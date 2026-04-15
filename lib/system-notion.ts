@@ -669,11 +669,11 @@ export async function updateEquipment(id: string, data: {
     notion.pages.update({ page_id: id, properties })
   )
   // Invalidate all customer-equipment and page-details cache entries
-  for (const key of transientCache.keys()) {
+  Array.from(transientCache.keys()).forEach((key) => {
     if (key.startsWith('customer-equipment:') || key.startsWith('page-details:')) {
       transientCache.delete(key)
     }
-  }
+  })
 }
 
 export async function listCustomerTickets(customerId: string): Promise<Ticket[]> {
