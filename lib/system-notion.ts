@@ -1209,6 +1209,7 @@ export async function createVisit(data: {
     address: data.address,
     city: data.city,
     district: data.district,
+    tags: [] as string[],
   }
 }
 
