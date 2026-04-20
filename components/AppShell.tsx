@@ -27,9 +27,9 @@ function canViewModule(
   permissions: UserPermissions | undefined,
   module: ModuleKey | null
 ): boolean {
-  if (module === null) return true          // 首頁 always visible
-  if (role === 'admin') return true         // admin sees all
-  if (!permissions) return true            // no perms in session = env admin
+  if (module === null) return true
+  if (role === 'admin') return true
+  if (!permissions) return true
   return permissions[module]?.view ?? false
 }
 
@@ -52,8 +52,8 @@ export function AppShell({
   const visibleItems = NAV_ITEMS.filter((item) => canViewModule(role, permissions, item.module))
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(21,128,61,0.08),transparent_28%),linear-gradient(180deg,#f8f4ea_0%,#eff4ef_54%,#e6eee8_100%)] text-slate-900">
-      <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-cream-100 via-cream-50 to-brand-50 text-stone-800">
+      <header className="sticky top-0 z-20 border-b border-brand-200/40 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <Image
@@ -63,24 +63,27 @@ export function AppShell({
               height={48}
               className="h-auto w-32 object-contain md:w-40"
             />
+            <div className="hidden sm:block h-8 w-px bg-brand-200/60" />
             <div className="min-w-0">
-              <p className="eyebrow">SONGTAH TRADING CO LTD</p>
-              <h1 className="truncate text-lg font-bold text-slate-900">{title}</h1>
+              <p className="eyebrow text-[10px]">SONGTAH TRADING CO LTD</p>
+              <h1 className="truncate text-lg font-bold text-stone-800">{title}</h1>
             </div>
           </div>
           <Link href="/api/auth/signout" className="button-secondary rounded-full px-4 py-2">
             登出
           </Link>
         </div>
-        <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-6 pb-4">
+        {/* Gold accent line under header */}
+        <div className="gold-line" />
+        <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-6 py-3">
           {visibleItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 pathname === item.href
-                  ? 'bg-slate-900 text-white shadow-[0_10px_25px_-15px_rgba(15,23,42,0.8)]'
-                  : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-emerald-50 hover:text-emerald-900'
+                  ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-[0_8px_20px_-8px_rgba(184,149,106,0.5)]'
+                  : 'bg-white/80 text-stone-500 ring-1 ring-brand-200/50 hover:bg-brand-50 hover:text-stone-800 hover:ring-brand-300/60'
               }`}
             >
               {item.label}
@@ -90,16 +93,17 @@ export function AppShell({
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <section className={`soft-grid mb-8 rounded-[32px] border border-white/80 bg-white/72 p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)] backdrop-blur ${hidePhaseNote ? '' : 'grid gap-4 md:grid-cols-[1.4fr_0.8fr]'}`}>
+        <section className={`soft-grid mb-8 rounded-2xl border border-brand-200/40 bg-white/80 p-8 shadow-[0_16px_48px_-16px_rgba(90,66,51,0.12)] backdrop-blur-sm ${hidePhaseNote ? '' : 'grid gap-4 md:grid-cols-[1.4fr_0.8fr]'}`}>
           <div>
             <p className="eyebrow mb-2">內部營運平台</p>
-            <h2 className="text-3xl font-black tracking-tight text-slate-900">{title}</h2>
+            <h2 className="text-3xl font-black tracking-tight text-stone-800">{title}</h2>
+            <div className="gold-line mt-3 w-16" />
             <p className="muted mt-3 max-w-3xl">{description}</p>
           </div>
           {!hidePhaseNote && (
-            <div className="rounded-[28px] bg-[linear-gradient(160deg,#0f172a_0%,#1e293b_100%)] p-5 text-sm text-slate-100 shadow-[0_20px_50px_-30px_rgba(15,23,42,0.8)]">
-              <p className="font-semibold text-emerald-300">目前階段</p>
-              <p className="mt-2 leading-7 text-slate-200">
+            <div className="rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 p-5 text-sm text-stone-100 shadow-[0_16px_40px_-16px_rgba(90,66,51,0.3)]">
+              <p className="font-semibold text-brand-300">目前階段</p>
+              <p className="mt-2 leading-7 text-stone-300">
                 先以 Notion 為主資料來源，網站先完成入口、列表、權限骨架與報價流程，
                 後續再逐步補上即時同步、案件處理與簽名流程。
               </p>

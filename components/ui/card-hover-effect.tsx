@@ -25,7 +25,7 @@ export function HoverEffect({
           <AnimatePresence>
             {hoveredIndex === idx && (
               <motion.span
-                className="absolute inset-0 block h-full w-full rounded-2xl bg-emerald-100/60"
+                className="absolute inset-0 block h-full w-full rounded-2xl bg-gradient-to-br from-brand-100/80 to-gold-100/60"
                 layoutId="hoverBackground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { duration: 0.2 } }}
@@ -33,10 +33,10 @@ export function HoverEffect({
               />
             )}
           </AnimatePresence>
-          <div className="relative z-10 rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm backdrop-blur transition-shadow duration-200 group-hover:shadow-lg">
+          <div className="relative z-10 rounded-2xl border border-brand-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-shadow duration-200 group-hover:shadow-md group-hover:border-brand-300/60">
             <p className="eyebrow mb-2">{item.badge}</p>
-            <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-            <p className="mt-1 text-xs text-slate-500">{item.description}</p>
+            <p className="text-sm font-semibold text-stone-800">{item.title}</p>
+            <p className="mt-1 text-xs text-stone-500">{item.description}</p>
           </div>
         </div>
       ))}

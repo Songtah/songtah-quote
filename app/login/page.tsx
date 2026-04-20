@@ -38,10 +38,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.12),transparent_25%),linear-gradient(180deg,#f8f4ea_0%,#eef3ef_52%,#e5ede8_100%)]">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-cream-100 via-cream-200 to-brand-100">
       {/* Aceternity effects */}
       <Spotlight />
       <BackgroundBeams />
+
+      {/* Subtle marble texture overlay */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+      }} />
 
       <div className="relative z-10 px-4 py-10">
         <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
@@ -58,7 +63,15 @@ export default function LoginPage() {
 
               <TextGenerateEffect
                 words="企業管理系統"
-                className="mt-6 text-5xl tracking-tight text-slate-900"
+                className="mt-6 text-5xl tracking-tight text-stone-800"
+              />
+
+              <motion.div
+                className="my-6 gold-line w-24"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                style={{ transformOrigin: 'left' }}
               />
 
               <motion.p
@@ -84,7 +97,7 @@ export default function LoginPage() {
 
           {/* Right login card */}
           <motion.section
-            className="panel soft-grid mx-auto w-full max-w-md overflow-hidden border-white/80 bg-white/82 p-8 backdrop-blur"
+            className="panel soft-grid mx-auto w-full max-w-md overflow-hidden p-8"
             initial={{ opacity: 0, x: 40, scale: 0.96 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -97,8 +110,9 @@ export default function LoginPage() {
               >
                 <Image src="/Logo.svg" alt="崧達企業" width={216} height={72} className="mb-4 h-auto w-52 object-contain" />
               </motion.div>
+              <div className="gold-line mx-auto mb-4 w-12" />
               <p className="eyebrow">企業管理平台</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">帳號登入</h2>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-stone-800">帳號登入</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -107,7 +121,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
               >
-                <label className="mb-2 block text-sm font-semibold text-slate-700">帳號</label>
+                <label className="mb-2 block text-sm font-semibold text-stone-600">帳號</label>
                 <input
                   type="text"
                   value={form.username}
@@ -123,7 +137,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.7 }}
               >
-                <label className="mb-2 block text-sm font-semibold text-slate-700">密碼</label>
+                <label className="mb-2 block text-sm font-semibold text-stone-600">密碼</label>
                 <input
                   type="password"
                   value={form.password}
@@ -136,7 +150,7 @@ export default function LoginPage() {
               </motion.div>
               {error && (
                 <motion.p
-                  className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-center text-rose-600"
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-center text-rose-600"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                 >
