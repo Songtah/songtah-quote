@@ -12,10 +12,14 @@
     "@fontsource/noto-sans-tc": "^5.2.9",
     "@notionhq/client": "^2.2.15",
     "@react-pdf/renderer": "^3.4.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
+    "mini-svg-data-uri": "^1.4.4",
     "next": "14.2.5",
     "next-auth": "^4.24.7",
     "react": "^18",
     "react-dom": "^18",
+    "tailwind-merge": "^3.5.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
