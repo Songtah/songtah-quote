@@ -48,15 +48,6 @@ export default function LoginPage() {
           {/* Left info panel */}
           <section className="hidden lg:block">
             <div className="max-w-xl">
-              <motion.p
-                className="eyebrow mb-3"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                Songtah Internal Suite
-              </motion.p>
-
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -67,7 +58,7 @@ export default function LoginPage() {
 
               <TextGenerateEffect
                 words="企業管理系統"
-                className="mt-8 text-5xl tracking-tight text-slate-900"
+                className="mt-6 text-5xl tracking-tight text-slate-900"
               />
 
               <motion.p
@@ -106,11 +97,8 @@ export default function LoginPage() {
               >
                 <Image src="/Logo.svg" alt="崧達企業" width={216} height={72} className="mb-4 h-auto w-52 object-contain" />
               </motion.div>
-              <p className="eyebrow">CRM・RMA・BD 內部平台</p>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">登入後台</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-500">
-                使用公司內部分配的帳號登入，進入客戶、工單、產品與報價模組。
-              </p>
+              <p className="eyebrow">企業管理平台</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">帳號登入</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
