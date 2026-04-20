@@ -62,11 +62,11 @@ export default function LoginPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <Image src="/Logo.svg" alt="崧達企業" width={260} height={88} className="h-auto w-64 object-contain" />
+                <Image src="/Logo.svg" alt="崧達企業" width={360} height={120} className="h-auto w-80 object-contain" />
               </motion.div>
 
               <TextGenerateEffect
-                words="CRM、RMA 與 BD 的統一工作台"
+                words="企業管理系統"
                 className="mt-8 text-5xl tracking-tight text-slate-900"
               />
 
