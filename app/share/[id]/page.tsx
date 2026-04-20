@@ -38,7 +38,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                 <div className="bg-white rounded-lg px-4 py-2 inline-flex items-center mb-2">
                   <Image src="/Logo.svg" alt="崧達企業" width={220} height={74} className="object-contain" />
                 </div>
-                <div className="text-green-200 text-xs">Songtah Enterprise Co., Ltd.</div>
+                <div className="text-green-200 text-xs">SONGTAH TRADING CO LTD</div>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold">報 價 單</div>
@@ -143,7 +143,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
         </div>
 
         <div className="text-center mt-6 text-xs text-gray-400">
-          崧達企業股份有限公司｜此報價單由系統自動產生
+          SONGTAH TRADING CO LTD｜此報價單由系統自動產生
         </div>
       </div>
     </div>

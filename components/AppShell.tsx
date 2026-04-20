@@ -64,7 +64,7 @@ export function AppShell({
               className="h-auto w-32 object-contain md:w-40"
             />
             <div className="min-w-0">
-              <p className="eyebrow">Songtah Internal Suite</p>
+              <p className="eyebrow">SONGTAH TRADING CO LTD</p>
               <h1 className="truncate text-lg font-bold text-slate-900">{title}</h1>
             </div>
           </div>
