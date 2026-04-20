@@ -36,7 +36,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
             <div className="flex justify-between items-center gap-6">
               <div className="flex flex-col justify-center">
                 <div className="bg-white rounded-lg px-4 py-2 inline-flex items-center mb-2">
-                  <Image src="/Logo.png" alt="崧達企業" width={220} height={74} className="object-contain" />
+                  <Image src="/Logo.svg" alt="崧達企業" width={220} height={74} className="object-contain" />
                 </div>
                 <div className="text-green-200 text-xs">Songtah Enterprise Co., Ltd.</div>
               </div>

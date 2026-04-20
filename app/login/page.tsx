@@ -32,7 +32,7 @@ export default function LoginPage() {
         <section className="hidden lg:block">
           <div className="max-w-xl">
             <p className="eyebrow mb-3">Songtah Internal Suite</p>
-            <Image src="/Logo.png" alt="崧達企業" width={260} height={88} className="h-auto w-64 object-contain" />
+            <Image src="/Logo.svg" alt="崧達企業" width={260} height={88} className="h-auto w-64 object-contain" />
             <h1 className="mt-8 text-5xl font-black tracking-tight text-slate-900">
               CRM、RMA 與
               <br />
@@ -61,7 +61,7 @@ export default function LoginPage() {
 
         <section className="panel soft-grid mx-auto w-full max-w-md overflow-hidden border-white/80 bg-white/82 p-8 backdrop-blur">
           <div className="mb-8 flex flex-col items-center text-center">
-            <Image src="/Logo.png" alt="崧達企業" width={216} height={72} className="mb-4 h-auto w-52 object-contain" />
+            <Image src="/Logo.svg" alt="崧達企業" width={216} height={72} className="mb-4 h-auto w-52 object-contain" />
             <p className="eyebrow">CRM・RMA・BD 內部平台</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">登入後台</h2>
             <p className="mt-3 text-sm leading-7 text-slate-500">

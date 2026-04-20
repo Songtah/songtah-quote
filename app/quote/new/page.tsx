@@ -13,7 +13,7 @@ export default async function NewQuotePage() {
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat bg-fixed" style={{ backgroundImage: "url('/background.jpeg')" }}>
       <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-        <Image src="/Logo.png" alt="崧達企業" width={168} height={55} className="object-contain" />
+        <Image src="/Logo.svg" alt="崧達企業" width={168} height={55} className="object-contain" />
         <a href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← 返回列表</a>
       </nav>
       <main className="max-w-5xl mx-auto px-6 py-8">
