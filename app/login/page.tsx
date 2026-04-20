@@ -7,8 +7,6 @@ import { motion } from 'framer-motion'
 import { Spotlight } from '@/components/ui/spotlight'
 import { BackgroundBeams } from '@/components/ui/background-beams'
 import { HoverEffect } from '@/components/ui/card-hover-effect'
-import { TextGenerateEffect } from '@/components/ui/text-generate-effect'
-
 const modules = [
   { badge: 'CRM', title: '客戶與轄區查閱', description: '客戶主檔、聯繫紀錄、區域管理' },
   { badge: 'RMA', title: '維修案件與設備追蹤', description: '工單管理、設備序號、維護排程' },
@@ -54,31 +52,20 @@ export default function LoginPage() {
           <section className="hidden lg:block">
             <div className="max-w-xl">
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <Image src="/Logo.svg" alt="崧達企業" width={360} height={120} className="h-auto w-80 object-contain" />
+                <Image src="/Logo.svg" alt="崧達企業" width={400} height={130} className="h-auto w-[340px] object-contain" />
+                <h1 className="mt-4 text-5xl font-black tracking-tight text-stone-800">企業管理系統</h1>
+                <div className="gold-line mt-4 w-24" />
               </motion.div>
-
-              <TextGenerateEffect
-                words="企業管理系統"
-                className="mt-6 text-5xl tracking-tight text-stone-800"
-              />
-
-              <motion.div
-                className="my-6 gold-line w-24"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-                style={{ transformOrigin: 'left' }}
-              />
 
               <motion.p
                 className="muted mt-5 max-w-lg text-base"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.8 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
               >
                 將客戶主檔、產品資訊、技術支援工單與報價流程集中到同一個平台，
                 讓業務、行政與工程團隊使用同一套資料與操作入口。
