@@ -56,7 +56,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <Image src="/Logo.svg" alt="崧達企業" width={400} height={130} className="h-auto w-[340px] object-contain" />
+                <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-[320px] object-contain" />
                 <h1 className="mt-4 text-5xl font-black tracking-tight text-stone-800">企業管理系統</h1>
                 <div className="gold-line mt-4 w-24" />
               </motion.div>
@@ -95,7 +95,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.5 }}
               >
-                <Image src="/Logo.svg" alt="崧達企業" width={216} height={72} className="mb-4 h-auto w-52 object-contain" />
+                <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="mb-4 h-auto w-48 object-contain" />
               </motion.div>
               <div className="gold-line mx-auto mb-4 w-12" />
               <p className="eyebrow">企業管理平台</p>

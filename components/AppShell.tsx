@@ -59,9 +59,9 @@ export function AppShell({
             <Image
               src="/Logo.svg"
               alt="崧達企業"
-              width={152}
-              height={48}
-              className="h-auto w-32 object-contain md:w-40"
+              width={520}
+              height={78}
+              className="h-auto w-28 object-contain md:w-36"
             />
             <div className="hidden sm:block h-8 w-px bg-brand-200/60" />
             <div className="min-w-0">
