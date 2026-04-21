@@ -66,6 +66,7 @@ export default function VisitsContent() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingVisit, setEditingVisit] = useState<Visit | null>(null)
+  const [viewingVisit, setViewingVisit] = useState<Visit | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -132,9 +133,13 @@ export default function VisitsContent() {
               </thead>
               <tbody className="divide-y divide-brand-100/30">
                 {visits.map((v) => (
-                  <tr key={v.id} className="hover:bg-cream-50/60 transition-colors">
+                  <tr
+                    key={v.id}
+                    onClick={() => setViewingVisit(v)}
+                    className="hover:bg-cream-50/60 transition-colors cursor-pointer group"
+                  >
                     <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{formatDate(v.date)}</td>
-                    <td className="px-4 py-3 font-medium text-stone-800">{v.customerName}</td>
+                    <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">{v.customerName}</td>
                     <td className="px-4 py-3 text-stone-500">{v.city || '—'}</td>
                     <td className="px-4 py-3 text-stone-500">{v.district || '—'}</td>
                     <td className="px-4 py-3">
@@ -142,7 +147,7 @@ export default function VisitsContent() {
                     </td>
                     <td className="px-4 py-3 text-stone-500">{v.salesperson || '—'}</td>
                     <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{v.content || '—'}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       {deleteConfirmId === v.id ? (
                         <div className="flex items-center gap-2 justify-end">
                           <span className="text-xs text-stone-500">確認刪除？</span>
@@ -161,7 +166,7 @@ export default function VisitsContent() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3 justify-end">
+                        <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }}
                             className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
@@ -201,7 +206,182 @@ export default function VisitsContent() {
           onSaved={() => { setEditingVisit(null); loadVisits() }}
         />
       )}
+
+      {/* View Visit Detail Modal */}
+      {viewingVisit && (
+        <ViewVisitModal
+          visit={viewingVisit}
+          onClose={() => setViewingVisit(null)}
+          onEdit={(v) => { setViewingVisit(null); setEditingVisit(v) }}
+          onDelete={(id) => { setViewingVisit(null); setDeleteConfirmId(id) }}
+        />
+      )}
     </div>
+  )
+}
+
+// ── View Detail Modal ─────────────────────────────────────────
+
+function ViewVisitModal({
+  visit,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  visit: Visit
+  onClose: () => void
+  onEdit: (v: Visit) => void
+  onDelete: (id: string) => void
+}) {
+  const [visible, setVisible] = useState(true)
+
+  const handleClose = () => {
+    setVisible(false)
+    setTimeout(onClose, 220)
+  }
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  const colorMap: Record<string, string> = {
+    初次拜訪: 'bg-blue-100 text-blue-700',
+    例行拜訪: 'bg-green-100 text-green-700',
+    重點追蹤: 'bg-orange-100 text-orange-700',
+    展覽: 'bg-purple-100 text-purple-700',
+    電話拜訪: 'bg-slate-100 text-slate-600',
+    視訊拜訪: 'bg-cyan-100 text-cyan-700',
+    其他: 'bg-gray-100 text-gray-600',
+  }
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={handleClose}
+          />
+
+          {/* Scroll container */}
+          <motion.div
+            className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="relative w-full max-w-lg"
+              initial={{ opacity: 0, y: 32, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <div className="panel overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-brand-100/60 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="eyebrow mb-1">客情管理</p>
+                    <h3 className="text-lg font-bold text-stone-800 truncate">{visit.customerName}</h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${colorMap[visit.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {visit.status || '—'}
+                      </span>
+                      <span className="text-xs text-stone-400">{formatDate(visit.date)}</span>
+                      {visit.salesperson && (
+                        <span className="text-xs text-stone-400">・{visit.salesperson}</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="px-6 py-5 space-y-4">
+                  {/* Info grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      ['縣市', visit.city],
+                      ['鄉鎮市區', visit.district],
+                      ['業務人員', visit.salesperson],
+                      ['拜訪性質', visit.status],
+                    ].map(([label, val]) => (
+                      <div key={label} className="bg-cream-50/60 rounded-xl px-4 py-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">{label}</div>
+                        <div className="text-sm font-medium text-stone-700">{val || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Address */}
+                  {visit.address && (
+                    <div className="bg-cream-50/60 rounded-xl px-4 py-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">地址</div>
+                      <div className="text-sm text-stone-700">{visit.address}</div>
+                    </div>
+                  )}
+
+                  {/* Content / notes */}
+                  <div className="bg-cream-50/60 rounded-xl px-4 py-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">拜訪內容</div>
+                    {visit.content ? (
+                      <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{visit.content}</p>
+                    ) : (
+                      <p className="text-sm text-stone-400 italic">無拜訪內容紀錄</p>
+                    )}
+                  </div>
+
+                  {/* Tags */}
+                  {visit.tags && visit.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {visit.tags.map((tag) => (
+                        <span key={tag} className="text-xs bg-brand-50 text-brand-600 border border-brand-200/50 rounded-full px-2.5 py-0.5">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer actions */}
+                <div className="px-6 py-4 border-t border-brand-100/60 flex gap-2">
+                  <button
+                    onClick={() => onEdit(visit)}
+                    className="button-primary flex-1 py-2.5 rounded-xl text-sm font-medium"
+                  >
+                    編輯紀錄
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className="button-secondary px-5 py-2.5 rounded-xl text-sm"
+                  >
+                    關閉
+                  </button>
+                  <button
+                    onClick={() => onDelete(visit.id)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   )
 }
 
