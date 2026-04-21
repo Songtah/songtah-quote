@@ -3,12 +3,14 @@ import Link from 'next/link'
 export function ModuleCard({
   title,
   count,
+  countLabel,
   description,
   href,
   accent,
 }: {
   title: string
   count: number
+  countLabel?: string
   description: string
   href: string
   accent: string
@@ -26,7 +28,14 @@ export function ModuleCard({
       <div className="mb-4 h-2 w-24 rounded-full" style={{ backgroundColor: accent }} />
       <div className="flex items-end justify-between gap-3">
         <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-        <div className="text-3xl font-black text-slate-900">{count}</div>
+        <div className="text-right">
+          <div className="text-3xl font-black text-slate-900">{count}</div>
+          {countLabel && (
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">
+              {countLabel}
+            </div>
+          )}
+        </div>
       </div>
       <p className="muted mt-3">{description}</p>
       <div className="mt-5 text-sm font-semibold text-emerald-700 transition group-hover:text-emerald-800">

@@ -75,7 +75,7 @@ export function DashboardContent() {
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <ModuleCard title="CRM 客戶" count={s.customers.total} description="客戶主檔、轄區查閱與後續拜訪紀錄入口。" href="/customers" accent="#0f766e" />
+            <ModuleCard title="CRM 客戶" count={s.customers.activeThisMonth ?? s.customers.total} countLabel={s.customers.activeThisMonth != null ? '本月活躍' : undefined} description="客戶主檔、轄區查閱與後續拜訪紀錄入口。" href="/customers" accent="#0f766e" />
             <ModuleCard title="RMA 工單" count={s.tickets.total} description="維修案件、技術支援與設備追蹤入口。" href="/tickets" accent="#b45309" />
             <ModuleCard title="BD 商機" count={s.opportunities.total} description="活動名單、商機跟進與成交流程入口。" href="/bd" accent="#7c3aed" />
             <ModuleCard title="產品管理" count={s.products.total} description="產品清單、系列與報價使用資料入口。" href="/products" accent="#2563eb" />

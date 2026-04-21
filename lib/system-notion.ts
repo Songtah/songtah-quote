@@ -3,6 +3,7 @@ import type { CreateTicketPayload, Equipment, Ticket } from '@/types'
 
 export type ModuleSummary = {
   total: number
+  activeThisMonth?: number   // unique active customers in current month (CRM only)
   recent: Array<{
     id: string
     title: string
@@ -226,10 +227,61 @@ async function querySummary(databaseId: string | undefined, pageSize = 100): Pro
   return { rows, total }
 }
 
+/**
+ * Count unique customers who appear in visit records within the current month.
+ * Deduplication uses relation ID first (more reliable), falling back to title name.
+ */
+async function getActiveCustomersThisMonth(): Promise<number> {
+  if (!DB.visits) return 0
+
+  const now = new Date()
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+
+  const uniqueCustomers = new Set<string>()
+  let cursor: string | undefined
+
+  do {
+    const response: any = await notionCallWithRetry('activeCustomersThisMonth', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        filter: {
+          and: [
+            { property: '日期', date: { on_or_after: firstOfMonth } },
+            { property: '日期', date: { on_or_before: lastOfMonth } },
+          ],
+        },
+      })
+    )
+
+    for (const page of response.results ?? []) {
+      // Prefer relation ID (stable) for deduplication
+      const relIds = getRelationIds(page, '🏥 牙科單位資料')
+      if (relIds.length > 0) {
+        relIds.forEach((id: string) => uniqueCustomers.add(id))
+      } else {
+        // Fallback: use title as key
+        const name = getTitle(page, '單位名稱').trim()
+        if (name) uniqueCustomers.add(`name:${name}`)
+      }
+    }
+
+    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cursor)
+
+  return uniqueCustomers.size
+}
+
 async function getCustomersSummary(): Promise<ModuleSummary> {
-  const { rows, total } = await querySummary(DB.customers)
+  const [{ rows, total }, activeThisMonth] = await Promise.all([
+    querySummary(DB.customers),
+    getActiveCustomersThisMonth(),
+  ])
   return {
     total,
+    activeThisMonth,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
       title: getTitle(page, '客戶名稱'),
@@ -327,7 +379,7 @@ async function getUsersSummary(): Promise<ModuleSummary> {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const cached = getCachedValue<DashboardSummary>('dashboard:summary:v2')
+  const cached = getCachedValue<DashboardSummary>('dashboard:summary:v3')
   if (cached) return cached
 
   const safe = async <T>(fn: () => Promise<T>, fallback: T) => {
@@ -349,7 +401,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   const summary: DashboardSummary = { customers, tickets, opportunities, products, users }
 
-  setCachedValue('dashboard:summary:v2', summary, 300_000) // 5 min
+  setCachedValue('dashboard:summary:v3', summary, 300_000) // 5 min
   return summary
 }
 
