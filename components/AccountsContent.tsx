@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { SystemUser, UserPermissions, ModuleKey } from '@/lib/system-notion'
 import { MODULE_KEYS, MODULE_LABELS } from '@/lib/system-notion'
 
 const ACCOUNT_TYPE_OPTIONS = ['中央管理', '業務', '行政', '技術']
-const STATUS_OPTIONS = ['啟用', '停用']
+const STATUS_OPTIONS = ['未開始', '進行中', '完成']
 
 function defaultPermissions(all = false): UserPermissions {
   const result = {} as UserPermissions
@@ -31,6 +32,12 @@ function accountTypeBadge(type: string) {
   return map[type] ?? 'bg-gray-100 text-gray-600'
 }
 
+function statusTextClass(status: string) {
+  if (status === '完成' || status === '停用') return 'text-red-500'
+  if (status === '未開始') return 'text-amber-600'
+  return 'text-green-700'
+}
+
 // ── Permission Grid ──────────────────────────────────────────
 
 function PermissionGrid({
@@ -44,34 +51,32 @@ function PermissionGrid({
 }) {
   const toggle = (mod: ModuleKey, type: 'view' | 'edit') => {
     const next = { ...permissions, [mod]: { ...permissions[mod], [type]: !permissions[mod][type] } }
-    // If disabling view, also disable edit
     if (type === 'view' && !next[mod].view) next[mod].edit = false
-    // If enabling edit, also enable view
     if (type === 'edit' && next[mod].edit) next[mod].view = true
     onChange(next)
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
+    <div className="rounded-xl border border-brand-200/40 overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 text-xs text-gray-500">
+          <tr className="bg-cream-50 text-xs text-stone-500">
             <th className="px-4 py-2 text-left font-medium">模組</th>
             <th className="px-4 py-2 text-center font-medium w-20">檢視</th>
             <th className="px-4 py-2 text-center font-medium w-20">編輯</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-brand-100/30">
           {MODULE_KEYS.map((mod) => (
-            <tr key={mod} className="hover:bg-gray-50/50">
-              <td className="px-4 py-2.5 font-medium text-gray-700">{MODULE_LABELS[mod]}</td>
+            <tr key={mod} className="hover:bg-cream-50/50">
+              <td className="px-4 py-2.5 font-medium text-stone-700">{MODULE_LABELS[mod]}</td>
               <td className="px-4 py-2.5 text-center">
                 <input
                   type="checkbox"
                   checked={permissions[mod]?.view ?? false}
                   onChange={() => toggle(mod, 'view')}
                   disabled={disabled}
-                  className="h-4 w-4 rounded accent-green-700 cursor-pointer disabled:cursor-default"
+                  className="h-4 w-4 rounded accent-brand-500 cursor-pointer disabled:cursor-default"
                 />
               </td>
               <td className="px-4 py-2.5 text-center">
@@ -80,7 +85,7 @@ function PermissionGrid({
                   checked={permissions[mod]?.edit ?? false}
                   onChange={() => toggle(mod, 'edit')}
                   disabled={disabled}
-                  className="h-4 w-4 rounded accent-green-700 cursor-pointer disabled:cursor-default"
+                  className="h-4 w-4 rounded accent-brand-500 cursor-pointer disabled:cursor-default"
                 />
               </td>
             </tr>
@@ -103,16 +108,29 @@ function AccountModal({
   onSaved: () => void
 }) {
   const isEdit = !!initialData
+  const [visible, setVisible] = useState(true)
   const [form, setForm] = useState({
     name: initialData?.name ?? '',
     username: initialData?.username ?? '',
     password: '',
     accountType: initialData?.accountType ?? '業務',
-    status: initialData?.status ?? '啟用',
+    status: initialData?.status ?? '未開始',
     permissions: initialData?.permissions ?? defaultPermissions(),
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const statusOptions = Array.from(new Set([form.status, ...STATUS_OPTIONS].filter(Boolean)))
+
+  const handleClose = () => {
+    setVisible(false)
+    setTimeout(onClose, 220)
+  }
+
+  // Body scroll lock
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -157,103 +175,153 @@ function AccountModal({
     }
   }
 
+  const inputCls = 'w-full border border-brand-200/60 bg-cream-50/50 rounded-xl px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition'
+
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800">{isEdit ? '編輯帳號' : '新增帳號'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
-        </div>
+    <AnimatePresence>
+      {visible && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={handleClose}
+          />
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">帳號名稱 *</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="顯示名稱"
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">帳號代碼 * <span className="text-gray-400">（登入用）</span></label>
-              <input
-                type="text"
-                value={form.username}
-                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                placeholder="login ID"
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                {isEdit ? '新密碼（留空不更改）' : '密碼 *'}
-              </label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                placeholder={isEdit ? '留空則不修改' : '設定登入密碼'}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">帳號類型</label>
-              <select
-                value={form.accountType}
-                onChange={(e) => setForm((f) => ({ ...f, accountType: e.target.value }))}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white"
-              >
-                {ACCOUNT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">狀態</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-white"
+          {/* Scroll container */}
+          <motion.div
+            className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Modal panel */}
+            <motion.div
+              className="relative w-full max-w-lg"
+              initial={{ opacity: 0, y: 32, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              {STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
+              <div className="panel overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-brand-100/60 flex items-center justify-between">
+                  <div>
+                    <p className="eyebrow mb-1">帳號管理</p>
+                    <h3 className="text-lg font-bold text-stone-800">
+                      {isEdit ? '編輯帳號' : '新增帳號'}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
 
-          <div>
-            <label className="block text-xs text-gray-500 mb-2">頁面權限</label>
-            <PermissionGrid
-              permissions={form.permissions}
-              onChange={(permissions) => setForm((f) => ({ ...f, permissions }))}
-            />
-          </div>
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="px-6 py-5 max-h-[72vh] overflow-y-auto space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">帳號名稱 *</label>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="顯示名稱"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                        帳號代碼 * <span className="text-stone-400">（登入用）</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.username}
+                        onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                        placeholder="login ID"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                        {isEdit ? '新密碼（留空不更改）' : '密碼 *'}
+                      </label>
+                      <input
+                        type="password"
+                        value={form.password}
+                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                        placeholder={isEdit ? '留空則不修改' : '設定登入密碼'}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">帳號類型</label>
+                      <select
+                        value={form.accountType}
+                        onChange={(e) => setForm((f) => ({ ...f, accountType: e.target.value }))}
+                        className={inputCls}
+                      >
+                        {ACCOUNT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
 
-          <div className="flex gap-3 pt-1">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-green-800 hover:bg-green-900 text-white py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50"
-            >
-              {submitting ? (isEdit ? '儲存中…' : '建立中…') : (isEdit ? '儲存變更' : '建立帳號')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition"
-            >
-              取消
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">狀態</label>
+                    <select
+                      value={form.status}
+                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                      className={inputCls}
+                    >
+                      {statusOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-2">頁面權限</label>
+                    <PermissionGrid
+                      permissions={form.permissions}
+                      onChange={(permissions) => setForm((f) => ({ ...f, permissions }))}
+                    />
+                  </div>
+
+                  {error && (
+                    <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>
+                  )}
+
+                  <div className="flex gap-3 pt-2 border-t border-brand-100/40">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="button-primary flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50"
+                    >
+                      {submitting ? (isEdit ? '儲存中…' : '建立中…') : (isEdit ? '儲存變更' : '建立帳號')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="button-secondary px-5 py-2.5 rounded-xl text-sm"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -307,36 +375,36 @@ export default function AccountsContent() {
           { label: '行政帳號', count: counts.ops },
           { label: '技術帳號', count: counts.tech },
         ].map(({ label, count }) => (
-          <div key={label} className="rounded-[24px] border border-slate-200 bg-white p-5">
-            <div className="text-sm text-slate-500">{label}</div>
-            <div className="mt-2 text-3xl font-black text-slate-900">{count}</div>
+          <div key={label} className="panel p-5">
+            <div className="eyebrow mb-2">{label}</div>
+            <div className="text-3xl font-black text-slate-900">{count}</div>
           </div>
         ))}
       </div>
 
       {/* Table header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800">帳號清單</h2>
+        <h2 className="text-lg font-semibold text-stone-800">帳號清單</h2>
         <button
           onClick={() => setShowCreate(true)}
-          className="bg-green-800 hover:bg-green-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+          className="button-primary px-4 py-2 rounded-full text-sm font-medium"
         >
           + 新增帳號
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">載入中…</div>
+          <div className="p-8 text-center text-sm text-stone-400">載入中…</div>
         ) : users.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl m-4">
+          <div className="p-10 text-center text-sm text-stone-400 border-2 border-dashed border-brand-200/40 rounded-2xl m-4">
             尚無帳號資料。
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-400 text-xs border-b border-gray-100">
+              <thead className="bg-cream-50 text-stone-400 text-xs border-b border-brand-100/40">
                 <tr>
                   <th className="px-4 py-3 text-left">帳號名稱</th>
                   <th className="px-4 py-3 text-left">帳號代碼</th>
@@ -346,35 +414,35 @@ export default function AccountsContent() {
                   <th className="px-4 py-3 text-right">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-brand-100/30">
                 {users.map((u) => {
                   const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
                   const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
 
                   return (
-                    <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 font-medium text-gray-800">{u.name}</td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{u.username || '—'}</td>
+                    <tr key={u.id} className="hover:bg-cream-50/60 transition-colors">
+                      <td className="px-4 py-3 font-medium text-stone-800">{u.name}</td>
+                      <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.username || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-medium ${u.status === '停用' ? 'text-red-500' : 'text-green-700'}`}>
+                        <span className={`text-xs font-medium ${statusTextClass(u.status)}`}>
                           {u.status || '—'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {viewableModules.length === 0 ? (
-                            <span className="text-xs text-gray-400">無</span>
+                            <span className="text-xs text-stone-400">無</span>
                           ) : (
                             viewableModules.map((m) => (
                               <span
                                 key={m}
                                 className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                                   editableModules.includes(m)
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-600'
+                                    ? 'bg-brand-100 text-brand-800'
+                                    : 'bg-stone-100 text-stone-600'
                                 }`}
                                 title={editableModules.includes(m) ? '可檢視＋編輯' : '僅檢視'}
                               >
@@ -387,7 +455,7 @@ export default function AccountsContent() {
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         {deleteConfirmId === u.id ? (
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="text-xs text-gray-500">確認刪除？</span>
+                            <span className="text-xs text-stone-500">確認刪除？</span>
                             <button
                               onClick={() => handleDelete(u.id)}
                               disabled={deleting}
@@ -397,7 +465,7 @@ export default function AccountsContent() {
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(null)}
-                              className="text-xs text-gray-400 hover:text-gray-600"
+                              className="text-xs text-stone-400 hover:text-stone-600"
                             >
                               取消
                             </button>
@@ -406,13 +474,13 @@ export default function AccountsContent() {
                           <div className="flex items-center gap-3 justify-end">
                             <button
                               onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }}
-                              className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                              className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
                             >
                               編輯
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(u.id)}
-                              className="text-xs text-gray-300 hover:text-red-500 transition-colors"
+                              className="text-xs text-stone-300 hover:text-red-500 transition-colors"
                             >
                               刪除
                             </button>

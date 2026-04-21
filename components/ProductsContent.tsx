@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type ProductItem = {
   id: string
@@ -27,7 +28,7 @@ type ProductItem = {
 }
 
 const inputCls =
-  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-700'
+  'w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-4 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition'
 
 function formatPrice(price: number | null) {
   if (price == null) return null
@@ -88,21 +89,34 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <motion.div
+        className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
 
       {/* Panel */}
-      <div className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden animate-slide-in">
+      <motion.div
+        className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden"
+        initial={{ x: '100%', opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: '100%', opacity: 0 }}
+        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
         {/* Header */}
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-gray-100">
+        <div className="flex items-start gap-4 px-6 py-5 border-b border-brand-100/60">
           <ProductThumb id={p.id} name={p.name} size={72} />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-green-700 mb-1">
+            <p className="eyebrow mb-1">
               {p.productType || '產品'}
             </p>
             <h2 className="text-xl font-bold text-slate-900 leading-snug">{p.name || '（未命名）'}</h2>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {p.manufacturer && (
-                <span className="px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-xs text-green-800 font-medium">
+                <span className="px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700 font-medium">
                   {p.manufacturer}
                 </span>
               )}
@@ -115,7 +129,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none shrink-0 mt-0.5"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none shrink-0 mt-0.5"
           >
             ✕
           </button>
@@ -136,9 +150,9 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
                   </div>
                 )}
                 {p.salePrice != null && (
-                  <div className="flex-1 bg-green-50 rounded-xl p-4 border border-green-100">
-                    <p className="text-xs text-green-600 mb-1">優惠價</p>
-                    <p className="text-lg font-bold text-green-800">{formatPrice(p.salePrice)}</p>
+                  <div className="flex-1 bg-brand-50 rounded-xl p-4 border border-brand-100">
+                    <p className="text-xs text-brand-600 mb-1">優惠價</p>
+                    <p className="text-lg font-bold text-brand-800">{formatPrice(p.salePrice)}</p>
                   </div>
                 )}
               </div>
@@ -186,7 +200,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -196,7 +210,7 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-start gap-4 px-5 py-4 hover:bg-green-50/50 transition group"
+      className="w-full text-left flex items-start gap-4 px-5 py-4 hover:bg-cream-50/50 transition group"
     >
       <ProductThumb id={p.id} name={p.name} size={64} />
 
@@ -206,7 +220,7 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
         </div>
         <div className="flex flex-wrap gap-1.5 mt-1.5">
           {p.manufacturer && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-xs text-green-800 font-medium">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700 font-medium">
               {p.manufacturer}
             </span>
           )}
@@ -230,7 +244,7 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
         </div>
       )}
 
-      <svg className="w-4 h-4 text-gray-300 group-hover:text-green-600 transition shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-4 h-4 text-stone-300 group-hover:text-brand-500 transition shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </button>
@@ -319,8 +333,8 @@ export function ProductsContent({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
         active
-          ? 'bg-green-800 text-white shadow-sm'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm'
+          : 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
       }`}
     >
       {label}
@@ -331,8 +345,8 @@ export function ProductsContent({
     <>
       {/* 統計卡片 */}
       <div className="mb-8">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 inline-flex flex-col gap-1 min-w-[180px]">
-          <p className="text-xs font-semibold uppercase tracking-widest text-green-700">Products</p>
+        <div className="panel p-6 inline-flex flex-col gap-1 min-w-[180px]">
+          <p className="eyebrow">Products</p>
           <p className="text-4xl font-black text-slate-900">{total}</p>
           <p className="text-sm text-slate-500">可供報價與售後查詢的產品主檔數量</p>
         </div>
@@ -369,8 +383,8 @@ export function ProductsContent({
             onClick={() => setFilterOpen((v) => !v)}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
               filterOpen || hasActiveFilter
-                ? 'bg-green-800 text-white border-green-800 shadow-sm'
-                : 'bg-white text-slate-600 border-gray-300 hover:border-green-700 hover:text-green-800'
+                ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white border-brand-500 shadow-sm'
+                : 'bg-white text-stone-600 border-brand-200/60 hover:border-brand-400 hover:text-brand-700'
             }`}
           >
             <svg className={`w-4 h-4 transition-transform ${filterOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
@@ -450,10 +464,10 @@ export function ProductsContent({
 
       {/* 產品列表 */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100/40">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-green-700 mb-0.5">Products</p>
-            <h3 className="text-lg font-bold text-slate-900">產品清單</h3>
+            <p className="eyebrow mb-0.5">Products</p>
+            <h3 className="text-lg font-bold text-stone-900">產品清單</h3>
           </div>
           <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
             {initialized ? `${results.length} 筆` : `共 ${total} 筆`}
@@ -493,86 +507,114 @@ export function ProductsContent({
       {/* 問題回報浮動按鈕 */}
       <button
         onClick={() => setBugOpen(true)}
-        className="fixed bottom-8 right-8 flex items-center gap-2 bg-green-800 hover:bg-green-900 text-white text-sm font-medium px-4 py-3 rounded-full shadow-lg transition-all hover:shadow-xl z-40"
+        className="button-primary fixed bottom-8 right-8 flex items-center gap-2 text-sm font-medium px-4 py-3 rounded-full shadow-lg hover:shadow-xl z-40"
       >
         <span>🐛</span>
         <span>回報問題</span>
       </button>
 
       {/* 問題回報 Modal */}
-      {bugOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setBugOpen(false) }}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            {bugDone ? (
-              <div className="py-8 text-center">
-                <div className="text-4xl mb-3">✅</div>
-                <p className="text-lg font-bold text-slate-900">感謝回報！</p>
-                <p className="text-sm text-slate-500 mt-1">我們已收到您的問題，將盡快處理。</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-green-700 mb-0.5">Bug Report</p>
-                    <h2 className="text-xl font-bold text-slate-900">回報網頁問題</h2>
-                  </div>
-                  <button onClick={() => setBugOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+      <AnimatePresence>
+        {bugOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setBugOpen(false)}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center px-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.div
+                className="relative w-full max-w-md"
+                initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <div className="panel p-6">
+                  {bugDone ? (
+                    <div className="py-8 text-center">
+                      <div className="text-4xl mb-3">✅</div>
+                      <p className="text-lg font-bold text-stone-900">感謝回報！</p>
+                      <p className="text-sm text-stone-500 mt-1">我們已收到您的問題，將盡快處理。</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-5">
+                        <div>
+                          <p className="eyebrow mb-1">Bug Report</p>
+                          <h2 className="text-xl font-bold text-stone-900">回報網頁問題</h2>
+                        </div>
+                        <button
+                          onClick={() => setBugOpen(false)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 mb-1.5">問題頁面 / 功能</label>
+                          <input
+                            value={bugPage}
+                            onChange={(e) => setBugPage(e.target.value)}
+                            placeholder="例：產品頁面、報價單、工單列表..."
+                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 mb-1.5">
+                            問題描述 <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            value={bugDesc}
+                            onChange={(e) => setBugDesc(e.target.value)}
+                            placeholder="請描述遇到的問題、重現步驟或預期行為..."
+                            rows={4}
+                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-stone-500 mb-1.5">回報人（選填）</label>
+                          <input
+                            value={bugReporter}
+                            onChange={(e) => setBugReporter(e.target.value)}
+                            placeholder="您的姓名或帳號"
+                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-6 pt-4 border-t border-brand-100/40">
+                        <button
+                          onClick={() => setBugOpen(false)}
+                          className="button-secondary flex-1 rounded-lg px-4 py-2.5 text-sm font-medium"
+                        >
+                          取消
+                        </button>
+                        <button
+                          onClick={submitBugReport}
+                          disabled={!bugDesc.trim() || bugSubmitting}
+                          className="button-primary flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+                        >
+                          {bugSubmitting ? '送出中...' : '送出回報'}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">問題頁面 / 功能</label>
-                    <input
-                      value={bugPage}
-                      onChange={(e) => setBugPage(e.target.value)}
-                      placeholder="例：產品頁面、報價單、工單列表..."
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      問題描述 <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={bugDesc}
-                      onChange={(e) => setBugDesc(e.target.value)}
-                      placeholder="請描述遇到的問題、重現步驟或預期行為..."
-                      rows={4}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">回報人（選填）</label>
-                    <input
-                      value={bugReporter}
-                      onChange={(e) => setBugReporter(e.target.value)}
-                      placeholder="您的姓名或帳號"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setBugOpen(false)}
-                    className="flex-1 border border-gray-300 text-gray-600 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={submitBugReport}
-                    disabled={!bugDesc.trim() || bugSubmitting}
-                    className="flex-1 bg-green-800 hover:bg-green-900 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 text-sm font-semibold transition"
-                  >
-                    {bugSubmitting ? '送出中...' : '送出回報'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   )
 }

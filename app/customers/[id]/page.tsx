@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { AppShell } from '@/components/AppShell'
 import { VisitModal } from '@/components/VisitsContent'
 import type { Equipment, Ticket } from '@/types'
@@ -179,19 +180,19 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
             <div className="mt-4 flex gap-3 flex-wrap">
               <Link
                 href={`/tickets/new`}
-                className="bg-green-800 hover:bg-green-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
               >
                 建立工單
               </Link>
               <Link
                 href={`/quote/new`}
-                className="bg-green-800 hover:bg-green-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
               >
                 建立報價單
               </Link>
               <button
                 onClick={() => setShowVisitModal(true)}
-                className="bg-green-800 hover:bg-green-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
               >
                 新增客情紀錄
               </button>
@@ -419,140 +420,159 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       )}
 
       {/* Equipment Modal */}
-      {(eqLoading || selectedEq) && (
-        <div
-          className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedEq(null)}
-        >
-          <div
-            className="bg-white rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto shadow-xl animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {eqLoading ? (
-              <div className="p-8 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-slate-200 border-t-green-700 rounded-full animate-spin" />
-              </div>
-            ) : selectedEq && (
-              <>
-                {selectedEq.thumbnail && (
-                  <div className="w-full bg-slate-50 rounded-t-2xl overflow-hidden flex items-center justify-center" style={{ maxHeight: 220 }}>
-                    <img src={selectedEq.thumbnail} alt={selectedEq.productName} className="object-contain w-full" style={{ maxHeight: 220 }} />
+      <AnimatePresence>
+        {(eqLoading || selectedEq) && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => { setSelectedEq(null); setEqEditing(false) }}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.div
+                className="relative bg-white rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl"
+                initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {eqLoading ? (
+                  <div className="p-8 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
                   </div>
-                )}
-                <div className="p-5">
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      {selectedEq.productName || selectedEq.manufacturer || '未知機型'}
-                    </h2>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {!eqEditing && (
-                        <button onClick={startEdit} className="text-xs text-green-800 border border-green-800 px-2 py-1 rounded-lg hover:bg-green-50 transition">
-                          編輯
-                        </button>
-                      )}
-                      <button onClick={() => { setSelectedEq(null); setEqEditing(false) }} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">✕</button>
-                    </div>
-                  </div>
-                  {selectedEq.manufacturer && <p className="text-sm text-slate-500 mb-3">{selectedEq.manufacturer}</p>}
+                ) : selectedEq && (
+                  <>
+                    {selectedEq.thumbnail && (
+                      <div className="w-full bg-cream-50 rounded-t-2xl overflow-hidden flex items-center justify-center" style={{ maxHeight: 220 }}>
+                        <img src={selectedEq.thumbnail} alt={selectedEq.productName} className="object-contain w-full" style={{ maxHeight: 220 }} />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h2 className="text-lg font-semibold text-slate-900">
+                          {selectedEq.productName || selectedEq.manufacturer || '未知機型'}
+                        </h2>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {!eqEditing && (
+                            <button onClick={startEdit} className="text-xs text-brand-700 border border-brand-300 px-2 py-1 rounded-lg hover:bg-brand-50 transition">
+                              編輯
+                            </button>
+                          )}
+                          <button onClick={() => { setSelectedEq(null); setEqEditing(false) }} className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition text-base leading-none mt-0.5">✕</button>
+                        </div>
+                      </div>
+                      {selectedEq.manufacturer && <p className="text-sm text-slate-500 mb-3">{selectedEq.manufacturer}</p>}
 
-                  {eqEditing ? (
-                    /* ── Edit Mode ── */
-                    <div className="space-y-3 text-sm">
-                      <div>
-                        <label className="text-xs text-slate-400 block mb-1">產品狀態</label>
-                        <select
-                          value={eqForm.status ?? ''}
-                          onChange={(e) => setEqForm((f) => ({ ...f, status: e.target.value }))}
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                        >
-                          <option value="">— 未設定 —</option>
-                          {['正常','新機','高齡設備','報廢','借用中','狀態不明'].map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                      {eqEditing ? (
+                        /* ── Edit Mode ── */
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <label className="text-xs text-stone-400 block mb-1">產品狀態</label>
+                            <select
+                              value={eqForm.status ?? ''}
+                              onChange={(e) => setEqForm((f) => ({ ...f, status: e.target.value }))}
+                              className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                            >
+                              <option value="">— 未設定 —</option>
+                              {['正常','新機','高齡設備','報廢','借用中','狀態不明'].map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {([
+                            ['serialNumber', '序號'],
+                            ['supportId', 'Support ID'],
+                            ['teamViewerId', 'TeamViewer ID'],
+                            ['dongleSerial', 'Dongle 序號'],
+                          ] as [keyof typeof eqForm, string][]).map(([field, label]) => (
+                            <div key={field}>
+                              <label className="text-xs text-stone-400 block mb-1">{label}</label>
+                              <input
+                                type="text"
+                                value={(eqForm[field] as string) ?? ''}
+                                onChange={(e) => setEqForm((f) => ({ ...f, [field]: e.target.value }))}
+                                className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                              />
+                            </div>
                           ))}
-                        </select>
-                      </div>
-                      {([
-                        ['serialNumber', '序號'],
-                        ['supportId', 'Support ID'],
-                        ['teamViewerId', 'TeamViewer ID'],
-                        ['dongleSerial', 'Dongle 序號'],
-                      ] as [keyof typeof eqForm, string][]).map(([field, label]) => (
-                        <div key={field}>
-                          <label className="text-xs text-slate-400 block mb-1">{label}</label>
-                          <input
-                            type="text"
-                            value={(eqForm[field] as string) ?? ''}
-                            onChange={(e) => setEqForm((f) => ({ ...f, [field]: e.target.value }))}
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                          />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-stone-400 block mb-1">啟用日期</label>
+                              <input type="date" value={eqForm.activationDate ?? ''} onChange={(e) => setEqForm((f) => ({ ...f, activationDate: e.target.value }))} className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-stone-400 block mb-1">保固結束日期</label>
+                              <input type="date" value={eqForm.warrantyEnd ?? ''} onChange={(e) => setEqForm((f) => ({ ...f, warrantyEnd: e.target.value }))} className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs text-stone-400 block mb-1">備註</label>
+                            <textarea
+                              rows={3}
+                              value={eqForm.note ?? ''}
+                              onChange={(e) => setEqForm((f) => ({ ...f, note: e.target.value }))}
+                              className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={saveEdit}
+                              disabled={eqSaving}
+                              className="button-primary flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                            >
+                              {eqSaving ? '儲存中…' : '儲存'}
+                            </button>
+                            <button
+                              onClick={() => setEqEditing(false)}
+                              className="button-secondary flex-1 py-2 rounded-lg text-sm"
+                            >
+                              取消
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-slate-400 block mb-1">啟用日期</label>
-                          <input type="date" value={eqForm.activationDate ?? ''} onChange={(e) => setEqForm((f) => ({ ...f, activationDate: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-400 block mb-1">保固結束日期</label>
-                          <input type="date" value={eqForm.warrantyEnd ?? ''} onChange={(e) => setEqForm((f) => ({ ...f, warrantyEnd: e.target.value }))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-400 block mb-1">備註</label>
-                        <textarea
-                          rows={3}
-                          value={eqForm.note ?? ''}
-                          onChange={(e) => setEqForm((f) => ({ ...f, note: e.target.value }))}
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 resize-none"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={saveEdit}
-                          disabled={eqSaving}
-                          className="flex-1 bg-green-800 hover:bg-green-900 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
-                        >
-                          {eqSaving ? '儲存中…' : '儲存'}
-                        </button>
-                        <button
-                          onClick={() => setEqEditing(false)}
-                          className="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 py-2 rounded-lg text-sm transition"
-                        >
-                          取消
-                        </button>
-                      </div>
+                      ) : (
+                        /* ── View Mode ── */
+                        <>
+                          {selectedEq.status && (
+                            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-4 ${EQUIPMENT_STATUS_STYLES[selectedEq.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                              {selectedEq.status}
+                            </span>
+                          )}
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            {selectedEq.serialNumber && <InfoRow label="序號" value={selectedEq.serialNumber} />}
+                            {selectedEq.supportId && <InfoRow label="Support ID" value={selectedEq.supportId} />}
+                            {selectedEq.teamViewerId && <InfoRow label="TeamViewer ID" value={selectedEq.teamViewerId} />}
+                            {selectedEq.dongleSerial && <InfoRow label="Dongle 序號" value={selectedEq.dongleSerial} />}
+                            {selectedEq.activationDate && <InfoRow label="啟用日期" value={selectedEq.activationDate.slice(0,10).replace(/-/g,'/')} />}
+                            {selectedEq.warrantyEnd && <InfoRow label="保固結束" value={selectedEq.warrantyEnd.slice(0,10).replace(/-/g,'/')} />}
+                          </div>
+                          {selectedEq.note && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                              <dt className="text-xs text-slate-400 mb-1">備註</dt>
+                              <dd className="text-sm text-slate-700 whitespace-pre-wrap">{selectedEq.note}</dd>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    /* ── View Mode ── */
-                    <>
-                      {selectedEq.status && (
-                        <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-4 ${EQUIPMENT_STATUS_STYLES[selectedEq.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                          {selectedEq.status}
-                        </span>
-                      )}
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        {selectedEq.serialNumber && <InfoRow label="序號" value={selectedEq.serialNumber} />}
-                        {selectedEq.supportId && <InfoRow label="Support ID" value={selectedEq.supportId} />}
-                        {selectedEq.teamViewerId && <InfoRow label="TeamViewer ID" value={selectedEq.teamViewerId} />}
-                        {selectedEq.dongleSerial && <InfoRow label="Dongle 序號" value={selectedEq.dongleSerial} />}
-                        {selectedEq.activationDate && <InfoRow label="啟用日期" value={selectedEq.activationDate.slice(0,10).replace(/-/g,'/')} />}
-                        {selectedEq.warrantyEnd && <InfoRow label="保固結束" value={selectedEq.warrantyEnd.slice(0,10).replace(/-/g,'/')} />}
-                      </div>
-                      {selectedEq.note && (
-                        <div className="mt-4 pt-4 border-t border-slate-100">
-                          <dt className="text-xs text-slate-400 mb-1">備註</dt>
-                          <dd className="text-sm text-slate-700 whitespace-pre-wrap">{selectedEq.note}</dd>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </AppShell>
   )
 }
