@@ -331,7 +331,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   const summary: DashboardSummary = { customers, tickets, opportunities, products, users }
 
-  setCachedValue('dashboard:summary', summary, 60_000)
+  setCachedValue('dashboard:summary', summary, 300_000) // 5 min
   return summary
 }
 
@@ -399,7 +399,7 @@ export async function searchEquipment(query: string): Promise<Equipment[]> {
     originalProductId: getRelationIds(page, '機型')[0] ?? '',
   }))
 
-  setCachedValue(cacheKey, items, 20_000)
+  setCachedValue(cacheKey, items, 120_000) // 2 min
   return items
 }
 
@@ -597,7 +597,7 @@ export async function listCustomerEquipment(customerId: string): Promise<Equipme
     }
   })
 
-  setCachedValue(cacheKey, items, 30_000)
+  setCachedValue(cacheKey, items, 180_000) // 3 min
   return items
 }
 
@@ -694,7 +694,7 @@ export async function listCustomerTickets(customerId: string): Promise<Ticket[]>
   const rawItems = (response.results ?? []).map(mapTicketPageRaw)
   const items = (await resolveTicketNames(rawItems)) as Ticket[]
 
-  setCachedValue(cacheKey, items, 30_000)
+  setCachedValue(cacheKey, items, 180_000) // 3 min
   return items
 }
 
@@ -743,7 +743,7 @@ export async function searchSystemCustomers(
     salesperson: getSelect(page, '負責業務'),
   }))
 
-  setCachedValue(cacheKey, items, 30_000)
+  setCachedValue(cacheKey, items, 180_000) // 3 min
   return items
 }
 
@@ -848,7 +848,7 @@ async function getAllProducts(): Promise<ProductItem[]> {
     }
   })
 
-  setCachedValue(cacheKey, items, 60_000)
+  setCachedValue(cacheKey, items, 600_000) // 10 min
   return items
 }
 
@@ -1033,7 +1033,7 @@ export async function listSystemTickets(): Promise<Ticket[]> {
 
   const rawItems = (response.results ?? []).map(mapTicketPageRaw)
   const items = (await resolveTicketNames(rawItems)) as Ticket[]
-  setCachedValue('tickets:list', items, 15_000)
+  setCachedValue('tickets:list', items, 180_000) // 3 min
   return items
 }
 
@@ -1047,7 +1047,7 @@ export async function getSystemTicketById(id: string) {
   )
 
   const [ticket] = await resolveTicketNames([mapTicketPageRaw(page)])
-  setCachedValue(cacheKey, ticket, 30_000)
+  setCachedValue(cacheKey, ticket, 300_000) // 5 min
   return ticket
 }
 
@@ -1390,7 +1390,7 @@ export async function getSystemUsers(): Promise<SystemUser[]> {
     permissions: mapUserPermissions(page),
   }))
 
-  setCachedValue(cacheKey, items, 60_000)
+  setCachedValue(cacheKey, items, 600_000) // 10 min
   return items
 }
 
