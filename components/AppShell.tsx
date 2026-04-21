@@ -2,9 +2,30 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
+
+// ── Page title mapping for audit log ─────────────────────────
+function getPageTitle(pathname: string): string {
+  const exact: Record<string, string> = {
+    '/dashboard':         '首頁總覽',
+    '/customers':         'CRM 客戶列表',
+    '/tickets':           'RMA 工單列表',
+    '/bd':                'BD 商機',
+    '/products':          '產品管理',
+    '/quote/new':         '新增報價單',
+    '/settings/accounts': '帳號管理',
+    '/settings/audit':    '操作紀錄',
+  }
+  if (exact[pathname]) return exact[pathname]
+  if (/^\/customers\//.test(pathname)) return '客戶詳情'
+  if (/^\/tickets\//.test(pathname)) return 'RMA 工單詳情'
+  if (/^\/quote\//.test(pathname)) return '報價單詳情'
+  if (/^\/share\//.test(pathname)) return '報價單分享頁'
+  return pathname
+}
 
 type NavItem = {
   href: string
@@ -53,6 +74,21 @@ export function AppShell({
   const sessionLoading = status === 'loading'
   const role = (session?.user as any)?.role as string | undefined
   const permissions = (session?.user as any)?.permissions as UserPermissions | undefined
+
+  // ── Page-view audit (fire-and-forget) ──────────────────────
+  const lastLoggedPath = useRef('')
+  useEffect(() => {
+    // Only log after session is loaded and path actually changed
+    if (status !== 'authenticated') return
+    if (pathname === lastLoggedPath.current) return
+    lastLoggedPath.current = pathname
+
+    fetch('/api/audit-pageview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pathname, title: getPageTitle(pathname) }),
+    }).catch(() => {}) // silent — never block the UI
+  }, [pathname, status])
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false

@@ -19,17 +19,19 @@ function formatDateTime(value: string) {
 }
 
 const MODULE_LABEL: Record<string, string> = {
-  auth: '登入',
-  crm: 'CRM',
-  rma: 'RMA',
-  accounts: '帳號',
-  quote: '報價',
-  bd: 'BD',
+  auth:       '登入',
+  navigation: '頁面瀏覽',
+  crm:        'CRM',
+  rma:        'RMA',
+  accounts:   '帳號',
+  quote:      '報價',
+  bd:         'BD',
 }
 
 const ACTION_LABEL: Record<string, { label: string; cls: string }> = {
   login:  { label: '登入', cls: 'bg-blue-100 text-blue-700' },
   logout: { label: '登出', cls: 'bg-slate-100 text-slate-600' },
+  view:   { label: '瀏覽', cls: 'bg-stone-100 text-stone-500' },
   create: { label: '新增', cls: 'bg-brand-100 text-brand-700' },
   update: { label: '修改', cls: 'bg-amber-100 text-amber-700' },
   delete: { label: '刪除', cls: 'bg-red-100 text-red-600' },
