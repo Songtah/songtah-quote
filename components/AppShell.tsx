@@ -10,6 +10,7 @@ type NavItem = {
   href: string
   label: string
   module: ModuleKey | null
+  adminOnly?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -20,16 +21,19 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/products',          label: '產品',    module: 'products' },
   { href: '/quote/new',         label: '報價',    module: 'quote' },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
+  { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
 
 function canViewModule(
   role: string | undefined,
   permissions: UserPermissions | undefined,
-  module: ModuleKey | null
+  module: ModuleKey | null,
+  sessionLoading: boolean
 ): boolean {
-  if (module === null) return true
-  if (role === 'admin') return true
-  if (!permissions) return true
+  if (module === null) return true          // 首頁永遠顯示
+  if (sessionLoading) return false          // session 尚未載入，先隱藏所有模組
+  if (role === 'admin') return true         // admin 看全部
+  if (!permissions) return true            // env 帳號（無 permissions）= admin
   return permissions[module]?.view ?? false
 }
 
@@ -45,11 +49,15 @@ export function AppShell({
   hidePhaseNote?: boolean
 }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const sessionLoading = status === 'loading'
   const role = (session?.user as any)?.role as string | undefined
   const permissions = (session?.user as any)?.permissions as UserPermissions | undefined
 
-  const visibleItems = NAV_ITEMS.filter((item) => canViewModule(role, permissions, item.module))
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && role !== 'admin') return false
+    return canViewModule(role, permissions, item.module, sessionLoading)
+  })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cream-100 via-cream-50 to-brand-50 text-stone-800">
