@@ -2,6 +2,7 @@ import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { getSystemUserByCredentials, allPermissions } from './system-notion'
 import type { UserPermissions } from './system-notion'
+import { logAuditEvent } from './audit'
 
 type AppUser = {
   id: string
@@ -98,6 +99,34 @@ export const authOptions: NextAuthOptions = {
         ;(session.user as any).permissions = (token.permissions as UserPermissions | undefined) ?? undefined
       }
       return session
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      const u = user as any
+      logAuditEvent({
+        module: 'auth',
+        action: 'login',
+        entityType: 'user',
+        entityId: u.id ?? '',
+        entityTitle: u.name ?? '',
+        summary: `登入：${u.name ?? '未知'}`,
+        actor: { id: u.id, name: u.name ?? '未知', role: u.role ?? '' },
+      }).catch((e) => console.error('audit login error:', e))
+    },
+    async signOut({ token }) {
+      const name = typeof token?.name === 'string' ? token.name : '未知'
+      const id = typeof (token as any)?.uid === 'string' ? (token as any).uid : ''
+      const role = typeof (token as any)?.role === 'string' ? (token as any).role : ''
+      logAuditEvent({
+        module: 'auth',
+        action: 'logout',
+        entityType: 'user',
+        entityId: id,
+        entityTitle: name,
+        summary: `登出：${name}`,
+        actor: { id, name, role },
+      }).catch((e) => console.error('audit logout error:', e))
     },
   },
   pages: { signIn: '/login' },

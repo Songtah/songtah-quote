@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createQuote, listQuotes } from '@/lib/notion'
 import type { QuoteItem } from '@/types'
+import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -62,6 +63,19 @@ export async function POST(req: NextRequest) {
       items: quoteItems,
       appUrl,
     })
+
+    await logAuditEvent({
+      module: 'quote',
+      action: 'create',
+      entityType: 'quote',
+      entityId: quote.id,
+      entityTitle: quote.quoteNumber,
+      summary: `建立報價單：${quote.quoteNumber}`,
+      actor: getAuditActor(session),
+      request: getAuditRequestContext(req),
+      after: quote,
+      metadata: { itemCount: quoteItems.length },
+    }).catch((error) => console.error('audit createQuote error:', error))
 
     return NextResponse.json(quote, { status: 201 })
   } catch (err) {

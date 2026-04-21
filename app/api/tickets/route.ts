@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createTicket, listSystemTickets } from '@/lib/system-notion'
 import type { CreateTicketPayload } from '@/types'
+import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 function isRateLimited(error: unknown) {
   if (!error || typeof error !== 'object') return false
@@ -53,6 +54,18 @@ export async function POST(req: NextRequest) {
       status: body.status || '尚未處理',
       priority: body.priority || 'P2',
     })
+
+    await logAuditEvent({
+      module: 'rma',
+      action: 'create',
+      entityType: 'ticket',
+      entityId: ticket.id,
+      entityTitle: ticket.title || ticket.number,
+      summary: `建立工單：${ticket.number} ${ticket.title || ticket.customerName}`,
+      actor: getAuditActor(session),
+      request: getAuditRequestContext(req),
+      after: ticket,
+    }).catch((error) => console.error('audit createTicket error:', error))
 
     return NextResponse.json(ticket, { status: 201 })
   } catch (error) {

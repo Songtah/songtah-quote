@@ -36,3 +36,9 @@ export async function requireViewPermission(module: ModuleKey) {
   if (!canView(session, module)) redirect('/dashboard')
   return session
 }
+
+export async function requireAdmin() {
+  const session = await requireSession()
+  if ((session.user as any)?.role !== 'admin') redirect('/dashboard')
+  return session
+}
