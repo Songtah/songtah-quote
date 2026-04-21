@@ -295,9 +295,8 @@ export async function createQuote(data: {
 export async function listQuotes(): Promise<Quote[]> {
   const resp: any = await notion.databases.query({
     database_id: DB.quotes,
-    filter: { property: '狀態', select: { does_not_equal: '已刪除' } },
     sorts: [{ property: '建立時間', direction: 'descending' }],
-    page_size: 50,
+    page_size: 100,
   })
 
   return resp.results
