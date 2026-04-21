@@ -287,7 +287,7 @@ export default function QuoteForm({ products }: Props) {
             下載 PDF
           </a>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/quotes')}
             className="border border-gray-300 px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             返回列表
@@ -732,7 +732,7 @@ export default function QuoteForm({ products }: Props) {
       )}
 
       <div className="flex justify-end gap-3">
-        <a href="/dashboard" className="border border-white/60 px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10">
+        <a href="/quotes" className="border border-white/60 px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10">
           取消
         </a>
         <button

@@ -16,6 +16,7 @@ function getPageTitle(pathname: string): string {
     '/bd':                'BD 商機',
     '/products':          '產品管理',
     '/quote/new':         '新增報價單',
+    '/quotes':            '報價單管理',
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
   }
@@ -23,6 +24,7 @@ function getPageTitle(pathname: string): string {
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
   if (/^\/tickets\//.test(pathname)) return 'RMA 工單詳情'
   if (/^\/quote\//.test(pathname)) return '報價單詳情'
+  if (/^\/quotes/.test(pathname)) return '報價單管理'
   if (/^\/share\//.test(pathname)) return '報價單分享頁'
   return pathname
 }
@@ -40,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tickets',           label: 'RMA',     module: 'rma' },
   { href: '/bd',                label: 'BD',      module: 'bd' },
   { href: '/products',          label: '產品',    module: 'products' },
-  { href: '/quote/new',         label: '報價',    module: 'quote' },
+  { href: '/quotes',             label: '報價',    module: 'quote' },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
@@ -125,7 +127,7 @@ export function AppShell({
               key={item.href}
               href={item.href}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                pathname === item.href
+                (pathname === item.href || (item.href === '/quotes' && pathname.startsWith('/quote')))
                   ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-[0_8px_20px_-8px_rgba(184,149,106,0.5)]'
                   : 'bg-white/80 text-stone-500 ring-1 ring-brand-200/50 hover:bg-brand-50 hover:text-stone-800 hover:ring-brand-300/60'
               }`}
