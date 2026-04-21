@@ -26,16 +26,16 @@ export function ModuleCard({
       />
       <div className="eyebrow mb-4">Module</div>
       <div className="mb-4 h-2 w-24 rounded-full" style={{ backgroundColor: accent }} />
-      <div className="flex items-end justify-between gap-3">
-        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-        <div className="text-right">
-          <div className="text-3xl font-black text-slate-900">{count}</div>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">{title}</h3>
           {countLabel && (
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-1">
               {countLabel}
-            </div>
+            </p>
           )}
         </div>
+        <div className="text-3xl font-black text-slate-900 shrink-0">{count}</div>
       </div>
       <p className="muted mt-3">{description}</p>
       <div className="mt-5 text-sm font-semibold text-emerald-700 transition group-hover:text-emerald-800">
