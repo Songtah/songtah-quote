@@ -8,7 +8,7 @@ import type { Quote } from '@/types'
 // 中文字體：fontsource woff
 Font.register({
   family: 'NotoSansTC',
-  src: path.join(process.cwd(), 'public', 'fonts', 'noto-sans-tc-400.woff'),
+  src: 'https://fonts.gstatic.com/s/notosanstc/v35/-nFuOG829Oofr2wohFbTp9iFOSsLA_ZJ1g.woff2',
 })
 
 const styles = StyleSheet.create({
