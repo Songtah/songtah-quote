@@ -48,6 +48,20 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#666',
   },
+  companyBlock: {
+    marginTop: 6,
+  },
+  companyNameTw: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 3,
+  },
+  companyDetail: {
+    fontSize: 7.5,
+    color: '#555',
+    lineHeight: 1.6,
+  },
   quoteTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -63,7 +77,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   headerLeft: {
     justifyContent: 'center',
@@ -225,6 +239,12 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
                 <Image src={path.join(process.cwd(), 'public', 'Logo.png')} style={styles.logo} />
               </View>
               <Text style={styles.companyInfo}>SONGTAH TRADING CO LTD</Text>
+              <View style={styles.companyBlock}>
+                <Text style={styles.companyNameTw}>崧達企業股份有限公司</Text>
+                <Text style={styles.companyDetail}>電話　02-2703-6465　｜　統編　30934957</Text>
+                <Text style={styles.companyDetail}>臺北市大安區敦化南路1段376號12F之1</Text>
+                <Text style={styles.companyDetail}>sales@songtah.com.tw</Text>
+              </View>
             </View>
             <View>
               <Text style={styles.quoteTitle}>報　價　單</Text>
