@@ -8,7 +8,7 @@ import type { Quote } from '@/types'
 // 中文字體：fontsource woff
 Font.register({
   family: 'NotoSansTC',
-  src: path.join(process.cwd(), 'node_modules/@fontsource/noto-sans-tc/files/noto-sans-tc-chinese-traditional-400-normal.woff'),
+  src: path.join(process.cwd(), 'public', 'fonts', 'noto-sans-tc-400.woff'),
 })
 
 const styles = StyleSheet.create({
@@ -295,13 +295,13 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
                   )}
                 </View>
               </View>
-              <Text style={styles.colName}>{item.name}</Text>
+              <Text style={styles.colName}>{item.name || ''}</Text>
               <Text style={styles.colSpec}>{item.spec || '—'}</Text>
-              <Text style={styles.colUnit}>{item.unit}</Text>
-              <Text style={styles.colQty}>{item.quantity}</Text>
+              <Text style={styles.colUnit}>{item.unit || ''}</Text>
+              <Text style={styles.colQty}>{String(item.quantity ?? '')}</Text>
               <Text style={styles.colPrice}>{formatMoney(item.unitPrice)}</Text>
               <Text style={styles.colSubtotal}>{formatMoney(item.subtotal)}</Text>
-              <Text style={styles.colNote}>{item.note}</Text>
+              <Text style={styles.colNote}>{item.note || ''}</Text>
             </View>
           ))}
         </View>
