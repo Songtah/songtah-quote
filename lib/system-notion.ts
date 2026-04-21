@@ -194,18 +194,36 @@ async function queryDatabase(databaseId: string | undefined, pageSize = 6) {
   return response.results ?? []
 }
 
-// Single-call summary: one request returns both rows and approximate total.
-// Avoids the separate countDatabase pagination which caused 10+ parallel API calls.
+// Fetch rows and paginate to get the true total count.
 async function querySummary(databaseId: string | undefined, pageSize = 100): Promise<{ rows: any[]; total: number }> {
   if (!databaseId) return { rows: [], total: 0 }
-  const response: any = await notionCallWithRetry('querySummary', () =>
+  const firstPage: any = await notionCallWithRetry('querySummary', () =>
     notion.databases.query({
       database_id: normalizeDatabaseId(databaseId),
       page_size: pageSize,
     })
   )
-  const rows = response.results ?? []
-  return { rows, total: rows.length }
+  const rows = firstPage.results ?? []
+
+  // No more pages → exact count
+  if (!firstPage.has_more) return { rows, total: rows.length }
+
+  // Paginate sequentially just to count remaining records
+  let total = rows.length
+  let cursor: string | undefined = firstPage.next_cursor ?? undefined
+  while (cursor) {
+    const page: any = await notionCallWithRetry('querySummary-count', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(databaseId),
+        page_size: 100,
+        start_cursor: cursor,
+      })
+    )
+    total += (page.results ?? []).length
+    cursor = page.has_more ? (page.next_cursor ?? undefined) : undefined
+  }
+
+  return { rows, total }
 }
 
 async function getCustomersSummary(): Promise<ModuleSummary> {
@@ -309,7 +327,7 @@ async function getUsersSummary(): Promise<ModuleSummary> {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const cached = getCachedValue<DashboardSummary>('dashboard:summary')
+  const cached = getCachedValue<DashboardSummary>('dashboard:summary:v2')
   if (cached) return cached
 
   const safe = async <T>(fn: () => Promise<T>, fallback: T) => {
@@ -331,7 +349,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   const summary: DashboardSummary = { customers, tickets, opportunities, products, users }
 
-  setCachedValue('dashboard:summary', summary, 300_000) // 5 min
+  setCachedValue('dashboard:summary:v2', summary, 300_000) // 5 min
   return summary
 }
 
