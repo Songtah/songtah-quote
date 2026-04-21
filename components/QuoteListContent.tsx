@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Quote } from '@/types'
+import QuoteForm from '@/components/QuoteForm'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,14 +17,11 @@ function formatDate(d: string) {
   return d.slice(0, 10).replace(/-/g, '/')
 }
 
-const STATUS_META: Record<
-  string,
-  { label: string; cls: string }
-> = {
+const STATUS_META: Record<string, { label: string; cls: string }> = {
   草稿:   { label: '草稿',   cls: 'bg-stone-100 text-stone-500' },
-  已送出: { label: '已送出', cls: 'bg-blue-100  text-blue-700' },
+  已送出: { label: '已送出', cls: 'bg-blue-100  text-blue-700'  },
   已確認: { label: '已確認', cls: 'bg-brand-100 text-brand-700' },
-  已過期: { label: '已過期', cls: 'bg-red-100   text-red-600' },
+  已過期: { label: '已過期', cls: 'bg-red-100   text-red-600'   },
 }
 
 // ── Delete Confirmation Modal ─────────────────────────────────────────────────
@@ -41,22 +39,19 @@ function DeleteModal({
 }) {
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
     >
-      {/* Backdrop */}
       <motion.div
-        className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm"
         onClick={onCancel}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       />
-
-      {/* Panel */}
       <motion.div
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
         initial={{ opacity: 0, scale: 0.94, y: 16 }}
@@ -76,20 +71,72 @@ function DeleteModal({
           此操作無法復原，相關品項也將一併刪除。
         </p>
         <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            className="button-secondary flex-1 rounded-xl"
-            disabled={loading}
-          >
+          <button onClick={onCancel} disabled={loading}
+            className="button-secondary flex-1 rounded-xl">
             取消
           </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2.5 transition disabled:opacity-60"
-          >
+          <button onClick={onConfirm} disabled={loading}
+            className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2.5 transition disabled:opacity-60">
             {loading ? '刪除中…' : '確認刪除'}
           </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── New-Quote Drawer ──────────────────────────────────────────────────────────
+
+function NewQuoteDrawer({
+  onCreated,
+  onClose,
+}: {
+  onCreated: (result: { shareUrl: string; id: string; quoteNumber: string }) => void
+  onClose: () => void
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+
+      {/* Drawer panel — slides in from the right */}
+      <motion.div
+        className="relative ml-auto flex h-full w-full max-w-4xl flex-col bg-gradient-to-br from-cream-100 via-cream-50 to-brand-50 shadow-2xl"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {/* Drawer header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-brand-200/40 bg-white/90 px-6 py-4 backdrop-blur-md">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-500">報價單管理</p>
+            <h2 className="text-lg font-bold text-stone-800">新增報價單</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition hover:bg-stone-200 hover:text-stone-700"
+            aria-label="關閉"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable form body */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <QuoteForm onCreated={onCreated} onClose={onClose} />
         </div>
       </motion.div>
     </motion.div>
@@ -104,12 +151,18 @@ export default function QuoteListContent() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+
+  // Drawer
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerVisible, setDrawerVisible] = useState(false)
+
+  // Delete
   const [deleteTarget, setDeleteTarget] = useState<Quote | null>(null)
   const [deleteVisible, setDeleteVisible] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   // ── Fetch ──────────────────────────────────────────────────────
-  useEffect(() => {
+  function loadQuotes() {
     setLoading(true)
     fetch('/api/quotes')
       .then(async (res) => {
@@ -119,7 +172,9 @@ export default function QuoteListContent() {
       })
       .catch((err: Error) => setError(err.message || '讀取失敗'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadQuotes() }, [])
 
   // ── Filter ─────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -134,13 +189,28 @@ export default function QuoteListContent() {
 
   // ── Status counts ──────────────────────────────────────────────
   const statusCounts = useMemo(
-    () =>
-      quotes.reduce<Record<string, number>>((acc, q) => {
-        acc[q.status] = (acc[q.status] ?? 0) + 1
-        return acc
-      }, {}),
+    () => quotes.reduce<Record<string, number>>((acc, q) => {
+      acc[q.status] = (acc[q.status] ?? 0) + 1
+      return acc
+    }, {}),
     [quotes]
   )
+
+  // ── Drawer handlers ────────────────────────────────────────────
+  function openDrawer() {
+    setDrawerOpen(true)
+    setDrawerVisible(true)
+  }
+
+  function closeDrawer() {
+    setDrawerVisible(false)
+    setTimeout(() => setDrawerOpen(false), 340)
+  }
+
+  function handleCreated(result: { shareUrl: string; id: string; quoteNumber: string }) {
+    // Refresh list in background; form shows success screen
+    loadQuotes()
+  }
 
   // ── Delete handlers ────────────────────────────────────────────
   function openDelete(quote: Quote) {
@@ -178,7 +248,7 @@ export default function QuoteListContent() {
       <div className="space-y-4">
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Status summary chips */}
+          {/* Status chips */}
           <div className="flex flex-wrap gap-2">
             {Object.entries(STATUS_META).map(([status, meta]) => (
               <button
@@ -198,9 +268,9 @@ export default function QuoteListContent() {
             ))}
           </div>
 
-          <Link href="/quote/new" className="button-primary rounded-full shrink-0">
+          <button onClick={openDrawer} className="button-primary rounded-full shrink-0">
             ＋ 新增報價單
-          </Link>
+          </button>
         </div>
 
         {/* Search + filter */}
@@ -229,13 +299,9 @@ export default function QuoteListContent() {
         {/* Record count */}
         {!loading && !error && quotes.length > 0 && (
           <div className="flex items-center gap-2 text-xs text-stone-400 px-1">
-            <span>
-              共 <strong className="text-stone-700">{quotes.length}</strong> 張報價單
-            </span>
+            <span>共 <strong className="text-stone-700">{quotes.length}</strong> 張報價單</span>
             {filtered.length !== quotes.length && (
-              <span>
-                ・篩選後 <strong className="text-brand-600">{filtered.length}</strong> 張
-              </span>
+              <span>・篩選後 <strong className="text-brand-600">{filtered.length}</strong> 張</span>
             )}
           </div>
         )}
@@ -248,7 +314,9 @@ export default function QuoteListContent() {
             <div className="m-4 rounded-2xl bg-red-50 p-8 text-center text-sm text-red-500">{error}</div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center text-sm text-stone-400">
-              {query || statusFilter ? '沒有符合條件的報價單。' : '尚無報價單，點擊右上角「新增報價單」開始建立。'}
+              {query || statusFilter
+                ? '沒有符合條件的報價單。'
+                : '尚無報價單，點擊右上角「新增報價單」開始建立。'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -270,53 +338,37 @@ export default function QuoteListContent() {
                     const status = STATUS_META[quote.status] ?? { label: quote.status, cls: 'bg-stone-100 text-stone-500' }
                     return (
                       <tr key={quote.id} className="hover:bg-cream-50/60 transition-colors group">
-                        {/* 報價單號 */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="font-mono font-semibold text-stone-700 text-xs tracking-wide">
                             {quote.quoteNumber}
                           </span>
                         </td>
-
-                        {/* 客戶 */}
                         <td className="px-4 py-3 font-medium text-stone-800 min-w-[120px]">
                           {quote.customerName}
                         </td>
-
-                        {/* 業務 */}
                         <td className="px-4 py-3 text-stone-500">
                           {quote.salesperson || '—'}
                         </td>
-
-                        {/* 金額 */}
                         <td className="px-4 py-3 text-right font-semibold text-stone-800 whitespace-nowrap">
                           {formatMoney(quote.total)}
                         </td>
-
-                        {/* 狀態 */}
                         <td className="px-4 py-3 text-center">
                           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${status.cls}`}>
                             {status.label}
                           </span>
                         </td>
-
-                        {/* 建立日期 */}
                         <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                           {formatDate(quote.createdAt)}
                         </td>
-
-                        {/* 有效期限 */}
                         <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                           {formatDate(quote.validUntil)}
                         </td>
-
-                        {/* 操作 */}
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
                             <Link
                               href={`/share/${quote.id}`}
                               target="_blank"
                               rel="noreferrer"
-                              title="預覽報價單"
                               className="inline-flex items-center gap-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
                             >
                               👁 預覽
@@ -325,14 +377,12 @@ export default function QuoteListContent() {
                               href={`/api/quotes/${quote.id}/pdf`}
                               target="_blank"
                               rel="noreferrer"
-                              title="下載 PDF"
                               className="inline-flex items-center gap-1 rounded-lg bg-stone-50 hover:bg-stone-100 text-stone-600 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
                             >
                               ↓ PDF
                             </a>
                             <button
                               onClick={() => openDelete(quote)}
-                              title="刪除報價單"
                               className="inline-flex items-center rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-xs font-semibold px-2.5 py-1.5 transition"
                             >
                               刪除
@@ -348,6 +398,16 @@ export default function QuoteListContent() {
           )}
         </div>
       </div>
+
+      {/* New-quote drawer */}
+      <AnimatePresence>
+        {drawerOpen && drawerVisible && (
+          <NewQuoteDrawer
+            onCreated={handleCreated}
+            onClose={closeDrawer}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Delete confirmation modal */}
       <AnimatePresence>

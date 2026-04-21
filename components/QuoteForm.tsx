@@ -4,7 +4,12 @@ import { useRouter } from 'next/navigation'
 import type { Customer, Product, QuoteItem } from '@/types'
 
 interface Props {
-  products: Product[]
+  /** Pass server-fetched products to skip the client-side fetch */
+  products?: Product[]
+  /** Called immediately after the quote is created (e.g. to refresh a list) */
+  onCreated?: (result: { shareUrl: string; id: string; quoteNumber: string }) => void
+  /** Called when the user wants to close/cancel (e.g. to close a drawer) */
+  onClose?: () => void
 }
 
 type DraftItem = QuoteItem & { tempId: string }
@@ -54,10 +59,22 @@ function createCustomItem(): DraftItem {
   }
 }
 
-export default function QuoteForm({ products }: Props) {
+export default function QuoteForm({ products: productsProp, onCreated, onClose }: Props) {
   const router = useRouter()
   const detailSectionRef = useRef<HTMLDivElement | null>(null)
   const latestAddedItemRef = useRef<HTMLDivElement | null>(null)
+
+  // ── Product loading (client-side fetch when prop not provided) ─
+  const [products, setProducts] = useState<Product[]>(productsProp ?? [])
+  const [productsLoading, setProductsLoading] = useState(!productsProp)
+  useEffect(() => {
+    if (productsProp) return
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setProductsLoading(false))
+  }, [productsProp])
 
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
@@ -249,7 +266,9 @@ export default function QuoteForm({ products }: Props) {
 
     const data = await res.json()
     const pageId = data.id.replace(/-/g, '')
-    setResult({ shareUrl: `/share/${pageId}`, id: pageId, quoteNumber: data.quoteNumber })
+    const resultData = { shareUrl: `/share/${pageId}`, id: pageId, quoteNumber: data.quoteNumber }
+    setResult(resultData)
+    onCreated?.(resultData)
   }
 
   if (result) {
@@ -287,7 +306,7 @@ export default function QuoteForm({ products }: Props) {
             下載 PDF
           </a>
           <button
-            onClick={() => router.push('/quotes')}
+            onClick={() => onClose ? onClose() : router.push('/quotes')}
             className="border border-gray-300 px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             返回列表
@@ -473,6 +492,9 @@ export default function QuoteForm({ products }: Props) {
         </div>
 
         <div className="max-h-72 overflow-y-auto border border-gray-100 rounded-xl">
+          {productsLoading ? (
+            <div className="py-8 text-center text-sm text-stone-400">載入產品清單中…</div>
+          ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 text-xs text-gray-500">
               <tr>
@@ -525,6 +547,7 @@ export default function QuoteForm({ products }: Props) {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </div>
 
@@ -732,9 +755,13 @@ export default function QuoteForm({ products }: Props) {
       )}
 
       <div className="flex justify-end gap-3">
-        <a href="/quotes" className="border border-white/60 px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10">
+        <button
+          type="button"
+          onClick={() => onClose ? onClose() : router.push('/quotes')}
+          className="border border-white/60 px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10"
+        >
           取消
-        </a>
+        </button>
         <button
           type="submit"
           disabled={submitting}
