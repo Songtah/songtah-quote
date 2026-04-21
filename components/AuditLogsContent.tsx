@@ -157,7 +157,7 @@ export default function AuditLogsContent() {
                         {formatDateTime(log.occurredAt)}
                       </td>
                       <td className="px-4 py-3 text-stone-600">
-                        {MODULE_LABEL[log.module] ?? log.module || '—'}
+                        {MODULE_LABEL[log.module] || log.module || '—'}
                       </td>
                       <td className="px-4 py-3">
                         {actionMeta ? (

@@ -204,24 +204,28 @@ async function findExistingAuditDb(parentPageId?: string) {
 }
 
 async function ensureAuditDb() {
+  // 1. Explicit env var (fastest path)
   if (process.env.NOTION_AUDIT_LOGS_DB) {
     return normalizeDatabaseId(process.env.NOTION_AUDIT_LOGS_DB)
   }
 
+  // 2. In-memory cache
   if (auditDbIdCache) return auditDbIdCache
 
+  // 3. Search workspace by title — works even without knowing the parent page
+  const existing = await findExistingAuditDb()
+  if (existing?.id) {
+    auditDbIdCache = normalizeDatabaseId(existing.id)
+    return auditDbIdCache
+  }
+
+  // 4. DB not found → try to create it under the parent of the visits DB
   const parentPageId =
     process.env.NOTION_AUDIT_PARENT_PAGE_ID ??
     (await resolveAuditParentPageId())
 
   if (!parentPageId) {
     throw new Error('Cannot resolve Notion page for audit database')
-  }
-
-  const existing = await findExistingAuditDb(parentPageId)
-  if (existing?.id) {
-    auditDbIdCache = normalizeDatabaseId(existing.id)
-    return auditDbIdCache
   }
 
   const created: any = await notionCallWithRetry('audit.createDb', () =>
