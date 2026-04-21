@@ -5,10 +5,10 @@ import {
 } from '@react-pdf/renderer'
 import type { Quote } from '@/types'
 
-// 中文字體：fontsource woff
+// 中文字體：@fontsource woff (woff2 不被 fontkit 支援)
 Font.register({
   family: 'NotoSansTC',
-  src: 'https://fonts.gstatic.com/s/notosanstc/v35/-nFuOG829Oofr2wohFbTp9iFOSsLA_ZJ1g.woff2',
+  src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5/files/noto-sans-tc-chinese-traditional-400-normal.woff',
 })
 
 const styles = StyleSheet.create({
@@ -315,7 +315,7 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
         </View>
 
         {/* Note */}
-        {quote.note && (
+        {!!quote.note && (
           <View style={styles.noteSection}>
             <Text style={styles.noteLabel}>備註</Text>
             <Text style={styles.noteText}>{quote.note}</Text>
