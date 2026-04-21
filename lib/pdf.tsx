@@ -238,7 +238,7 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
               <View style={styles.logoFrame}>
                 <Image src={path.join(process.cwd(), 'public', 'Logo.png')} style={styles.logo} />
               </View>
-              <Text style={styles.companyInfo}>SONGTAH TRADING CO LTD</Text>
+              <Text style={styles.companyInfo}>SONGTAH TRADING CO.,LTD.</Text>
               <View style={styles.companyBlock}>
                 <Text style={styles.companyNameTw}>崧達企業股份有限公司</Text>
                 <Text style={styles.companyDetail}>電話　02-2703-6465　｜　統編　30934957</Text>
@@ -344,7 +344,7 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>SONGTAH TRADING CO LTD｜本報價單有效期至 {formatDate(quote.validUntil)}</Text>
+          <Text style={styles.footerText}>SONGTAH TRADING CO.,LTD.｜本報價單有效期至 {formatDate(quote.validUntil)}</Text>
           <Text style={styles.footerText}>報價單號：{quote.quoteNumber}</Text>
         </View>
       </Page>

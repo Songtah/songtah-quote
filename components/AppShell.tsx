@@ -111,7 +111,7 @@ export function AppShell({
             />
             <div className="hidden sm:block h-8 w-px bg-brand-200/60" />
             <div className="min-w-0">
-              <p className="eyebrow text-[10px]">SONGTAH TRADING CO LTD</p>
+              <p className="eyebrow text-[10px]">SONGTAH TRADING CO.,LTD.</p>
               <h1 className="truncate text-lg font-bold text-stone-800">{title}</h1>
             </div>
           </div>

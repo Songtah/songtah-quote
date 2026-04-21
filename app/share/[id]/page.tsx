@@ -52,7 +52,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                   <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-48 object-contain" />
                 </div>
                 <div className="text-white/60 text-[10px] font-semibold tracking-[0.22em] uppercase">
-                  SONGTAH TRADING CO LTD
+                  SONGTAH TRADING CO.,LTD.
                 </div>
               </div>
               <div className="text-right">
@@ -158,7 +158,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
         </div>
 
         <div className="text-center mt-6 text-xs text-stone-400">
-          SONGTAH TRADING CO LTD｜此報價單由系統自動產生
+          SONGTAH TRADING CO.,LTD.｜此報價單由系統自動產生
         </div>
       </div>
     </div>
