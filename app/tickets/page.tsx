@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
 import { listSystemTickets } from '@/lib/system-notion'
 import TicketList from '@/components/TicketList'
+import NewTicketModal from '@/components/NewTicketModal'
 import { requireViewPermission } from '@/lib/permissions'
 import type { Ticket } from '@/types'
 
@@ -46,9 +46,7 @@ export default async function TicketsPage() {
 
       {/* Actions */}
       <div className="mb-5 flex justify-end">
-        <Link href="/tickets/new" className="button-primary">
-          ＋ 新建工單
-        </Link>
+        <NewTicketModal />
       </div>
 
       {/* Interactive ticket list */}
