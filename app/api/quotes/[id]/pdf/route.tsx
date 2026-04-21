@@ -4,6 +4,11 @@ import { getQuote } from '@/lib/notion'
 import { QuoteDocument } from '@/lib/pdf'
 import React from 'react'
 
+// @react-pdf/renderer and Node.js `path` require the Node.js runtime.
+// Without this, Next.js defaults to Edge Runtime which lacks filesystem APIs.
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const quote = await getQuote(params.id)

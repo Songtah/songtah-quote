@@ -32,21 +32,36 @@ export default async function SharePage({ params }: { params: { id: string } }) 
       <div className="max-w-3xl mx-auto">
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-[0_16px_48px_-16px_rgba(90,66,51,0.12)] border border-brand-200/40 overflow-hidden mb-4">
-          <div className="bg-gradient-to-r from-stone-800 to-stone-900 px-8 py-6 text-white relative overflow-hidden">
-            {/* Subtle gold shimmer */}
-            <div className="absolute inset-0 opacity-10" style={{
-              background: 'linear-gradient(135deg, transparent 30%, rgba(184,149,106,0.3) 50%, transparent 70%)',
+          <div
+            className="px-8 py-7 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #c8a96e 0%, #e8d4a0 28%, #b8956a 52%, #d4af70 76%, #c09050 100%)',
+            }}
+          >
+            {/* Metallic sheen sweep */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.28) 50%, transparent 75%)',
+              }}
+            />
+            {/* Subtle texture grain */}
+            <div className="absolute inset-0 opacity-[0.06]" style={{
+              backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, transparent 1px, transparent 3px)',
             }} />
+
             <div className="relative flex justify-between items-center gap-6">
               <div className="flex flex-col justify-center">
-                <div className="bg-white rounded-lg px-4 py-2 inline-flex items-center mb-2">
+                <div className="bg-white/92 backdrop-blur-sm rounded-xl px-4 py-2 inline-flex items-center mb-2.5 shadow-[0_2px_12px_rgba(90,60,20,0.18)]">
                   <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-48 object-contain" />
                 </div>
-                <div className="text-brand-300 text-xs tracking-wider">SONGTAH TRADING CO LTD</div>
+                <div className="text-stone-800/70 text-[10px] font-semibold tracking-[0.22em] uppercase">
+                  SONGTAH TRADING CO LTD
+                </div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold">報 價 單</div>
-                <div className="text-brand-300 text-sm font-mono mt-1">
+                <div className="text-2xl font-black text-stone-800 tracking-wider drop-shadow-sm">報　價　單</div>
+                <div className="text-stone-700/80 text-sm font-mono mt-1.5 bg-white/30 rounded-lg px-3 py-1 inline-block">
                   {quote.quoteNumber}
                 </div>
               </div>
