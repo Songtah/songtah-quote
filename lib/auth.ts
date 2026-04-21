@@ -48,7 +48,16 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
 
-        // 1. Try Notion users DB first
+        // 1. Always check env-based users first (admin accounts, always available)
+        const envUsers = parseAppUsers()
+        const envMatched = envUsers.find(
+          (u) => u.username === credentials.username && u.password === credentials.password
+        )
+        if (envMatched) {
+          return { id: envMatched.id, name: envMatched.name, role: envMatched.role } as any
+        }
+
+        // 2. Try Notion users DB (accounts created via account management)
         try {
           const notionUser = await getSystemUserByCredentials(
             credentials.username,
@@ -63,23 +72,20 @@ export const authOptions: NextAuthOptions = {
               permissions: isAdmin ? allPermissions() : notionUser.permissions,
             } as any
           }
+          // Notion is reachable but user/password not found
+          return null
         } catch (e) {
-          console.warn('Notion auth unavailable, falling back to env users:', e)
+          console.error('Notion auth error:', e)
+          // Notion unavailable — only env users can log in
+          return null
         }
-
-        // 2. Fall back to env-based users (always treated as admin)
-        const users = parseAppUsers()
-        const matched = users.find(
-          (u) => u.username === credentials.username && u.password === credentials.password
-        )
-        if (!matched) return null
-        return { id: matched.id, name: matched.name, role: matched.role } as any
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.uid = (user as any).id ?? token.sub
         token.role = (user as any).role ?? 'viewer'
         token.permissions = (user as any).permissions ?? undefined
       }
@@ -87,6 +93,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
+        ;(session.user as any).id = typeof token.uid === 'string' ? token.uid : token.sub
         ;(session.user as any).role = typeof token.role === 'string' ? token.role : 'viewer'
         ;(session.user as any).permissions = (token.permissions as UserPermissions | undefined) ?? undefined
       }

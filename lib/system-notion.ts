@@ -1066,6 +1066,11 @@ export type Visit = {
   tags: string[]         // 客戶標籤
 }
 
+export type VisitFormOptions = {
+  salespersons: string[]
+  statuses: string[]
+}
+
 let _visitFieldsEnsured = false
 async function ensureVisitDbFields() {
   if (_visitFieldsEnsured) return
@@ -1082,6 +1087,34 @@ async function ensureVisitDbFields() {
     console.warn('ensureVisitDbFields warning:', e)
   }
   _visitFieldsEnsured = true
+}
+
+export async function getVisitFormOptions(): Promise<VisitFormOptions> {
+  await ensureVisitDbFields()
+
+  try {
+    const database: any = await notionCallWithRetry('getVisitFormOptions', () =>
+      notion.databases.retrieve({
+        database_id: normalizeDatabaseId(DB.visits),
+      })
+    )
+
+    const salespersonOptions =
+      database.properties?.['業務人員']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+    const statusOptions =
+      database.properties?.['拜訪性質']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+
+    return {
+      salespersons: salespersonOptions,
+      statuses: statusOptions,
+    }
+  } catch (error) {
+    console.warn('getVisitFormOptions warning:', error)
+    return {
+      salespersons: [],
+      statuses: [],
+    }
+  }
 }
 
 /** Returns a raw visit object with an extra _relId field for name resolution. */
@@ -1128,10 +1161,6 @@ async function resolveCustomerNames(relIds: string[]): Promise<Record<string, st
 }
 
 export async function listVisits(options?: { customerName?: string; customerId?: string }): Promise<Visit[]> {
-  const cacheKey = `visits:${options?.customerId ?? options?.customerName ?? '*'}`
-  const cached = getCachedValue<Visit[]>(cacheKey)
-  if (cached) return cached
-
   let filter: any
   if (options?.customerId) {
     filter = { property: '🏥 牙科單位資料', relation: { contains: options.customerId } }
@@ -1158,8 +1187,22 @@ export async function listVisits(options?: { customerName?: string; customerId?:
     return { ...v, customerName: (_relId && nameMap[_relId]) || v.customerName }
   })
 
-  setCachedValue(cacheKey, items, 20_000)
   return items
+}
+
+export async function getVisitById(id: string): Promise<Visit> {
+  const page: any = await notionCallWithRetry('getVisitById', () =>
+    notion.pages.retrieve({ page_id: id })
+  )
+
+  const raw = mapVisitPageRaw(page)
+  const nameMap = await resolveCustomerNames(raw._relId ? [raw._relId] : [])
+  const { _relId, ...visit } = raw
+
+  return {
+    ...visit,
+    customerName: (_relId && nameMap[_relId]) || visit.customerName,
+  }
 }
 
 export async function createVisit(data: {
@@ -1193,11 +1236,6 @@ export async function createVisit(data: {
       } as any,
     })
   )
-
-  // Invalidate all visit caches
-  Array.from(transientCache.keys())
-    .filter((k) => k.startsWith('visits:'))
-    .forEach((k) => transientCache.delete(k))
 
   return {
     id: response.id,
@@ -1233,23 +1271,21 @@ export async function updateVisit(id: string, data: {
   if (data.address !== undefined) properties['地址'] = { rich_text: richText(data.address) }
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
   if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
-  if (data.customerId !== undefined) properties['🏥 牙科單位資料'] = { relation: [{ id: data.customerId }] }
+  if (data.customerId !== undefined) {
+    properties['🏥 牙科單位資料'] = data.customerId
+      ? { relation: [{ id: data.customerId }] }
+      : { relation: [] }
+  }
 
   await notionCallWithRetry('updateVisit', () =>
     notion.pages.update({ page_id: id, properties } as any)
   )
-  Array.from(transientCache.keys())
-    .filter((k) => k.startsWith('visits:'))
-    .forEach((k) => transientCache.delete(k))
 }
 
 export async function deleteVisit(id: string): Promise<void> {
   await notionCallWithRetry('deleteVisit', () =>
     notion.pages.update({ page_id: id, archived: true })
   )
-  Array.from(transientCache.keys())
-    .filter((k) => k.startsWith('visits:'))
-    .forEach((k) => transientCache.delete(k))
 }
 
 // ── accounts & permissions ────────────────────────────────────
@@ -1313,7 +1349,10 @@ let _userFieldsEnsured = false
 async function ensureUserDbFields() {
   if (_userFieldsEnsured) return
   try {
-    const permProps: Record<string, any> = { 密碼: { rich_text: {} } }
+    const permProps: Record<string, any> = {
+      帳號代碼: { rich_text: {} },   // username — needed for login filter
+      密碼:   { rich_text: {} },   // password
+    }
     for (const fields of Object.values(MODULE_NOTION_FIELDS)) {
       permProps[fields.view] = { checkbox: {} }
       permProps[fields.edit] = { checkbox: {} }
@@ -1388,8 +1427,9 @@ export async function createSystemUser(data: {
   username: string
   password: string
   accountType: string
+  status?: string
   permissions: UserPermissions
-}): Promise<void> {
+}): Promise<SystemUser> {
   await ensureUserDbFields()
   const permProps: Record<string, any> = {}
   for (const [mod, fields] of Object.entries(MODULE_NOTION_FIELDS)) {
@@ -1397,7 +1437,7 @@ export async function createSystemUser(data: {
     permProps[fields.view] = { checkbox: p.view }
     permProps[fields.edit] = { checkbox: p.edit }
   }
-  await notionCallWithRetry('createSystemUser', () =>
+  const response: any = await notionCallWithRetry('createSystemUser', () =>
     notion.pages.create({
       parent: { database_id: normalizeDatabaseId(DB.users) },
       properties: {
@@ -1405,11 +1445,37 @@ export async function createSystemUser(data: {
         帳號代碼: { rich_text: richText(data.username) },
         密碼: { rich_text: richText(data.password) },
         ...(data.accountType ? { 帳號類型: { select: { name: data.accountType } } } : {}),
+        ...(data.status ? { 狀態: { status: { name: data.status } } } : {}),
         ...permProps,
       } as any,
     })
   )
   transientCache.delete('users:all')
+
+  return {
+    id: response.id,
+    name: data.name,
+    username: data.username,
+    accountType: data.accountType,
+    status: getSelect(response, '狀態') || data.status || '未開始',
+    permissions: data.permissions,
+  }
+}
+
+export async function getSystemUserById(id: string): Promise<SystemUser> {
+  await ensureUserDbFields()
+  const page: any = await notionCallWithRetry('getSystemUserById', () =>
+    notion.pages.retrieve({ page_id: id })
+  )
+
+  return {
+    id: page.id,
+    name: getTitle(page, '帳號名稱'),
+    username: getText(page, '帳號代碼'),
+    accountType: getSelect(page, '帳號類型'),
+    status: getSelect(page, '狀態'),
+    permissions: mapUserPermissions(page),
+  }
 }
 
 export async function updateSystemUser(
@@ -1426,7 +1492,7 @@ export async function updateSystemUser(
   if (data.name !== undefined) properties['帳號名稱'] = { title: richText(data.name) }
   if (data.password !== undefined) properties['密碼'] = { rich_text: richText(data.password) }
   if (data.accountType !== undefined) properties['帳號類型'] = { select: { name: data.accountType } }
-  if (data.status !== undefined) properties['狀態'] = { select: { name: data.status } }
+  if (data.status !== undefined) properties['狀態'] = { status: { name: data.status } }
   if (data.permissions !== undefined) {
     for (const [mod, fields] of Object.entries(MODULE_NOTION_FIELDS)) {
       const p = data.permissions[mod as ModuleKey]
