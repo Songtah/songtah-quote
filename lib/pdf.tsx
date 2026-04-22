@@ -242,45 +242,30 @@ const styles = StyleSheet.create({
     marginBottom: 52,        // clears the absolute footer
   },
   stampBox: {
-    width: '42%',
-    height: 90,
-    borderWidth: 1,
-    borderColor: '#c8b8a8',
-    borderStyle: 'dashed',
-    borderRadius: 4,
-    padding: 8,
+    width: '44%',
+    height: 100,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
-  stampBoxLabel: {
-    fontSize: 7.5,
-    color: '#aaa',
-    alignSelf: 'flex-start',
-  },
-  stampBoxTitle: {
-    fontSize: 9,
-    color: '#bbb',
-    letterSpacing: 4,
-  },
-  stampBoxBottom: {
-    fontSize: 7,
-    color: '#ccc',
-    alignSelf: 'flex-end',
+  stampImage: {
+    width: 160,
+    height: 100,
+    objectFit: 'contain',
   },
   signBox: {
-    width: '52%',
-    height: 90,
+    width: '48%',
+    height: 100,
     borderWidth: 1,
     borderColor: '#c8b8a8',
     borderRadius: 4,
-    padding: 8,
+    padding: 10,
     justifyContent: 'space-between',
   },
   signBoxTitle: {
     fontSize: 8.5,
     fontWeight: 'bold',
     color: BRAND,
-    marginBottom: 4,
+    marginBottom: 6,
     borderBottomWidth: 0.5,
     borderBottomColor: '#e0d4c8',
     paddingBottom: 4,
@@ -288,12 +273,12 @@ const styles = StyleSheet.create({
   signLine: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginBottom: 4,
+    flex: 1,
   },
   signLineLabel: {
     fontSize: 7.5,
     color: '#888',
-    width: 48,
+    width: 40,
   },
   signLineRule: {
     flex: 1,
@@ -454,26 +439,19 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
 
         {/* ── Signature & Stamp ── */}
         <View style={styles.signatureSection}>
-          {/* Left: company stamp */}
+          {/* Left: company stamp image */}
           <View style={styles.stampBox}>
-            <Text style={styles.stampBoxLabel}>崧達企業股份有限公司</Text>
-            <Text style={styles.stampBoxTitle}>公　司　章</Text>
-            <Text style={styles.stampBoxBottom}>SONGTAH TRADING CO.,LTD.</Text>
+            <Image
+              src={path.join(process.cwd(), 'public', 'stamp.png')}
+              style={styles.stampImage}
+            />
           </View>
 
-          {/* Right: countersign */}
+          {/* Right: countersign — signature line only */}
           <View style={styles.signBox}>
             <Text style={styles.signBoxTitle}>客戶確認回簽</Text>
             <View style={styles.signLine}>
-              <Text style={styles.signLineLabel}>公司名稱</Text>
-              <View style={styles.signLineRule} />
-            </View>
-            <View style={styles.signLine}>
-              <Text style={styles.signLineLabel}>授權簽章</Text>
-              <View style={styles.signLineRule} />
-            </View>
-            <View style={styles.signLine}>
-              <Text style={styles.signLineLabel}>日　　期</Text>
+              <Text style={styles.signLineLabel}>簽章</Text>
               <View style={styles.signLineRule} />
             </View>
           </View>
