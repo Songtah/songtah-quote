@@ -302,6 +302,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 7.5,
     color: '#999',
+    letterSpacing: 0.6,
   },
 })
 
@@ -459,9 +460,9 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
 
         {/* ── Footer ── */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>
-            SONGTAH TRADING CO.,LTD.　崧達企業股份有限公司｜有效期至 {formatDate(quote.validUntil)}
-          </Text>
+          <Text style={styles.footerText}>SONGTAH TRADING CO.,LTD.</Text>
+          <Text style={styles.footerText}>崧達企業股份有限公司</Text>
+          <Text style={styles.footerText}>有效期至 {formatDate(quote.validUntil)}</Text>
           <Text style={styles.footerText}>報價單號：{quote.quoteNumber}</Text>
         </View>
 
