@@ -234,6 +234,74 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
 
+  // ── Signature / Stamp ────────────────────────────────────────────────────
+  signatureSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    marginBottom: 52,        // clears the absolute footer
+  },
+  stampBox: {
+    width: '42%',
+    height: 90,
+    borderWidth: 1,
+    borderColor: '#c8b8a8',
+    borderStyle: 'dashed',
+    borderRadius: 4,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stampBoxLabel: {
+    fontSize: 7.5,
+    color: '#aaa',
+    alignSelf: 'flex-start',
+  },
+  stampBoxTitle: {
+    fontSize: 9,
+    color: '#bbb',
+    letterSpacing: 4,
+  },
+  stampBoxBottom: {
+    fontSize: 7,
+    color: '#ccc',
+    alignSelf: 'flex-end',
+  },
+  signBox: {
+    width: '52%',
+    height: 90,
+    borderWidth: 1,
+    borderColor: '#c8b8a8',
+    borderRadius: 4,
+    padding: 8,
+    justifyContent: 'space-between',
+  },
+  signBoxTitle: {
+    fontSize: 8.5,
+    fontWeight: 'bold',
+    color: BRAND,
+    marginBottom: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e0d4c8',
+    paddingBottom: 4,
+  },
+  signLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 4,
+  },
+  signLineLabel: {
+    fontSize: 7.5,
+    color: '#888',
+    width: 48,
+  },
+  signLineRule: {
+    flex: 1,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#c8b8a8',
+    marginBottom: 1,
+  },
+
   // ── Footer ───────────────────────────────────────────────────────────────
   footer: {
     position: 'absolute',
@@ -383,6 +451,33 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
             <Text style={styles.noteText}>{quote.note}</Text>
           </View>
         )}
+
+        {/* ── Signature & Stamp ── */}
+        <View style={styles.signatureSection}>
+          {/* Left: company stamp */}
+          <View style={styles.stampBox}>
+            <Text style={styles.stampBoxLabel}>崧達企業股份有限公司</Text>
+            <Text style={styles.stampBoxTitle}>公　司　章</Text>
+            <Text style={styles.stampBoxBottom}>SONGTAH TRADING CO.,LTD.</Text>
+          </View>
+
+          {/* Right: countersign */}
+          <View style={styles.signBox}>
+            <Text style={styles.signBoxTitle}>客戶確認回簽</Text>
+            <View style={styles.signLine}>
+              <Text style={styles.signLineLabel}>公司名稱</Text>
+              <View style={styles.signLineRule} />
+            </View>
+            <View style={styles.signLine}>
+              <Text style={styles.signLineLabel}>授權簽章</Text>
+              <View style={styles.signLineRule} />
+            </View>
+            <View style={styles.signLine}>
+              <Text style={styles.signLineLabel}>日　　期</Text>
+              <View style={styles.signLineRule} />
+            </View>
+          </View>
+        </View>
 
         {/* ── Footer ── */}
         <View style={styles.footer} fixed>
