@@ -154,14 +154,14 @@ const styles = StyleSheet.create({
   },
   colIndex:    { width: '5%',  textAlign: 'center' },
   colImage:    { width: '13%' },
-  colName:     { width: '22%', flexWrap: 'wrap' },
+  colName:     { width: '27%', flexWrap: 'wrap' },
   colSpec:     { width: '8%',  flexWrap: 'wrap', textAlign: 'center' },
   colUnit:     { width: '7%',  textAlign: 'center' },
   colQty:      { width: '7%',  textAlign: 'center' },
-  colPrice:    { width: '16%', textAlign: 'left' },
-  colSubtotal: { width: '15%', textAlign: 'left', paddingRight: 6 },
-  colNote:     { width: '7%',  flexWrap: 'wrap', paddingLeft: 4 },
+  colPrice:    { width: '17%', textAlign: 'left' },
+  colSubtotal: { width: '16%', textAlign: 'left', paddingRight: 6 },
   headerCell:  { textAlign: 'center' },
+  itemNote:    { fontSize: 7.5, color: '#888', marginTop: 2 },
 
   imageBox: {
     width: 42,
@@ -341,7 +341,6 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
             <Text style={[styles.colQty,      styles.headerCell]}>數量</Text>
             <Text style={[styles.colPrice,    styles.headerCell]}>單價</Text>
             <Text style={[styles.colSubtotal, styles.headerCell]}>小計</Text>
-            <Text style={[styles.colNote,     styles.headerCell]}>備註</Text>
           </View>
 
           {items.map((item, i) => (
@@ -356,13 +355,15 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
                   )}
                 </View>
               </View>
-              <Text style={styles.colName}>{item.name || ''}</Text>
+              <View style={styles.colName}>
+                <Text>{item.name || ''}</Text>
+                {!!item.note && <Text style={styles.itemNote}>{item.note}</Text>}
+              </View>
               <Text style={styles.colSpec}>{item.spec || '—'}</Text>
               <Text style={styles.colUnit}>{item.unit || ''}</Text>
               <Text style={styles.colQty}>{String(item.quantity ?? '')}</Text>
               <Text style={styles.colPrice}>{formatMoney(item.unitPrice)}</Text>
               <Text style={styles.colSubtotal}>{formatMoney(item.subtotal)}</Text>
-              <Text style={styles.colNote}>{item.note || ''}</Text>
             </View>
           ))}
         </View>

@@ -626,6 +626,17 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                   </div>
                 </div>
 
+                {/* 常駐備註欄 */}
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={item.note}
+                    onChange={(e) => updateItem(item.tempId, 'note', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-700 placeholder:text-gray-400 bg-gray-50"
+                    placeholder="備註（選填，會顯示於品名下方）"
+                  />
+                </div>
+
                 {expandedItemIds.includes(item.tempId) && (
                   <div className="grid grid-cols-1 xl:grid-cols-[132px,1fr] gap-4 mt-4 pt-4 border-t border-gray-100">
                     <div>
@@ -722,16 +733,6 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           min={1}
                           onChange={(e) => updateItem(item.tempId, 'quantity', Number(e.target.value))}
                           className="w-full text-right border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">備註</label>
-                        <input
-                          type="text"
-                          value={item.note}
-                          onChange={(e) => updateItem(item.tempId, 'note', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                          placeholder="選填"
                         />
                       </div>
                     </div>
