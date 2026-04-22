@@ -30,7 +30,7 @@ const EMPTY_FORM: CreateTicketPayload = {
 
 const inputCls = 'w-full border border-brand-200 rounded-xl px-3 py-2 text-sm bg-cream-50 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400 transition'
 
-export default function NewTicketModal() {
+export default function NewTicketModal({ onCreated }: { onCreated?: () => void } = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<CreateTicketPayload>(EMPTY_FORM)
@@ -149,7 +149,8 @@ export default function NewTicketModal() {
       return
     }
     handleClose()
-    router.refresh()
+    if (onCreated) onCreated()
+    else router.refresh()
   }
 
   return (
