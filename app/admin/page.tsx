@@ -21,7 +21,7 @@ export default async function AdminPage() {
 
   return (
     <AppShell
-      title="行政管理中心"
+      title="行政管理"
       description="報價單審核、簽核流程管理。"
       hidePhaseNote
     >

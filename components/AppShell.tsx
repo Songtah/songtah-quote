@@ -19,7 +19,7 @@ function getPageTitle(pathname: string): string {
     '/quotes':            '報價單管理',
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
-    '/admin':             '行政管理中心',
+    '/admin':             '行政管理',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
