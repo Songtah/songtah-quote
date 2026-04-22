@@ -185,7 +185,8 @@ export default function QuoteListContent() {
   // What approval actions each role sees per-status
   function allowedActions(status: string): ApprovalAction[] {
     if (isAdmin) {
-      if (status === '待行政審核')   return ['approve', 'escalate', 'reject']
+      // 中央管理（Edward）= 總經理層級，可直接核准或退回，不需呈送
+      if (status === '待行政審核')   return ['approve', 'reject']
       if (status === '待總經理審核') return ['approve', 'reject']
       if (status === '已退回')       return ['resubmit']
       return []
