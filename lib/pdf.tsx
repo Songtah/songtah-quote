@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   colName:     { width: '22%', flexWrap: 'wrap' },
   colSpec:     { width: '8%',  flexWrap: 'wrap' },
   colUnit:     { width: '7%',  textAlign: 'center' },
-  colQty:      { width: '7%',  textAlign: 'right' },
+  colQty:      { width: '7%',  textAlign: 'center' },
   colPrice:    { width: '16%', textAlign: 'left' },
   colSubtotal: { width: '15%', textAlign: 'left', paddingRight: 6 },
   colNote:     { width: '7%',  flexWrap: 'wrap', paddingLeft: 4 },
