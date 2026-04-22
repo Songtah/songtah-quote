@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     width: 244,
     height: 58,
     objectFit: 'contain',
-    marginLeft: -34,
+    marginLeft: -12,
   },
   companyEn: {
     fontSize: 7.5,
@@ -155,12 +155,12 @@ const styles = StyleSheet.create({
   },
   colIndex:    { width: '5%',  textAlign: 'center' },
   colImage:    { width: '13%' },
-  colName:     { width: '21%', flexWrap: 'wrap' },
-  colSpec:     { width: '14%', flexWrap: 'wrap' },
+  colName:     { width: '22%', flexWrap: 'wrap' },
+  colSpec:     { width: '8%',  flexWrap: 'wrap' },
   colUnit:     { width: '7%',  textAlign: 'center' },
   colQty:      { width: '7%',  textAlign: 'right' },
-  colPrice:    { width: '13%', textAlign: 'right' },
-  colSubtotal: { width: '13%', textAlign: 'right', paddingRight: 6 },
+  colPrice:    { width: '16%', textAlign: 'right' },
+  colSubtotal: { width: '15%', textAlign: 'right', paddingRight: 6 },
   colNote:     { width: '7%',  flexWrap: 'wrap', paddingLeft: 4 },
 
   imageBox: {
