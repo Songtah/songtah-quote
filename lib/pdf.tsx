@@ -143,12 +143,12 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 5,
+    paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#e8ddd3',
     alignItems: 'center',
-    minHeight: 36,
+    minHeight: 56,
   },
   tableRowAlt: {
     backgroundColor: CREAM,
