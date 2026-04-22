@@ -118,8 +118,8 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-stone-700">
-                      {item.name}
-                      {item.brand && <span className="ml-2 text-xs text-stone-400">{item.brand}</span>}
+                      <div>{item.name}{item.brand && <span className="ml-2 text-xs text-stone-400">{item.brand}</span>}</div>
+                      {item.note && <div className="text-xs text-stone-400 mt-0.5">{item.note}</div>}
                     </td>
                     <td className="px-4 py-3 text-stone-500">{item.spec || '—'}</td>
                     <td className="px-4 py-3 text-center text-stone-500">{item.unit}</td>
