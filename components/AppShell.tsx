@@ -98,7 +98,7 @@ export function AppShell({
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false
-    if (item.adminOrStaff && role !== 'admin' && accountType !== '行政') return false
+    if (item.adminOrStaff && role !== 'admin' && accountType !== '行政' && !permissions?.['admin']?.view) return false
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
 

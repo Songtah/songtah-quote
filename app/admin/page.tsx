@@ -12,7 +12,11 @@ export default async function AdminPage() {
   const role        = user?.role        ?? ''
   const accountType = user?.accountType ?? ''
 
-  const canAccess = role === 'admin' || accountType === '行政'
+  const permissions = user?.permissions
+  const canAccess =
+    role === 'admin' ||
+    accountType === '行政' ||
+    permissions?.['admin']?.view === true
   if (!canAccess) redirect('/dashboard')
 
   return (
