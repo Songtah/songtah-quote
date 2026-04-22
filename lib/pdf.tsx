@@ -8,7 +8,8 @@ import type { Quote } from '@/types'
 // ── Font ─────────────────────────────────────────────────────────────────────
 Font.register({
   family: 'NotoSansTC',
-  src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5/files/noto-sans-tc-chinese-traditional-400-normal.woff',
+  // Local file in public/fonts/ — avoids CDN round-trip on every PDF render
+  src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-400.woff'),
 })
 
 // ── Brand colours (metallic coffee-brown, same as share page) ────────────────
