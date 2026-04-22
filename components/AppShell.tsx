@@ -19,6 +19,7 @@ function getPageTitle(pathname: string): string {
     '/quotes':            '報價單管理',
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
+    '/admin':             '行政管理中心',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
@@ -34,15 +35,17 @@ type NavItem = {
   label: string
   module: ModuleKey | null
   adminOnly?: boolean
+  adminOrStaff?: boolean   // visible to admin OR 行政 accountType
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',         label: '首頁',    module: null },
-  { href: '/customers',         label: 'CRM',     module: 'crm' },
-  { href: '/tickets',           label: 'RMA',     module: 'rma' },
-  { href: '/bd',                label: 'BD',      module: 'bd' },
-  { href: '/products',          label: '產品',    module: 'products' },
-  { href: '/quotes',             label: '報價',    module: 'quote' },
+  { href: '/dashboard',         label: '首頁',     module: null },
+  { href: '/customers',         label: 'CRM',      module: 'crm' },
+  { href: '/tickets',           label: 'RMA',      module: 'rma' },
+  { href: '/bd',                label: 'BD',       module: 'bd' },
+  { href: '/products',          label: '產品',     module: 'products' },
+  { href: '/quotes',            label: '報價',     module: 'quote' },
+  { href: '/admin',             label: '行政管理', module: null, adminOrStaff: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
@@ -74,7 +77,8 @@ export function AppShell({
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const sessionLoading = status === 'loading'
-  const role = (session?.user as any)?.role as string | undefined
+  const role        = (session?.user as any)?.role        as string | undefined
+  const accountType = (session?.user as any)?.accountType as string | undefined
   const permissions = (session?.user as any)?.permissions as UserPermissions | undefined
 
   // ── Page-view audit (fire-and-forget) ──────────────────────
@@ -94,6 +98,7 @@ export function AppShell({
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false
+    if (item.adminOrStaff && role !== 'admin' && accountType !== '行政') return false
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
 
@@ -127,7 +132,9 @@ export function AppShell({
               key={item.href}
               href={item.href}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                (pathname === item.href || (item.href === '/quotes' && pathname.startsWith('/quote')))
+                (pathname === item.href ||
+                  (item.href === '/quotes' && pathname.startsWith('/quote')) ||
+                  (item.href === '/admin'  && pathname.startsWith('/admin')))
                   ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-[0_8px_20px_-8px_rgba(184,149,106,0.5)]'
                   : 'bg-white/80 text-stone-500 ring-1 ring-brand-200/50 hover:bg-brand-50 hover:text-stone-800 hover:ring-brand-300/60'
               }`}
