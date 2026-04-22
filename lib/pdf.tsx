@@ -47,18 +47,17 @@ const styles = StyleSheet.create({
     minWidth: '30%',
   },
   logoFrame: {
-    width: 220,
-    height: 58,
-    overflow: 'hidden',
+    width: 190,
+    height: 52,
     marginBottom: 5,
     alignItems: 'flex-start',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   logo: {
-    width: 244,
-    height: 58,
+    width: 190,
+    height: 52,
     objectFit: 'contain',
-    marginLeft: -12,
+    objectPositionX: 0,
   },
   companyEn: {
     fontSize: 7.5,
@@ -159,9 +158,10 @@ const styles = StyleSheet.create({
   colSpec:     { width: '8%',  flexWrap: 'wrap' },
   colUnit:     { width: '7%',  textAlign: 'center' },
   colQty:      { width: '7%',  textAlign: 'right' },
-  colPrice:    { width: '16%', textAlign: 'right' },
-  colSubtotal: { width: '15%', textAlign: 'right', paddingRight: 6 },
+  colPrice:    { width: '16%', textAlign: 'left' },
+  colSubtotal: { width: '15%', textAlign: 'left', paddingRight: 6 },
   colNote:     { width: '7%',  flexWrap: 'wrap', paddingLeft: 4 },
+  headerCell:  { textAlign: 'center' },
 
   imageBox: {
     width: 42,
@@ -333,15 +333,15 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
         {/* ── Items table ── */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.colIndex}>#</Text>
-            <Text style={styles.colImage}>圖片</Text>
-            <Text style={styles.colName}>品名</Text>
-            <Text style={styles.colSpec}>規格</Text>
-            <Text style={styles.colUnit}>單位</Text>
-            <Text style={styles.colQty}>數量</Text>
-            <Text style={styles.colPrice}>單價</Text>
-            <Text style={styles.colSubtotal}>小計</Text>
-            <Text style={styles.colNote}>備註</Text>
+            <Text style={[styles.colIndex,    styles.headerCell]}>#</Text>
+            <Text style={[styles.colImage,    styles.headerCell]}>圖片</Text>
+            <Text style={[styles.colName,     styles.headerCell]}>品名</Text>
+            <Text style={[styles.colSpec,     styles.headerCell]}>規格</Text>
+            <Text style={[styles.colUnit,     styles.headerCell]}>單位</Text>
+            <Text style={[styles.colQty,      styles.headerCell]}>數量</Text>
+            <Text style={[styles.colPrice,    styles.headerCell]}>單價</Text>
+            <Text style={[styles.colSubtotal, styles.headerCell]}>小計</Text>
+            <Text style={[styles.colNote,     styles.headerCell]}>備註</Text>
           </View>
 
           {items.map((item, i) => (
