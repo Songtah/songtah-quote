@@ -234,6 +234,34 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
 
+  // ── Bank info ────────────────────────────────────────────────────────────
+  bankSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f0ec',
+    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 14,
+    gap: 16,
+  },
+  bankLabel: {
+    fontSize: 7.5,
+    color: BRAND,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  bankText: {
+    fontSize: 8,
+    color: '#444',
+    letterSpacing: 0.3,
+  },
+  bankSep: {
+    fontSize: 8,
+    color: '#c8b8a8',
+    marginHorizontal: 6,
+  },
+
   // ── Signature / Stamp ────────────────────────────────────────────────────
   signatureSection: {
     flexDirection: 'row',
@@ -437,6 +465,16 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
             <Text style={styles.noteText}>{quote.note}</Text>
           </View>
         )}
+
+        {/* ── Bank info ── */}
+        <View style={styles.bankSection}>
+          <Text style={styles.bankLabel}>匯款資訊</Text>
+          <Text style={styles.bankText}>戶名：崧達企業股份有限公司</Text>
+          <Text style={styles.bankSep}>｜</Text>
+          <Text style={styles.bankText}>華南商業銀行（總行代號 008）</Text>
+          <Text style={styles.bankSep}>｜</Text>
+          <Text style={styles.bankText}>帳號：130-10-000184-7</Text>
+        </View>
 
         {/* ── Signature & Stamp ── */}
         <View style={styles.signatureSection}>
