@@ -80,10 +80,11 @@ async function ensureDbFields() {
       notion.databases.update({
         database_id: DB.quotes,
         properties: {
-          '編號': { rich_text: {} },
-          '電話': { rich_text: {} },
-          '地址': { rich_text: {} },
+          '編號':     { rich_text: {} },
+          '電話':     { rich_text: {} },
+          '地址':     { rich_text: {} },
           '統一編號': { rich_text: {} },
+          '審核意見': { rich_text: {} },
         } as any,
       }),
       notion.databases.update({
@@ -236,7 +237,7 @@ export async function createQuote(data: {
       付款條件:     { rich_text: richText(data.paymentTerms) },
       備註:         { rich_text: richText(data.note) },
       總金額:       { number: data.total },
-      狀態:         { select: { name: '已送出' } },
+      狀態:         { select: { name: '待行政審核' } },
       ...(data.validUntil ? { 有效期限: { date: { start: data.validUntil } } } : {}),
     },
   })
@@ -316,6 +317,7 @@ export async function listQuotes(): Promise<Quote[]> {
       status:       (getSelect(p, '狀態') || '草稿') as Quote['status'],
       shareUrl:     getText(p, '分享連結'),
       note:         getText(p, '備註'),
+      approvalNote: getText(p, '審核意見'),
       createdAt:    getCreatedTime(p, '建立時間'),
     }))
 }
@@ -367,12 +369,31 @@ export async function getQuote(pageId: string): Promise<Quote | null> {
       status:       (getSelect(page, '狀態') || '草稿') as Quote['status'],
       shareUrl:     getText(page, '分享連結'),
       note:         getText(page, '備註'),
+      approvalNote: getText(page, '審核意見'),
       createdAt:    getCreatedTime(page, '建立時間'),
       items,
     }
   } catch {
     return null
   }
+}
+
+export async function updateQuoteStatus(
+  pageId: string,
+  status: string,
+  approvalNote?: string,
+): Promise<void> {
+  const formatted = pageId.replace(
+    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
+    '$1-$2-$3-$4-$5',
+  )
+  const properties: any = {
+    狀態: { select: { name: status } },
+  }
+  if (approvalNote !== undefined) {
+    properties['審核意見'] = { rich_text: richText(approvalNote) }
+  }
+  await notion.pages.update({ page_id: formatted, properties })
 }
 
 export async function deleteQuote(pageId: string): Promise<void> {

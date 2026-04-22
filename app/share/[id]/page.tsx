@@ -147,14 +147,39 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           </div>
         )}
 
+        {/* Approval status banner */}
+        {quote.status !== '已核准' && (
+          <div className={`rounded-2xl px-6 py-4 mb-4 border ${
+            quote.status === '已退回'
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            <div className="flex items-center gap-2 font-semibold text-sm mb-1">
+              {quote.status === '已退回' ? '✗ 此報價單已被退回' :
+               quote.status === '待總經理審核' ? '📋 此報價單正等待總經理審核' :
+               '⏳ 此報價單正等待行政審核'}
+            </div>
+            {quote.approvalNote && (
+              <div className="text-sm opacity-80">意見：{quote.approvalNote}</div>
+            )}
+            <div className="text-xs opacity-60 mt-1">核准後即可下載 PDF</div>
+          </div>
+        )}
+
         {/* PDF Button */}
         <div className="text-center">
-          <a
-            href={`/api/quotes/${params.id}/pdf`}
-            className="button-primary inline-flex items-center gap-2"
-          >
-            ↓ 下載 PDF
-          </a>
+          {quote.status === '已核准' ? (
+            <a
+              href={`/api/quotes/${params.id}/pdf`}
+              className="button-primary inline-flex items-center gap-2"
+            >
+              ↓ 下載 PDF
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-stone-100 text-stone-400 text-sm font-medium cursor-not-allowed select-none">
+              ↓ 下載 PDF（待核准）
+            </span>
+          )}
         </div>
 
         <div className="text-center mt-6 text-xs text-stone-400">

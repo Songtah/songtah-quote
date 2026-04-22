@@ -70,6 +70,7 @@ export const authOptions: NextAuthOptions = {
               id: notionUser.id,
               name: notionUser.name,
               role: isAdmin ? 'admin' : 'user',
+              accountType: notionUser.accountType,
               permissions: isAdmin ? allPermissions() : notionUser.permissions,
             } as any
           }
@@ -88,6 +89,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.uid = (user as any).id ?? token.sub
         token.role = (user as any).role ?? 'viewer'
+        token.accountType = (user as any).accountType ?? ''
         token.permissions = (user as any).permissions ?? undefined
       }
       return token
@@ -96,6 +98,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         ;(session.user as any).id = typeof token.uid === 'string' ? token.uid : token.sub
         ;(session.user as any).role = typeof token.role === 'string' ? token.role : 'viewer'
+        ;(session.user as any).accountType = typeof token.accountType === 'string' ? token.accountType : ''
         ;(session.user as any).permissions = (token.permissions as UserPermissions | undefined) ?? undefined
       }
       return session

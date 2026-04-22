@@ -14,6 +14,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const quote = await getQuote(params.id)
     if (!quote) return NextResponse.json({ error: '找不到報價單' }, { status: 404 })
 
+    // ── Approval gate ────────────────────────────────────────
+    if (quote.status !== '已核准') {
+      return NextResponse.json(
+        { error: '此報價單尚未核准，無法產生 PDF。請等待行政或總經理簽核後再試。' },
+        { status: 403 },
+      )
+    }
+
     const buffer = await renderToBuffer(<QuoteDocument quote={quote} />)
 
     const filename = `報價單_${quote.quoteNumber}_${quote.customerName}.pdf`

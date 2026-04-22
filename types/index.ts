@@ -104,9 +104,10 @@ export interface Quote {
   validUntil: string
   paymentTerms: string
   total: number
-  status: '草稿' | '已送出' | '已確認' | '已過期'
+  status: '草稿' | '待行政審核' | '待總經理審核' | '已核准' | '已退回' | '已送出' | '已確認' | '已過期'
   shareUrl: string
   note: string
+  approvalNote?: string
   createdAt: string
   items?: QuoteItem[]
 }
