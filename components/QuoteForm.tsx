@@ -320,7 +320,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 className="font-semibold text-gray-800 mb-4">客戶資訊</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               客戶名稱 <span className="text-red-500">*</span>
@@ -393,7 +393,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               placeholder="輸入統一編號"
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="col-span-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">地址</label>
             <input
               type="text"
@@ -432,7 +432,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               placeholder="如：貨到付款、月結30天"
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="col-span-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">備註</label>
             <textarea
               value={note}
@@ -638,7 +638,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 </div>
 
                 {expandedItemIds.includes(item.tempId) && (
-                  <div className="grid grid-cols-1 xl:grid-cols-[132px,1fr] gap-4 mt-4 pt-4 border-t border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-[132px,1fr] gap-4 mt-4 pt-4 border-t border-gray-100">
                     <div>
                       <div className="h-32 w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 overflow-hidden flex items-center justify-center">
                         {item.imageUrl ? (
@@ -652,7 +652,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           品名 <span className="text-red-500">*</span>

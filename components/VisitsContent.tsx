@@ -311,7 +311,7 @@ function ViewVisitModal({
                 {/* Content */}
                 <div className="px-6 py-5 space-y-4">
                   {/* Info grid */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       ['縣市', visit.city],
                       ['鄉鎮市區', visit.district],
@@ -596,7 +596,7 @@ export function VisitModal({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-500 mb-1.5">拜訪日期</label>
                       <input

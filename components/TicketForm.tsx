@@ -233,7 +233,7 @@ export default function TicketForm() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* 客戶名稱 */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -376,8 +376,8 @@ export default function TicketForm() {
       {/* 問題詳情 */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 className="font-semibold text-gray-800 mb-4">問題詳情</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               問題描述 <span className="text-red-500">*</span>
             </label>

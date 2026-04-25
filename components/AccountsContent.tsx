@@ -226,7 +226,7 @@ function AccountModal({
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="px-6 py-5 max-h-[72vh] overflow-y-auto space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-500 mb-1.5">帳號名稱 *</label>
                       <input
@@ -251,7 +251,7 @@ function AccountModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-stone-500 mb-1.5">
                         {isEdit ? '新密碼（留空不更改）' : '密碼 *'}
