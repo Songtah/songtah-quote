@@ -1258,12 +1258,20 @@ export async function listVisits(options?: { customerName?: string; customerId?:
 
   const rawItems = allResults.map(mapVisitPageRaw)
 
-  // Resolve customer names from the 🏥 牙科單位資料 relation
-  const nameMap = await resolveCustomerNames(rawItems.map((v: ReturnType<typeof mapVisitPageRaw>) => v._relId))
+  // Only resolve via relation for rows that don't already have a title name.
+  // Visits created through the app always store customerName in 單位名稱,
+  // so this avoids O(n) extra Notion API calls in the common case.
+  const missingNameIds = rawItems
+    .filter((v) => !v.customerName && v._relId)
+    .map((v) => v._relId)
+
+  const nameMap = missingNameIds.length
+    ? await resolveCustomerNames(missingNameIds)
+    : {}
 
   const items: Visit[] = rawItems.map((raw: ReturnType<typeof mapVisitPageRaw>) => {
     const { _relId, ...v } = raw
-    return { ...v, customerName: (_relId && nameMap[_relId]) || v.customerName }
+    return { ...v, customerName: v.customerName || (_relId && nameMap[_relId]) || '' }
   })
 
   return items
