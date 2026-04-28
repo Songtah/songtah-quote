@@ -1230,7 +1230,22 @@ async function resolveCustomerNames(relIds: string[]): Promise<Record<string, st
   return nameMap
 }
 
+const VISITS_ALL_CACHE_KEY = 'visits:all'
+const VISITS_ALL_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+
+function invalidateVisitsCache() {
+  transientCache.delete(VISITS_ALL_CACHE_KEY)
+}
+
 export async function listVisits(options?: { customerName?: string; customerId?: string }): Promise<Visit[]> {
+  const isFullList = !options?.customerName && !options?.customerId
+
+  // Return cached full list instantly if available
+  if (isFullList) {
+    const cached = getCachedValue<Visit[]>(VISITS_ALL_CACHE_KEY)
+    if (cached) return cached
+  }
+
   let filter: any
   if (options?.customerId) {
     filter = { property: '🏥 牙科單位資料', relation: { contains: options.customerId } }
@@ -1274,6 +1289,11 @@ export async function listVisits(options?: { customerName?: string; customerId?:
     return { ...v, customerName: v.customerName || (_relId && nameMap[_relId]) || '' }
   })
 
+  // Cache the full list result
+  if (isFullList) {
+    setCachedValue(VISITS_ALL_CACHE_KEY, items, VISITS_ALL_CACHE_TTL)
+  }
+
   return items
 }
 
@@ -1303,6 +1323,7 @@ export async function createVisit(data: {
   district: string
   customerId?: string
 }): Promise<Visit> {
+  invalidateVisitsCache()
   await ensureVisitDbFields()
 
   const response: any = await notionCallWithRetry('createVisit', () =>
@@ -1364,12 +1385,14 @@ export async function updateVisit(id: string, data: {
       : { relation: [] }
   }
 
+  invalidateVisitsCache()
   await notionCallWithRetry('updateVisit', () =>
     notion.pages.update({ page_id: id, properties } as any)
   )
 }
 
 export async function deleteVisit(id: string): Promise<void> {
+  invalidateVisitsCache()
   await notionCallWithRetry('deleteVisit', () =>
     notion.pages.update({ page_id: id, archived: true })
   )

@@ -73,11 +73,31 @@ export default function VisitsContent() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const loadVisits = useCallback(() => {
-    setLoading(true)
+  const CACHE_KEY = 'bd-visits-cache'
+  const CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+
+  const loadVisits = useCallback((silent = false) => {
+    // Show cached data instantly while fetching fresh in background
+    if (!silent) {
+      try {
+        const raw = sessionStorage.getItem(CACHE_KEY)
+        if (raw) {
+          const { data, ts } = JSON.parse(raw)
+          if (Date.now() - ts < CACHE_TTL) {
+            setVisits(data)
+            setLoading(false)
+          }
+        }
+      } catch {}
+    }
+
     fetch('/api/visits')
       .then((r) => r.json())
-      .then(setVisits)
+      .then((data) => {
+        if (!Array.isArray(data)) return
+        setVisits(data)
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
@@ -89,7 +109,8 @@ export default function VisitsContent() {
     try {
       await fetch(`/api/visits/${id}`, { method: 'DELETE' })
       setDeleteConfirmId(null)
-      loadVisits()
+      try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+      loadVisits(true)
     } finally {
       setDeleting(false)
     }
@@ -314,7 +335,11 @@ export default function VisitsContent() {
       {showModal && (
         <VisitModal
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); loadVisits() }}
+          onSaved={() => {
+            setShowModal(false)
+            try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+            loadVisits(true)
+          }}
         />
       )}
 
@@ -323,7 +348,11 @@ export default function VisitsContent() {
         <VisitModal
           initialData={editingVisit}
           onClose={() => setEditingVisit(null)}
-          onSaved={() => { setEditingVisit(null); loadVisits() }}
+          onSaved={() => {
+            setEditingVisit(null)
+            try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+            loadVisits(true)
+          }}
         />
       )}
 
