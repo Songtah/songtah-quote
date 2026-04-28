@@ -772,7 +772,7 @@ export function VisitModal({
                       onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                       rows={3}
                       placeholder="記錄此次拜訪的重點內容…"
-                      className={`${inputCls} resize-none`}
+                      className={`${inputCls} resize-y min-h-[80px]`}
                     />
                   </div>
 
