@@ -1238,16 +1238,25 @@ export async function listVisits(options?: { customerName?: string; customerId?:
     filter = { property: '單位名稱', title: { contains: options.customerName } }
   }
 
-  const response: any = await notionCallWithRetry('listVisits', () =>
-    notion.databases.query({
-      database_id: normalizeDatabaseId(DB.visits),
-      page_size: 100,
-      sorts: [{ property: '日期', direction: 'descending' }],
-      ...(filter ? { filter } : {}),
-    })
-  )
+  // Paginate through all results (Notion max page_size = 100)
+  const allResults: any[] = []
+  let cursor: string | undefined
 
-  const rawItems = (response.results ?? []).map(mapVisitPageRaw)
+  do {
+    const response: any = await notionCallWithRetry('listVisits', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        sorts: [{ property: '日期', direction: 'descending' }],
+        ...(filter ? { filter } : {}),
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    allResults.push(...(response.results ?? []))
+    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cursor)
+
+  const rawItems = allResults.map(mapVisitPageRaw)
 
   // Resolve customer names from the 🏥 牙科單位資料 relation
   const nameMap = await resolveCustomerNames(rawItems.map((v: ReturnType<typeof mapVisitPageRaw>) => v._relId))
