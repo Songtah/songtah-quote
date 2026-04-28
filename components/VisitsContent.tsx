@@ -64,6 +64,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function VisitsContent() {
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingVisit, setEditingVisit] = useState<Visit | null>(null)
   const [viewingVisit, setViewingVisit] = useState<Visit | null>(null)
@@ -92,20 +93,53 @@ export default function VisitsContent() {
     }
   }
 
+  const keyword = search.trim().toLowerCase()
+  const filteredVisits = keyword
+    ? visits.filter((v) =>
+        [v.customerName, v.city, v.district, v.salesperson, v.status, v.content, v.address]
+          .some((field) => field?.toLowerCase().includes(keyword))
+      )
+    : visits
+
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-stone-800">客情拜訪紀錄</h2>
           <p className="text-xs text-stone-400 mt-0.5">記錄每日客戶拜訪情況</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="button-primary px-4 py-2 rounded-full text-sm font-medium"
+          className="button-primary px-4 py-2 rounded-full text-sm font-medium self-start sm:self-auto"
         >
           + 新增拜訪
         </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative mb-4">
+        <svg
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="搜尋客戶名稱、縣市、業務、拜訪性質、內容…"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-brand-200/60 bg-white text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -116,77 +150,91 @@ export default function VisitsContent() {
           <div className="p-10 text-center text-sm text-stone-400 border-2 border-dashed border-brand-200/40 rounded-2xl m-4">
             尚無拜訪紀錄，點擊「新增拜訪」開始記錄。
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-cream-50 text-stone-400 text-xs border-b border-brand-100/40">
-                <tr>
-                  <th className="px-4 py-3 text-left">日期</th>
-                  <th className="px-4 py-3 text-left">客戶名稱</th>
-                  <th className="px-4 py-3 text-left">縣市</th>
-                  <th className="px-4 py-3 text-left">鄉鎮市區</th>
-                  <th className="px-4 py-3 text-left">拜訪性質</th>
-                  <th className="px-4 py-3 text-left">業務人員</th>
-                  <th className="px-4 py-3 text-left">拜訪內容</th>
-                  <th className="px-4 py-3 text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-100/30">
-                {visits.map((v) => (
-                  <tr
-                    key={v.id}
-                    onClick={() => setViewingVisit(v)}
-                    className="hover:bg-cream-50/60 transition-colors cursor-pointer group"
-                  >
-                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{formatDate(v.date)}</td>
-                    <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">{v.customerName}</td>
-                    <td className="px-4 py-3 text-stone-500">{v.city || '—'}</td>
-                    <td className="px-4 py-3 text-stone-500">{v.district || '—'}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={v.status} />
-                    </td>
-                    <td className="px-4 py-3 text-stone-500">{v.salesperson || '—'}</td>
-                    <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{v.content || '—'}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {deleteConfirmId === v.id ? (
-                        <div className="flex items-center gap-2 justify-end">
-                          <span className="text-xs text-stone-500">確認刪除？</span>
-                          <button
-                            onClick={() => handleDelete(v.id)}
-                            disabled={deleting}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                          >
-                            {deleting ? '…' : '確認'}
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(null)}
-                            className="text-xs text-stone-400 hover:text-stone-600"
-                          >
-                            取消
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }}
-                            className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
-                          >
-                            編輯
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(v.id)}
-                            className="text-xs text-stone-300 hover:text-red-500 transition-colors"
-                          >
-                            刪除
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        ) : filteredVisits.length === 0 ? (
+          <div className="p-10 text-center text-sm text-stone-400">
+            找不到符合「{search}」的拜訪紀錄
           </div>
+        ) : (
+          <>
+            {keyword && (
+              <div className="px-4 py-2.5 border-b border-brand-100/40 bg-cream-50/60">
+                <span className="text-xs text-stone-500">
+                  搜尋「<span className="font-medium text-brand-600">{search}</span>」共 {filteredVisits.length} 筆
+                  <span className="text-stone-400">（共 {visits.length} 筆）</span>
+                </span>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-cream-50 text-stone-400 text-xs border-b border-brand-100/40">
+                  <tr>
+                    <th className="px-4 py-3 text-left">日期</th>
+                    <th className="px-4 py-3 text-left">客戶名稱</th>
+                    <th className="px-4 py-3 text-left">縣市</th>
+                    <th className="px-4 py-3 text-left">鄉鎮市區</th>
+                    <th className="px-4 py-3 text-left">拜訪性質</th>
+                    <th className="px-4 py-3 text-left">業務人員</th>
+                    <th className="px-4 py-3 text-left">拜訪內容</th>
+                    <th className="px-4 py-3 text-right">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-100/30">
+                  {filteredVisits.map((v) => (
+                    <tr
+                      key={v.id}
+                      onClick={() => setViewingVisit(v)}
+                      className="hover:bg-cream-50/60 transition-colors cursor-pointer group"
+                    >
+                      <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{formatDate(v.date)}</td>
+                      <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">{v.customerName}</td>
+                      <td className="px-4 py-3 text-stone-500">{v.city || '—'}</td>
+                      <td className="px-4 py-3 text-stone-500">{v.district || '—'}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={v.status} />
+                      </td>
+                      <td className="px-4 py-3 text-stone-500">{v.salesperson || '—'}</td>
+                      <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{v.content || '—'}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        {deleteConfirmId === v.id ? (
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className="text-xs text-stone-500">確認刪除？</span>
+                            <button
+                              onClick={() => handleDelete(v.id)}
+                              disabled={deleting}
+                              className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                            >
+                              {deleting ? '…' : '確認'}
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="text-xs text-stone-400 hover:text-stone-600"
+                            >
+                              取消
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }}
+                              className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
+                            >
+                              編輯
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(v.id)}
+                              className="text-xs text-stone-300 hover:text-red-500 transition-colors"
+                            >
+                              刪除
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
