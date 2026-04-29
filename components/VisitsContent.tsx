@@ -891,60 +891,41 @@ export function VisitModal({
                   {/* 客戶標籤 */}
                   <div>
                     <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶標籤</label>
-                    {/* Selected tags */}
                     {form.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {form.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1 text-xs bg-brand-100 text-brand-700 border border-brand-200/60 rounded-full px-2.5 py-0.5"
-                          >
+                          <span key={tag} className="inline-flex items-center gap-1 text-xs bg-brand-100 text-brand-700 border border-brand-200/60 rounded-full px-2.5 py-0.5">
                             {tag}
-                            <button
-                              type="button"
-                              onClick={() => removeTag(tag)}
-                              className="hover:text-brand-900 leading-none"
-                            >
-                              ×
-                            </button>
+                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-brand-900 leading-none">×</button>
                           </span>
                         ))}
                       </div>
                     )}
-                    {/* Tag input */}
                     <div className="relative">
                       <input
                         ref={tagInputRef}
                         type="text"
                         value={tagInput}
-                        onChange={(e) => { setTagInput(e.target.value); setShowTagDropdown(true) }}
-                        onFocus={() => setShowTagDropdown(true)}
+                        onChange={(e) => { setTagInput(e.target.value); setShowTagDropdown(!!e.target.value.trim()) }}
                         onBlur={() => setTimeout(() => setShowTagDropdown(false), 150)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') { e.preventDefault(); if (tagInput.trim()) addTag(tagInput) }
-                          if (e.key === 'Escape') setShowTagDropdown(false)
+                          if (e.key === 'Escape') { setShowTagDropdown(false); setTagInput('') }
                         }}
-                        placeholder="輸入或選擇標籤，按 Enter 新增…"
+                        placeholder="輸入關鍵字搜尋標籤，按 Enter 新增…"
                         className={inputCls}
                       />
-                      {showTagDropdown && (filteredTagOptions.length > 0 || tagInput.trim()) && (
-                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                      {showTagDropdown && tagInput.trim() && (filteredTagOptions.length > 0 || !tagOptions.includes(tagInput.trim())) && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-44 overflow-y-auto">
                           {filteredTagOptions.map((t) => (
-                            <button
-                              key={t}
-                              type="button"
-                              onMouseDown={() => addTag(t)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors"
-                            >
+                            <button key={t} type="button" onMouseDown={() => addTag(t)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
                               {t}
                             </button>
                           ))}
-                          {tagInput.trim() && !tagOptions.includes(tagInput.trim()) && (
-                            <button
-                              type="button"
-                              onMouseDown={() => addTag(tagInput)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-brand-600 font-medium hover:bg-brand-50 transition-colors"
-                            >
+                          {!tagOptions.includes(tagInput.trim()) && (
+                            <button type="button" onMouseDown={() => addTag(tagInput)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-brand-600 font-medium hover:bg-brand-50 transition-colors">
                               + 新增「{tagInput.trim()}」
                             </button>
                           )}
@@ -979,34 +960,26 @@ export function VisitModal({
                       <input
                         type="text"
                         value={competitorInput}
-                        onChange={(e) => { setCompetitorInput(e.target.value); setShowCompetitorDropdown(true) }}
-                        onFocus={() => setShowCompetitorDropdown(true)}
+                        onChange={(e) => { setCompetitorInput(e.target.value); setShowCompetitorDropdown(!!e.target.value.trim()) }}
                         onBlur={() => setTimeout(() => setShowCompetitorDropdown(false), 150)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') { e.preventDefault(); if (competitorInput.trim()) addCompetitor(competitorInput) }
-                          if (e.key === 'Escape') setShowCompetitorDropdown(false)
+                          if (e.key === 'Escape') { setShowCompetitorDropdown(false); setCompetitorInput('') }
                         }}
-                        placeholder="輸入或選擇競品，按 Enter 新增…"
+                        placeholder="輸入關鍵字搜尋競品，按 Enter 新增…"
                         className={inputCls}
                       />
-                      {showCompetitorDropdown && (filteredCompetitorOptions.length > 0 || competitorInput.trim()) && (
+                      {showCompetitorDropdown && competitorInput.trim() && (filteredCompetitorOptions.length > 0 || !competitorOptions.includes(competitorInput.trim())) && (
                         <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                           {filteredCompetitorOptions.map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onMouseDown={() => addCompetitor(c)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors"
-                            >
+                            <button key={c} type="button" onMouseDown={() => addCompetitor(c)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
                               {c}
                             </button>
                           ))}
-                          {competitorInput.trim() && !competitorOptions.includes(competitorInput.trim()) && (
-                            <button
-                              type="button"
-                              onMouseDown={() => addCompetitor(competitorInput)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-orange-600 font-medium hover:bg-orange-50 transition-colors"
-                            >
+                          {!competitorOptions.includes(competitorInput.trim()) && (
+                            <button type="button" onMouseDown={() => addCompetitor(competitorInput)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-orange-600 font-medium hover:bg-orange-50 transition-colors">
                               + 新增「{competitorInput.trim()}」
                             </button>
                           )}
