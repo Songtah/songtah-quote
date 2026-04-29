@@ -1213,31 +1213,12 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
     } while (cursor)
 
-    // Fetch all products from the products DB for the relation picker
-    const allProducts: Array<{ id: string; name: string }> = []
-    let productCursor: string | undefined
-    do {
-      const res: any = await notionCallWithRetry('getVisitFormOptions-products', () =>
-        notion.databases.query({
-          database_id: normalizeDatabaseId(DB.products ?? ''),
-          page_size: 100,
-          sorts: [{ property: 'Name', direction: 'ascending' }],
-          ...(productCursor ? { start_cursor: productCursor } : {}),
-        })
-      )
-      for (const page of res.results ?? []) {
-        const name = getTitle(page, 'Name') || getTitle(page, '產品名稱') || getTitle(page, '名稱')
-        if (name) allProducts.push({ id: page.id, name })
-      }
-      productCursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
-    } while (productCursor)
-
     return {
       salespersons: salespersonOptions,
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
       competitorOptions: Array.from(allCompetitorSet).sort(),
-      products: allProducts,
+      products: [],  // products are searched on-demand via /api/products/search
     }
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)

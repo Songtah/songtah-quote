@@ -628,9 +628,10 @@ export function VisitModal({
   const [competitorInput, setCompetitorInput] = useState('')
   const [showCompetitorDropdown, setShowCompetitorDropdown] = useState(false)
 
-  const [productOptions, setProductOptions] = useState<Array<{ id: string; name: string }>>([])
+  const [productSuggestions, setProductSuggestions] = useState<Array<{ id: string; name: string }>>([])
   const [productInput, setProductInput] = useState('')
-  const [showProductDropdown, setShowProductDropdown] = useState(false)
+  const [productSearchLoading, setProductSearchLoading] = useState(false)
+  const productTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Customer search — disabled when prefillCustomer is provided
   const [query, setQuery] = useState(initialData?.customerName ?? prefillCustomer?.name ?? '')
@@ -656,14 +657,13 @@ export function VisitModal({
     let cancelled = false
     fetch('/api/visits/options')
       .then((r) => r.json())
-      .then((data: { salespersons?: string[]; tagOptions?: string[]; competitorOptions?: string[]; products?: Array<{ id: string; name: string }> }) => {
+      .then((data: { salespersons?: string[]; tagOptions?: string[]; competitorOptions?: string[] }) => {
         if (cancelled) return
         if (Array.isArray(data?.salespersons)) {
           setSalespersonOptions(data.salespersons.map((name) => ({ value: name, label: name })))
         }
         if (Array.isArray(data?.tagOptions)) setTagOptions(data.tagOptions)
         if (Array.isArray(data?.competitorOptions)) setCompetitorOptions(data.competitorOptions)
-        if (Array.isArray(data?.products)) setProductOptions(data.products)
       })
       .catch(() => { if (cancelled) return; setSalespersonOptions([]) })
     return () => { cancelled = true }
@@ -699,20 +699,42 @@ export function VisitModal({
     (c) => !form.competitorEquipment.includes(c) && c.toLowerCase().includes(competitorInput.toLowerCase())
   )
 
+  // Product search (debounced via /api/products/search)
+  const searchProducts = useCallback((q: string) => {
+    if (productTimer.current) clearTimeout(productTimer.current)
+    if (!q.trim()) { setProductSuggestions([]); setProductSearchLoading(false); return }
+    setProductSearchLoading(true)
+    productTimer.current = setTimeout(() => {
+      fetch(`/api/products/search?q=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((data: Array<{ id: string; name: string }>) => {
+          if (!Array.isArray(data)) return
+          setProductSuggestions(data.filter((p) => !form.interestedProductIds.includes(p.id)))
+        })
+        .catch(() => setProductSuggestions([]))
+        .finally(() => setProductSearchLoading(false))
+    }, 300)
+  }, [form.interestedProductIds])
+
   // Product helpers
+  const [selectedProductNames, setSelectedProductNames] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    if (initialData?.interestedProducts) {
+      for (const p of initialData.interestedProducts) map[p.id] = p.name
+    }
+    return map
+  })
+
   const addProduct = (product: { id: string; name: string }) => {
     if (form.interestedProductIds.includes(product.id)) return
+    setSelectedProductNames((m) => ({ ...m, [product.id]: product.name }))
     setForm((f) => ({ ...f, interestedProductIds: [...f.interestedProductIds, product.id] }))
     setProductInput('')
-    setShowProductDropdown(false)
+    setProductSuggestions([])
   }
   const removeProduct = (id: string) => {
     setForm((f) => ({ ...f, interestedProductIds: f.interestedProductIds.filter((pid) => pid !== id) }))
   }
-  const selectedProducts = productOptions.filter((p) => form.interestedProductIds.includes(p.id))
-  const filteredProductOptions = productOptions.filter(
-    (p) => !form.interestedProductIds.includes(p.id) && p.name.toLowerCase().includes(productInput.toLowerCase())
-  )
 
   // Body scroll lock
   useEffect(() => {
@@ -1023,12 +1045,12 @@ export function VisitModal({
                   {/* 有興趣的產品 */}
                   <div>
                     <label className="block text-xs font-medium text-stone-500 mb-1.5">有興趣的產品</label>
-                    {selectedProducts.length > 0 && (
+                    {form.interestedProductIds.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
-                        {selectedProducts.map((p) => (
-                          <span key={p.id} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
-                            {p.name}
-                            <button type="button" onClick={() => removeProduct(p.id)} className="hover:text-emerald-900 leading-none">×</button>
+                        {form.interestedProductIds.map((id) => (
+                          <span key={id} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
+                            {selectedProductNames[id] ?? id}
+                            <button type="button" onClick={() => removeProduct(id)} className="hover:text-emerald-900 leading-none">×</button>
                           </span>
                         ))}
                       </div>
@@ -1037,25 +1059,29 @@ export function VisitModal({
                       <input
                         type="text"
                         value={productInput}
-                        onChange={(e) => { setProductInput(e.target.value); setShowProductDropdown(!!e.target.value.trim()) }}
-                        onBlur={() => setTimeout(() => setShowProductDropdown(false), 150)}
+                        onChange={(e) => { setProductInput(e.target.value); searchProducts(e.target.value) }}
+                        onBlur={() => setTimeout(() => setProductSuggestions([]), 150)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Escape') { setShowProductDropdown(false); setProductInput('') }
+                          if (e.key === 'Escape') { setProductInput(''); setProductSuggestions([]) }
                         }}
                         placeholder="輸入產品名稱搜尋…"
                         className={inputCls}
                       />
-                      {showProductDropdown && productInput.trim() && filteredProductOptions.length > 0 && (
+                      {(productSearchLoading || productSuggestions.length > 0) && productInput.trim() && (
                         <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                          {filteredProductOptions.map((p) => (
-                            <button key={p.id} type="button" onMouseDown={() => addProduct(p)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
-                              {p.name}
-                            </button>
-                          ))}
+                          {productSearchLoading ? (
+                            <div className="px-4 py-3 text-sm text-stone-400">搜尋中…</div>
+                          ) : (
+                            productSuggestions.map((p) => (
+                              <button key={p.id} type="button" onMouseDown={() => addProduct(p)}
+                                className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
+                                {p.name}
+                              </button>
+                            ))
+                          )}
                         </div>
                       )}
-                      {showProductDropdown && productInput.trim() && filteredProductOptions.length === 0 && (
+                      {!productSearchLoading && productInput.trim() && productSuggestions.length === 0 && (
                         <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg px-4 py-3 text-sm text-stone-400">
                           找不到符合的產品
                         </div>
