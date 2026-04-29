@@ -1133,8 +1133,9 @@ export type Visit = {
   address: string              // 地址
   city: string                 // 縣市
   district: string             // 鄉鎮市區
-  tags: string[]                // 客戶標籤
-  competitorEquipment: string[] // 競品 (multi_select)
+  tags: string[]                                    // 客戶標籤
+  competitorEquipment: string[]                     // 競品 (multi_select)
+  interestedProducts: Array<{ id: string; name: string }> // 有興趣的產品 (relation)
 }
 
 export type VisitFormOptions = {
@@ -1142,6 +1143,7 @@ export type VisitFormOptions = {
   statuses: string[]
   tagOptions: string[]
   competitorOptions: string[]
+  products: Array<{ id: string; name: string }>
 }
 
 let _visitFieldsEnsured = false
@@ -1211,11 +1213,31 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
     } while (cursor)
 
+    // Fetch all products from the products DB for the relation picker
+    const allProducts: Array<{ id: string; name: string }> = []
+    let productCursor: string | undefined
+    do {
+      const res: any = await notionCallWithRetry('getVisitFormOptions-products', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.products ?? ''),
+          page_size: 100,
+          sorts: [{ property: 'Name', direction: 'ascending' }],
+          ...(productCursor ? { start_cursor: productCursor } : {}),
+        })
+      )
+      for (const page of res.results ?? []) {
+        const name = getTitle(page, 'Name') || getTitle(page, '產品名稱') || getTitle(page, '名稱')
+        if (name) allProducts.push({ id: page.id, name })
+      }
+      productCursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
+    } while (productCursor)
+
     return {
       salespersons: salespersonOptions,
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
       competitorOptions: Array.from(allCompetitorSet).sort(),
+      products: allProducts,
     }
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
@@ -1224,15 +1246,17 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       statuses: [],
       tagOptions: [],
       competitorOptions: [],
+      products: [],
     }
   }
 }
 
-/** Returns a raw visit object with an extra _relId field for name resolution. */
+/** Returns a raw visit object with extra _relId / _productRelIds for name resolution. */
 function mapVisitPageRaw(page: any) {
   return {
     id: page.id,
     _relId: getRelationIds(page, '🏥 牙科單位資料')[0] ?? '',
+    _productRelIds: getRelationIds(page, '有興趣的產品'),
     customerName: getTitle(page, '單位名稱'), // fallback if relation unresolved
     date: getDate(page, '日期'),
     salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
@@ -1244,6 +1268,32 @@ function mapVisitPageRaw(page: any) {
     tags: (getProp(page, '客戶標籤')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
     competitorEquipment: (getProp(page, '競品')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
   }
+}
+
+/** Batch-fetch product names for a set of relation IDs (each result cached 10 min). */
+async function resolveProductNames(relIds: string[]): Promise<Record<string, string>> {
+  const nameMap: Record<string, string> = {}
+  const unique = Array.from(new Set(relIds.filter(Boolean)))
+  if (!unique.length) return nameMap
+
+  await Promise.all(
+    unique.map(async (id) => {
+      const cacheKey = `product-name:${id}`
+      const cached = getCachedValue<string>(cacheKey)
+      if (cached !== null) { nameMap[id] = cached; return }
+      try {
+        const page: any = await notionCallWithRetry('resolveProductName', () =>
+          notion.pages.retrieve({ page_id: id })
+        )
+        const name = getTitle(page, 'Name') || getTitle(page, '產品名稱') || getTitle(page, '名稱')
+        nameMap[id] = name
+        setCachedValue(cacheKey, name, 600_000)
+      } catch {
+        nameMap[id] = ''
+      }
+    })
+  )
+  return nameMap
 }
 
 /** Batch-fetch customer names for a set of relation IDs (each result cached 5 min). */
@@ -1326,9 +1376,19 @@ export async function listVisits(options?: { customerName?: string; customerId?:
     ? await resolveCustomerNames(missingNameIds)
     : {}
 
+  // Resolve product names for records that have interested product relations
+  const allProductRelIds = rawItems.flatMap((v) => v._productRelIds)
+  const productNameMap = allProductRelIds.length ? await resolveProductNames(allProductRelIds) : {}
+
   const items: Visit[] = rawItems.map((raw: ReturnType<typeof mapVisitPageRaw>) => {
-    const { _relId, ...v } = raw
-    return { ...v, customerName: v.customerName || (_relId && nameMap[_relId]) || '' }
+    const { _relId, _productRelIds, ...v } = raw
+    return {
+      ...v,
+      customerName: v.customerName || (_relId && nameMap[_relId]) || '',
+      interestedProducts: _productRelIds
+        .map((pid: string) => ({ id: pid, name: productNameMap[pid] ?? '' }))
+        .filter((p: { id: string; name: string }) => p.name),
+    }
   })
 
   // Cache the full list result
@@ -1345,12 +1405,18 @@ export async function getVisitById(id: string): Promise<Visit> {
   )
 
   const raw = mapVisitPageRaw(page)
-  const nameMap = await resolveCustomerNames(raw._relId ? [raw._relId] : [])
-  const { _relId, ...visit } = raw
+  const [nameMap, productNameMap] = await Promise.all([
+    resolveCustomerNames(raw._relId ? [raw._relId] : []),
+    resolveProductNames(raw._productRelIds),
+  ])
+  const { _relId, _productRelIds, ...visit } = raw
 
   return {
     ...visit,
     customerName: (_relId && nameMap[_relId]) || visit.customerName,
+    interestedProducts: (_productRelIds as string[])
+      .map((pid: string) => ({ id: pid, name: productNameMap[pid] ?? '' }))
+      .filter((p: { id: string; name: string }) => p.name),
   }
 }
 
@@ -1366,6 +1432,7 @@ export async function createVisit(data: {
   customerId?: string
   tags?: string[]
   competitorEquipment?: string[]
+  interestedProductIds?: string[]
 }): Promise<Visit> {
   invalidateVisitsCache()
   await ensureVisitDbFields()
@@ -1391,6 +1458,9 @@ export async function createVisit(data: {
         ...(data.customerId
           ? { '🏥 牙科單位資料': { relation: [{ id: data.customerId }] } }
           : {}),
+        ...(data.interestedProductIds?.length
+          ? { '有興趣的產品': { relation: data.interestedProductIds.map((id) => ({ id })) } }
+          : {}),
       } as any,
     })
   )
@@ -1407,6 +1477,7 @@ export async function createVisit(data: {
     district: data.district,
     tags: data.tags ?? [],
     competitorEquipment: data.competitorEquipment ?? [],
+    interestedProducts: [],
   }
 }
 
@@ -1422,6 +1493,7 @@ export async function updateVisit(id: string, data: {
   customerId?: string
   tags?: string[]
   competitorEquipment?: string[]
+  interestedProductIds?: string[]
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
@@ -1434,6 +1506,7 @@ export async function updateVisit(id: string, data: {
   if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
   if (data.tags !== undefined) properties['客戶標籤'] = { multi_select: data.tags.map((name) => ({ name })) }
   if (data.competitorEquipment !== undefined) properties['競品'] = { multi_select: data.competitorEquipment.map((name) => ({ name })) }
+  if (data.interestedProductIds !== undefined) properties['有興趣的產品'] = { relation: data.interestedProductIds.map((id) => ({ id })) }
   if (data.customerId !== undefined) {
     properties['🏥 牙科單位資料'] = data.customerId
       ? { relation: [{ id: data.customerId }] }

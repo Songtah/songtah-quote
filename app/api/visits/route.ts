@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { customerName, date, salesperson, status, content, address, city, district, customerId, tags, competitorEquipment } = body
+    const { customerName, date, salesperson, status, content, address, city, district, customerId, tags, competitorEquipment, interestedProductIds } = body
 
     if (!customerName) return NextResponse.json({ error: '客戶名稱必填' }, { status: 400 })
 
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       customerId,
       tags: Array.isArray(tags) ? tags : [],
       competitorEquipment: Array.isArray(competitorEquipment) ? competitorEquipment : [],
+      interestedProductIds: Array.isArray(interestedProductIds) ? interestedProductIds : [],
     })
 
     await logAuditEvent({
