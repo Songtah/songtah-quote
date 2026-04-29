@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       district,
       customerId,
       tags: Array.isArray(tags) ? tags : [],
-      competitorEquipment: competitorEquipment ?? '',
+      competitorEquipment: Array.isArray(competitorEquipment) ? competitorEquipment : [],
     })
 
     await logAuditEvent({

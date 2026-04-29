@@ -1133,14 +1133,15 @@ export type Visit = {
   address: string              // 地址
   city: string                 // 縣市
   district: string             // 鄉鎮市區
-  tags: string[]               // 客戶標籤
-  competitorEquipment: string  // 競品設備
+  tags: string[]                // 客戶標籤
+  competitorEquipment: string[] // 競品 (multi_select)
 }
 
 export type VisitFormOptions = {
   salespersons: string[]
   statuses: string[]
   tagOptions: string[]
+  competitorOptions: string[]
 }
 
 let _visitFieldsEnsured = false
@@ -1179,18 +1180,20 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
     const statusOptions =
       database.properties?.['拜訪性質']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
 
-    // Collect tag options from both the schema AND from actual record values.
-    // Scanning records ensures we get every tag ever used, even if the DB schema
-    // was recreated or the field options list was reset.
+    // For multi_select fields (客戶標籤, 競品): collect options from both the DB schema
+    // AND from actual record values, so we never miss a previously-used option.
     const schemaTagOptions: string[] =
-      database.properties?.['客戶標籤']?.multi_select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+      database.properties?.['客戶標籤']?.multi_select?.options?.map((o: any) => o.name).filter(Boolean) ?? []
+    const schemaCompetitorOptions: string[] =
+      database.properties?.['競品']?.multi_select?.options?.map((o: any) => o.name).filter(Boolean) ?? []
 
     const allTagsSet = new Set<string>(schemaTagOptions)
+    const allCompetitorSet = new Set<string>(schemaCompetitorOptions)
 
-    // Paginate through all records to collect tags from actual data
+    // Paginate through all records to also collect values from actual data
     let cursor: string | undefined
     do {
-      const response: any = await notionCallWithRetry('getVisitFormOptions-tags', () =>
+      const response: any = await notionCallWithRetry('getVisitFormOptions-scan', () =>
         notion.databases.query({
           database_id: normalizeDatabaseId(DB.visits),
           page_size: 100,
@@ -1198,9 +1201,11 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
         })
       )
       for (const page of response.results ?? []) {
-        const multiSel = getProp(page, '客戶標籤')?.multi_select ?? []
-        for (const item of multiSel) {
+        for (const item of getProp(page, '客戶標籤')?.multi_select ?? []) {
           if (item?.name) allTagsSet.add(item.name)
+        }
+        for (const item of getProp(page, '競品')?.multi_select ?? []) {
+          if (item?.name) allCompetitorSet.add(item.name)
         }
       }
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
@@ -1210,6 +1215,7 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       salespersons: salespersonOptions,
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
+      competitorOptions: Array.from(allCompetitorSet).sort(),
     }
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
@@ -1217,6 +1223,7 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       salespersons: [],
       statuses: [],
       tagOptions: [],
+      competitorOptions: [],
     }
   }
 }
@@ -1235,7 +1242,7 @@ function mapVisitPageRaw(page: any) {
     city: getRollupText(page, '縣市') || getSelect(page, '縣市') || getText(page, '縣市'),
     district: getRollupText(page, '鄉鎮市區') || getSelect(page, '鄉鎮市區') || getText(page, '鄉鎮市區'),
     tags: (getProp(page, '客戶標籤')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
-    competitorEquipment: getText(page, '競品') || getText(page, '競品設備'),
+    competitorEquipment: (getProp(page, '競品')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
   }
 }
 
@@ -1358,7 +1365,7 @@ export async function createVisit(data: {
   district: string
   customerId?: string
   tags?: string[]
-  competitorEquipment?: string
+  competitorEquipment?: string[]
 }): Promise<Visit> {
   invalidateVisitsCache()
   await ensureVisitDbFields()
@@ -1378,8 +1385,8 @@ export async function createVisit(data: {
         ...(data.tags?.length
           ? { 客戶標籤: { multi_select: data.tags.map((name) => ({ name })) } }
           : {}),
-        ...(data.competitorEquipment
-          ? { 競品: { rich_text: richText(data.competitorEquipment) } }
+        ...(data.competitorEquipment?.length
+          ? { 競品: { multi_select: data.competitorEquipment.map((name) => ({ name })) } }
           : {}),
         ...(data.customerId
           ? { '🏥 牙科單位資料': { relation: [{ id: data.customerId }] } }
@@ -1399,7 +1406,7 @@ export async function createVisit(data: {
     city: data.city,
     district: data.district,
     tags: data.tags ?? [],
-    competitorEquipment: data.competitorEquipment ?? '',
+    competitorEquipment: data.competitorEquipment ?? [],
   }
 }
 
@@ -1414,7 +1421,7 @@ export async function updateVisit(id: string, data: {
   district?: string
   customerId?: string
   tags?: string[]
-  competitorEquipment?: string
+  competitorEquipment?: string[]
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
@@ -1426,7 +1433,7 @@ export async function updateVisit(id: string, data: {
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
   if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
   if (data.tags !== undefined) properties['客戶標籤'] = { multi_select: data.tags.map((name) => ({ name })) }
-  if (data.competitorEquipment !== undefined) properties['競品'] = { rich_text: richText(data.competitorEquipment) }
+  if (data.competitorEquipment !== undefined) properties['競品'] = { multi_select: data.competitorEquipment.map((name) => ({ name })) }
   if (data.customerId !== undefined) {
     properties['🏥 牙科單位資料'] = data.customerId
       ? { relation: [{ id: data.customerId }] }

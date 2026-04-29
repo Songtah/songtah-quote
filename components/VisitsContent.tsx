@@ -35,7 +35,7 @@ type VisitForm = {
   city: string
   district: string
   tags: string[]
-  competitorEquipment: string
+  competitorEquipment: string[]
 }
 
 type SalespersonOption = {
@@ -520,10 +520,16 @@ function ViewVisitModal({
                   )}
 
                   {/* 競品設備 */}
-                  {visit.competitorEquipment && (
+                  {visit.competitorEquipment && visit.competitorEquipment.length > 0 && (
                     <div className="bg-cream-50/60 rounded-xl px-4 py-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">競品設備</div>
-                      <div className="text-sm text-stone-700">{visit.competitorEquipment}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">競品設備</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visit.competitorEquipment.map((val) => (
+                          <span key={val} className="text-xs bg-orange-50 text-orange-700 border border-orange-200/50 rounded-full px-2.5 py-0.5 font-medium">
+                            {val}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -592,7 +598,7 @@ export function VisitModal({
     city: initialData?.city ?? prefillCustomer?.city ?? '',
     district: initialData?.district ?? prefillCustomer?.district ?? '',
     tags: initialData?.tags ?? [],
-    competitorEquipment: initialData?.competitorEquipment ?? '',
+    competitorEquipment: initialData?.competitorEquipment ?? [],
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -601,6 +607,10 @@ export function VisitModal({
   const [tagInput, setTagInput] = useState('')
   const [showTagDropdown, setShowTagDropdown] = useState(false)
   const tagInputRef = useRef<HTMLInputElement>(null)
+
+  const [competitorOptions, setCompetitorOptions] = useState<string[]>([])
+  const [competitorInput, setCompetitorInput] = useState('')
+  const [showCompetitorDropdown, setShowCompetitorDropdown] = useState(false)
 
   // Customer search — disabled when prefillCustomer is provided
   const [query, setQuery] = useState(initialData?.customerName ?? prefillCustomer?.name ?? '')
@@ -626,13 +636,16 @@ export function VisitModal({
     let cancelled = false
     fetch('/api/visits/options')
       .then((r) => r.json())
-      .then((data: { salespersons?: string[]; tagOptions?: string[] }) => {
+      .then((data: { salespersons?: string[]; tagOptions?: string[]; competitorOptions?: string[] }) => {
         if (cancelled) return
         if (Array.isArray(data?.salespersons)) {
           setSalespersonOptions(data.salespersons.map((name) => ({ value: name, label: name })))
         }
         if (Array.isArray(data?.tagOptions)) {
           setTagOptions(data.tagOptions)
+        }
+        if (Array.isArray(data?.competitorOptions)) {
+          setCompetitorOptions(data.competitorOptions)
         }
       })
       .catch(() => { if (cancelled) return; setSalespersonOptions([]) })
@@ -652,6 +665,21 @@ export function VisitModal({
   }
   const filteredTagOptions = tagOptions.filter(
     (t) => !form.tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase())
+  )
+
+  // Competitor helpers
+  const addCompetitor = (val: string) => {
+    const v = val.trim()
+    if (!v || form.competitorEquipment.includes(v)) return
+    setForm((f) => ({ ...f, competitorEquipment: [...f.competitorEquipment, v] }))
+    setCompetitorInput('')
+    setShowCompetitorDropdown(false)
+  }
+  const removeCompetitor = (val: string) => {
+    setForm((f) => ({ ...f, competitorEquipment: f.competitorEquipment.filter((v) => v !== val) }))
+  }
+  const filteredCompetitorOptions = competitorOptions.filter(
+    (c) => !form.competitorEquipment.includes(c) && c.toLowerCase().includes(competitorInput.toLowerCase())
   )
 
   // Body scroll lock
@@ -928,13 +956,63 @@ export function VisitModal({
                   {/* 競品設備 */}
                   <div>
                     <label className="block text-xs font-medium text-stone-500 mb-1.5">競品設備</label>
-                    <input
-                      type="text"
-                      value={form.competitorEquipment}
-                      onChange={(e) => setForm((f) => ({ ...f, competitorEquipment: e.target.value }))}
-                      placeholder="記錄客戶現有或考慮中的競品設備…"
-                      className={inputCls}
-                    />
+                    {form.competitorEquipment.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {form.competitorEquipment.map((val) => (
+                          <span
+                            key={val}
+                            className="inline-flex items-center gap-1 text-xs bg-orange-50 text-orange-700 border border-orange-200/60 rounded-full px-2.5 py-0.5"
+                          >
+                            {val}
+                            <button
+                              type="button"
+                              onClick={() => removeCompetitor(val)}
+                              className="hover:text-orange-900 leading-none"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={competitorInput}
+                        onChange={(e) => { setCompetitorInput(e.target.value); setShowCompetitorDropdown(true) }}
+                        onFocus={() => setShowCompetitorDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowCompetitorDropdown(false), 150)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); if (competitorInput.trim()) addCompetitor(competitorInput) }
+                          if (e.key === 'Escape') setShowCompetitorDropdown(false)
+                        }}
+                        placeholder="輸入或選擇競品，按 Enter 新增…"
+                        className={inputCls}
+                      />
+                      {showCompetitorDropdown && (filteredCompetitorOptions.length > 0 || competitorInput.trim()) && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                          {filteredCompetitorOptions.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onMouseDown={() => addCompetitor(c)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors"
+                            >
+                              {c}
+                            </button>
+                          ))}
+                          {competitorInput.trim() && !competitorOptions.includes(competitorInput.trim()) && (
+                            <button
+                              type="button"
+                              onMouseDown={() => addCompetitor(competitorInput)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-orange-600 font-medium hover:bg-orange-50 transition-colors"
+                            >
+                              + 新增「{competitorInput.trim()}」
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {error && (

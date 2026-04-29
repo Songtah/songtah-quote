@@ -13,6 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const before = await getVisitById(params.id).catch(() => null)
     const updateData = { ...body }
     if (body.tags !== undefined && !Array.isArray(body.tags)) delete updateData.tags
+    if (body.competitorEquipment !== undefined && !Array.isArray(body.competitorEquipment)) delete updateData.competitorEquipment
     await updateVisit(params.id, updateData)
 
     const after = await getVisitById(params.id).catch(() => ({ id: params.id, ...body }))
