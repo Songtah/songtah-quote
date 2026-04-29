@@ -1153,7 +1153,8 @@ async function ensureVisitDbFields() {
         縣市:     { rich_text: {} },
         鄉鎮市區:   { rich_text: {} },
         拜訪性質:   { select: {} },
-        客戶標籤:   { multi_select: {} },
+        // 注意：不可在此放 multi_select 欄位（如客戶標籤），
+        // Notion API 會將空的 multi_select:{} 解讀為清除所有選項。
       } as any,
     })
   } catch (e) {
