@@ -942,6 +942,53 @@ export function VisitModal({
                     />
                   </div>
 
+                  {/* 有興趣的產品 */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">有興趣的產品</label>
+                    {form.interestedProductIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {form.interestedProductIds.map((id) => (
+                          <span key={id} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
+                            {selectedProductNames[id] ?? id}
+                            <button type="button" onClick={() => removeProduct(id)} className="hover:text-emerald-900 leading-none">×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={productInput}
+                        onChange={(e) => { setProductInput(e.target.value); searchProducts(e.target.value) }}
+                        onBlur={() => setTimeout(() => setProductSuggestions([]), 150)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') { setProductInput(''); setProductSuggestions([]) }
+                        }}
+                        placeholder="輸入產品名稱搜尋…"
+                        className={inputCls}
+                      />
+                      {(productSearchLoading || productSuggestions.length > 0) && productInput.trim() && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                          {productSearchLoading ? (
+                            <div className="px-4 py-3 text-sm text-stone-400">搜尋中…</div>
+                          ) : (
+                            productSuggestions.map((p) => (
+                              <button key={p.id} type="button" onMouseDown={() => addProduct(p)}
+                                className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
+                                {p.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                      {!productSearchLoading && productInput.trim() && productSuggestions.length === 0 && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg px-4 py-3 text-sm text-stone-400">
+                          找不到符合的產品
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* 客戶標籤 */}
                   <div>
                     <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶標籤</label>
@@ -1037,53 +1084,6 @@ export function VisitModal({
                               + 新增「{competitorInput.trim()}」
                             </button>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 有興趣的產品 */}
-                  <div>
-                    <label className="block text-xs font-medium text-stone-500 mb-1.5">有興趣的產品</label>
-                    {form.interestedProductIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {form.interestedProductIds.map((id) => (
-                          <span key={id} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
-                            {selectedProductNames[id] ?? id}
-                            <button type="button" onClick={() => removeProduct(id)} className="hover:text-emerald-900 leading-none">×</button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={productInput}
-                        onChange={(e) => { setProductInput(e.target.value); searchProducts(e.target.value) }}
-                        onBlur={() => setTimeout(() => setProductSuggestions([]), 150)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') { setProductInput(''); setProductSuggestions([]) }
-                        }}
-                        placeholder="輸入產品名稱搜尋…"
-                        className={inputCls}
-                      />
-                      {(productSearchLoading || productSuggestions.length > 0) && productInput.trim() && (
-                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                          {productSearchLoading ? (
-                            <div className="px-4 py-3 text-sm text-stone-400">搜尋中…</div>
-                          ) : (
-                            productSuggestions.map((p) => (
-                              <button key={p.id} type="button" onMouseDown={() => addProduct(p)}
-                                className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors">
-                                {p.name}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                      {!productSearchLoading && productInput.trim() && productSuggestions.length === 0 && (
-                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg px-4 py-3 text-sm text-stone-400">
-                          找不到符合的產品
                         </div>
                       )}
                     </div>
