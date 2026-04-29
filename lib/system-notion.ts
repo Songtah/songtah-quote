@@ -1146,24 +1146,11 @@ export type VisitFormOptions = {
   products: Array<{ id: string; name: string }>
 }
 
-let _visitFieldsEnsured = false
+// ⚠️ ensureVisitDbFields 已停用：
+// Notion databases.update 傳入任何 select:{} / multi_select:{} 都會清除既有選項，
+// 並同步刪除所有紀錄上的對應值。所有欄位在 Notion 中已存在，不需要此函式。
 async function ensureVisitDbFields() {
-  if (_visitFieldsEnsured) return
-  try {
-    await notion.databases.update({
-      database_id: normalizeDatabaseId(DB.visits),
-      properties: {
-        縣市:     { rich_text: {} },
-        鄉鎮市區:   { rich_text: {} },
-        拜訪性質:   { select: {} },
-        // 注意：不可在此放 multi_select 欄位（如客戶標籤），
-        // Notion API 會將空的 multi_select:{} 解讀為清除所有選項。
-      } as any,
-    })
-  } catch (e) {
-    console.warn('ensureVisitDbFields warning:', e)
-  }
-  _visitFieldsEnsured = true
+  // intentionally empty — do NOT call databases.update here
 }
 
 export async function getVisitFormOptions(): Promise<VisitFormOptions> {
