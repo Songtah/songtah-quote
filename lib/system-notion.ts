@@ -1125,20 +1125,22 @@ export async function getSystemTicketById(id: string) {
 
 export type Visit = {
   id: string
-  customerName: string   // 單位名稱
-  date: string           // 日期
-  salesperson: string    // 業務人員
-  status: string         // 狀態 (拜訪性質)
-  content: string        // 拜訪內容
-  address: string        // 地址
-  city: string           // 縣市
-  district: string       // 鄉鎮市區
-  tags: string[]         // 客戶標籤
+  customerName: string         // 單位名稱
+  date: string                 // 日期
+  salesperson: string          // 業務人員
+  status: string               // 狀態 (拜訪性質)
+  content: string              // 拜訪內容
+  address: string              // 地址
+  city: string                 // 縣市
+  district: string             // 鄉鎮市區
+  tags: string[]               // 客戶標籤
+  competitorEquipment: string  // 競品設備
 }
 
 export type VisitFormOptions = {
   salespersons: string[]
   statuses: string[]
+  tagOptions: string[]
 }
 
 let _visitFieldsEnsured = false
@@ -1148,9 +1150,11 @@ async function ensureVisitDbFields() {
     await notion.databases.update({
       database_id: normalizeDatabaseId(DB.visits),
       properties: {
-        縣市:   { rich_text: {} },
-        鄉鎮市區: { rich_text: {} },
-        拜訪性質: { select: {} },
+        縣市:     { rich_text: {} },
+        鄉鎮市區:   { rich_text: {} },
+        拜訪性質:   { select: {} },
+        競品設備:   { rich_text: {} },
+        客戶標籤:   { multi_select: {} },
       } as any,
     })
   } catch (e) {
@@ -1173,16 +1177,20 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       database.properties?.['業務人員']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
     const statusOptions =
       database.properties?.['拜訪性質']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+    const tagOptions =
+      database.properties?.['客戶標籤']?.multi_select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
 
     return {
       salespersons: salespersonOptions,
       statuses: statusOptions,
+      tagOptions,
     }
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
     return {
       salespersons: [],
       statuses: [],
+      tagOptions: [],
     }
   }
 }
@@ -1201,6 +1209,7 @@ function mapVisitPageRaw(page: any) {
     city: getRollupText(page, '縣市') || getSelect(page, '縣市') || getText(page, '縣市'),
     district: getRollupText(page, '鄉鎮市區') || getSelect(page, '鄉鎮市區') || getText(page, '鄉鎮市區'),
     tags: (getProp(page, '客戶標籤')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
+    competitorEquipment: getText(page, '競品設備'),
   }
 }
 
@@ -1322,6 +1331,8 @@ export async function createVisit(data: {
   city: string
   district: string
   customerId?: string
+  tags?: string[]
+  competitorEquipment?: string
 }): Promise<Visit> {
   invalidateVisitsCache()
   await ensureVisitDbFields()
@@ -1338,6 +1349,12 @@ export async function createVisit(data: {
         地址: { rich_text: richText(data.address) },
         縣市: { rich_text: richText(data.city) },
         鄉鎮市區: { rich_text: richText(data.district) },
+        ...(data.tags?.length
+          ? { 客戶標籤: { multi_select: data.tags.map((name) => ({ name })) } }
+          : {}),
+        ...(data.competitorEquipment
+          ? { 競品設備: { rich_text: richText(data.competitorEquipment) } }
+          : {}),
         ...(data.customerId
           ? { '🏥 牙科單位資料': { relation: [{ id: data.customerId }] } }
           : {}),
@@ -1355,7 +1372,8 @@ export async function createVisit(data: {
     address: data.address,
     city: data.city,
     district: data.district,
-    tags: [] as string[],
+    tags: data.tags ?? [],
+    competitorEquipment: data.competitorEquipment ?? '',
   }
 }
 
@@ -1369,6 +1387,8 @@ export async function updateVisit(id: string, data: {
   city?: string
   district?: string
   customerId?: string
+  tags?: string[]
+  competitorEquipment?: string
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
@@ -1379,6 +1399,8 @@ export async function updateVisit(id: string, data: {
   if (data.address !== undefined) properties['地址'] = { rich_text: richText(data.address) }
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
   if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
+  if (data.tags !== undefined) properties['客戶標籤'] = { multi_select: data.tags.map((name) => ({ name })) }
+  if (data.competitorEquipment !== undefined) properties['競品設備'] = { rich_text: richText(data.competitorEquipment) }
   if (data.customerId !== undefined) {
     properties['🏥 牙科單位資料'] = data.customerId
       ? { relation: [{ id: data.customerId }] }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Visit } from '@/lib/system-notion'
 
@@ -33,6 +34,8 @@ type VisitForm = {
   address: string
   city: string
   district: string
+  tags: string[]
+  competitorEquipment: string
 }
 
 type SalespersonOption = {
@@ -62,6 +65,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function VisitsContent() {
+  const router = useRouter()
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -92,22 +96,31 @@ export default function VisitsContent() {
     }
 
     fetch('/api/visits')
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          // Session expired — clear cache and redirect to login
+          try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+          router.push('/login')
+          return null
+        }
+        return r.json()
+      })
       .then((data) => {
-        if (!Array.isArray(data)) return
+        if (!data || !Array.isArray(data)) return
         setVisits(data)
         try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [router])
 
   useEffect(() => { loadVisits() }, [loadVisits])
 
   const handleDelete = async (id: string) => {
     setDeleting(true)
     try {
-      await fetch(`/api/visits/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/visits/${id}`, { method: 'DELETE' })
+      if (res.status === 401) { try { sessionStorage.removeItem(CACHE_KEY) } catch {}; router.push('/login'); return }
       setDeleteConfirmId(null)
       try { sessionStorage.removeItem(CACHE_KEY) } catch {}
       loadVisits(true)
@@ -492,14 +505,25 @@ function ViewVisitModal({
                     )}
                   </div>
 
-                  {/* Tags */}
+                  {/* 客戶標籤 */}
                   {visit.tags && visit.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {visit.tags.map((tag) => (
-                        <span key={tag} className="text-xs bg-brand-50 text-brand-600 border border-brand-200/50 rounded-full px-2.5 py-0.5">
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="bg-cream-50/60 rounded-xl px-4 py-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">客戶標籤</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {visit.tags.map((tag) => (
+                          <span key={tag} className="text-xs bg-brand-100 text-brand-700 border border-brand-200/50 rounded-full px-2.5 py-0.5 font-medium">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 競品設備 */}
+                  {visit.competitorEquipment && (
+                    <div className="bg-cream-50/60 rounded-xl px-4 py-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">競品設備</div>
+                      <div className="text-sm text-stone-700">{visit.competitorEquipment}</div>
                     </div>
                   )}
                 </div>
@@ -547,6 +571,7 @@ export function VisitModal({
   onClose: () => void
   onSaved: () => void
 }) {
+  const router = useRouter()
   const isEdit = !!initialData
   const today = new Date().toISOString().slice(0, 10)
   const [visible, setVisible] = useState(true)
@@ -566,10 +591,16 @@ export function VisitModal({
     address: initialData?.address ?? prefillCustomer?.address ?? '',
     city: initialData?.city ?? prefillCustomer?.city ?? '',
     district: initialData?.district ?? prefillCustomer?.district ?? '',
+    tags: initialData?.tags ?? [],
+    competitorEquipment: initialData?.competitorEquipment ?? '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [salespersonOptions, setSalespersonOptions] = useState<SalespersonOption[]>([])
+  const [tagOptions, setTagOptions] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+  const tagInputRef = useRef<HTMLInputElement>(null)
 
   // Customer search — disabled when prefillCustomer is provided
   const [query, setQuery] = useState(initialData?.customerName ?? prefillCustomer?.name ?? '')
@@ -595,13 +626,33 @@ export function VisitModal({
     let cancelled = false
     fetch('/api/visits/options')
       .then((r) => r.json())
-      .then((data: { salespersons?: string[] }) => {
-        if (cancelled || !Array.isArray(data?.salespersons)) return
-        setSalespersonOptions(data.salespersons.map((name) => ({ value: name, label: name })))
+      .then((data: { salespersons?: string[]; tagOptions?: string[] }) => {
+        if (cancelled) return
+        if (Array.isArray(data?.salespersons)) {
+          setSalespersonOptions(data.salespersons.map((name) => ({ value: name, label: name })))
+        }
+        if (Array.isArray(data?.tagOptions)) {
+          setTagOptions(data.tagOptions)
+        }
       })
       .catch(() => { if (cancelled) return; setSalespersonOptions([]) })
     return () => { cancelled = true }
   }, [])
+
+  // Tag helpers
+  const addTag = (tag: string) => {
+    const t = tag.trim()
+    if (!t || form.tags.includes(t)) return
+    setForm((f) => ({ ...f, tags: [...f.tags, t] }))
+    setTagInput('')
+    setShowTagDropdown(false)
+  }
+  const removeTag = (tag: string) => {
+    setForm((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }))
+  }
+  const filteredTagOptions = tagOptions.filter(
+    (t) => !form.tags.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase())
+  )
 
   // Body scroll lock
   useEffect(() => {
@@ -645,6 +696,10 @@ export function VisitModal({
             body: JSON.stringify(form),
           })
 
+      if (res.status === 401) {
+        router.push('/login')
+        return
+      }
       if (!res.ok) {
         const d = await res.json()
         setError(d.error ?? (isEdit ? '更新失敗' : '建立失敗'))
@@ -802,6 +857,83 @@ export function VisitModal({
                       rows={3}
                       placeholder="記錄此次拜訪的重點內容…"
                       className={`${inputCls} resize-y min-h-[80px]`}
+                    />
+                  </div>
+
+                  {/* 客戶標籤 */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶標籤</label>
+                    {/* Selected tags */}
+                    {form.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {form.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 text-xs bg-brand-100 text-brand-700 border border-brand-200/60 rounded-full px-2.5 py-0.5"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => removeTag(tag)}
+                              className="hover:text-brand-900 leading-none"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Tag input */}
+                    <div className="relative">
+                      <input
+                        ref={tagInputRef}
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => { setTagInput(e.target.value); setShowTagDropdown(true) }}
+                        onFocus={() => setShowTagDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowTagDropdown(false), 150)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); if (tagInput.trim()) addTag(tagInput) }
+                          if (e.key === 'Escape') setShowTagDropdown(false)
+                        }}
+                        placeholder="輸入或選擇標籤，按 Enter 新增…"
+                        className={inputCls}
+                      />
+                      {showTagDropdown && (filteredTagOptions.length > 0 || tagInput.trim()) && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-brand-200/40 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          {filteredTagOptions.map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onMouseDown={() => addTag(t)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-cream-50 border-b border-brand-100/30 last:border-0 transition-colors"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                          {tagInput.trim() && !tagOptions.includes(tagInput.trim()) && (
+                            <button
+                              type="button"
+                              onMouseDown={() => addTag(tagInput)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-brand-600 font-medium hover:bg-brand-50 transition-colors"
+                            >
+                              + 新增「{tagInput.trim()}」
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 競品設備 */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">競品設備</label>
+                    <input
+                      type="text"
+                      value={form.competitorEquipment}
+                      onChange={(e) => setForm((f) => ({ ...f, competitorEquipment: e.target.value }))}
+                      placeholder="記錄客戶現有或考慮中的競品設備…"
+                      className={inputCls}
                     />
                   </div>
 

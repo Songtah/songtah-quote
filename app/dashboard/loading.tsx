@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(21,128,61,0.08),transparent_28%),linear-gradient(180deg,#f8f4ea_0%,#eff4ef_54%,#e6eee8_100%)]">
+    <div className="min-h-screen bg-gradient-to-br from-cream-100 via-cream-50 to-brand-50 text-stone-800">
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-8 rounded-[32px] border border-white/80 bg-white/72 p-8">
           <div className="h-4 w-32 animate-pulse rounded bg-slate-200 mb-3" />

@@ -10,6 +10,7 @@ type AppUser = {
   password: string
   name: string
   role: string
+  accountType?: string
 }
 
 function parseAppUsers(): AppUser[] {
@@ -32,6 +33,7 @@ function parseAppUsers(): AppUser[] {
         password: process.env.APP_PASSWORD,
         name: '崧達使用者',
         role: 'admin',
+        accountType: '中央管理',
       },
     ]
   }
@@ -55,7 +57,12 @@ export const authOptions: NextAuthOptions = {
           (u) => u.username === credentials.username && u.password === credentials.password
         )
         if (envMatched) {
-          return { id: envMatched.id, name: envMatched.name, role: envMatched.role } as any
+          return {
+            id: envMatched.id,
+            name: envMatched.name,
+            role: envMatched.role,
+            accountType: envMatched.accountType ?? (envMatched.role === 'admin' ? '中央管理' : ''),
+          } as any
         }
 
         // 2. Try Notion users DB (accounts created via account management)

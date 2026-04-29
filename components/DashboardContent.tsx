@@ -51,11 +51,24 @@ function SkeletonList() {
   )
 }
 
-export function DashboardContent() {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null)
-  const [error, setError] = useState('')
+export function DashboardContent({
+  initialSummary = null,
+  initialError = '',
+}: {
+  initialSummary?: DashboardSummary | null
+  initialError?: string
+}) {
+  const [summary, setSummary] = useState<DashboardSummary | null>(initialSummary ?? EMPTY_SUMMARY)
+  const [error, setError] = useState(initialError)
+  const [isRefreshing, setIsRefreshing] = useState(!initialSummary && !initialError)
 
   useEffect(() => {
+    if (initialSummary || initialError) {
+      setIsRefreshing(false)
+      return
+    }
+
+    setIsRefreshing(true)
     fetch('/api/dashboard')
       .then((r) => r.json())
       .then((data) => {
@@ -63,10 +76,11 @@ export function DashboardContent() {
         else setSummary(data)
       })
       .catch(() => setError('無法載入資料'))
-  }, [])
+      .finally(() => setIsRefreshing(false))
+  }, [initialSummary, initialError])
 
   const s = summary ?? EMPTY_SUMMARY
-  const loading = summary === null && !error
+  const loading = isRefreshing && !initialSummary
 
   return (
     <>
@@ -83,6 +97,12 @@ export function DashboardContent() {
           </>
         )}
       </section>
+
+      {loading && !error && (
+        <p className="mt-4 text-sm text-slate-500">
+          正在同步首頁資料，模組入口已可直接使用。
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">

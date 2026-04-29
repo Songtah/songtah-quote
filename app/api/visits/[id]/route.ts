@@ -11,7 +11,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   try {
     const body = await req.json()
     const before = await getVisitById(params.id).catch(() => null)
-    await updateVisit(params.id, body)
+    const updateData = { ...body }
+    if (body.tags !== undefined && !Array.isArray(body.tags)) delete updateData.tags
+    await updateVisit(params.id, updateData)
 
     const after = await getVisitById(params.id).catch(() => ({ id: params.id, ...body }))
     await logAuditEvent({

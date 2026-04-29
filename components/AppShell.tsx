@@ -7,6 +7,12 @@ import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
 
+type SessionUserLike = {
+  role?: string
+  accountType?: string
+  permissions?: UserPermissions
+}
+
 // ── Page title mapping for audit log ─────────────────────────
 function getPageTitle(pathname: string): string {
   const exact: Record<string, string> = {
@@ -68,18 +74,20 @@ export function AppShell({
   description,
   children,
   hidePhaseNote,
+  sessionUser,
 }: {
   title: string
   description: string
   children: React.ReactNode
   hidePhaseNote?: boolean
+  sessionUser?: SessionUserLike
 }) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-  const sessionLoading = status === 'loading'
-  const role        = (session?.user as any)?.role        as string | undefined
-  const accountType = (session?.user as any)?.accountType as string | undefined
-  const permissions = (session?.user as any)?.permissions as UserPermissions | undefined
+  const sessionLoading = status === 'loading' && !sessionUser
+  const role        = ((session?.user as any)?.role        as string | undefined) ?? sessionUser?.role
+  const accountType = ((session?.user as any)?.accountType as string | undefined) ?? sessionUser?.accountType
+  const permissions = ((session?.user as any)?.permissions as UserPermissions | undefined) ?? sessionUser?.permissions
 
   // ── Page-view audit (fire-and-forget) ──────────────────────
   const lastLoggedPath = useRef('')
@@ -98,7 +106,7 @@ export function AppShell({
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false
-    if (item.adminOrStaff && role !== 'admin' && accountType !== '行政' && !permissions?.['admin']?.view) return false
+    if (item.adminOrStaff && role !== 'admin' && accountType !== '行政') return false
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
 
