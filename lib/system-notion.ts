@@ -1153,7 +1153,6 @@ async function ensureVisitDbFields() {
         縣市:     { rich_text: {} },
         鄉鎮市區:   { rich_text: {} },
         拜訪性質:   { select: {} },
-        競品設備:   { rich_text: {} },
         客戶標籤:   { multi_select: {} },
       } as any,
     })
@@ -1167,6 +1166,7 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
   await ensureVisitDbFields()
 
   try {
+    // Read DB schema for salesperson / status options
     const database: any = await notionCallWithRetry('getVisitFormOptions', () =>
       notion.databases.retrieve({
         database_id: normalizeDatabaseId(DB.visits),
@@ -1177,13 +1177,38 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       database.properties?.['業務人員']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
     const statusOptions =
       database.properties?.['拜訪性質']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
-    const tagOptions =
+
+    // Collect tag options from both the schema AND from actual record values.
+    // Scanning records ensures we get every tag ever used, even if the DB schema
+    // was recreated or the field options list was reset.
+    const schemaTagOptions: string[] =
       database.properties?.['客戶標籤']?.multi_select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+
+    const allTagsSet = new Set<string>(schemaTagOptions)
+
+    // Paginate through all records to collect tags from actual data
+    let cursor: string | undefined
+    do {
+      const response: any = await notionCallWithRetry('getVisitFormOptions-tags', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.visits),
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        })
+      )
+      for (const page of response.results ?? []) {
+        const multiSel = getProp(page, '客戶標籤')?.multi_select ?? []
+        for (const item of multiSel) {
+          if (item?.name) allTagsSet.add(item.name)
+        }
+      }
+      cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+    } while (cursor)
 
     return {
       salespersons: salespersonOptions,
       statuses: statusOptions,
-      tagOptions,
+      tagOptions: Array.from(allTagsSet).sort(),
     }
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
@@ -1209,7 +1234,7 @@ function mapVisitPageRaw(page: any) {
     city: getRollupText(page, '縣市') || getSelect(page, '縣市') || getText(page, '縣市'),
     district: getRollupText(page, '鄉鎮市區') || getSelect(page, '鄉鎮市區') || getText(page, '鄉鎮市區'),
     tags: (getProp(page, '客戶標籤')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
-    competitorEquipment: getText(page, '競品設備'),
+    competitorEquipment: getText(page, '競品') || getText(page, '競品設備'),
   }
 }
 
@@ -1353,7 +1378,7 @@ export async function createVisit(data: {
           ? { 客戶標籤: { multi_select: data.tags.map((name) => ({ name })) } }
           : {}),
         ...(data.competitorEquipment
-          ? { 競品設備: { rich_text: richText(data.competitorEquipment) } }
+          ? { 競品: { rich_text: richText(data.competitorEquipment) } }
           : {}),
         ...(data.customerId
           ? { '🏥 牙科單位資料': { relation: [{ id: data.customerId }] } }
@@ -1400,7 +1425,7 @@ export async function updateVisit(id: string, data: {
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
   if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
   if (data.tags !== undefined) properties['客戶標籤'] = { multi_select: data.tags.map((name) => ({ name })) }
-  if (data.competitorEquipment !== undefined) properties['競品設備'] = { rich_text: richText(data.competitorEquipment) }
+  if (data.competitorEquipment !== undefined) properties['競品'] = { rich_text: richText(data.competitorEquipment) }
   if (data.customerId !== undefined) {
     properties['🏥 牙科單位資料'] = data.customerId
       ? { relation: [{ id: data.customerId }] }
