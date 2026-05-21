@@ -87,13 +87,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { mode, customerName, visits: bodyVisits, filterSalesperson, filterDateFrom, filterDateTo } = body as {
+    const { mode, customerName, visits: bodyVisits, filterSalesperson, filterDateFrom, filterDateTo, customInstructions } = body as {
       mode: AnalyzeMode
       customerName?: string
       visits?: Visit[]                // customer 模式傳入
       filterSalesperson?: string      // overview 模式篩選
       filterDateFrom?: string
       filterDateTo?: string
+      customInstructions?: string     // 使用者自訂分析提示詞
     }
 
     let visits: Visit[]
@@ -141,7 +142,7 @@ ${visitsText}
   "keyInsight": "最關鍵的一句洞察，讓業務知道現在最重要的事"
 }
 
-只回傳 JSON，不要加其他文字。`
+${customInstructions?.trim() ? `\n【分析重點與限制（請嚴格遵守）】\n${customInstructions.trim()}\n` : ''}只回傳 JSON，不要加其他文字。`
     } else {
       prompt = `你是一位資深牙科材料業務顧問。以下是業務團隊最近的客情拜訪紀錄（共 ${visitsSlice.length} 筆），請從整體角度分析商機。
 每行格式：[序號] 日期 客戶 @業務 互動類型 客戶反應 需:有興趣產品 競:競品 追蹤:日期 標:標籤
@@ -169,7 +170,7 @@ ${visitsText}
 }
 
 hotCustomers 最多 5 筆，productDemand 最多 5 筆，competitorThreats 最多 5 筆，followUpUrgent 最多 5 筆。
-只回傳 JSON，不要加其他文字。`
+${customInstructions?.trim() ? `\n【分析重點與限制（請嚴格遵守）】\n${customInstructions.trim()}\n` : ''}只回傳 JSON，不要加其他文字。`
     }
 
     const message = await client.messages.create({

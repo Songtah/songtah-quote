@@ -273,6 +273,15 @@ export default function VisitsContent() {
   const [aiFilterDateFrom, setAiFilterDateFrom] = useState('')
   const [aiFilterDateTo, setAiFilterDateTo] = useState('')
 
+  const AI_CUSTOM_PROMPT_KEY = 'bd-ai-custom-prompt'
+  const [aiCustomPrompt, setAiCustomPrompt] = useState(() => {
+    try { return localStorage.getItem('bd-ai-custom-prompt') ?? '' } catch { return '' }
+  })
+  // 自動同步到 localStorage
+  useEffect(() => {
+    try { localStorage.setItem(AI_CUSTOM_PROMPT_KEY, aiCustomPrompt) } catch {}
+  }, [aiCustomPrompt])
+
   const visitsForAi = useMemo(() => {
     let result = visits
     if (aiFilterSalesperson) result = result.filter((v) => v.salesperson === aiFilterSalesperson)
@@ -299,6 +308,7 @@ export default function VisitsContent() {
           filterSalesperson: aiFilterSalesperson || undefined,
           filterDateFrom: aiFilterDateFrom || undefined,
           filterDateTo: aiFilterDateTo || undefined,
+          customInstructions: aiCustomPrompt.trim() || undefined,
         }),
       })
       if (res.status === 401) { router.push('/login'); return }
@@ -324,7 +334,7 @@ export default function VisitsContent() {
     } finally {
       setAiLoading(false)
     }
-  }, [router, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
+  }, [router, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo, aiCustomPrompt])
 
   // Keep ref pointing to latest runAiAnalysis (so openAiModal's [] closure always gets fresh fn)
   useEffect(() => { runAiAnalysisRef.current = runAiAnalysis }, [runAiAnalysis])
@@ -623,6 +633,8 @@ export default function VisitsContent() {
           onFilterSalespersonChange={setAiFilterSalesperson}
           onFilterDateFromChange={setAiFilterDateFrom}
           onFilterDateToChange={setAiFilterDateTo}
+          customPrompt={aiCustomPrompt}
+          onCustomPromptChange={setAiCustomPrompt}
         />
       )}
 
@@ -1601,6 +1613,8 @@ function AiAnalysisModal({
   onFilterSalespersonChange,
   onFilterDateFromChange,
   onFilterDateToChange,
+  customPrompt,
+  onCustomPromptChange,
 }: {
   analysis: OverviewAnalysis | null
   loading: boolean
@@ -1619,7 +1633,11 @@ function AiAnalysisModal({
   onFilterSalespersonChange: (v: string) => void
   onFilterDateFromChange: (v: string) => void
   onFilterDateToChange: (v: string) => void
+  customPrompt: string
+  onCustomPromptChange: (v: string) => void
 }) {
+  const [showPromptEditor, setShowPromptEditor] = useState(false)
+
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -1679,8 +1697,13 @@ function AiAnalysisModal({
                     </button>
                   )}
                   <button
+                    onClick={() => setShowPromptEditor((v) => !v)}
+                    title="自訂分析提示詞"
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-base transition ${showPromptEditor ? 'bg-violet-100 text-violet-600' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'}`}
+                  >⚙️</button>
+                  <button
                     onClick={onReanalyze}
-                    disabled={loading || filteredCount === 0}
+                    disabled={loading}
                     className="text-xs text-violet-600 hover:text-violet-800 font-medium border border-violet-200 bg-white rounded-full px-3 py-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {loading ? '分析中…' : '重新分析'}
@@ -1725,6 +1748,31 @@ function AiAnalysisModal({
                   </span>
                 </div>
               </div>
+
+              {/* 提示詞編輯面板 */}
+              {showPromptEditor && (
+                <div className="px-6 py-4 border-b border-amber-100/60 bg-amber-50/30">
+                  <label className="block text-xs font-semibold text-stone-600 mb-1.5">
+                    分析提示詞
+                    <span className="ml-2 font-normal text-stone-400">（告訴 AI 分析的重點與限制，調整後點「重新分析」套用）</span>
+                  </label>
+                  <textarea
+                    value={customPrompt}
+                    onChange={(e) => onCustomPromptChange(e.target.value)}
+                    rows={3}
+                    placeholder="例：請專注於客戶商機、產品需求與競品動態分析。不需要對業務人員的工作分配、人力管理或團隊負荷提出建議。"
+                    className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-300 transition"
+                  />
+                  {customPrompt.trim() && (
+                    <button
+                      onClick={() => onCustomPromptChange('')}
+                      className="mt-1.5 text-xs text-stone-400 hover:text-red-500 transition"
+                    >
+                      清除提示詞
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Content */}
               <div className="px-6 py-6 space-y-6 max-h-[55vh] overflow-y-auto">
