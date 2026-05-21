@@ -31,6 +31,7 @@ export type OverviewAnalysis = {
 
 export type AnalysisResult = CustomerAnalysis | OverviewAnalysis
 
+// 詳細格式：供 customer 模式使用（需讀完整內容才能深度分析單一客戶）
 function formatVisitsForPrompt(visits: Visit[]): string {
   return visits.map((v, i) => {
     const lines = [
@@ -50,6 +51,29 @@ function formatVisitsForPrompt(visits: Visit[]): string {
     ].filter(Boolean)
     return lines.join('\n')
   }).join('\n\n')
+}
+
+// 精簡格式：供 overview 模式使用，每筆壓縮成一行，大幅降低 token 數
+// 500 筆 × ~35 tokens ≈ 17,500 tokens，遠低於 Vercel 10s 函式逾時風險
+function formatVisitsCompact(visits: Visit[]): string {
+  return visits.map((v, i) => {
+    const parts = [
+      `[${i + 1}]`,
+      v.date?.slice(0, 10) ?? '?',
+      v.customerName,
+      v.salesperson ? `@${v.salesperson}` : '',
+      v.interactionType || '',
+      v.customerReaction || '',
+      v.interestedProducts?.length
+        ? `需:${v.interestedProducts.map((p) => p.name).join('/')}` : '',
+      v.competitorEquipment?.length
+        ? `競:${v.competitorEquipment.join('/')}` : '',
+      v.needsFollowUp
+        ? `追蹤${v.nextFollowUpDate ? ':' + v.nextFollowUpDate.slice(0, 10) : ''}` : '',
+      v.tags?.length ? `標:${v.tags.join('/')}` : '',
+    ].filter(Boolean)
+    return parts.join(' ')
+  }).join('\n')
 }
 
 export async function POST(req: NextRequest) {
@@ -72,14 +96,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '沒有可分析的拜訪紀錄' }, { status: 400 })
     }
 
-    const visitsText = formatVisitsForPrompt(visits.slice(0, 60)) // 最多 60 筆，避免 token 過多
+    // overview：精簡格式最多 500 筆（每筆 ~35 tokens，不會逾時）
+    // customer：詳細格式最多 60 筆（需完整內容做深度分析）
+    const visitsSlice = mode === 'overview' ? visits.slice(0, 500) : visits.slice(0, 60)
+    const visitsText = mode === 'overview'
+      ? formatVisitsCompact(visitsSlice)
+      : formatVisitsForPrompt(visitsSlice)
 
     let prompt: string
 
     if (mode === 'customer') {
       prompt = `你是一位資深牙科材料業務顧問。以下是客戶「${customerName}」的所有拜訪紀錄，請根據這些資料提供商機分析。
 
-拜訪紀錄（共 ${visits.length} 筆，依時間排序）：
+拜訪紀錄（共 ${visitsSlice.length} 筆，依時間排序）：
 
 ${visitsText}
 
@@ -95,7 +124,8 @@ ${visitsText}
 
 只回傳 JSON，不要加其他文字。`
     } else {
-      prompt = `你是一位資深牙科材料業務顧問。以下是業務團隊最近的客情拜訪紀錄（共 ${visits.length} 筆），請從整體角度分析商機。
+      prompt = `你是一位資深牙科材料業務顧問。以下是業務團隊最近的客情拜訪紀錄（共 ${visitsSlice.length} 筆），請從整體角度分析商機。
+每行格式：[序號] 日期 客戶 @業務 互動類型 客戶反應 需:有興趣產品 競:競品 追蹤:日期 標:標籤
 
 拜訪紀錄：
 
