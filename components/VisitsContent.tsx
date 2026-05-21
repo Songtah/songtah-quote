@@ -794,9 +794,13 @@ export function VisitModal({
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Only search after the user has actually typed — prevents edit mode from
+  // auto-firing a search with the pre-filled customer name on mount.
+  const customerSearchEnabled = useRef(false)
 
   useEffect(() => {
     if (prefillCustomer) return
+    if (!customerSearchEnabled.current) return   // user hasn't typed yet
     if (!query || query.length < 1) { setSuggestions([]); return }
     if (searchTimer.current) clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(() => {
@@ -1014,6 +1018,7 @@ export function VisitModal({
                       readOnly={!!prefillCustomer}
                       onChange={(e) => {
                         if (prefillCustomer) return
+                        customerSearchEnabled.current = true   // enable search once user types
                         setQuery(e.target.value)
                         setForm((f) => ({ ...f, customerName: e.target.value, customerId: '', city: '', district: '', address: '' }))
                       }}
