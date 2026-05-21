@@ -1192,6 +1192,12 @@ export type Visit = {
   nextFollowUpDate: string     // 下次追蹤日
 }
 
+export type VisitListResult = {
+  items: Visit[]
+  hasMore: boolean
+  nextCursor: string | null
+}
+
 export type VisitFormOptions = {
   salespersons: string[]
   statuses: string[]
@@ -1377,65 +1383,25 @@ async function resolveCustomerNames(relIds: string[]): Promise<Record<string, st
   return nameMap
 }
 
-const VISITS_ALL_CACHE_KEY = 'visits:all'
-const VISITS_ALL_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+// Cache for the first page of visits (no filters, no cursor)
+const VISITS_PAGE1_CACHE_KEY = 'visits:page1'
+const VISITS_PAGE1_TTL = 2 * 60 * 1000 // 2 minutes
 
 function invalidateVisitsCache() {
-  deleteRedisValue(VISITS_ALL_CACHE_KEY)
+  deleteRedisValue(VISITS_PAGE1_CACHE_KEY)
 }
 
-export async function listVisits(options?: { customerName?: string; customerId?: string }): Promise<Visit[]> {
-  const isFullList = !options?.customerName && !options?.customerId
-
-  // Return cached full list instantly if available (L1 → L2)
-  if (isFullList) {
-    const cached = await getRedisValue<Visit[]>(VISITS_ALL_CACHE_KEY)
-    if (cached) return cached
-  }
-
-  let filter: any
-  if (options?.customerId) {
-    filter = { property: '🏥 牙科單位資料', relation: { contains: options.customerId } }
-  } else if (options?.customerName) {
-    filter = { property: '單位名稱', title: { contains: options.customerName } }
-  }
-
-  // Paginate through all results (Notion max page_size = 100)
-  const allResults: any[] = []
-  let cursor: string | undefined
-
-  do {
-    const response: any = await notionCallWithRetry('listVisits', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        sorts: [{ property: '日期', direction: 'descending' }],
-        ...(filter ? { filter } : {}),
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    allResults.push(...(response.results ?? []))
-    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cursor)
-
-  const rawItems = allResults.map(mapVisitPageRaw)
-
-  // Only resolve via relation for rows that don't already have a title name.
-  // Visits created through the app always store customerName in 單位名稱,
-  // so this avoids O(n) extra Notion API calls in the common case.
+/** Resolve names and build final Visit[] from raw mapped items. */
+async function buildVisitItems(rawItems: ReturnType<typeof mapVisitPageRaw>[]): Promise<Visit[]> {
   const missingNameIds = rawItems
     .filter((v) => !v.customerName && v._relId)
     .map((v) => v._relId)
+  const nameMap = missingNameIds.length ? await resolveCustomerNames(missingNameIds) : {}
 
-  const nameMap = missingNameIds.length
-    ? await resolveCustomerNames(missingNameIds)
-    : {}
-
-  // Resolve product names for records that have interested product relations
   const allProductRelIds = rawItems.flatMap((v) => v._productRelIds)
   const productNameMap = allProductRelIds.length ? await resolveProductNames(allProductRelIds) : {}
 
-  const items: Visit[] = rawItems.map((raw: ReturnType<typeof mapVisitPageRaw>) => {
+  return rawItems.map((raw) => {
     const { _relId, _productRelIds, ...v } = raw
     return {
       ...v,
@@ -1445,13 +1411,101 @@ export async function listVisits(options?: { customerName?: string; customerId?:
         .filter((p: { id: string; name: string }) => p.name),
     }
   })
+}
 
-  // Cache the full list result (L1 + L2)
-  if (isFullList) {
-    await setRedisValue(VISITS_ALL_CACHE_KEY, items, VISITS_ALL_CACHE_TTL)
+/**
+ * List visits with optional server-side filters and cursor-based pagination.
+ *
+ * Options:
+ *   customerName  — Notion title contains filter (server-side)
+ *   customerId    — Notion relation contains filter (server-side)
+ *   salesperson   — Notion select equals filter (server-side)
+ *   cursor        — Notion pagination cursor for next page
+ *   limit         — records per page (default 50); pass 0 to fetch ALL (for customer detail)
+ *   fetchAll      — if true, ignore limit and paginate through all records
+ */
+export async function listVisits(options?: {
+  customerName?: string
+  customerId?: string
+  salesperson?: string
+  cursor?: string
+  limit?: number
+  fetchAll?: boolean
+}): Promise<VisitListResult> {
+  const isFirstPage =
+    !options?.customerName &&
+    !options?.customerId &&
+    !options?.salesperson &&
+    !options?.cursor &&
+    !options?.fetchAll
+
+  // Return cached first page instantly if available (L1 → L2)
+  if (isFirstPage) {
+    const cached = await getRedisValue<VisitListResult>(VISITS_PAGE1_CACHE_KEY)
+    if (cached) return cached
   }
 
-  return items
+  // Build Notion filter
+  const filters: any[] = []
+  if (options?.customerId) {
+    filters.push({ property: '🏥 牙科單位資料', relation: { contains: options.customerId } })
+  } else if (options?.customerName) {
+    filters.push({ property: '單位名稱', title: { contains: options.customerName } })
+  }
+  if (options?.salesperson) {
+    filters.push({ property: '業務人員', select: { equals: options.salesperson } })
+  }
+  const filter = filters.length === 0 ? undefined : filters.length === 1 ? filters[0] : { and: filters }
+
+  // ── fetchAll: paginate through every page (used by customer detail) ─────────
+  if (options?.fetchAll) {
+    const allResults: any[] = []
+    let cur: string | undefined
+    do {
+      const response: any = await notionCallWithRetry('listVisits-all', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.visits),
+          page_size: 100,
+          sorts: [{ property: '日期', direction: 'descending' }],
+          ...(filter ? { filter } : {}),
+          ...(cur ? { start_cursor: cur } : {}),
+        })
+      )
+      allResults.push(...(response.results ?? []))
+      cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+    } while (cur)
+
+    const items = await buildVisitItems(allResults.map(mapVisitPageRaw))
+    return { items, hasMore: false, nextCursor: null }
+  }
+
+  // ── Single-page query (the normal paginated path) ───────────────────────────
+  const limit = options?.limit ?? 50
+  const response: any = await notionCallWithRetry('listVisits', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(DB.visits),
+      page_size: limit,
+      sorts: [{ property: '日期', direction: 'descending' }],
+      ...(filter ? { filter } : {}),
+      ...(options?.cursor ? { start_cursor: options.cursor } : {}),
+    })
+  )
+
+  const rawItems = (response.results ?? []).map(mapVisitPageRaw)
+  const items = await buildVisitItems(rawItems)
+
+  const result: VisitListResult = {
+    items,
+    hasMore: response.has_more ?? false,
+    nextCursor: response.next_cursor ?? null,
+  }
+
+  // Cache only the first page (no filters, no cursor)
+  if (isFirstPage) {
+    await setRedisValue(VISITS_PAGE1_CACHE_KEY, result, VISITS_PAGE1_TTL)
+  }
+
+  return result
 }
 
 export async function getVisitById(id: string): Promise<Visit> {

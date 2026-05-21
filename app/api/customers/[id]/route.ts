@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const [equipment, tickets, visits] = await Promise.all([
     listCustomerEquipment(id),
     listCustomerTickets(id),
-    listVisits({ customerId: id }),
+    listVisits({ customerId: id, fetchAll: true }).then((r) => r.items),
   ])
 
   return NextResponse.json({ customer, equipment, tickets, visits })

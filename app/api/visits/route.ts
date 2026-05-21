@@ -9,9 +9,14 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
   try {
-    const customerName = req.nextUrl.searchParams.get('customerName') ?? undefined
-    const visits = await listVisits(customerName ? { customerName } : undefined)
-    return NextResponse.json(visits)
+    const p = req.nextUrl.searchParams
+    const customerName = p.get('customerName') ?? undefined
+    const salesperson  = p.get('salesperson')  ?? undefined
+    const cursor       = p.get('cursor')        ?? undefined
+    const limit        = Math.min(parseInt(p.get('limit') ?? '50') || 50, 100)
+
+    const result = await listVisits({ customerName, salesperson, cursor, limit })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('listVisits error:', error)
     return NextResponse.json({ error: '讀取客情紀錄失敗' }, { status: 500 })

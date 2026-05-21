@@ -94,38 +94,59 @@ function ReactionBadge({ reaction }: { reaction: string }) {
 export default function VisitsContent() {
   const router = useRouter()
   const [visits, setVisits] = useState<Visit[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
-  const [filterSalesperson, setFilterSalesperson] = useState('')
-  const [filterCity, setFilterCity] = useState('')
+  const [filterSalesperson, setFilterSalesperson] = useState('')  // server-side filter
+  const [filterCity, setFilterCity] = useState('')               // client-side filter
+  const [salespersonFilterOptions, setSalespersonFilterOptions] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingVisit, setEditingVisit] = useState<Visit | null>(null)
   const [viewingVisit, setViewingVisit] = useState<Visit | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const CACHE_KEY = 'bd-visits-cache'
-  const CACHE_TTL = 2 * 60 * 1000 // 2 minutes
+  const CACHE_KEY = 'bd-visits-v2'   // v2 = new paginated format
+  const CACHE_TTL = 2 * 60 * 1000
 
-  const loadVisits = useCallback((silent = false) => {
-    // Show cached data instantly while fetching fresh in background
-    if (!silent) {
+  // Build query string from current server-side filters (salesperson)
+  const buildQuery = useCallback((opts: { salesperson?: string; cursor?: string } = {}) => {
+    const p = new URLSearchParams()
+    const sp = opts.salesperson ?? filterSalesperson
+    if (sp)          p.set('salesperson', sp)
+    if (opts.cursor) p.set('cursor', opts.cursor)
+    return p.toString() ? `?${p}` : ''
+  }, [filterSalesperson])
+
+  // Initial / refresh load — replaces the list
+  const loadVisits = useCallback((opts: { salesperson?: string; silent?: boolean } = {}) => {
+    const sp = opts.salesperson ?? filterSalesperson
+
+    // Show sessionStorage cache instantly on first (non-silent, no-filter) load
+    if (!opts.silent && !sp) {
       try {
         const raw = sessionStorage.getItem(CACHE_KEY)
         if (raw) {
-          const { data, ts } = JSON.parse(raw)
-          if (Date.now() - ts < CACHE_TTL) {
-            setVisits(data)
+          const { items, hasMore: hm, nextCursor: nc, ts } = JSON.parse(raw)
+          if (Array.isArray(items) && Date.now() - ts < CACHE_TTL) {
+            setVisits(items)
+            setHasMore(hm ?? false)
+            setNextCursor(nc ?? null)
             setLoading(false)
           }
         }
       } catch {}
     }
 
-    fetch('/api/visits')
+    const qs = new URLSearchParams()
+    if (sp) qs.set('salesperson', sp)
+    const url = `/api/visits${qs.toString() ? `?${qs}` : ''}`
+
+    fetch(url)
       .then((r) => {
         if (r.status === 401) {
-          // Session expired — clear cache and redirect to login
           try { sessionStorage.removeItem(CACHE_KEY) } catch {}
           router.push('/login')
           return null
@@ -133,15 +154,68 @@ export default function VisitsContent() {
         return r.json()
       })
       .then((data) => {
-        if (!data || !Array.isArray(data)) return
-        setVisits(data)
-        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
+        if (!data || typeof data !== 'object') return
+        const { items, hasMore: hm, nextCursor: nc } = data as { items: Visit[]; hasMore: boolean; nextCursor: string | null }
+        if (!Array.isArray(items)) return
+        setVisits(items)
+        setHasMore(hm ?? false)
+        setNextCursor(nc ?? null)
+        // Cache only the default (no filter) first page
+        if (!sp) {
+          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ items, hasMore: hm, nextCursor: nc, ts: Date.now() })) } catch {}
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [router])
+  }, [filterSalesperson, router, buildQuery])
 
-  useEffect(() => { loadVisits() }, [loadVisits])
+  // Load next page and append to list
+  const loadMore = useCallback(() => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    const qs = new URLSearchParams()
+    qs.set('cursor', nextCursor)
+    if (filterSalesperson) qs.set('salesperson', filterSalesperson)
+    fetch(`/api/visits?${qs}`)
+      .then((r) => {
+        if (r.status === 401) { router.push('/login'); return null }
+        return r.json()
+      })
+      .then((data) => {
+        if (!data || typeof data !== 'object') return
+        const { items, hasMore: hm, nextCursor: nc } = data as { items: Visit[]; hasMore: boolean; nextCursor: string | null }
+        if (!Array.isArray(items)) return
+        setVisits((prev) => [...prev, ...items])
+        setHasMore(hm ?? false)
+        setNextCursor(nc ?? null)
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false))
+  }, [nextCursor, loadingMore, filterSalesperson, router])
+
+  useEffect(() => { loadVisits() }, [])  // mount only
+
+  // Fetch salesperson options for filter dropdown (cached in Redis, fast)
+  useEffect(() => {
+    fetch('/api/visits/options')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data?.salespersons)) setSalespersonFilterOptions(data.salespersons)
+      })
+      .catch(() => {})
+  }, [])
+
+  // When salesperson filter changes: reload from page 1 with new filter
+  const handleSalespersonFilter = useCallback((sp: string) => {
+    setFilterSalesperson(sp)
+    setFilterCity('')
+    setSearch('')
+    setLoading(true)
+    setVisits([])
+    setHasMore(false)
+    setNextCursor(null)
+    loadVisits({ salesperson: sp })
+  }, [loadVisits])
 
   const handleDelete = async (id: string) => {
     setDeleting(true)
@@ -150,21 +224,20 @@ export default function VisitsContent() {
       if (res.status === 401) { try { sessionStorage.removeItem(CACHE_KEY) } catch {}; router.push('/login'); return }
       setDeleteConfirmId(null)
       try { sessionStorage.removeItem(CACHE_KEY) } catch {}
-      loadVisits(true)
+      setFilterSalesperson('')
+      loadVisits({ silent: true })
     } finally {
       setDeleting(false)
     }
   }
 
-  // Derive unique options from loaded data
-  const salespersonOptions = Array.from(new Set(visits.map((v) => v.salesperson).filter(Boolean))).sort()
+  // City options derived from currently loaded records
   const cityOptions = Array.from(new Set(visits.map((v) => v.city).filter(Boolean))).sort()
 
   const keyword = search.trim().toLowerCase()
-  const activeFilterCount = [filterSalesperson, filterCity].filter(Boolean).length
+  const clientFiltered = filterCity || keyword  // whether client-side filters are active
 
   const filteredVisits = visits.filter((v) => {
-    if (filterSalesperson && v.salesperson !== filterSalesperson) return false
     if (filterCity && v.city !== filterCity) return false
     if (keyword) {
       return [v.customerName, v.city, v.district, v.salesperson, v.status, v.content, v.address,
@@ -177,9 +250,12 @@ export default function VisitsContent() {
   const isFiltered = keyword || filterSalesperson || filterCity
 
   function clearAll() {
-    setSearch('')
-    setFilterSalesperson('')
-    setFilterCity('')
+    if (filterSalesperson) {
+      handleSalespersonFilter('')
+    } else {
+      setSearch('')
+      setFilterCity('')
+    }
   }
 
   return (
@@ -225,10 +301,10 @@ export default function VisitsContent() {
           )}
         </div>
 
-        {/* Salesperson filter */}
+        {/* Salesperson filter (server-side) */}
         <select
           value={filterSalesperson}
-          onChange={(e) => setFilterSalesperson(e.target.value)}
+          onChange={(e) => handleSalespersonFilter(e.target.value)}
           className={`py-2.5 px-3 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-400 ${
             filterSalesperson
               ? 'border-brand-400 bg-brand-50 text-brand-700 font-medium'
@@ -236,7 +312,7 @@ export default function VisitsContent() {
           }`}
         >
           <option value="">全部業務</option>
-          {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          {salespersonFilterOptions.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {/* City filter */}
@@ -254,7 +330,7 @@ export default function VisitsContent() {
         </select>
 
         {/* Clear all */}
-        {(activeFilterCount > 0 || search) && (
+        {isFiltered && (
           <button
             onClick={clearAll}
             className="px-3 py-2.5 rounded-xl border border-brand-200/60 bg-white text-xs text-stone-400 hover:text-stone-600 hover:border-brand-300 transition whitespace-nowrap"
@@ -379,6 +455,29 @@ export default function VisitsContent() {
         )}
       </div>
 
+      {/* Incomplete filter warning + Load more */}
+      {hasMore && (
+        <div className="mt-3 flex flex-col items-center gap-2">
+          {clientFiltered && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-1.5 text-center">
+              ⚠️ 篩選僅適用於已載入的 {visits.length} 筆，還有更多紀錄尚未載入
+            </p>
+          )}
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-5 py-2 rounded-full border border-brand-200/60 bg-white text-sm text-stone-500 hover:text-brand-600 hover:border-brand-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? '載入中…' : '載入更多'}
+          </button>
+        </div>
+      )}
+      {!hasMore && visits.length > 0 && (
+        <p className="mt-3 text-center text-xs text-stone-300">
+          已顯示全部 {visits.length} 筆
+        </p>
+      )}
+
       {/* New Visit Modal */}
       {showModal && (
         <VisitModal
@@ -386,7 +485,14 @@ export default function VisitsContent() {
           onSaved={() => {
             setShowModal(false)
             try { sessionStorage.removeItem(CACHE_KEY) } catch {}
-            loadVisits(true)
+            setFilterSalesperson('')
+            setFilterCity('')
+            setSearch('')
+            setLoading(true)
+            setVisits([])
+            setHasMore(false)
+            setNextCursor(null)
+            loadVisits({ silent: true })
           }}
         />
       )}
@@ -399,7 +505,11 @@ export default function VisitsContent() {
           onSaved={() => {
             setEditingVisit(null)
             try { sessionStorage.removeItem(CACHE_KEY) } catch {}
-            loadVisits(true)
+            setLoading(true)
+            setVisits([])
+            setHasMore(false)
+            setNextCursor(null)
+            loadVisits({ salesperson: filterSalesperson, silent: true })
           }}
         />
       )}
