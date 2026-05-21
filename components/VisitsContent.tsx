@@ -285,31 +285,35 @@ export default function VisitsContent() {
   const runAiAnalysisRef = useRef<() => Promise<void>>(async () => {})
 
   const runAiAnalysis = useCallback(async () => {
-    if (visitsForAi.length === 0) {
-      setAiError('篩選條件下無可分析的拜訪紀錄')
-      return
-    }
     setAiLoading(true)
     setAiError('')
     setAiAnalysis(null)
     try {
+      // 直接傳篩選條件給 API，由伺服器端向 Notion 抓全部符合紀錄
+      // 不再受 UI 分頁（已載入筆數）限制
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'overview', visits: visitsForAi }),
+        body: JSON.stringify({
+          mode: 'overview',
+          filterSalesperson: aiFilterSalesperson || undefined,
+          filterDateFrom: aiFilterDateFrom || undefined,
+          filterDateTo: aiFilterDateTo || undefined,
+        }),
       })
       if (res.status === 401) { router.push('/login'); return }
       const data = await res.json()
       if (!res.ok) { setAiError(data.error ?? 'AI 分析失敗'); return }
       const result = data as OverviewAnalysis
       const timestamp = new Date().toISOString()
+      const analyzedCount = result.analyzedCount ?? 0
       setAiAnalysis(result)
       setAiTimestamp(timestamp)
-      setAiVisitCount(visitsForAi.length)
+      setAiVisitCount(analyzedCount)
       try {
         localStorage.setItem(AI_STORAGE_KEY, JSON.stringify({
           result, timestamp,
-          visitCount: visitsForAi.length,
+          visitCount: analyzedCount,
           filterSalesperson: aiFilterSalesperson,
           filterDateFrom: aiFilterDateFrom,
           filterDateTo: aiFilterDateTo,
@@ -320,7 +324,7 @@ export default function VisitsContent() {
     } finally {
       setAiLoading(false)
     }
-  }, [visitsForAi, router, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
+  }, [router, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
   // Keep ref pointing to latest runAiAnalysis (so openAiModal's [] closure always gets fresh fn)
   useEffect(() => { runAiAnalysisRef.current = runAiAnalysis }, [runAiAnalysis])
@@ -1715,9 +1719,9 @@ function AiAnalysisModal({
                     className="w-36 h-8 text-sm border border-stone-200 rounded-lg px-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
                   />
                   <span className="text-xs text-stone-400 ml-auto shrink-0">
-                    共 <span className="font-semibold text-violet-600">{filteredCount}</span>
-                    {filteredCount !== totalVisits && <span className="text-stone-300"> / {totalVisits}</span>}
-                    {' '}筆
+                    {visitCount > 0
+                      ? <>上次分析 <span className="font-semibold text-violet-600">{visitCount}</span> 筆</>
+                      : '分析時自動抓取全部符合紀錄'}
                   </span>
                 </div>
               </div>

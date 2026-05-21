@@ -1428,6 +1428,8 @@ export async function listVisits(options?: {
   customerName?: string
   customerId?: string
   salesperson?: string
+  dateFrom?: string   // ISO date string, e.g. '2026-05-01'
+  dateTo?: string     // ISO date string, e.g. '2026-05-31'
   cursor?: string
   limit?: number
   fetchAll?: boolean
@@ -1454,6 +1456,12 @@ export async function listVisits(options?: {
   }
   if (options?.salesperson) {
     filters.push({ property: '業務人員', select: { equals: options.salesperson } })
+  }
+  if (options?.dateFrom) {
+    filters.push({ property: '日期', date: { on_or_after: options.dateFrom } })
+  }
+  if (options?.dateTo) {
+    filters.push({ property: '日期', date: { on_or_before: options.dateTo } })
   }
   const filter = filters.length === 0 ? undefined : filters.length === 1 ? filters[0] : { and: filters }
 
