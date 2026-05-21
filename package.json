@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.97.1",
     "@fontsource/noto-sans-tc": "^5.2.9",
     "@notionhq/client": "^2.2.15",
     "@react-pdf/renderer": "^3.4.4",

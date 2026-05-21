@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Visit } from '@/lib/system-notion'
+import type { OverviewAnalysis } from '@/app/api/ai/analyze/route'
 
 // Legacy 拜訪性質 badge colors (for old records)
 const LEGACY_STATUS_COLORS: Record<string, string> = {
@@ -258,6 +259,35 @@ export default function VisitsContent() {
     }
   }
 
+  // ── AI 商機分析 ───────────────────────────────────────────────
+  const [aiAnalysis, setAiAnalysis] = useState<OverviewAnalysis | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [showAiPanel, setShowAiPanel] = useState(false)
+
+  const runAiAnalysis = useCallback(async () => {
+    if (visits.length === 0) return
+    setAiLoading(true)
+    setAiError('')
+    setShowAiPanel(true)
+    setAiAnalysis(null)
+    try {
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'overview', visits }),
+      })
+      if (res.status === 401) { router.push('/login'); return }
+      const data = await res.json()
+      if (!res.ok) { setAiError(data.error ?? 'AI 分析失敗'); return }
+      setAiAnalysis(data as OverviewAnalysis)
+    } catch {
+      setAiError('網路錯誤，請重試')
+    } finally {
+      setAiLoading(false)
+    }
+  }, [visits, router])
+
   return (
     <div>
       {/* Header */}
@@ -266,12 +296,22 @@ export default function VisitsContent() {
           <h2 className="text-lg font-semibold text-stone-800">客情拜訪紀錄</h2>
           <p className="text-xs text-stone-400 mt-0.5">記錄每日客戶拜訪情況</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="button-primary px-4 py-2 rounded-full text-sm font-medium self-start sm:self-auto"
-        >
-          + 新增拜訪
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={runAiAnalysis}
+            disabled={aiLoading || visits.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="text-base leading-none">✦</span>
+            {aiLoading ? 'AI 分析中…' : 'AI 商機分析'}
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="button-primary px-4 py-2 rounded-full text-sm font-medium"
+          >
+            + 新增拜訪
+          </button>
+        </div>
       </div>
 
       {/* Search + Filter bar */}
@@ -477,6 +517,153 @@ export default function VisitsContent() {
           已顯示全部 {visits.length} 筆
         </p>
       )}
+
+      {/* AI 商機分析面板 */}
+      <AnimatePresence>
+        {showAiPanel && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
+            className="mt-6 rounded-2xl border border-violet-200/60 bg-violet-50/40 overflow-hidden"
+          >
+            {/* 面板 header */}
+            <div className="px-5 py-4 border-b border-violet-200/40 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-violet-500 text-lg">✦</span>
+                <h3 className="text-sm font-semibold text-violet-800">AI 商機分析</h3>
+                {aiAnalysis && (
+                  <span className="text-xs text-violet-400">（已載入 {visits.length} 筆紀錄）</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {aiAnalysis && (
+                  <button
+                    onClick={runAiAnalysis}
+                    disabled={aiLoading}
+                    className="text-xs text-violet-500 hover:text-violet-700 transition disabled:opacity-40"
+                  >
+                    重新分析
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAiPanel(false)}
+                  className="text-stone-400 hover:text-stone-600 transition text-sm"
+                >✕</button>
+              </div>
+            </div>
+
+            {/* 面板內容 */}
+            <div className="px-5 py-5">
+              {aiLoading && (
+                <div className="flex items-center gap-3 text-sm text-violet-500 py-4">
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  正在分析 {visits.length} 筆拜訪紀錄…
+                </div>
+              )}
+
+              {aiError && (
+                <p className="text-sm text-red-500 bg-red-50 rounded-xl px-4 py-3">{aiError}</p>
+              )}
+
+              {aiAnalysis && !aiLoading && (
+                <div className="space-y-5">
+                  {/* 高潛力客戶 */}
+                  {aiAnalysis.hotCustomers?.length > 0 && (
+                    <section>
+                      <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-2">高潛力客戶</h4>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {aiAnalysis.hotCustomers.map((c, i) => (
+                          <div key={i} className="bg-white rounded-xl px-4 py-3 border border-violet-100/60">
+                            <p className="text-sm font-semibold text-stone-800">{c.name}</p>
+                            <p className="text-xs text-stone-500 mt-0.5">{c.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* 產品需求 + 競品威脅 */}
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    {aiAnalysis.productDemand?.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-2">產品需求趨勢</h4>
+                        <div className="space-y-1.5">
+                          {aiAnalysis.productDemand.map((p, i) => (
+                            <div key={i} className="bg-white rounded-xl px-4 py-2.5 border border-emerald-100/60 flex justify-between items-start gap-3">
+                              <div>
+                                <p className="text-sm font-medium text-stone-800">{p.product}</p>
+                                <p className="text-xs text-stone-400">{p.note}</p>
+                              </div>
+                              <span className="text-xs font-bold text-emerald-600 shrink-0">{p.count} 次</span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {aiAnalysis.competitorThreats?.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-orange-500 mb-2">競品威脅雷達</h4>
+                        <div className="space-y-1.5">
+                          {aiAnalysis.competitorThreats.map((c, i) => (
+                            <div key={i} className="bg-white rounded-xl px-4 py-2.5 border border-orange-100/60 flex justify-between items-start gap-3">
+                              <div>
+                                <p className="text-sm font-medium text-stone-800">{c.competitor}</p>
+                                <p className="text-xs text-stone-400">{c.note}</p>
+                              </div>
+                              <span className="text-xs font-bold text-orange-500 shrink-0">{c.count} 次</span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+
+                  {/* 緊急追蹤 */}
+                  {aiAnalysis.followUpUrgent?.length > 0 && (
+                    <section>
+                      <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-2">需緊急追蹤</h4>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {aiAnalysis.followUpUrgent.map((f, i) => (
+                          <div key={i} className="bg-white rounded-xl px-4 py-3 border border-red-100/60 flex items-start gap-3">
+                            <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                            <div>
+                              <p className="text-sm font-semibold text-stone-800">{f.name}
+                                {f.date && <span className="ml-1.5 text-xs font-normal text-stone-400">{f.date}</span>}
+                              </p>
+                              <p className="text-xs text-stone-500">{f.reason}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* 策略建議 */}
+                  {aiAnalysis.strategicSuggestions?.length > 0 && (
+                    <section>
+                      <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-2">策略建議</h4>
+                      <div className="space-y-1.5">
+                        {aiAnalysis.strategicSuggestions.map((s, i) => (
+                          <div key={i} className="flex items-start gap-2.5 bg-white rounded-xl px-4 py-2.5 border border-violet-100/60">
+                            <span className="text-violet-400 text-xs mt-0.5 font-bold shrink-0">{i + 1}.</span>
+                            <p className="text-sm text-stone-700">{s}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* New Visit Modal */}
       {showModal && (
