@@ -353,11 +353,20 @@ export default function VisitsContent() {
       dateFrom: aiFilterDateFrom,
       dateTo: aiFilterDateTo,
     })
-    const win = window.open('', '_blank')
-    if (!win) { alert('請允許彈出視窗以匯出 PDF'); return }
-    win.document.write(html)
-    win.document.close()
-    setTimeout(() => { win.focus(); win.print() }, 600)
+    // 用隱藏 iframe 列印，避免瀏覽器封鎖彈出視窗
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:1px;height:1px;border:none;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument || iframe.contentWindow?.document
+    if (!doc) { document.body.removeChild(iframe); return }
+    doc.open()
+    doc.write(html)
+    doc.close()
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      setTimeout(() => { document.body.removeChild(iframe) }, 2000)
+    }, 500)
   }, [aiAnalysis, aiTimestamp, aiVisitCount, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
   return (
