@@ -1,4 +1,5 @@
 import { Client } from '@notionhq/client'
+import { Redis } from '@upstash/redis'
 import type { CreateTicketPayload, Equipment, Ticket } from '@/types'
 
 export type ModuleSummary = {
@@ -23,7 +24,63 @@ export type DashboardSummary = {
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
+// ── In-memory cache (L1) ─────────────────────────────────────────────────────
+// Fast but resets on every Vercel cold start.
 const transientCache = new Map<string, { expiresAt: number; value: unknown }>()
+
+// ── Redis cache (L2 — Upstash) ────────────────────────────────────────────────
+// Persists across cold starts and serverless instances.
+// Requires UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env vars.
+let _redis: Redis | null | undefined = undefined
+
+function getRedis(): Redis | null {
+  if (_redis !== undefined) return _redis
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  _redis = url && token ? new Redis({ url, token }) : null
+  return _redis
+}
+
+/** Read from L1 first, then L2. On L2 hit, refreshes L1 for 2 min. */
+async function getRedisValue<T>(key: string): Promise<T | null> {
+  // L1 hit
+  const hit = transientCache.get(key)
+  if (hit && Date.now() <= hit.expiresAt) return hit.value as T
+
+  // L2 (Redis) hit
+  const r = getRedis()
+  if (!r) return null
+  try {
+    const value = await r.get<T>(key)
+    if (value !== null && value !== undefined) {
+      // Warm L1 for 2 min so subsequent requests in this instance are instant
+      transientCache.set(key, { value, expiresAt: Date.now() + 120_000 })
+    }
+    return value ?? null
+  } catch (e) {
+    console.warn(`[redis] get "${key}" failed:`, e)
+    return null
+  }
+}
+
+/** Write to both L1 and L2. TTL in milliseconds. */
+async function setRedisValue<T>(key: string, value: T, ttlMs: number): Promise<void> {
+  transientCache.set(key, { value, expiresAt: Date.now() + ttlMs })
+  const r = getRedis()
+  if (!r) return
+  try {
+    await r.set(key, value, { px: ttlMs })
+  } catch (e) {
+    console.warn(`[redis] set "${key}" failed:`, e)
+  }
+}
+
+/** Delete from both L1 and L2 (fire-and-forget for L2). */
+function deleteRedisValue(key: string): void {
+  transientCache.delete(key)
+  const r = getRedis()
+  if (r) r.del(key).catch((e) => console.warn(`[redis] del "${key}" failed:`, e))
+}
 
 const DB = {
   customers: process.env.NOTION_CUSTOMERS_SYSTEM_DB ?? process.env.NOTION_CUSTOMERS_DB,
@@ -370,7 +427,7 @@ async function getUsersSummary(): Promise<ModuleSummary> {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const cached = getCachedValue<DashboardSummary>('dashboard:summary:v3')
+  const cached = await getRedisValue<DashboardSummary>('dashboard:summary:v3')
   if (cached) return cached
 
   const safe = async <T>(fn: () => Promise<T>, fallback: T) => {
@@ -392,7 +449,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   const summary: DashboardSummary = { customers, tickets, opportunities, products, users }
 
-  setCachedValue('dashboard:summary:v3', summary, 300_000) // 5 min
+  await setRedisValue('dashboard:summary:v3', summary, 300_000) // 5 min
   return summary
 }
 
@@ -1153,8 +1210,15 @@ async function ensureVisitDbFields() {
   // intentionally empty — do NOT call databases.update here
 }
 
+const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v1'
+const VISIT_FORM_OPTIONS_TTL = 10 * 60 * 1000 // 10 min
+
 export async function getVisitFormOptions(): Promise<VisitFormOptions> {
   await ensureVisitDbFields()
+
+  // Return from cache if available (L1 → L2)
+  const cached = await getRedisValue<VisitFormOptions>(VISIT_FORM_OPTIONS_CACHE_KEY)
+  if (cached) return cached
 
   try {
     // Read DB schema for salesperson / status options
@@ -1208,7 +1272,7 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
     } while (cursor)
 
-    return {
+    const result: VisitFormOptions = {
       salespersons: salespersonOptions,
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
@@ -1218,6 +1282,9 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       customerReactions: customerReactionOptions,
       products: [],  // products are searched on-demand via /api/products/search
     }
+    // Cache result (L1 + L2) — this function scans all visit records so caching is important
+    await setRedisValue(VISIT_FORM_OPTIONS_CACHE_KEY, result, VISIT_FORM_OPTIONS_TTL)
+    return result
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
     return {
@@ -1314,15 +1381,15 @@ const VISITS_ALL_CACHE_KEY = 'visits:all'
 const VISITS_ALL_CACHE_TTL = 2 * 60 * 1000 // 2 minutes
 
 function invalidateVisitsCache() {
-  transientCache.delete(VISITS_ALL_CACHE_KEY)
+  deleteRedisValue(VISITS_ALL_CACHE_KEY)
 }
 
 export async function listVisits(options?: { customerName?: string; customerId?: string }): Promise<Visit[]> {
   const isFullList = !options?.customerName && !options?.customerId
 
-  // Return cached full list instantly if available
+  // Return cached full list instantly if available (L1 → L2)
   if (isFullList) {
-    const cached = getCachedValue<Visit[]>(VISITS_ALL_CACHE_KEY)
+    const cached = await getRedisValue<Visit[]>(VISITS_ALL_CACHE_KEY)
     if (cached) return cached
   }
 
@@ -1379,9 +1446,9 @@ export async function listVisits(options?: { customerName?: string; customerId?:
     }
   })
 
-  // Cache the full list result
+  // Cache the full list result (L1 + L2)
   if (isFullList) {
-    setCachedValue(VISITS_ALL_CACHE_KEY, items, VISITS_ALL_CACHE_TTL)
+    await setRedisValue(VISITS_ALL_CACHE_KEY, items, VISITS_ALL_CACHE_TTL)
   }
 
   return items

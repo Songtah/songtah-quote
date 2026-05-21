@@ -12,6 +12,7 @@
     "@fontsource/noto-sans-tc": "^5.2.9",
     "@notionhq/client": "^2.2.15",
     "@react-pdf/renderer": "^3.4.4",
+    "@upstash/redis": "^1.38.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "mini-svg-data-uri": "^1.4.4",
