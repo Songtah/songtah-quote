@@ -260,16 +260,37 @@ export default function VisitsContent() {
   }
 
   // ── AI 商機分析 ───────────────────────────────────────────────
+  const AI_STORAGE_KEY = 'bd-ai-analysis'
+
+  const [showAiModal, setShowAiModal] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<OverviewAnalysis | null>(null)
+  const [aiTimestamp, setAiTimestamp] = useState<string | null>(null)
+  const [aiVisitCount, setAiVisitCount] = useState<number>(0)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
-  const [showAiPanel, setShowAiPanel] = useState(false)
+
+  // 開啟 Modal：先載入 localStorage 快取，若無快取則直接執行分析
+  const openAiModal = useCallback(() => {
+    setShowAiModal(true)
+    setAiError('')
+    try {
+      const raw = localStorage.getItem(AI_STORAGE_KEY)
+      if (raw) {
+        const { result, timestamp, visitCount } = JSON.parse(raw)
+        setAiAnalysis(result)
+        setAiTimestamp(timestamp)
+        setAiVisitCount(visitCount)
+        return  // 有快取就直接顯示，不自動重新分析
+      }
+    } catch {}
+    // 沒有快取 → 自動執行一次分析
+    runAiAnalysis()
+  }, [])  // runAiAnalysis 在下面定義，用 ref 避免循環
 
   const runAiAnalysis = useCallback(async () => {
     if (visits.length === 0) return
     setAiLoading(true)
     setAiError('')
-    setShowAiPanel(true)
     setAiAnalysis(null)
     try {
       const res = await fetch('/api/ai/analyze', {
@@ -280,7 +301,15 @@ export default function VisitsContent() {
       if (res.status === 401) { router.push('/login'); return }
       const data = await res.json()
       if (!res.ok) { setAiError(data.error ?? 'AI 分析失敗'); return }
-      setAiAnalysis(data as OverviewAnalysis)
+      const result = data as OverviewAnalysis
+      const timestamp = new Date().toISOString()
+      setAiAnalysis(result)
+      setAiTimestamp(timestamp)
+      setAiVisitCount(visits.length)
+      // 儲存到 localStorage
+      try {
+        localStorage.setItem(AI_STORAGE_KEY, JSON.stringify({ result, timestamp, visitCount: visits.length }))
+      } catch {}
     } catch {
       setAiError('網路錯誤，請重試')
     } finally {
@@ -298,12 +327,12 @@ export default function VisitsContent() {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={runAiAnalysis}
-            disabled={aiLoading || visits.length === 0}
+            onClick={openAiModal}
+            disabled={visits.length === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <span className="text-base leading-none">✦</span>
-            {aiLoading ? 'AI 分析中…' : 'AI 商機分析'}
+            AI 商機分析
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -518,152 +547,18 @@ export default function VisitsContent() {
         </p>
       )}
 
-      {/* AI 商機分析面板 */}
-      <AnimatePresence>
-        {showAiPanel && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.25 }}
-            className="mt-6 rounded-2xl border border-violet-200/60 bg-violet-50/40 overflow-hidden"
-          >
-            {/* 面板 header */}
-            <div className="px-5 py-4 border-b border-violet-200/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-violet-500 text-lg">✦</span>
-                <h3 className="text-sm font-semibold text-violet-800">AI 商機分析</h3>
-                {aiAnalysis && (
-                  <span className="text-xs text-violet-400">（已載入 {visits.length} 筆紀錄）</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {aiAnalysis && (
-                  <button
-                    onClick={runAiAnalysis}
-                    disabled={aiLoading}
-                    className="text-xs text-violet-500 hover:text-violet-700 transition disabled:opacity-40"
-                  >
-                    重新分析
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowAiPanel(false)}
-                  className="text-stone-400 hover:text-stone-600 transition text-sm"
-                >✕</button>
-              </div>
-            </div>
-
-            {/* 面板內容 */}
-            <div className="px-5 py-5">
-              {aiLoading && (
-                <div className="flex items-center gap-3 text-sm text-violet-500 py-4">
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  正在分析 {visits.length} 筆拜訪紀錄…
-                </div>
-              )}
-
-              {aiError && (
-                <p className="text-sm text-red-500 bg-red-50 rounded-xl px-4 py-3">{aiError}</p>
-              )}
-
-              {aiAnalysis && !aiLoading && (
-                <div className="space-y-5">
-                  {/* 高潛力客戶 */}
-                  {aiAnalysis.hotCustomers?.length > 0 && (
-                    <section>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-2">高潛力客戶</h4>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {aiAnalysis.hotCustomers.map((c, i) => (
-                          <div key={i} className="bg-white rounded-xl px-4 py-3 border border-violet-100/60">
-                            <p className="text-sm font-semibold text-stone-800">{c.name}</p>
-                            <p className="text-xs text-stone-500 mt-0.5">{c.reason}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* 產品需求 + 競品威脅 */}
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    {aiAnalysis.productDemand?.length > 0 && (
-                      <section>
-                        <h4 className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-2">產品需求趨勢</h4>
-                        <div className="space-y-1.5">
-                          {aiAnalysis.productDemand.map((p, i) => (
-                            <div key={i} className="bg-white rounded-xl px-4 py-2.5 border border-emerald-100/60 flex justify-between items-start gap-3">
-                              <div>
-                                <p className="text-sm font-medium text-stone-800">{p.product}</p>
-                                <p className="text-xs text-stone-400">{p.note}</p>
-                              </div>
-                              <span className="text-xs font-bold text-emerald-600 shrink-0">{p.count} 次</span>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    )}
-
-                    {aiAnalysis.competitorThreats?.length > 0 && (
-                      <section>
-                        <h4 className="text-xs font-semibold uppercase tracking-widest text-orange-500 mb-2">競品威脅雷達</h4>
-                        <div className="space-y-1.5">
-                          {aiAnalysis.competitorThreats.map((c, i) => (
-                            <div key={i} className="bg-white rounded-xl px-4 py-2.5 border border-orange-100/60 flex justify-between items-start gap-3">
-                              <div>
-                                <p className="text-sm font-medium text-stone-800">{c.competitor}</p>
-                                <p className="text-xs text-stone-400">{c.note}</p>
-                              </div>
-                              <span className="text-xs font-bold text-orange-500 shrink-0">{c.count} 次</span>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                  </div>
-
-                  {/* 緊急追蹤 */}
-                  {aiAnalysis.followUpUrgent?.length > 0 && (
-                    <section>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-2">需緊急追蹤</h4>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {aiAnalysis.followUpUrgent.map((f, i) => (
-                          <div key={i} className="bg-white rounded-xl px-4 py-3 border border-red-100/60 flex items-start gap-3">
-                            <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                            <div>
-                              <p className="text-sm font-semibold text-stone-800">{f.name}
-                                {f.date && <span className="ml-1.5 text-xs font-normal text-stone-400">{f.date}</span>}
-                              </p>
-                              <p className="text-xs text-stone-500">{f.reason}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* 策略建議 */}
-                  {aiAnalysis.strategicSuggestions?.length > 0 && (
-                    <section>
-                      <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-2">策略建議</h4>
-                      <div className="space-y-1.5">
-                        {aiAnalysis.strategicSuggestions.map((s, i) => (
-                          <div key={i} className="flex items-start gap-2.5 bg-white rounded-xl px-4 py-2.5 border border-violet-100/60">
-                            <span className="text-violet-400 text-xs mt-0.5 font-bold shrink-0">{i + 1}.</span>
-                            <p className="text-sm text-stone-700">{s}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* AI 商機分析 Modal */}
+      {showAiModal && (
+        <AiAnalysisModal
+          analysis={aiAnalysis}
+          loading={aiLoading}
+          error={aiError}
+          timestamp={aiTimestamp}
+          visitCount={aiVisitCount}
+          onReanalyze={runAiAnalysis}
+          onClose={() => setShowAiModal(false)}
+        />
+      )}
 
       {/* New Visit Modal */}
       {showModal && (
@@ -1525,6 +1420,216 @@ export function VisitModal({
           </motion.div>
         </>
       )}
+    </AnimatePresence>
+  )
+}
+
+// ── AI 商機分析 Modal ─────────────────────────────────────────
+
+function AiAnalysisModal({
+  analysis,
+  loading,
+  error,
+  timestamp,
+  visitCount,
+  onReanalyze,
+  onClose,
+}: {
+  analysis: OverviewAnalysis | null
+  loading: boolean
+  error: string
+  timestamp: string | null
+  visitCount: number
+  onReanalyze: () => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  function formatTimestamp(iso: string) {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  return (
+    <AnimatePresence>
+      <>
+        {/* Backdrop */}
+        <motion.div
+          className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+        />
+
+        {/* Modal */}
+        <motion.div
+          className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.div
+            className="relative w-full max-w-2xl"
+            initial={{ opacity: 0, y: 32, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            <div className="panel overflow-hidden border-violet-200/60">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-violet-100/60 bg-violet-50/40 flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-violet-500 text-lg">✦</span>
+                    <h3 className="text-lg font-bold text-stone-800">AI 商機分析</h3>
+                  </div>
+                  {timestamp && (
+                    <p className="text-xs text-stone-400">
+                      上次分析：{formatTimestamp(timestamp)}・共 {visitCount} 筆紀錄
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={onReanalyze}
+                    disabled={loading}
+                    className="text-xs text-violet-600 hover:text-violet-800 font-medium border border-violet-200 bg-white rounded-full px-3 py-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {loading ? '分析中…' : '重新分析'}
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                  >✕</button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6 space-y-6 max-h-[72vh] overflow-y-auto">
+
+                {/* Loading */}
+                {loading && (
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <svg className="animate-spin w-8 h-8 text-violet-400" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    <p className="text-sm text-violet-500">AI 正在分析拜訪紀錄中…</p>
+                  </div>
+                )}
+
+                {/* Error */}
+                {error && !loading && (
+                  <div className="bg-red-50 border border-red-200/60 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
+                )}
+
+                {/* Results */}
+                {analysis && !loading && (
+                  <>
+                    {/* 高潛力客戶 */}
+                    {analysis.hotCustomers?.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-3">⭐ 高潛力客戶</h4>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {analysis.hotCustomers.map((c, i) => (
+                            <div key={i} className="bg-violet-50/50 rounded-xl px-4 py-3 border border-violet-100/60">
+                              <p className="text-sm font-semibold text-stone-800">{c.name}</p>
+                              <p className="text-xs text-stone-500 mt-1 leading-relaxed">{c.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 產品需求 + 競品 */}
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      {analysis.productDemand?.length > 0 && (
+                        <section>
+                          <h4 className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-3">📦 產品需求趨勢</h4>
+                          <div className="space-y-2">
+                            {analysis.productDemand.map((p, i) => (
+                              <div key={i} className="bg-emerald-50/50 rounded-xl px-4 py-2.5 border border-emerald-100/60 flex justify-between items-start gap-3">
+                                <div>
+                                  <p className="text-sm font-medium text-stone-800">{p.product}</p>
+                                  <p className="text-xs text-stone-400 mt-0.5">{p.note}</p>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 rounded-full px-2 py-0.5 shrink-0">{p.count} 次</span>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {analysis.competitorThreats?.length > 0 && (
+                        <section>
+                          <h4 className="text-xs font-semibold uppercase tracking-widest text-orange-500 mb-3">⚠️ 競品威脅雷達</h4>
+                          <div className="space-y-2">
+                            {analysis.competitorThreats.map((c, i) => (
+                              <div key={i} className="bg-orange-50/50 rounded-xl px-4 py-2.5 border border-orange-100/60 flex justify-between items-start gap-3">
+                                <div>
+                                  <p className="text-sm font-medium text-stone-800">{c.competitor}</p>
+                                  <p className="text-xs text-stone-400 mt-0.5">{c.note}</p>
+                                </div>
+                                <span className="text-xs font-bold text-orange-500 bg-orange-100 rounded-full px-2 py-0.5 shrink-0">{c.count} 次</span>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+                    </div>
+
+                    {/* 緊急追蹤 */}
+                    {analysis.followUpUrgent?.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-red-500 mb-3">🔴 需緊急追蹤</h4>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {analysis.followUpUrgent.map((f, i) => (
+                            <div key={i} className="bg-red-50/50 rounded-xl px-4 py-3 border border-red-100/60 flex items-start gap-3">
+                              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                              <div>
+                                <p className="text-sm font-semibold text-stone-800">
+                                  {f.name}
+                                  {f.date && <span className="ml-1.5 text-xs font-normal text-stone-400">{f.date}</span>}
+                                </p>
+                                <p className="text-xs text-stone-500 mt-0.5">{f.reason}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 策略建議 */}
+                    {analysis.strategicSuggestions?.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-semibold uppercase tracking-widest text-violet-500 mb-3">💡 策略建議</h4>
+                        <div className="space-y-2">
+                          {analysis.strategicSuggestions.map((s, i) => (
+                            <div key={i} className="flex items-start gap-3 bg-violet-50/50 rounded-xl px-4 py-3 border border-violet-100/60">
+                              <span className="text-violet-400 text-xs font-bold shrink-0 mt-0.5">{i + 1}.</span>
+                              <p className="text-sm text-stone-700 leading-relaxed">{s}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </>
+                )}
+
+                {/* Empty state */}
+                {!analysis && !loading && !error && (
+                  <div className="text-center py-12 text-sm text-stone-400">
+                    點擊「重新分析」開始分析拜訪紀錄
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </>
     </AnimatePresence>
   )
 }
