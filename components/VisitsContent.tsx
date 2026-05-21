@@ -1695,7 +1695,7 @@ function AiAnalysisModal({
                   <select
                     value={filterSalesperson}
                     onChange={(e) => onFilterSalespersonChange(e.target.value)}
-                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    className="w-32 h-8 text-sm border border-stone-200 rounded-lg px-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
                   >
                     <option value="">全部業務</option>
                     {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -1705,14 +1705,14 @@ function AiAnalysisModal({
                     type="date"
                     value={filterDateFrom}
                     onChange={(e) => onFilterDateFromChange(e.target.value)}
-                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    className="w-36 h-8 text-sm border border-stone-200 rounded-lg px-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
                   />
                   <span className="text-xs text-stone-300">—</span>
                   <input
                     type="date"
                     value={filterDateTo}
                     onChange={(e) => onFilterDateToChange(e.target.value)}
-                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    className="w-36 h-8 text-sm border border-stone-200 rounded-lg px-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
                   />
                   <span className="text-xs text-stone-400 ml-auto shrink-0">
                     共 <span className="font-semibold text-violet-600">{filteredCount}</span>
