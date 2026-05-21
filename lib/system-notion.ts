@@ -1216,7 +1216,7 @@ async function ensureVisitDbFields() {
   // intentionally empty — do NOT call databases.update here
 }
 
-const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v1'
+const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v2'
 const VISIT_FORM_OPTIONS_TTL = 10 * 60 * 1000 // 10 min
 
 export async function getVisitFormOptions(): Promise<VisitFormOptions> {
