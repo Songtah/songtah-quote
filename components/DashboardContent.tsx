@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ModuleCard } from '@/components/ModuleCard'
 import { RecordList } from '@/components/RecordList'
@@ -62,12 +62,8 @@ export function DashboardContent({
   const [error, setError] = useState(initialError)
   const [isRefreshing, setIsRefreshing] = useState(!initialSummary && !initialError)
 
-  useEffect(() => {
-    if (initialSummary || initialError) {
-      setIsRefreshing(false)
-      return
-    }
-
+  const fetchSummary = useCallback(() => {
+    setError('')
     setIsRefreshing(true)
     fetch('/api/dashboard')
       .then((r) => r.json())
@@ -75,9 +71,17 @@ export function DashboardContent({
         if (data.error) setError(data.error)
         else setSummary(data)
       })
-      .catch(() => setError('無法載入資料'))
+      .catch(() => setError('無法載入資料，請檢查網路連線'))
       .finally(() => setIsRefreshing(false))
-  }, [initialSummary, initialError])
+  }, [])
+
+  useEffect(() => {
+    if (initialSummary || initialError) {
+      setIsRefreshing(false)
+      return
+    }
+    fetchSummary()
+  }, [initialSummary, initialError, fetchSummary])
 
   const s = summary ?? EMPTY_SUMMARY
   const loading = isRefreshing && !initialSummary
@@ -89,11 +93,11 @@ export function DashboardContent({
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <ModuleCard title="CRM 客戶" count={s.customers.activeThisMonth ?? s.customers.total} countLabel={s.customers.activeThisMonth != null ? '本月活躍' : undefined} description="客戶主檔、轄區查閱與後續拜訪紀錄入口。" href="/customers" accent="#0f766e" />
-            <ModuleCard title="RMA 工單" count={s.tickets.total} description="維修案件、技術支援與設備追蹤入口。" href="/tickets" accent="#b45309" />
-            <ModuleCard title="BD 商機" count={s.opportunities.total} description="活動名單、商機跟進與成交流程入口。" href="/bd" accent="#7c3aed" />
-            <ModuleCard title="產品管理" count={s.products.total} description="產品清單、系列與報價使用資料入口。" href="/products" accent="#2563eb" />
-            <ModuleCard title="帳號權限" count={s.users.total} description="使用者帳號、角色與後續 RBAC 權限設定。" href="/settings/accounts" accent="#dc2626" />
+            <ModuleCard title="CRM 客戶" count={s.customers.activeThisMonth ?? s.customers.total} countLabel={s.customers.activeThisMonth != null ? '本月活躍' : undefined} hasMore={s.customers.activeThisMonth == null && (s.customers.hasMore ?? false)} description="客戶主檔、轄區查閱與後續拜訪紀錄入口。" href="/customers" accent="#0f766e" />
+            <ModuleCard title="RMA 工單" count={s.tickets.total} hasMore={s.tickets.hasMore} description="維修案件、技術支援與設備追蹤入口。" href="/tickets" accent="#b45309" />
+            <ModuleCard title="BD 商機" count={s.opportunities.total} hasMore={s.opportunities.hasMore} description="活動名單、商機跟進與成交流程入口。" href="/bd" accent="#7c3aed" />
+            <ModuleCard title="產品管理" count={s.products.total} hasMore={s.products.hasMore} description="產品清單、系列與報價使用資料入口。" href="/products" accent="#2563eb" />
+            <ModuleCard title="帳號權限" count={s.users.total} hasMore={s.users.hasMore} description="使用者帳號、角色與後續 RBAC 權限設定。" href="/settings/accounts" accent="#dc2626" />
           </>
         )}
       </section>
@@ -105,9 +109,15 @@ export function DashboardContent({
       )}
 
       {error && (
-        <p className="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-          {error}
-        </p>
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
+          <p className="flex-1 text-sm text-amber-700">{error}</p>
+          <button
+            onClick={fetchSummary}
+            className="shrink-0 text-sm font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2"
+          >
+            重新整理
+          </button>
+        </div>
       )}
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2">

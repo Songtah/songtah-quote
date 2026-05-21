@@ -3,7 +3,8 @@ import type { CreateTicketPayload, Equipment, Ticket } from '@/types'
 
 export type ModuleSummary = {
   total: number
-  activeThisMonth?: number   // unique active customers in current month (CRM only)
+  hasMore?: boolean           // true when actual record count exceeds the fetched page
+  activeThisMonth?: number    // unique active customers in current month (CRM only)
   recent: Array<{
     id: string
     title: string
@@ -195,9 +196,12 @@ async function queryDatabase(databaseId: string | undefined, pageSize = 6) {
   return response.results ?? []
 }
 
-// Fetch rows and paginate to get the true total count.
-async function querySummary(databaseId: string | undefined, pageSize = 100): Promise<{ rows: any[]; total: number }> {
-  if (!databaseId) return { rows: [], total: 0 }
+// Fetch the first page of rows. If all records fit in one page, total is exact.
+// If there are more pages (has_more = true), we intentionally do NOT paginate —
+// sequential Notion API calls for counting caused Vercel function timeouts on cold
+// starts. The caller receives hasMore=true and the UI shows "N+" to be honest.
+async function querySummary(databaseId: string | undefined, pageSize = 100): Promise<{ rows: any[]; total: number; hasMore: boolean }> {
+  if (!databaseId) return { rows: [], total: 0, hasMore: false }
   const firstPage: any = await notionCallWithRetry('querySummary', () =>
     notion.databases.query({
       database_id: normalizeDatabaseId(databaseId),
@@ -205,26 +209,8 @@ async function querySummary(databaseId: string | undefined, pageSize = 100): Pro
     })
   )
   const rows = firstPage.results ?? []
-
-  // No more pages → exact count
-  if (!firstPage.has_more) return { rows, total: rows.length }
-
-  // Paginate sequentially just to count remaining records
-  let total = rows.length
-  let cursor: string | undefined = firstPage.next_cursor ?? undefined
-  while (cursor) {
-    const page: any = await notionCallWithRetry('querySummary-count', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(databaseId),
-        page_size: 100,
-        start_cursor: cursor,
-      })
-    )
-    total += (page.results ?? []).length
-    cursor = page.has_more ? (page.next_cursor ?? undefined) : undefined
-  }
-
-  return { rows, total }
+  const hasMore = firstPage.has_more ?? false
+  return { rows, total: rows.length, hasMore }
 }
 
 /**
@@ -275,12 +261,13 @@ async function getActiveCustomersThisMonth(): Promise<number> {
 }
 
 async function getCustomersSummary(): Promise<ModuleSummary> {
-  const [{ rows, total }, activeThisMonth] = await Promise.all([
+  const [{ rows, total, hasMore }, activeThisMonth] = await Promise.all([
     querySummary(DB.customers),
     getActiveCustomersThisMonth(),
   ])
   return {
     total,
+    hasMore,
     activeThisMonth,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
@@ -311,9 +298,10 @@ export async function listAllSystemCustomers(): Promise<{ id: string; name: stri
 }
 
 async function getTicketsSummary(): Promise<ModuleSummary> {
-  const { rows, total } = await querySummary(DB.tickets)
+  const { rows, total, hasMore } = await querySummary(DB.tickets)
   return {
     total,
+    hasMore,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
       title:
@@ -329,9 +317,10 @@ async function getTicketsSummary(): Promise<ModuleSummary> {
 }
 
 async function getOpportunitiesSummary(): Promise<ModuleSummary> {
-  const { rows, total } = await querySummary(DB.opportunities)
+  const { rows, total, hasMore } = await querySummary(DB.opportunities)
   return {
     total,
+    hasMore,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
       title: getTitle(page, '商機名稱'),
@@ -347,9 +336,10 @@ async function getOpportunitiesSummary(): Promise<ModuleSummary> {
 }
 
 export async function getProductsSummary(): Promise<ModuleSummary> {
-  const { rows, total } = await querySummary(DB.products)
+  const { rows, total, hasMore } = await querySummary(DB.products)
   return {
     total,
+    hasMore,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
       title: getTitle(page, 'Name'),
@@ -361,9 +351,10 @@ export async function getProductsSummary(): Promise<ModuleSummary> {
 }
 
 async function getUsersSummary(): Promise<ModuleSummary> {
-  const { rows, total } = await querySummary(DB.users, 50)
+  const { rows, total, hasMore } = await querySummary(DB.users, 50)
   return {
     total,
+    hasMore,
     recent: rows.slice(0, 20).map((page: any) => ({
       id: page.id,
       title: getTitle(page, '帳號名稱'),
@@ -1125,17 +1116,23 @@ export async function getSystemTicketById(id: string) {
 
 export type Visit = {
   id: string
-  customerName: string         // 單位名稱
-  date: string                 // 日期
-  salesperson: string          // 業務人員
-  status: string               // 狀態 (拜訪性質)
-  content: string              // 拜訪內容
-  address: string              // 地址
-  city: string                 // 縣市
-  district: string             // 鄉鎮市區
-  tags: string[]                                    // 客戶標籤
-  competitorEquipment: string[]                     // 競品 (multi_select)
-  interestedProducts: Array<{ id: string; name: string }> // 有興趣的產品 (relation)
+  customerName: string
+  date: string
+  salesperson: string
+  status: string               // 拜訪性質 (legacy, preserved but no longer shown in form)
+  content: string
+  address: string
+  city: string
+  district: string
+  tags: string[]
+  competitorEquipment: string[]
+  interestedProducts: Array<{ id: string; name: string }>
+  interactionType: string      // 互動類型
+  interactionPurpose: string   // 互動目的
+  customerReaction: string     // 客戶反應
+  followUpAction: string       // 後續動作
+  needsFollowUp: boolean       // 是否需追蹤
+  nextFollowUpDate: string     // 下次追蹤日
 }
 
 export type VisitFormOptions = {
@@ -1143,6 +1140,9 @@ export type VisitFormOptions = {
   statuses: string[]
   tagOptions: string[]
   competitorOptions: string[]
+  interactionTypes: string[]
+  interactionPurposes: string[]
+  customerReactions: string[]
   products: Array<{ id: string; name: string }>
 }
 
@@ -1168,6 +1168,14 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       database.properties?.['業務人員']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
     const statusOptions =
       database.properties?.['拜訪性質']?.select?.options?.map((option: any) => option.name).filter(Boolean) ?? []
+
+    // New select fields — read options directly from schema (user manages options in Notion UI)
+    const interactionTypeOptions: string[] =
+      database.properties?.['互動類型']?.select?.options?.map((o: any) => o.name).filter(Boolean) ?? []
+    const interactionPurposeOptions: string[] =
+      database.properties?.['互動目的']?.select?.options?.map((o: any) => o.name).filter(Boolean) ?? []
+    const customerReactionOptions: string[] =
+      database.properties?.['客戶反應']?.select?.options?.map((o: any) => o.name).filter(Boolean) ?? []
 
     // For multi_select fields (客戶標籤, 競品): collect options from both the DB schema
     // AND from actual record values, so we never miss a previously-used option.
@@ -1205,6 +1213,9 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
       competitorOptions: Array.from(allCompetitorSet).sort(),
+      interactionTypes: interactionTypeOptions,
+      interactionPurposes: interactionPurposeOptions,
+      customerReactions: customerReactionOptions,
       products: [],  // products are searched on-demand via /api/products/search
     }
   } catch (error) {
@@ -1214,6 +1225,9 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       statuses: [],
       tagOptions: [],
       competitorOptions: [],
+      interactionTypes: [],
+      interactionPurposes: [],
+      customerReactions: [],
       products: [],
     }
   }
@@ -1225,16 +1239,22 @@ function mapVisitPageRaw(page: any) {
     id: page.id,
     _relId: getRelationIds(page, '🏥 牙科單位資料')[0] ?? '',
     _productRelIds: getRelationIds(page, '有興趣的產品'),
-    customerName: getTitle(page, '單位名稱'), // fallback if relation unresolved
+    customerName: getTitle(page, '單位名稱'),
     date: getDate(page, '日期'),
     salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
-    status: getSelect(page, '拜訪性質') || getSelect(page, '狀態'),
+    status: getSelect(page, '拜訪性質') || getSelect(page, '狀態'), // legacy field
     content: getText(page, '拜訪內容'),
     address: getText(page, '地址'),
     city: getRollupText(page, '縣市') || getSelect(page, '縣市') || getText(page, '縣市'),
     district: getRollupText(page, '鄉鎮市區') || getSelect(page, '鄉鎮市區') || getText(page, '鄉鎮市區'),
     tags: (getProp(page, '客戶標籤')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
     competitorEquipment: (getProp(page, '競品')?.multi_select ?? []).map((t: any) => t.name).filter(Boolean),
+    interactionType: getSelect(page, '互動類型'),
+    interactionPurpose: getSelect(page, '互動目的'),
+    customerReaction: getSelect(page, '客戶反應'),
+    followUpAction: getText(page, '後續動作'),
+    needsFollowUp: getProp(page, '是否需追蹤')?.checkbox ?? false,
+    nextFollowUpDate: getDate(page, '下次追蹤日'),
   }
 }
 
@@ -1392,7 +1412,7 @@ export async function createVisit(data: {
   customerName: string
   date: string
   salesperson: string
-  status: string
+  status?: string
   content: string
   address: string
   city: string
@@ -1401,6 +1421,12 @@ export async function createVisit(data: {
   tags?: string[]
   competitorEquipment?: string[]
   interestedProductIds?: string[]
+  interactionType?: string
+  interactionPurpose?: string
+  customerReaction?: string
+  followUpAction?: string
+  needsFollowUp?: boolean
+  nextFollowUpDate?: string
 }): Promise<Visit> {
   invalidateVisitsCache()
   await ensureVisitDbFields()
@@ -1412,7 +1438,6 @@ export async function createVisit(data: {
         單位名稱: { title: richText(data.customerName) },
         ...(data.date ? { 日期: { date: { start: data.date } } } : {}),
         ...(data.salesperson ? { 業務人員: { select: { name: data.salesperson } } } : {}),
-        ...(data.status ? { 拜訪性質: { select: { name: data.status } } } : {}),
         拜訪內容: { rich_text: richText(data.content) },
         地址: { rich_text: richText(data.address) },
         縣市: { rich_text: richText(data.city) },
@@ -1429,6 +1454,12 @@ export async function createVisit(data: {
         ...(data.interestedProductIds?.length
           ? { '有興趣的產品': { relation: data.interestedProductIds.map((id) => ({ id })) } }
           : {}),
+        ...(data.interactionType ? { 互動類型: { select: { name: data.interactionType } } } : {}),
+        ...(data.interactionPurpose ? { 互動目的: { select: { name: data.interactionPurpose } } } : {}),
+        ...(data.customerReaction ? { 客戶反應: { select: { name: data.customerReaction } } } : {}),
+        ...(data.followUpAction ? { 後續動作: { rich_text: richText(data.followUpAction) } } : {}),
+        是否需追蹤: { checkbox: data.needsFollowUp ?? false },
+        ...(data.nextFollowUpDate ? { 下次追蹤日: { date: { start: data.nextFollowUpDate } } } : {}),
       } as any,
     })
   )
@@ -1438,7 +1469,7 @@ export async function createVisit(data: {
     customerName: data.customerName,
     date: data.date,
     salesperson: data.salesperson,
-    status: data.status,
+    status: data.status ?? '',
     content: data.content,
     address: data.address,
     city: data.city,
@@ -1446,6 +1477,12 @@ export async function createVisit(data: {
     tags: data.tags ?? [],
     competitorEquipment: data.competitorEquipment ?? [],
     interestedProducts: [],
+    interactionType: data.interactionType ?? '',
+    interactionPurpose: data.interactionPurpose ?? '',
+    customerReaction: data.customerReaction ?? '',
+    followUpAction: data.followUpAction ?? '',
+    needsFollowUp: data.needsFollowUp ?? false,
+    nextFollowUpDate: data.nextFollowUpDate ?? '',
   }
 }
 
@@ -1462,12 +1499,17 @@ export async function updateVisit(id: string, data: {
   tags?: string[]
   competitorEquipment?: string[]
   interestedProductIds?: string[]
+  interactionType?: string
+  interactionPurpose?: string
+  customerReaction?: string
+  followUpAction?: string
+  needsFollowUp?: boolean
+  nextFollowUpDate?: string
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
   if (data.date !== undefined) properties['日期'] = { date: { start: data.date } }
   if (data.salesperson !== undefined) properties['業務人員'] = { select: { name: data.salesperson } }
-  if (data.status !== undefined) properties['拜訪性質'] = { select: { name: data.status } }
   if (data.content !== undefined) properties['拜訪內容'] = { rich_text: richText(data.content) }
   if (data.address !== undefined) properties['地址'] = { rich_text: richText(data.address) }
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
@@ -1480,6 +1522,12 @@ export async function updateVisit(id: string, data: {
       ? { relation: [{ id: data.customerId }] }
       : { relation: [] }
   }
+  if (data.interactionType !== undefined) properties['互動類型'] = data.interactionType ? { select: { name: data.interactionType } } : { select: null }
+  if (data.interactionPurpose !== undefined) properties['互動目的'] = data.interactionPurpose ? { select: { name: data.interactionPurpose } } : { select: null }
+  if (data.customerReaction !== undefined) properties['客戶反應'] = data.customerReaction ? { select: { name: data.customerReaction } } : { select: null }
+  if (data.followUpAction !== undefined) properties['後續動作'] = { rich_text: richText(data.followUpAction) }
+  if (data.needsFollowUp !== undefined) properties['是否需追蹤'] = { checkbox: data.needsFollowUp }
+  if (data.nextFollowUpDate !== undefined) properties['下次追蹤日'] = data.nextFollowUpDate ? { date: { start: data.nextFollowUpDate } } : { date: null }
 
   invalidateVisitsCache()
   await notionCallWithRetry('updateVisit', () =>

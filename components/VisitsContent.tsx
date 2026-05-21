@@ -5,15 +5,37 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Visit } from '@/lib/system-notion'
 
-const VISIT_STATUS_OPTIONS = [
-  '初次拜訪',
-  '例行拜訪',
-  '重點追蹤',
-  '展覽',
-  '電話拜訪',
-  '視訊拜訪',
-  '其他',
-]
+// Legacy 拜訪性質 badge colors (for old records)
+const LEGACY_STATUS_COLORS: Record<string, string> = {
+  初次拜訪: 'bg-blue-100 text-blue-700',
+  例行拜訪: 'bg-green-100 text-green-700',
+  重點追蹤: 'bg-orange-100 text-orange-700',
+  展覽: 'bg-purple-100 text-purple-700',
+  電話拜訪: 'bg-slate-100 text-slate-600',
+  視訊拜訪: 'bg-cyan-100 text-cyan-700',
+  其他: 'bg-gray-100 text-gray-600',
+}
+
+// 互動類型 badge colors
+const INTERACTION_TYPE_COLORS: Record<string, string> = {
+  拜訪: 'bg-blue-100 text-blue-700',
+  電話: 'bg-slate-100 text-slate-600',
+  LINE: 'bg-green-100 text-green-700',
+  展會: 'bg-purple-100 text-purple-700',
+  課程: 'bg-cyan-100 text-cyan-700',
+  維修: 'bg-orange-100 text-orange-700',
+  報價: 'bg-amber-100 text-amber-700',
+  售後: 'bg-rose-100 text-rose-700',
+}
+
+// 客戶反應 badge colors
+const REACTION_COLORS: Record<string, string> = {
+  有興趣: 'bg-emerald-100 text-emerald-700',
+  觀望: 'bg-yellow-100 text-yellow-700',
+  拒絕: 'bg-red-100 text-red-600',
+  需內部討論: 'bg-indigo-100 text-indigo-700',
+  已購買: 'bg-teal-100 text-teal-700',
+}
 
 type CustomerSuggestion = {
   id: string
@@ -29,7 +51,7 @@ type VisitForm = {
   customerId: string
   date: string
   salesperson: string
-  status: string
+  status: string  // legacy, kept for backward compat but not shown in form
   content: string
   address: string
   city: string
@@ -37,6 +59,12 @@ type VisitForm = {
   tags: string[]
   competitorEquipment: string[]
   interestedProductIds: string[]
+  interactionType: string
+  interactionPurpose: string
+  customerReaction: string
+  followUpAction: string
+  needsFollowUp: boolean
+  nextFollowUpDate: string
 }
 
 type SalespersonOption = {
@@ -49,20 +77,18 @@ function formatDate(d: string) {
   return d.slice(0, 10).replace(/-/g, '/')
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    初次拜訪: 'bg-blue-100 text-blue-700',
-    例行拜訪: 'bg-green-100 text-green-700',
-    重點追蹤: 'bg-orange-100 text-orange-700',
-    展覽: 'bg-purple-100 text-purple-700',
-    電話拜訪: 'bg-slate-100 text-slate-600',
-    視訊拜訪: 'bg-cyan-100 text-cyan-700',
-    其他: 'bg-gray-100 text-gray-600',
-  }
-  const cls = colorMap[status] ?? 'bg-gray-100 text-gray-600'
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{status || '—'}</span>
-  )
+function InteractionBadge({ interactionType, fallbackStatus }: { interactionType: string; fallbackStatus: string }) {
+  const label = interactionType || fallbackStatus
+  const cls = INTERACTION_TYPE_COLORS[interactionType] ?? LEGACY_STATUS_COLORS[fallbackStatus] ?? 'bg-gray-100 text-gray-600'
+  return label
+    ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
+    : <span className="text-xs text-stone-300">—</span>
+}
+
+function ReactionBadge({ reaction }: { reaction: string }) {
+  if (!reaction) return null
+  const cls = REACTION_COLORS[reaction] ?? 'bg-gray-100 text-gray-600'
+  return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{reaction}</span>
 }
 
 export default function VisitsContent() {
@@ -141,7 +167,8 @@ export default function VisitsContent() {
     if (filterSalesperson && v.salesperson !== filterSalesperson) return false
     if (filterCity && v.city !== filterCity) return false
     if (keyword) {
-      return [v.customerName, v.city, v.district, v.salesperson, v.status, v.content, v.address]
+      return [v.customerName, v.city, v.district, v.salesperson, v.status, v.content, v.address,
+              v.interactionType, v.interactionPurpose, v.customerReaction, v.followUpAction]
         .some((field) => field?.toLowerCase().includes(keyword))
     }
     return true
@@ -278,8 +305,8 @@ export default function VisitsContent() {
                     <th className="px-4 py-3 text-left">日期</th>
                     <th className="px-4 py-3 text-left">客戶名稱</th>
                     <th className="px-4 py-3 text-left">縣市</th>
-                    <th className="px-4 py-3 text-left">鄉鎮市區</th>
-                    <th className="px-4 py-3 text-left">拜訪性質</th>
+                    <th className="px-4 py-3 text-left">互動類型</th>
+                    <th className="px-4 py-3 text-left">客戶反應</th>
                     <th className="px-4 py-3 text-left">業務人員</th>
                     <th className="px-4 py-3 text-left">拜訪內容</th>
                     <th className="px-4 py-3 text-right">操作</th>
@@ -293,11 +320,18 @@ export default function VisitsContent() {
                       className="hover:bg-cream-50/60 transition-colors cursor-pointer group"
                     >
                       <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{formatDate(v.date)}</td>
-                      <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">{v.customerName}</td>
+                      <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">
+                        {v.customerName}
+                        {v.needsFollowUp && (
+                          <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-orange-400 align-middle" title="需要追蹤" />
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-stone-500">{v.city || '—'}</td>
-                      <td className="px-4 py-3 text-stone-500">{v.district || '—'}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={v.status} />
+                        <InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <ReactionBadge reaction={v.customerReaction} />
                       </td>
                       <td className="px-4 py-3 text-stone-500">{v.salesperson || '—'}</td>
                       <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{v.content || '—'}</td>
@@ -408,16 +442,6 @@ function ViewVisitModal({
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  const colorMap: Record<string, string> = {
-    初次拜訪: 'bg-blue-100 text-blue-700',
-    例行拜訪: 'bg-green-100 text-green-700',
-    重點追蹤: 'bg-orange-100 text-orange-700',
-    展覽: 'bg-purple-100 text-purple-700',
-    電話拜訪: 'bg-slate-100 text-slate-600',
-    視訊拜訪: 'bg-cyan-100 text-cyan-700',
-    其他: 'bg-gray-100 text-gray-600',
-  }
-
   return (
     <AnimatePresence>
       {visible && (
@@ -454,12 +478,16 @@ function ViewVisitModal({
                     <p className="eyebrow mb-1">客情管理</p>
                     <h3 className="text-lg font-bold text-stone-800 truncate">{visit.customerName}</h3>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${colorMap[visit.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {visit.status || '—'}
-                      </span>
+                      <InteractionBadge interactionType={visit.interactionType} fallbackStatus={visit.status} />
+                      {visit.customerReaction && <ReactionBadge reaction={visit.customerReaction} />}
                       <span className="text-xs text-stone-400">{formatDate(visit.date)}</span>
                       {visit.salesperson && (
                         <span className="text-xs text-stone-400">・{visit.salesperson}</span>
+                      )}
+                      {visit.needsFollowUp && (
+                        <span className="text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded-full px-2 py-0.5 font-medium">
+                          需追蹤{visit.nextFollowUpDate ? `・${formatDate(visit.nextFollowUpDate)}` : ''}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -475,12 +503,12 @@ function ViewVisitModal({
                 <div className="px-6 py-5 space-y-4">
                   {/* Info grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
+                    {([
                       ['縣市', visit.city],
                       ['鄉鎮市區', visit.district],
                       ['業務人員', visit.salesperson],
-                      ['拜訪性質', visit.status],
-                    ].map(([label, val]) => (
+                      ['互動目的', visit.interactionPurpose],
+                    ] as [string, string][]).map(([label, val]) => (
                       <div key={label} className="bg-cream-50/60 rounded-xl px-4 py-3">
                         <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">{label}</div>
                         <div className="text-sm font-medium text-stone-700">{val || '—'}</div>
@@ -505,6 +533,14 @@ function ViewVisitModal({
                       <p className="text-sm text-stone-400 italic">無拜訪內容紀錄</p>
                     )}
                   </div>
+
+                  {/* 後續動作 */}
+                  {visit.followUpAction && (
+                    <div className="bg-orange-50/60 rounded-xl px-4 py-3 border border-orange-100/60">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-orange-400 mb-1.5">後續動作</div>
+                      <p className="text-sm text-stone-700 whitespace-pre-wrap">{visit.followUpAction}</p>
+                    </div>
+                  )}
 
                   {/* 有興趣的產品 */}
                   {visit.interestedProducts && visit.interestedProducts.length > 0 && (
@@ -607,7 +643,7 @@ export function VisitModal({
     customerId: prefillCustomer?.id ?? '',
     date: initialData?.date ? initialData.date.slice(0, 10) : today,
     salesperson: initialData?.salesperson ?? '',
-    status: initialData?.status ?? '例行拜訪',
+    status: initialData?.status ?? '',
     content: initialData?.content ?? '',
     address: initialData?.address ?? prefillCustomer?.address ?? '',
     city: initialData?.city ?? prefillCustomer?.city ?? '',
@@ -615,6 +651,12 @@ export function VisitModal({
     tags: initialData?.tags ?? [],
     competitorEquipment: initialData?.competitorEquipment ?? [],
     interestedProductIds: initialData?.interestedProducts?.map((p) => p.id) ?? [],
+    interactionType: initialData?.interactionType ?? '',
+    interactionPurpose: initialData?.interactionPurpose ?? '',
+    customerReaction: initialData?.customerReaction ?? '',
+    followUpAction: initialData?.followUpAction ?? '',
+    needsFollowUp: initialData?.needsFollowUp ?? false,
+    nextFollowUpDate: initialData?.nextFollowUpDate ? initialData.nextFollowUpDate.slice(0, 10) : '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -627,6 +669,10 @@ export function VisitModal({
   const [competitorOptions, setCompetitorOptions] = useState<string[]>([])
   const [competitorInput, setCompetitorInput] = useState('')
   const [showCompetitorDropdown, setShowCompetitorDropdown] = useState(false)
+
+  const [interactionTypeOptions, setInteractionTypeOptions] = useState<string[]>([])
+  const [interactionPurposeOptions, setInteractionPurposeOptions] = useState<string[]>([])
+  const [customerReactionOptions, setCustomerReactionOptions] = useState<string[]>([])
 
   const [productSuggestions, setProductSuggestions] = useState<Array<{ id: string; name: string }>>([])
   const [productInput, setProductInput] = useState('')
@@ -657,13 +703,16 @@ export function VisitModal({
     let cancelled = false
     fetch('/api/visits/options')
       .then((r) => r.json())
-      .then((data: { salespersons?: string[]; tagOptions?: string[]; competitorOptions?: string[] }) => {
+      .then((data: { salespersons?: string[]; tagOptions?: string[]; competitorOptions?: string[]; interactionTypes?: string[]; interactionPurposes?: string[]; customerReactions?: string[] }) => {
         if (cancelled) return
         if (Array.isArray(data?.salespersons)) {
           setSalespersonOptions(data.salespersons.map((name) => ({ value: name, label: name })))
         }
         if (Array.isArray(data?.tagOptions)) setTagOptions(data.tagOptions)
         if (Array.isArray(data?.competitorOptions)) setCompetitorOptions(data.competitorOptions)
+        if (Array.isArray(data?.interactionTypes)) setInteractionTypeOptions(data.interactionTypes)
+        if (Array.isArray(data?.interactionPurposes)) setInteractionPurposeOptions(data.interactionPurposes)
+        if (Array.isArray(data?.customerReactions)) setCustomerReactionOptions(data.customerReactions)
       })
       .catch(() => { if (cancelled) return; setSalespersonOptions([]) })
     return () => { cancelled = true }
@@ -907,17 +956,29 @@ export function VisitModal({
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-stone-500 mb-1.5">拜訪性質</label>
-                    <select
-                      value={form.status}
-                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                      className={inputCls}
-                    >
-                      {VISIT_STATUS_OPTIONS.map((o) => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">互動類型</label>
+                      <select
+                        value={form.interactionType}
+                        onChange={(e) => setForm((f) => ({ ...f, interactionType: e.target.value }))}
+                        className={inputCls}
+                      >
+                        <option value="">請選擇互動類型</option>
+                        {interactionTypeOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">互動目的</label>
+                      <select
+                        value={form.interactionPurpose}
+                        onChange={(e) => setForm((f) => ({ ...f, interactionPurpose: e.target.value }))}
+                        className={inputCls}
+                      >
+                        <option value="">請選擇互動目的</option>
+                        {interactionPurposeOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
                   </div>
 
                   <div>
@@ -940,6 +1001,18 @@ export function VisitModal({
                       placeholder="記錄此次拜訪的重點內容…"
                       className={`${inputCls} resize-y min-h-[80px]`}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶反應</label>
+                    <select
+                      value={form.customerReaction}
+                      onChange={(e) => setForm((f) => ({ ...f, customerReaction: e.target.value }))}
+                      className={inputCls}
+                    >
+                      <option value="">請選擇客戶反應</option>
+                      {customerReactionOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
                   </div>
 
                   {/* 有興趣的產品 */}
@@ -1087,6 +1160,41 @@ export function VisitModal({
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* 後續動作 */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1.5">後續動作</label>
+                    <textarea
+                      value={form.followUpAction}
+                      onChange={(e) => setForm((f) => ({ ...f, followUpAction: e.target.value }))}
+                      rows={2}
+                      placeholder="記錄下一步需要做的事…"
+                      className={`${inputCls} resize-y min-h-[60px]`}
+                    />
+                  </div>
+
+                  {/* 是否需追蹤 + 下次追蹤日 */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={form.needsFollowUp}
+                        onChange={(e) => setForm((f) => ({ ...f, needsFollowUp: e.target.checked, nextFollowUpDate: e.target.checked ? f.nextFollowUpDate : '' }))}
+                        className="w-4 h-4 rounded border-brand-300 text-brand-600 focus:ring-brand-400 accent-brand-600"
+                      />
+                      <span className="text-sm font-medium text-stone-600">需要追蹤</span>
+                    </label>
+                    {form.needsFollowUp && (
+                      <div className="flex-1 min-w-[160px]">
+                        <input
+                          type="date"
+                          value={form.nextFollowUpDate}
+                          onChange={(e) => setForm((f) => ({ ...f, nextFollowUpDate: e.target.value }))}
+                          className={inputCls}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {error && (

@@ -7,6 +7,7 @@ export function ModuleCard({
   description,
   href,
   accent,
+  hasMore = false,
 }: {
   title: string
   count: number
@@ -14,6 +15,7 @@ export function ModuleCard({
   description: string
   href: string
   accent: string
+  hasMore?: boolean
 }) {
   return (
     <Link
@@ -35,7 +37,7 @@ export function ModuleCard({
             </p>
           )}
         </div>
-        <div className="text-3xl font-black text-slate-900 shrink-0">{count}</div>
+        <div className="text-3xl font-black text-slate-900 shrink-0">{count}{hasMore ? '+' : ''}</div>
       </div>
       <p className="muted mt-3">{description}</p>
       <div className="mt-5 text-sm font-semibold text-emerald-700 transition group-hover:text-emerald-800">

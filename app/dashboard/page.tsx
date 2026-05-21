@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   try {
     initialSummary = await Promise.race<Awaited<ReturnType<typeof getDashboardSummary>> | null>([
       getDashboardSummary(),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
     ])
   } catch (error) {
     console.error('dashboard page summary error:', error)
