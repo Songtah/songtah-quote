@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Visit } from '@/lib/system-notion'
@@ -269,11 +269,26 @@ export default function VisitsContent() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
+  const [aiFilterSalesperson, setAiFilterSalesperson] = useState('')
+  const [aiFilterDateFrom, setAiFilterDateFrom] = useState('')
+  const [aiFilterDateTo, setAiFilterDateTo] = useState('')
+
+  const visitsForAi = useMemo(() => {
+    let result = visits
+    if (aiFilterSalesperson) result = result.filter((v) => v.salesperson === aiFilterSalesperson)
+    if (aiFilterDateFrom) result = result.filter((v) => !!v.date && v.date.slice(0, 10) >= aiFilterDateFrom)
+    if (aiFilterDateTo) result = result.filter((v) => !!v.date && v.date.slice(0, 10) <= aiFilterDateTo)
+    return result
+  }, [visits, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
+
   // Ref so openAiModal (memoized with [] deps) always calls the latest runAiAnalysis
   const runAiAnalysisRef = useRef<() => Promise<void>>(async () => {})
 
   const runAiAnalysis = useCallback(async () => {
-    if (visits.length === 0) return
+    if (visitsForAi.length === 0) {
+      setAiError('篩選條件下無可分析的拜訪紀錄')
+      return
+    }
     setAiLoading(true)
     setAiError('')
     setAiAnalysis(null)
@@ -281,7 +296,7 @@ export default function VisitsContent() {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'overview', visits }),
+        body: JSON.stringify({ mode: 'overview', visits: visitsForAi }),
       })
       if (res.status === 401) { router.push('/login'); return }
       const data = await res.json()
@@ -290,17 +305,22 @@ export default function VisitsContent() {
       const timestamp = new Date().toISOString()
       setAiAnalysis(result)
       setAiTimestamp(timestamp)
-      setAiVisitCount(visits.length)
-      // 儲存到 localStorage
+      setAiVisitCount(visitsForAi.length)
       try {
-        localStorage.setItem(AI_STORAGE_KEY, JSON.stringify({ result, timestamp, visitCount: visits.length }))
+        localStorage.setItem(AI_STORAGE_KEY, JSON.stringify({
+          result, timestamp,
+          visitCount: visitsForAi.length,
+          filterSalesperson: aiFilterSalesperson,
+          filterDateFrom: aiFilterDateFrom,
+          filterDateTo: aiFilterDateTo,
+        }))
       } catch {}
     } catch {
       setAiError('網路錯誤，請重試')
     } finally {
       setAiLoading(false)
     }
-  }, [visits, router])
+  }, [visitsForAi, router, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
   // Keep ref pointing to latest runAiAnalysis (so openAiModal's [] closure always gets fresh fn)
   useEffect(() => { runAiAnalysisRef.current = runAiAnalysis }, [runAiAnalysis])
@@ -312,16 +332,33 @@ export default function VisitsContent() {
     try {
       const raw = localStorage.getItem(AI_STORAGE_KEY)
       if (raw) {
-        const { result, timestamp, visitCount } = JSON.parse(raw)
+        const { result, timestamp, visitCount, filterSalesperson, filterDateFrom, filterDateTo } = JSON.parse(raw)
         setAiAnalysis(result)
         setAiTimestamp(timestamp)
         setAiVisitCount(visitCount)
+        if (filterSalesperson) setAiFilterSalesperson(filterSalesperson)
+        if (filterDateFrom) setAiFilterDateFrom(filterDateFrom)
+        if (filterDateTo) setAiFilterDateTo(filterDateTo)
         return  // 有快取就直接顯示，不自動重新分析
       }
     } catch {}
     // 沒有快取 → 透過 ref 呼叫最新的 runAiAnalysis（避免 stale closure）
     runAiAnalysisRef.current()
   }, [])
+
+  const exportAiPdf = useCallback(() => {
+    if (!aiAnalysis) return
+    const html = generatePdfHtml(aiAnalysis, aiTimestamp, aiVisitCount, {
+      salesperson: aiFilterSalesperson,
+      dateFrom: aiFilterDateFrom,
+      dateTo: aiFilterDateTo,
+    })
+    const win = window.open('', '_blank')
+    if (!win) { alert('請允許彈出視窗以匯出 PDF'); return }
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => { win.focus(); win.print() }, 600)
+  }, [aiAnalysis, aiTimestamp, aiVisitCount, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
   return (
     <div>
@@ -561,8 +598,18 @@ export default function VisitsContent() {
           error={aiError}
           timestamp={aiTimestamp}
           visitCount={aiVisitCount}
+          filteredCount={visitsForAi.length}
+          totalVisits={visits.length}
           onReanalyze={runAiAnalysis}
           onClose={() => setShowAiModal(false)}
+          onExportPdf={exportAiPdf}
+          salespersonOptions={salespersonFilterOptions}
+          filterSalesperson={aiFilterSalesperson}
+          filterDateFrom={aiFilterDateFrom}
+          filterDateTo={aiFilterDateTo}
+          onFilterSalespersonChange={setAiFilterSalesperson}
+          onFilterDateFromChange={setAiFilterDateFrom}
+          onFilterDateToChange={setAiFilterDateTo}
         />
       )}
 
@@ -1430,6 +1477,97 @@ export function VisitModal({
   )
 }
 
+// ── PDF 產生 ──────────────────────────────────────────────────
+
+function generatePdfHtml(
+  analysis: OverviewAnalysis,
+  timestamp: string | null,
+  visitCount: number,
+  filter: { salesperson: string; dateFrom: string; dateTo: string },
+): string {
+  const formatTs = (iso: string) => {
+    const d = new Date(iso)
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  }
+  const filterParts = [
+    filter.salesperson || '全部業務',
+    filter.dateFrom || filter.dateTo
+      ? `${filter.dateFrom || '—'} 至 ${filter.dateTo || '—'}`
+      : '全部時間',
+  ]
+  const card = (name: string, desc: string, sub?: string) =>
+    `<div class="card"><div class="card-name">${name}${sub ? ` <small>${sub}</small>` : ''}</div><div class="card-desc">${desc}</div></div>`
+
+  const hotHtml = analysis.hotCustomers?.length
+    ? analysis.hotCustomers.map((c) => card(c.name, c.reason)).join('')
+    : '<p class="empty">無</p>'
+
+  const productHtml = analysis.productDemand?.length
+    ? `<table><tr><th>產品 / 需求</th><th>次數</th><th>備註</th></tr>${
+        analysis.productDemand.map((p) =>
+          `<tr><td>${p.product}</td><td class="num">${p.count}</td><td>${p.note}</td></tr>`
+        ).join('')}</table>`
+    : '<p class="empty">無</p>'
+
+  const compHtml = analysis.competitorThreats?.length
+    ? `<table><tr><th>競品</th><th>次數</th><th>威脅情境</th></tr>${
+        analysis.competitorThreats.map((c) =>
+          `<tr><td>${c.competitor}</td><td class="num">${c.count}</td><td>${c.note}</td></tr>`
+        ).join('')}</table>`
+    : '<p class="empty">無</p>'
+
+  const followHtml = analysis.followUpUrgent?.length
+    ? analysis.followUpUrgent.map((f) => card(f.name, f.reason, f.date)).join('')
+    : '<p class="empty">無</p>'
+
+  const suggestHtml = analysis.strategicSuggestions?.length
+    ? `<ol>${analysis.strategicSuggestions.map((s) => `<li>${s}</li>`).join('')}</ol>`
+    : '<p class="empty">無</p>'
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>AI 商機分析報告</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system,"PingFang TC","PingFang SC","Microsoft JhengHei","Microsoft YaHei",sans-serif; font-size: 13px; color: #333; padding: 32px; }
+h1 { font-size: 20px; font-weight: 700; color: #1e1b4b; margin-bottom: 4px; }
+.meta { font-size: 11px; color: #888; margin-bottom: 6px; }
+.filter-bar { display: flex; gap: 16px; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 8px 14px; margin: 12px 0 24px; font-size: 11px; color: #555; }
+.filter-bar strong { color: #6d28d9; }
+.section { margin-bottom: 22px; page-break-inside: avoid; }
+.section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
+.card-name { font-weight: 600; font-size: 13px; color: #1f2937; margin-bottom: 3px; }
+.card-name small { font-weight: 400; color: #9ca3af; margin-left: 6px; }
+.card-desc { font-size: 12px; color: #6b7280; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: #f9fafb; font-weight: 600; color: #374151; padding: 7px 10px; text-align: left; border-bottom: 2px solid #e5e7eb; }
+td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+td.num { text-align: center; font-weight: 600; color: #059669; }
+ol { padding-left: 20px; }
+ol li { margin-bottom: 6px; line-height: 1.6; }
+.empty { color: #9ca3af; font-size: 12px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
+@media print { body { padding: 16px; } .section { page-break-inside: avoid; } @page { margin: 1.5cm; } }
+</style>
+</head>
+<body>
+<h1>✦ AI 商機分析報告</h1>
+<p class="meta">分析時間：${timestamp ? formatTs(timestamp) : '—'}・共 ${visitCount} 筆紀錄・期間：${analysis.period || '—'}</p>
+<div class="filter-bar">篩選條件：<strong>${filterParts.join('　|　')}</strong></div>
+<div class="section"><div class="section-title" style="color:#6d28d9">⭐ 高潛力客戶</div>${hotHtml}</div>
+<div class="two-col">
+  <div class="section"><div class="section-title" style="color:#059669">📦 產品需求趨勢</div>${productHtml}</div>
+  <div class="section"><div class="section-title" style="color:#d97706">⚠️ 競品威脅雷達</div>${compHtml}</div>
+</div>
+<div class="section"><div class="section-title" style="color:#dc2626">🔴 需緊急追蹤</div>${followHtml}</div>
+<div class="section"><div class="section-title" style="color:#6d28d9">💡 策略建議</div>${suggestHtml}</div>
+</body></html>`
+}
+
 // ── AI 商機分析 Modal ─────────────────────────────────────────
 
 function AiAnalysisModal({
@@ -1438,16 +1576,36 @@ function AiAnalysisModal({
   error,
   timestamp,
   visitCount,
+  filteredCount,
+  totalVisits,
   onReanalyze,
   onClose,
+  onExportPdf,
+  salespersonOptions,
+  filterSalesperson,
+  filterDateFrom,
+  filterDateTo,
+  onFilterSalespersonChange,
+  onFilterDateFromChange,
+  onFilterDateToChange,
 }: {
   analysis: OverviewAnalysis | null
   loading: boolean
   error: string
   timestamp: string | null
   visitCount: number
+  filteredCount: number
+  totalVisits: number
   onReanalyze: () => void
   onClose: () => void
+  onExportPdf: () => void
+  salespersonOptions: string[]
+  filterSalesperson: string
+  filterDateFrom: string
+  filterDateTo: string
+  onFilterSalespersonChange: (v: string) => void
+  onFilterDateFromChange: (v: string) => void
+  onFilterDateToChange: (v: string) => void
 }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -1498,10 +1656,18 @@ function AiAnalysisModal({
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  {analysis && !loading && (
+                    <button
+                      onClick={onExportPdf}
+                      className="text-xs text-stone-500 hover:text-stone-700 font-medium border border-stone-200 bg-white rounded-full px-3 py-1.5 transition"
+                    >
+                      匯出 PDF
+                    </button>
+                  )}
                   <button
                     onClick={onReanalyze}
-                    disabled={loading}
+                    disabled={loading || filteredCount === 0}
                     className="text-xs text-violet-600 hover:text-violet-800 font-medium border border-violet-200 bg-white rounded-full px-3 py-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {loading ? '分析中…' : '重新分析'}
@@ -1513,8 +1679,48 @@ function AiAnalysisModal({
                 </div>
               </div>
 
+              {/* 篩選條件 */}
+              <div className="px-6 py-3 border-b border-violet-100/40 bg-violet-50/20">
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">業務人員</label>
+                    <select
+                      value={filterSalesperson}
+                      onChange={(e) => onFilterSalespersonChange(e.target.value)}
+                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    >
+                      <option value="">全部業務</option>
+                      {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">日期起</label>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => onFilterDateFromChange(e.target.value)}
+                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">日期迄</label>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => onFilterDateToChange(e.target.value)}
+                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                    />
+                  </div>
+                  <div className="text-xs text-stone-400 pb-2">
+                    共 <span className="font-semibold text-violet-600">{filteredCount}</span>
+                    {filteredCount !== totalVisits && <span className="text-stone-300"> / {totalVisits}</span>}
+                    {' '}筆可分析
+                  </div>
+                </div>
+              </div>
+
               {/* Content */}
-              <div className="px-6 py-6 space-y-6 max-h-[72vh] overflow-y-auto">
+              <div className="px-6 py-6 space-y-6 max-h-[55vh] overflow-y-auto">
 
                 {/* Loading */}
                 {loading && (
