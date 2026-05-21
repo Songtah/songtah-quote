@@ -1690,41 +1690,35 @@ function AiAnalysisModal({
 
               {/* 篩選條件 */}
               <div className="px-6 py-3 border-b border-violet-100/40 bg-violet-50/20">
-                <div className="flex flex-wrap gap-3 items-end">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">業務人員</label>
-                    <select
-                      value={filterSalesperson}
-                      onChange={(e) => onFilterSalespersonChange(e.target.value)}
-                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
-                    >
-                      <option value="">全部業務</option>
-                      {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">日期起</label>
-                    <input
-                      type="date"
-                      value={filterDateFrom}
-                      onChange={(e) => onFilterDateFromChange(e.target.value)}
-                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">日期迄</label>
-                    <input
-                      type="date"
-                      value={filterDateTo}
-                      onChange={(e) => onFilterDateToChange(e.target.value)}
-                      className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
-                    />
-                  </div>
-                  <div className="text-xs text-stone-400 pb-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs text-stone-400 shrink-0">業務</span>
+                  <select
+                    value={filterSalesperson}
+                    onChange={(e) => onFilterSalespersonChange(e.target.value)}
+                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                  >
+                    <option value="">全部業務</option>
+                    {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <span className="text-xs text-stone-400 shrink-0 ml-1">日期</span>
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => onFilterDateFromChange(e.target.value)}
+                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                  />
+                  <span className="text-xs text-stone-300">—</span>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => onFilterDateToChange(e.target.value)}
+                    className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition"
+                  />
+                  <span className="text-xs text-stone-400 ml-auto shrink-0">
                     共 <span className="font-semibold text-violet-600">{filteredCount}</span>
                     {filteredCount !== totalVisits && <span className="text-stone-300"> / {totalVisits}</span>}
-                    {' '}筆可分析
-                  </div>
+                    {' '}筆
+                  </span>
                 </div>
               </div>
 
