@@ -269,23 +269,8 @@ export default function VisitsContent() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
 
-  // 開啟 Modal：先載入 localStorage 快取，若無快取則直接執行分析
-  const openAiModal = useCallback(() => {
-    setShowAiModal(true)
-    setAiError('')
-    try {
-      const raw = localStorage.getItem(AI_STORAGE_KEY)
-      if (raw) {
-        const { result, timestamp, visitCount } = JSON.parse(raw)
-        setAiAnalysis(result)
-        setAiTimestamp(timestamp)
-        setAiVisitCount(visitCount)
-        return  // 有快取就直接顯示，不自動重新分析
-      }
-    } catch {}
-    // 沒有快取 → 自動執行一次分析
-    runAiAnalysis()
-  }, [])  // runAiAnalysis 在下面定義，用 ref 避免循環
+  // Ref so openAiModal (memoized with [] deps) always calls the latest runAiAnalysis
+  const runAiAnalysisRef = useRef<() => Promise<void>>(async () => {})
 
   const runAiAnalysis = useCallback(async () => {
     if (visits.length === 0) return
@@ -316,6 +301,27 @@ export default function VisitsContent() {
       setAiLoading(false)
     }
   }, [visits, router])
+
+  // Keep ref pointing to latest runAiAnalysis (so openAiModal's [] closure always gets fresh fn)
+  useEffect(() => { runAiAnalysisRef.current = runAiAnalysis }, [runAiAnalysis])
+
+  // 開啟 Modal：先載入 localStorage 快取，若無快取則直接執行分析
+  const openAiModal = useCallback(() => {
+    setShowAiModal(true)
+    setAiError('')
+    try {
+      const raw = localStorage.getItem(AI_STORAGE_KEY)
+      if (raw) {
+        const { result, timestamp, visitCount } = JSON.parse(raw)
+        setAiAnalysis(result)
+        setAiTimestamp(timestamp)
+        setAiVisitCount(visitCount)
+        return  // 有快取就直接顯示，不自動重新分析
+      }
+    } catch {}
+    // 沒有快取 → 透過 ref 呼叫最新的 runAiAnalysis（避免 stale closure）
+    runAiAnalysisRef.current()
+  }, [])
 
   return (
     <div>
