@@ -1298,23 +1298,27 @@ function buildPrintHtml(data: {
 
 ${data.customer?.name ? `
 <!-- Customer info -->
-<div style="background:#fff;border-bottom:1px solid #e8dfd0;padding:10px 28px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0">
-  <div style="padding:4px 0">
-    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">客戶名稱</div>
-    <div style="font-size:14px;font-weight:700;color:#3d2b1f">${data.customer.name}</div>
+<div style="background:#faf7f2;border-bottom:2px solid #d4c5ab;padding:10px 28px 12px;">
+  <div style="font-size:9px;color:#b8956a;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;border-bottom:1px dashed #e0d0bc;padding-bottom:4px">收貨客戶資訊</div>
+  <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:8px 24px;">
+    <div>
+      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">客戶名稱</div>
+      <div style="font-size:15px;font-weight:700;color:#3d2b1f">${data.customer.name}</div>
+    </div>
+    <div>
+      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">聯絡人</div>
+      <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.contactPerson || '—'}</div>
+    </div>
+    <div>
+      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">電話</div>
+      <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.phone || '—'}</div>
+    </div>
   </div>
-  <div style="padding:4px 0">
-    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">電話</div>
-    <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.phone || '—'}</div>
-  </div>
-  <div style="padding:4px 0">
-    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">聯絡人</div>
-    <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.contactPerson || '—'}</div>
-  </div>
-  <div style="padding:4px 0">
-    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">地址</div>
-    <div style="font-size:12px;font-weight:500;color:#3d2b1f">${data.customer.address || '—'}</div>
-  </div>
+  ${data.customer.address ? `
+  <div style="margin-top:6px;">
+    <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">送貨地址</div>
+    <div style="font-size:12px;font-weight:500;color:#3d2b1f">${data.customer.address}</div>
+  </div>` : ''}
 </div>` : ''}
 
 <!-- Table -->
