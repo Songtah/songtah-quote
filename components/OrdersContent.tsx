@@ -30,6 +30,8 @@ export default function OrdersContent() {
         const data = await res.json()
         setOrders(data)
       }
+    } catch (e) {
+      console.error('fetchOrders error:', e)
     } finally {
       setLoading(false)
     }

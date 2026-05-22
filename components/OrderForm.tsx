@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { OrderItem } from '@/lib/orders-notion'
 
@@ -179,10 +179,19 @@ function ProductPicker({
     () => Array.from(new Set(catalog.map((s) => s.brand))).sort(),
     [catalog]
   )
-  const types = useMemo(
-    () => Array.from(new Set(catalog.map((s) => s.type))).sort(),
-    [catalog]
-  )
+
+  // 品牌切換時，類型只顯示此品牌有的選項
+  const availableTypes = useMemo(() => {
+    const base = filterBrand ? catalog.filter((s) => s.brand === filterBrand) : catalog
+    return Array.from(new Set(base.map((s) => s.type))).sort()
+  }, [catalog, filterBrand])
+
+  // 若當前選的類型在新品牌裡不存在，自動清除
+  useEffect(() => {
+    if (filterType && !availableTypes.includes(filterType)) {
+      setFilterType('')
+    }
+  }, [availableTypes, filterType])
 
   const searchLower = search.toLowerCase()
   const isSearching = search.trim().length > 0
@@ -279,7 +288,7 @@ function ProductPicker({
               className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
             >
               <option value="">全部類型</option>
-              {types.map((t) => <option key={t} value={t}>{t}</option>)}
+              {availableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
@@ -325,9 +334,9 @@ function ProductPicker({
               <div className="divide-y">
                 {filteredSeries.map((series) => {
                   const isExpanded = expandedSeries === series.id
+                  // 只在此系列為規格式且有多個 SKU 時才顯示「含規格選項」提示
                   const hasSpecFilter =
-                    series.mode === '選擇式規格' &&
-                    computeSpecFilters(series.skus).length > 0
+                    series.mode === '選擇式規格' && series.skus.length > 1
                   return (
                     <div key={series.id}>
                       {/* Series header row */}
@@ -397,8 +406,14 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
   const isEdit = !!initialOrder
 
   // Form state
-  const today = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const [date, setDate] = useState(initialOrder?.date ?? today)
+  // 日期初始值在 useEffect 設定，避免 Server/Client 時間不同導致 Hydration Mismatch
+  const [date, setDate] = useState(initialOrder?.date ?? '')
+  useEffect(() => {
+    if (!date) {
+      setDate(new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [salesperson, setSalesperson] = useState(initialOrder?.salesperson ?? '')
   const [note, setNote] = useState(initialOrder?.note ?? '')
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
