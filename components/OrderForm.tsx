@@ -201,18 +201,22 @@ function ProductPicker({
   const searchLower = search.toLowerCase()
   const isSearching = search.trim().length > 0
 
+  // Safe lowercase helper – never crashes on null/undefined
+  const lc = (v: string | null | undefined) => (v ?? '').toLowerCase()
+
   const filteredSeries = useMemo(() => {
     return catalog.filter((s) => {
       if (filterBrand && s.brand !== filterBrand) return false
       if (filterType && s.type !== filterType) return false
       if (!isSearching) return true
-      if (s.name.toLowerCase().includes(searchLower)) return true
+      if (lc(s.name).includes(searchLower)) return true
       return s.skus.some(
         (sku) =>
-          sku.name.toLowerCase().includes(searchLower) ||
-          sku.code.toLowerCase().includes(searchLower)
+          lc(sku.name).includes(searchLower) ||
+          lc(sku.code).includes(searchLower)
       )
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalog, filterBrand, filterType, searchLower, isSearching])
 
   // 搜尋結果：展開到 SKU 層
@@ -222,9 +226,9 @@ function ProductPicker({
     for (const s of filteredSeries) {
       for (const sku of s.skus) {
         if (
-          sku.name.toLowerCase().includes(searchLower) ||
-          sku.code.toLowerCase().includes(searchLower) ||
-          s.name.toLowerCase().includes(searchLower)
+          lc(sku.name).includes(searchLower) ||
+          lc(sku.code).includes(searchLower) ||
+          lc(s.name).includes(searchLower)
         ) {
           results.push({ series: s, sku })
         }
