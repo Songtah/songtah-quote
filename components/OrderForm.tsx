@@ -411,6 +411,152 @@ function ProductPicker({
   )
 }
 
+// ── CustomerSearchBox ─────────────────────────────────────────
+
+interface CustomerResult {
+  id: string
+  name: string
+  city: string
+  address: string
+}
+
+interface SelectedCustomer {
+  id: string
+  name: string
+  address: string
+  phone: string
+  contactPerson: string
+}
+
+function CustomerSearchBox({
+  value,
+  onChange,
+}: {
+  value: SelectedCustomer
+  onChange: (c: SelectedCustomer) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<CustomerResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [open, setOpen] = useState(false)
+  const timerRef = useState<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useState<HTMLDivElement | null>(null)
+
+  // Debounced search
+  useEffect(() => {
+    if (timerRef[0]) clearTimeout(timerRef[0])
+    if (!query.trim()) { setResults([]); setOpen(false); return }
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(query)}`)
+        if (res.ok) { setResults(await res.json()); setOpen(true) }
+      } catch { /* ignore */ } finally { setSearching(false) }
+    }, 300)
+    timerRef[0] = t
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
+
+  // Click-outside to close
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef[0] && !wrapRef[0].contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wrapRef[0]])
+
+  const handleSelect = async (c: CustomerResult) => {
+    setOpen(false)
+    setQuery('')
+    // Fetch full details (phone)
+    try {
+      const res = await fetch(`/api/customers/${c.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        onChange({
+          id: c.id,
+          name: data.customer?.name ?? c.name,
+          address: data.customer?.address ?? c.address,
+          phone: data.customer?.phone ?? '',
+          contactPerson: value.contactPerson, // keep existing
+        })
+        return
+      }
+    } catch { /* fallback */ }
+    onChange({ id: c.id, name: c.name, address: c.address, phone: '', contactPerson: value.contactPerson })
+  }
+
+  const handleClear = () => {
+    onChange({ id: '', name: '', address: '', phone: '', contactPerson: value.contactPerson })
+    setQuery('')
+    setResults([])
+  }
+
+  // Selected state
+  if (value.name) {
+    return (
+      <div className="flex items-start gap-3 bg-brand-50 border border-brand-200 rounded-lg px-4 py-3">
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <div className="font-semibold text-stone-800 text-sm">{value.name}</div>
+          {value.address && <div className="text-xs text-stone-500">📍 {value.address}</div>}
+          {value.phone && <div className="text-xs text-stone-500">📞 {value.phone}</div>}
+        </div>
+        <button
+          onClick={handleClear}
+          className="text-stone-400 hover:text-red-500 text-xs shrink-0 mt-0.5 transition-colors"
+        >
+          ✕ 清除
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative" ref={(el) => { wrapRef[0] = el }}>
+      <div className="flex items-center border rounded-lg px-3 py-2 gap-2 focus-within:ring-1 focus-within:ring-blue-400 bg-white">
+        <span className="text-gray-400 text-sm">🔍</span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder="輸入客戶名稱搜尋..."
+          className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400"
+        />
+        {searching && <span className="text-xs text-gray-400 animate-pulse">搜尋中</span>}
+      </div>
+
+      <AnimatePresence>
+        {open && results.length > 0 && (
+          <motion.div
+            className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border rounded-xl shadow-xl overflow-hidden"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+          >
+            {results.map((c) => (
+              <button
+                key={c.id}
+                onMouseDown={() => handleSelect(c)}
+                className="w-full text-left px-4 py-2.5 hover:bg-brand-50 border-b last:border-0 transition-colors"
+              >
+                <div className="text-sm font-medium text-stone-800">{c.name}</div>
+                {(c.city || c.address) && (
+                  <div className="text-xs text-stone-400 mt-0.5">{c.city}{c.address ? ` · ${c.address}` : ''}</div>
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── OrderForm (主元件) ────────────────────────────────────────
 
 interface OrderFormProps {
@@ -422,6 +568,11 @@ interface OrderFormProps {
     status: string
     note: string
     items: OrderItem[]
+    customerId?: string
+    customerName?: string
+    customerAddress?: string
+    customerPhone?: string
+    contactPerson?: string
   }
 }
 
@@ -448,6 +599,15 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // 客戶資訊
+  const [customer, setCustomer] = useState<SelectedCustomer>({
+    id: initialOrder?.customerId ?? '',
+    name: initialOrder?.customerName ?? '',
+    address: initialOrder?.customerAddress ?? '',
+    phone: initialOrder?.customerPhone ?? '',
+    contactPerson: initialOrder?.contactPerson ?? '',
+  })
 
   // Load product catalog + salesperson options in parallel
   useEffect(() => {
@@ -517,17 +677,24 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
     setSaving(true)
 
     try {
+      const customerPayload = {
+        customerId: customer.id,
+        customerName: customer.name,
+        customerAddress: customer.address,
+        customerPhone: customer.phone,
+        contactPerson: customer.contactPerson,
+      }
       if (isEdit && initialOrder) {
         await fetch(`/api/orders/${initialOrder.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus }),
+          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload }),
         })
       } else {
         await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus }),
+          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload }),
         })
       }
       router.push('/orders')
@@ -541,7 +708,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
 
   // Print
   const handlePrint = () => {
-    const html = buildPrintHtml({ orderNumber: initialOrder?.orderNumber ?? '(未儲存)', date, salesperson, note, status, items })
+    const html = buildPrintHtml({ orderNumber: initialOrder?.orderNumber ?? '(未儲存)', date, salesperson, note, status, items, customer })
     const iframe = document.createElement('iframe')
     iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;'
     document.body.appendChild(iframe)
@@ -625,6 +792,53 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
             />
           </div>
         </div>
+      </div>
+
+      {/* 客戶資訊 */}
+      <div className="bg-white border rounded-lg p-5 space-y-4">
+        <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
+        <CustomerSearchBox
+          value={customer}
+          onChange={setCustomer}
+        />
+        {/* 聯絡人 + 補充欄（客戶選定後顯示） */}
+        {(customer.name || customer.contactPerson) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">聯絡人</label>
+              <input
+                type="text"
+                value={customer.contactPerson}
+                onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
+                placeholder="聯絡人姓名（選填）"
+                className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">電話（可修改）</label>
+              <input
+                type="text"
+                value={customer.phone}
+                onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
+                placeholder="電話號碼"
+                className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+            </div>
+          </div>
+        )}
+        {/* 若尚未選客戶，僅顯示聯絡人欄位 */}
+        {!customer.name && (
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">聯絡人（選填）</label>
+            <input
+              type="text"
+              value={customer.contactPerson}
+              onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
+              placeholder="聯絡人姓名"
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+        )}
       </div>
 
       {/* Items table */}
@@ -815,6 +1029,7 @@ function buildPrintHtml(data: {
   note: string
   status: string
   items: OrderItem[]
+  customer?: SelectedCustomer
 }) {
   const totalQty = data.items.reduce((a, i) => a + i.quantity, 0)
   const totalAmount = calcTotal(data.items)
@@ -957,6 +1172,27 @@ function buildPrintHtml(data: {
     <div class="meta-value">${data.note || '—'}</div>
   </div>
 </div>
+
+${data.customer?.name ? `
+<!-- Customer info -->
+<div style="background:#fff;border-bottom:1px solid #e8dfd0;padding:10px 28px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0">
+  <div style="padding:4px 0">
+    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">客戶名稱</div>
+    <div style="font-size:14px;font-weight:700;color:#3d2b1f">${data.customer.name}</div>
+  </div>
+  <div style="padding:4px 0">
+    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">電話</div>
+    <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.phone || '—'}</div>
+  </div>
+  <div style="padding:4px 0">
+    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">聯絡人</div>
+    <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.contactPerson || '—'}</div>
+  </div>
+  <div style="padding:4px 0">
+    <div style="font-size:10px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">地址</div>
+    <div style="font-size:12px;font-weight:500;color:#3d2b1f">${data.customer.address || '—'}</div>
+  </div>
+</div>` : ''}
 
 <!-- Table -->
 <div class="wrap">

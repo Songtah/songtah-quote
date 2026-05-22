@@ -90,6 +90,12 @@ export interface Order {
   items: OrderItem[]
   totalAmount: number
   createdTime: string
+  // 客戶資訊
+  customerId: string
+  customerName: string
+  customerAddress: string
+  customerPhone: string
+  contactPerson: string
 }
 
 /** 計算訂單總金額 */
@@ -136,6 +142,11 @@ export async function createOrder(data: {
   note: string
   items: OrderItem[]
   status?: string
+  customerId?: string
+  customerName?: string
+  customerAddress?: string
+  customerPhone?: string
+  contactPerson?: string
 }): Promise<Order> {
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
@@ -153,6 +164,11 @@ export async function createOrder(data: {
       備註:     { rich_text: richText(data.note) },
       明細JSON: { rich_text: richText(itemsJson) },
       總金額:   { number: total },
+      客戶ID:   { rich_text: richText(data.customerId ?? '') },
+      客戶名稱: { rich_text: richText(data.customerName ?? '') },
+      地址:     { rich_text: richText(data.customerAddress ?? '') },
+      電話:     { rich_text: richText(data.customerPhone ?? '') },
+      聯絡人:   { rich_text: richText(data.contactPerson ?? '') },
     },
   })
 
@@ -176,6 +192,11 @@ export async function updateOrder(id: string, data: {
   note?: string
   items?: OrderItem[]
   status?: string
+  customerId?: string
+  customerName?: string
+  customerAddress?: string
+  customerPhone?: string
+  contactPerson?: string
 }): Promise<void> {
   const formatted = id.replace(
     /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
@@ -190,6 +211,11 @@ export async function updateOrder(id: string, data: {
     props['明細JSON'] = { rich_text: richText(JSON.stringify(data.items.map(({ id: _id, ...rest }) => rest))) }
     props['總金額']   = { number: calcTotal(data.items) }
   }
+  if (data.customerId   !== undefined) props['客戶ID']   = { rich_text: richText(data.customerId) }
+  if (data.customerName !== undefined) props['客戶名稱'] = { rich_text: richText(data.customerName) }
+  if (data.customerAddress !== undefined) props['地址']  = { rich_text: richText(data.customerAddress) }
+  if (data.customerPhone !== undefined)   props['電話']  = { rich_text: richText(data.customerPhone) }
+  if (data.contactPerson !== undefined)   props['聯絡人'] = { rich_text: richText(data.contactPerson) }
 
   await notion.pages.update({ page_id: formatted, properties: props })
 }
@@ -226,5 +252,10 @@ function parseOrderPage(page: any): Order {
     items,
     totalAmount: page.properties?.['總金額']?.number ?? 0,
     createdTime: getCreatedTime(page, '建立時間'),
+    customerId: getText(page, '客戶ID'),
+    customerName: getText(page, '客戶名稱'),
+    customerAddress: getText(page, '地址'),
+    customerPhone: getText(page, '電話'),
+    contactPerson: getText(page, '聯絡人'),
   }
 }
