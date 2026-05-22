@@ -1,0 +1,161 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import type { Order } from '@/lib/orders-notion'
+
+const STATUS_COLOR: Record<string, string> = {
+  草稿:   'bg-gray-100 text-gray-600',
+  已送出: 'bg-blue-100 text-blue-700',
+  確認中: 'bg-yellow-100 text-yellow-700',
+  已到貨: 'bg-green-100 text-green-700',
+  已取消: 'bg-red-100 text-red-600',
+}
+
+const STATUS_OPTIONS = ['草稿', '已送出', '確認中', '已到貨', '已取消']
+
+export default function OrdersContent() {
+  const router = useRouter()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState('')
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/orders')
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(data)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchOrders() }, [fetchOrders])
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    setUpdatingId(id)
+    try {
+      await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
+      )
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const filtered = filterStatus
+    ? orders.filter((o) => o.status === filterStatus)
+    : orders
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border rounded px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            <option value="">全部狀態</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-400">
+            共 {filtered.length} 筆
+          </span>
+        </div>
+        <Link
+          href="/orders/new"
+          className="button-primary px-4 py-2 text-sm rounded"
+        >
+          + 新增訂貨單
+        </Link>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="text-center text-gray-400 py-16">載入中...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center text-gray-400 py-16">
+          <div className="text-3xl mb-2">📋</div>
+          <div className="text-sm">尚無訂貨單，點擊右上角新增</div>
+        </div>
+      ) : (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+                  <th className="px-4 py-3 text-left">訂單編號</th>
+                  <th className="px-4 py-3 text-left">日期</th>
+                  <th className="px-4 py-3 text-left">業務</th>
+                  <th className="px-4 py-3 text-left">品項</th>
+                  <th className="px-4 py-3 text-left">備註</th>
+                  <th className="px-4 py-3 text-center">狀態</th>
+                  <th className="px-4 py-3 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="font-mono text-blue-600 hover:underline font-medium"
+                      >
+                        {order.orderNumber || '—'}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{order.date}</td>
+                    <td className="px-4 py-3 text-gray-700">{order.salesperson}</td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {order.items.length > 0 ? (
+                        <span>
+                          {order.items.length} 種・
+                          {order.items.reduce((acc, it) => acc + it.quantity, 0)} 件
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{order.note || '—'}</td>
+                    <td className="px-4 py-3 text-center">
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                        disabled={updatingId === order.id}
+                        className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="text-blue-500 hover:text-blue-700 text-xs"
+                      >
+                        查看 ›
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

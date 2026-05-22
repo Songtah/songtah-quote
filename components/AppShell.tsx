@@ -26,6 +26,8 @@ function getPageTitle(pathname: string): string {
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
+    '/orders':            '訂貨單管理',
+    '/orders/new':        '新增訂貨單',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
@@ -33,6 +35,7 @@ function getPageTitle(pathname: string): string {
   if (/^\/quote\//.test(pathname)) return '報價單詳情'
   if (/^\/quotes/.test(pathname)) return '報價單管理'
   if (/^\/share\//.test(pathname)) return '報價單分享頁'
+  if (/^\/orders\//.test(pathname)) return '訂貨單詳情'
   return pathname
 }
 
@@ -51,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/bd',                label: 'BD',       module: 'bd' },
   { href: '/products',          label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },
+  { href: '/orders',            label: '訂貨',     module: null },
   { href: '/admin',             label: '行政管理', module: null, adminOrStaff: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
@@ -142,6 +146,7 @@ export function AppShell({
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 (pathname === item.href ||
                   (item.href === '/quotes' && pathname.startsWith('/quote')) ||
+                  (item.href === '/orders' && pathname.startsWith('/orders')) ||
                   (item.href === '/admin'  && pathname.startsWith('/admin')))
                   ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-[0_8px_20px_-8px_rgba(184,149,106,0.5)]'
                   : 'bg-white/80 text-stone-500 ring-1 ring-brand-200/50 hover:bg-brand-50 hover:text-stone-800 hover:ring-brand-300/60'
