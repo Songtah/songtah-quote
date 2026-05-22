@@ -274,12 +274,23 @@ export default function VisitsContent() {
   const [aiFilterDateTo, setAiFilterDateTo] = useState('')
 
   const AI_CUSTOM_PROMPT_KEY = 'bd-ai-custom-prompt'
-  const [aiCustomPrompt, setAiCustomPrompt] = useState(() => {
-    try { return localStorage.getItem('bd-ai-custom-prompt') ?? '' } catch { return '' }
-  })
-  // 自動同步到 localStorage
+  const [aiCustomPrompt, setAiCustomPrompt] = useState('')
+  const [aiPromptSaved, setAiPromptSaved] = useState(false)
+
+  // 掛載後從 localStorage 讀取（不能在 useState 初始化函式裡讀，SSR 時 localStorage 不存在）
   useEffect(() => {
-    try { localStorage.setItem(AI_CUSTOM_PROMPT_KEY, aiCustomPrompt) } catch {}
+    try {
+      const saved = localStorage.getItem(AI_CUSTOM_PROMPT_KEY)
+      if (saved) setAiCustomPrompt(saved)
+    } catch {}
+  }, [])
+
+  const saveCustomPrompt = useCallback(() => {
+    try {
+      localStorage.setItem(AI_CUSTOM_PROMPT_KEY, aiCustomPrompt)
+      setAiPromptSaved(true)
+      setTimeout(() => setAiPromptSaved(false), 2000)
+    } catch {}
   }, [aiCustomPrompt])
 
   const visitsForAi = useMemo(() => {
@@ -635,6 +646,8 @@ export default function VisitsContent() {
           onFilterDateToChange={setAiFilterDateTo}
           customPrompt={aiCustomPrompt}
           onCustomPromptChange={setAiCustomPrompt}
+          onSavePrompt={saveCustomPrompt}
+          promptSaved={aiPromptSaved}
         />
       )}
 
@@ -1615,6 +1628,8 @@ function AiAnalysisModal({
   onFilterDateToChange,
   customPrompt,
   onCustomPromptChange,
+  onSavePrompt,
+  promptSaved,
 }: {
   analysis: OverviewAnalysis | null
   loading: boolean
@@ -1635,6 +1650,8 @@ function AiAnalysisModal({
   onFilterDateToChange: (v: string) => void
   customPrompt: string
   onCustomPromptChange: (v: string) => void
+  onSavePrompt: () => void
+  promptSaved: boolean
 }) {
   const [showPromptEditor, setShowPromptEditor] = useState(false)
 
@@ -1752,10 +1769,32 @@ function AiAnalysisModal({
               {/* 提示詞編輯面板 */}
               {showPromptEditor && (
                 <div className="px-6 py-4 border-b border-amber-100/60 bg-amber-50/30">
-                  <label className="block text-xs font-semibold text-stone-600 mb-1.5">
-                    分析提示詞
-                    <span className="ml-2 font-normal text-stone-400">（告訴 AI 分析的重點與限制，調整後點「重新分析」套用）</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-stone-600">
+                      分析提示詞
+                      <span className="ml-2 font-normal text-stone-400">調整後需點「儲存」才會記住</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {customPrompt.trim() && (
+                        <button
+                          onClick={() => onCustomPromptChange('')}
+                          className="text-xs text-stone-400 hover:text-red-500 transition"
+                        >
+                          清除
+                        </button>
+                      )}
+                      <button
+                        onClick={onSavePrompt}
+                        className={`text-xs font-medium px-3 py-1 rounded-full border transition ${
+                          promptSaved
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                            : 'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200'
+                        }`}
+                      >
+                        {promptSaved ? '✓ 已儲存' : '儲存'}
+                      </button>
+                    </div>
+                  </div>
                   <textarea
                     value={customPrompt}
                     onChange={(e) => onCustomPromptChange(e.target.value)}
@@ -1763,14 +1802,7 @@ function AiAnalysisModal({
                     placeholder="例：請專注於客戶商機、產品需求與競品動態分析。不需要對業務人員的工作分配、人力管理或團隊負荷提出建議。"
                     className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-300 transition"
                   />
-                  {customPrompt.trim() && (
-                    <button
-                      onClick={() => onCustomPromptChange('')}
-                      className="mt-1.5 text-xs text-stone-400 hover:text-red-500 transition"
-                    >
-                      清除提示詞
-                    </button>
-                  )}
+                  <p className="text-[11px] text-stone-400 mt-1.5">儲存後下次開啟自動帶入 · 調整後點「重新分析」套用至本次分析</p>
                 </div>
               )}
 
