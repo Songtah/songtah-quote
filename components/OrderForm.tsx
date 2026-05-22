@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { OrderItem } from '@/lib/orders-notion'
-import { calcTotal } from '@/lib/orders-notion'
+
+// Inline to avoid importing server-side Notion client in the browser bundle
+const calcTotal = (items: OrderItem[]): number =>
+  items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
 
 // ── 產品目錄型別 ──────────────────────────────────────────────
 
@@ -250,10 +254,24 @@ function ProductPicker({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <motion.div
+        className="absolute inset-0 bg-black/40"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
+      <motion.div
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col"
+        style={{ maxHeight: '85vh' }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b rounded-t-2xl">
           <h2 className="text-base font-semibold text-gray-800">選擇品項</h2>
@@ -384,7 +402,7 @@ function ProductPicker({
             ? `搜尋結果 ${searchResults.length} 項`
             : `共 ${filteredSeries.length} 個系列`}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -647,75 +665,81 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {items.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
-                    <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
-                    <td className="px-3 py-2.5 text-gray-800 font-medium">{item.skuName}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })}
-                          className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                        >−</button>
+                {items.map((item, idx) => {
+                  const qty = Math.max(1, item.quantity || 1)
+                  const price = item.unitPrice || 0
+                  const lineAmt = qty * price
+                  return (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
+                      <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
+                      <td className="px-3 py-2.5 text-gray-800 font-medium">{item.skuName}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => updateItem(item.id, { quantity: Math.max(1, qty - 1) })}
+                            className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                          >−</button>
+                          <input
+                            type="number"
+                            min={1}
+                            value={qty}
+                            onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                            className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                          <button
+                            onClick={() => updateItem(item.id, { quantity: qty + 1 })}
+                            className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                          >+</button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">
                         <input
                           type="number"
-                          min={1}
-                          value={item.quantity}
-                          onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                          className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          min={0}
+                          value={price > 0 ? price : ''}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value)
+                            updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
+                          }}
+                          placeholder="—"
+                          className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
                         />
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
+                        {price > 0
+                          ? lineAmt.toLocaleString()
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <input
+                          type="text"
+                          value={item.note ?? ''}
+                          onChange={(e) => updateItem(item.id, { note: e.target.value })}
+                          placeholder="備註"
+                          className="w-full border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
                         <button
-                          onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })}
-                          className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                        >+</button>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.unitPrice || ''}
-                        onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                        placeholder="—"
-                        className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
-                      />
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
-                      {item.unitPrice > 0
-                        ? (item.quantity * item.unitPrice).toLocaleString()
-                        : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <input
-                        type="text"
-                        value={item.note}
-                        onChange={(e) => updateItem(item.id, { note: e.target.value })}
-                        placeholder="備註"
-                        className="w-full border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
-                      />
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="text-gray-300 hover:text-red-400 text-lg leading-none"
-                      >×</button>
-                    </td>
-                  </tr>
-                ))}
+                          onClick={() => removeItem(item.id)}
+                          className="text-gray-300 hover:text-red-400 text-lg leading-none"
+                        >×</button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
-              {totalAmount > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 bg-gray-50">
-                    <td colSpan={6} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計</td>
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
-                      {totalAmount.toLocaleString()}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                </tfoot>
-              )}
+              <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
+                <tr className="border-t-2 bg-gray-50">
+                  <td colSpan={6} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計</td>
+                  <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
+                    {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
@@ -765,13 +789,15 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
       </div>
 
       {/* Product picker panel */}
-      {showPicker && catalog.length > 0 && (
-        <ProductPicker
-          catalog={catalog}
-          onAdd={handleAddItem}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showPicker && catalog.length > 0 && (
+          <ProductPicker
+            catalog={catalog}
+            onAdd={handleAddItem}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
