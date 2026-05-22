@@ -21,6 +21,13 @@ interface SkuEntry {
   colorOpt?: string
   model?: string
   summary?: string
+  specValues?: Record<string, string>   // chip-based spec selection
+}
+
+interface SeriesSpec {
+  name: string
+  options: string[]
+  order: number
 }
 
 interface SeriesEntry {
@@ -30,7 +37,7 @@ interface SeriesEntry {
   type: string
   mode: '直接選品項' | '選擇式規格'
   skus: SkuEntry[]
-  specs?: Array<{ name: string; options: string[]; order: number }>
+  specs?: SeriesSpec[]
 }
 
 // ── 狀態顏色 ──────────────────────────────────────────────────
@@ -46,7 +53,7 @@ const STATUS_COLOR: Record<StatusType, string> = {
   已取消: 'bg-red-100 text-red-600',
 }
 
-// ── 規格欄位定義（從 SKU 欄位名 → 中文顯示名） ───────────────
+// ── 規格欄位定義（舊式 dropdown 用） ──────────────────────────
 
 const SPEC_FIELDS: Array<{ key: keyof SkuEntry; label: string }> = [
   { key: 'material',  label: '材質' },
@@ -57,7 +64,6 @@ const SPEC_FIELDS: Array<{ key: keyof SkuEntry; label: string }> = [
   { key: 'model',     label: '型號' },
 ]
 
-/** 從 SKU 列表計算哪些規格欄位有 2+ 個不同值（才值得顯示篩選器） */
 function computeSpecFilters(skus: SkuEntry[]) {
   const result: Array<{ key: keyof SkuEntry; label: string; options: string[] }> = []
   for (const { key, label } of SPEC_FIELDS) {
@@ -69,7 +75,6 @@ function computeSpecFilters(skus: SkuEntry[]) {
   return result
 }
 
-/** 用規格篩選 SKU */
 function filterSkusBySpecs(skus: SkuEntry[], selected: Record<string, string>) {
   return skus.filter((sku) =>
     Object.entries(selected).every(([key, val]) => {
@@ -79,7 +84,121 @@ function filterSkusBySpecs(skus: SkuEntry[], selected: Record<string, string>) {
   )
 }
 
-// ── SeriesPanel（展開後顯示規格篩選 + SKU 列表） ──────────────
+// ── ChipSpecPanel（新式串聯卡片規格選擇） ─────────────────────
+
+function ChipSpecPanel({
+  series,
+  onAdd,
+}: {
+  series: SeriesEntry
+  onAdd: (series: SeriesEntry, sku: SkuEntry) => void
+}) {
+  const specs = useMemo(
+    () => [...(series.specs ?? [])].sort((a, b) => a.order - b.order),
+    [series.specs]
+  )
+  const [selected, setSelected] = useState<Record<string, string>>({})
+
+  // For spec at index i, get the options available given previous selections
+  const availableOptions = useCallback(
+    (specIndex: number): string[] => {
+      const spec = specs[specIndex]
+      if (!spec) return []
+      const filtered = series.skus.filter((sku) =>
+        specs.slice(0, specIndex).every(
+          (prev) => !selected[prev.name] || sku.specValues?.[prev.name] === selected[prev.name]
+        )
+      )
+      const have = new Set(filtered.map((s) => s.specValues?.[spec.name] ?? '').filter(Boolean))
+      return spec.options.filter((o) => have.has(o))
+    },
+    [series.skus, specs, selected]
+  )
+
+  const handleChip = (specIndex: number, specName: string, value: string) => {
+    setSelected((prev) => {
+      const next: Record<string, string> = {}
+      // Keep selections before this level, set this level, clear subsequent
+      specs.slice(0, specIndex).forEach((s) => { if (prev[s.name]) next[s.name] = prev[s.name] })
+      next[specName] = prev[specName] === value ? '' : value  // toggle
+      return next
+    })
+  }
+
+  const allSelected = specs.length > 0 && specs.every((s) => !!selected[s.name])
+  const matchedSku = allSelected
+    ? series.skus.find((sku) =>
+        specs.every((s) => sku.specValues?.[s.name] === selected[s.name])
+      )
+    : null
+
+  return (
+    <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
+      {specs.map((spec, idx) => {
+        const prevSelected = idx === 0 || !!selected[specs[idx - 1].name]
+        const opts = availableOptions(idx)
+        return (
+          <div key={spec.name}>
+            <div className="text-xs font-semibold text-brand-600 mb-2">{spec.name}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(prevSelected ? opts : spec.options).map((opt) => {
+                const isSelected = selected[spec.name] === opt
+                const isAvailable = prevSelected && opts.includes(opt)
+                return (
+                  <button
+                    key={opt}
+                    disabled={!isAvailable}
+                    onClick={() => handleChip(idx, spec.name, opt)}
+                    className={[
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+                      isSelected
+                        ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
+                        : isAvailable
+                          ? 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600'
+                          : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed',
+                    ].join(' ')}
+                  >
+                    {opt}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* 結果區 */}
+      <div className="pt-1">
+        {allSelected && matchedSku && (
+          <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-gray-800 truncate">{matchedSku.name}</div>
+              <div className="text-xs text-gray-400 font-mono">{matchedSku.code}</div>
+            </div>
+            <button
+              onClick={() => { onAdd(series, matchedSku); setSelected({}) }}
+              className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
+            >
+              + 加入
+            </button>
+          </div>
+        )}
+        {allSelected && !matchedSku && (
+          <div className="text-xs text-red-400 bg-red-50 rounded-lg px-3 py-2">
+            此規格組合無對應品項
+          </div>
+        )}
+        {!allSelected && specs.length > 0 && (
+          <div className="text-xs text-gray-400">
+            請選擇{specs.find((s) => !selected[s.name])?.name}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── SeriesPanel（分流：chip 卡片 or 舊式列表） ────────────────
 
 function SeriesPanel({
   series,
@@ -88,62 +207,66 @@ function SeriesPanel({
   series: SeriesEntry
   onAdd: (series: SeriesEntry, sku: SkuEntry) => void
 }) {
-  const specFilters = useMemo(() => computeSpecFilters(series.skus), [series.skus])
-  // 初始 selected：每個 spec 預設空字串（全部）
+  // Use chip UI when series has specValues in SKUs
+  const useChips = series.mode === '選擇式規格' &&
+    (series.specs?.length ?? 0) > 0 &&
+    series.skus.some((s) => s.specValues && Object.keys(s.specValues).length > 0)
+
+  if (useChips) {
+    return <ChipSpecPanel series={series} onAdd={onAdd} />
+  }
+
+  // ── 舊式：dropdown 篩選 + SKU 列表 ──
+  const specFilters = computeSpecFilters(series.skus)
+  return <LegacySpecPanel series={series} onAdd={onAdd} specFilters={specFilters} />
+}
+
+function LegacySpecPanel({
+  series,
+  onAdd,
+  specFilters,
+}: {
+  series: SeriesEntry
+  onAdd: (series: SeriesEntry, sku: SkuEntry) => void
+  specFilters: Array<{ key: keyof SkuEntry; label: string; options: string[] }>
+}) {
   const [selected, setSelected] = useState<Record<string, string>>(() =>
     Object.fromEntries(specFilters.map((f) => [f.key, '']))
   )
-
   const filteredSkus = useMemo(
     () => filterSkusBySpecs(series.skus, selected),
     [series.skus, selected]
   )
-
-  const showSpecFilters = series.mode === '選擇式規格' && specFilters.length > 0
+  const showFilters = series.mode === '選擇式規格' && specFilters.length > 0
 
   return (
     <div className="bg-gray-50 border-t border-gray-100">
-      {/* 規格篩選區 */}
-      {showSpecFilters && (
+      {showFilters && (
         <div className="px-5 py-3 space-y-2 border-b border-gray-200 bg-blue-50/50">
           <div className="text-xs font-medium text-blue-700 mb-1.5">選擇規格</div>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {specFilters.map((f) => (
-              <div key={f.key} className="flex items-center gap-1.5">
+              <div key={String(f.key)} className="flex items-center gap-1.5">
                 <span className="text-xs text-gray-500 whitespace-nowrap">{f.label}</span>
                 <select
                   value={selected[f.key] ?? ''}
-                  onChange={(e) =>
-                    setSelected((prev) => ({ ...prev, [f.key]: e.target.value }))
-                  }
+                  onChange={(e) => setSelected((prev) => ({ ...prev, [f.key]: e.target.value }))}
                   className="border rounded px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
                 >
                   <option value="">全部</option>
-                  {f.options.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
+                  {f.options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               </div>
             ))}
           </div>
-          {filteredSkus.length === 0 && (
-            <div className="text-xs text-gray-400 pt-1">無符合規格的品項</div>
-          )}
-          {filteredSkus.length > 0 && (
-            <div className="text-xs text-gray-400">
-              符合 {filteredSkus.length} 項
-            </div>
-          )}
+          <div className="text-xs text-gray-400">
+            {filteredSkus.length === 0 ? '無符合規格的品項' : `符合 ${filteredSkus.length} 項`}
+          </div>
         </div>
       )}
-
-      {/* SKU 列表 */}
       <div className="divide-y divide-gray-100">
         {filteredSkus.map((sku) => (
-          <div
-            key={sku.code}
-            className="flex items-center gap-3 px-5 py-2.5 hover:bg-blue-50"
-          >
+          <div key={sku.code} className="flex items-center gap-3 px-5 py-2.5 hover:bg-blue-50">
             <div className="flex-1 min-w-0">
               <div className="text-sm text-gray-800">{sku.name}</div>
               <div className="text-xs text-gray-400 flex gap-2 flex-wrap mt-0.5">
