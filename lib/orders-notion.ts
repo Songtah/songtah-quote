@@ -76,6 +76,7 @@ export interface OrderItem {
   seriesName: string
   seriesId: string
   quantity: number
+  unitPrice: number   // 單價（0 = 未填）
   note: string
 }
 
@@ -87,7 +88,13 @@ export interface Order {
   status: string
   note: string
   items: OrderItem[]
+  totalAmount: number
   createdTime: string
+}
+
+/** 計算訂單總金額 */
+export function calcTotal(items: OrderItem[]): number {
+  return items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
 }
 
 // ── CRUD ──────────────────────────────────────────────────────
@@ -131,8 +138,9 @@ export async function createOrder(data: {
   status?: string
 }): Promise<Order> {
   const orderNumber = await generateOrderNumber()
+  const total = calcTotal(data.items)
   const itemsJson = JSON.stringify(
-    data.items.map(({ id: _id, ...rest }) => rest)  // strip local id
+    data.items.map(({ id: _id, ...rest }) => rest)
   )
 
   const page: any = await notion.pages.create({
@@ -144,6 +152,7 @@ export async function createOrder(data: {
       狀態:     { select: { name: data.status ?? '草稿' } },
       備註:     { rich_text: richText(data.note) },
       明細JSON: { rich_text: richText(itemsJson) },
+      總金額:   { number: total },
     },
   })
 
@@ -157,9 +166,7 @@ export async function updateOrderStatus(id: string, status: string): Promise<voi
   )
   await notion.pages.update({
     page_id: formatted,
-    properties: {
-      狀態: { select: { name: status } },
-    },
+    properties: { 狀態: { select: { name: status } } },
   })
 }
 
@@ -175,11 +182,14 @@ export async function updateOrder(id: string, data: {
     '$1-$2-$3-$4-$5'
   )
   const props: any = {}
-  if (data.date)        props['日期']     = { date: { start: data.date } }
-  if (data.salesperson !== undefined) props['業務'] = { rich_text: richText(data.salesperson) }
-  if (data.note !== undefined) props['備註'] = { rich_text: richText(data.note) }
-  if (data.status)      props['狀態']     = { select: { name: data.status } }
-  if (data.items)       props['明細JSON'] = { rich_text: richText(JSON.stringify(data.items.map(({ id: _id, ...rest }) => rest))) }
+  if (data.date)                      props['日期']     = { date: { start: data.date } }
+  if (data.salesperson !== undefined) props['業務']     = { rich_text: richText(data.salesperson) }
+  if (data.note !== undefined)        props['備註']     = { rich_text: richText(data.note) }
+  if (data.status)                    props['狀態']     = { select: { name: data.status } }
+  if (data.items) {
+    props['明細JSON'] = { rich_text: richText(JSON.stringify(data.items.map(({ id: _id, ...rest }) => rest))) }
+    props['總金額']   = { number: calcTotal(data.items) }
+  }
 
   await notion.pages.update({ page_id: formatted, properties: props })
 }
@@ -200,6 +210,7 @@ function parseOrderPage(page: any): Order {
         seriesName: item.seriesName ?? '',
         seriesId: item.seriesId ?? '',
         quantity: item.quantity ?? 1,
+        unitPrice: item.unitPrice ?? 0,
         note: item.note ?? '',
       }))
     }
@@ -213,6 +224,7 @@ function parseOrderPage(page: any): Order {
     status: getSelect(page, '狀態'),
     note: getText(page, '備註'),
     items,
+    totalAmount: page.properties?.['總金額']?.number ?? 0,
     createdTime: getCreatedTime(page, '建立時間'),
   }
 }

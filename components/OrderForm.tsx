@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { OrderItem } from '@/lib/orders-notion'
+import { calcTotal } from '@/lib/orders-notion'
 
 // ── 產品目錄型別 ──────────────────────────────────────────────
 
@@ -236,6 +237,7 @@ function ProductPicker({
         brand: series.brand,
         seriesName: series.name,
         seriesId: series.id,
+        unitPrice: 0,
       })
     },
     [onAdd]
@@ -415,6 +417,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [salesperson, setSalesperson] = useState(initialOrder?.salesperson ?? '')
+  const [salespersonOptions, setSalespersonOptions] = useState<string[]>([])
   const [note, setNote] = useState(initialOrder?.note ?? '')
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
   const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? [])
@@ -424,15 +427,17 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  // Load product catalog
+  // Load product catalog + salesperson options in parallel
   useEffect(() => {
     fetch('/products_catalog.json')
       .then((r) => r.json())
-      .then((data) => {
-        setCatalog(data)
-        setCatalogLoading(false)
-      })
+      .then((data) => { setCatalog(data); setCatalogLoading(false) })
       .catch(() => setCatalogLoading(false))
+
+    fetch('/api/visits/options')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data?.salespersons)) setSalespersonOptions(data.salespersons) })
+      .catch(() => {})
   }, [])
 
   // Add item from picker
@@ -454,6 +459,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
             ...partial,
             id: `item-${Date.now()}-${Math.random()}`,
             quantity: 1,
+            unitPrice: 0,
             note: '',
           },
         ]
@@ -527,6 +533,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
   }
 
   const totalQty = items.reduce((acc, it) => acc + it.quantity, 0)
+  const totalAmount = calcTotal(items)
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -550,13 +557,26 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">業務姓名 *</label>
-            <input
-              type="text"
-              value={salesperson}
-              onChange={(e) => setSalesperson(e.target.value)}
-              placeholder="輸入姓名"
-              className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-32"
-            />
+            {salespersonOptions.length > 0 ? (
+              <select
+                value={salesperson}
+                onChange={(e) => setSalesperson(e.target.value)}
+                className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-32"
+              >
+                <option value="">請選擇</option>
+                {salespersonOptions.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={salesperson}
+                onChange={(e) => setSalesperson(e.target.value)}
+                placeholder="輸入姓名"
+                className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-32"
+              />
+            )}
           </div>
           {isEdit && (
             <div>
@@ -615,32 +635,30 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="px-4 py-2.5 text-left w-8">#</th>
-                  <th className="px-3 py-2.5 text-left">品牌</th>
-                  <th className="px-3 py-2.5 text-left">系列</th>
-                  <th className="px-3 py-2.5 text-left">品名</th>
+                  <th className="px-3 py-2.5 text-left w-8">#</th>
                   <th className="px-3 py-2.5 text-left">貨品碼</th>
+                  <th className="px-3 py-2.5 text-left">品牌</th>
+                  <th className="px-3 py-2.5 text-left">品名</th>
                   <th className="px-3 py-2.5 text-center w-24">數量</th>
+                  <th className="px-3 py-2.5 text-right w-28">單價</th>
+                  <th className="px-3 py-2.5 text-right w-28">金額</th>
                   <th className="px-3 py-2.5 text-left">備註</th>
-                  <th className="px-3 py-2.5 w-10"></th>
+                  <th className="px-3 py-2.5 w-8"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {items.map((item, idx) => (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                    <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
                     <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
-                    <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.seriesName}</td>
                     <td className="px-3 py-2.5 text-gray-800 font-medium">{item.skuName}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{item.skuCode}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => updateItem(item.id, { quantity: Math.max(1, item.quantity - 1) })}
                           className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                        >
-                          −
-                        </button>
+                        >−</button>
                         <input
                           type="number"
                           min={1}
@@ -651,10 +669,23 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
                         <button
                           onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })}
                           className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                        >
-                          +
-                        </button>
+                        >+</button>
                       </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.unitPrice || ''}
+                        onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                        placeholder="—"
+                        className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
+                      {item.unitPrice > 0
+                        ? (item.quantity * item.unitPrice).toLocaleString()
+                        : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-2.5">
                       <input
@@ -669,13 +700,22 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
                       <button
                         onClick={() => removeItem(item.id)}
                         className="text-gray-300 hover:text-red-400 text-lg leading-none"
-                      >
-                        ×
-                      </button>
+                      >×</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
+              {totalAmount > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 bg-gray-50">
+                    <td colSpan={6} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計</td>
+                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
+                      {totalAmount.toLocaleString()}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
@@ -746,48 +786,176 @@ function buildPrintHtml(data: {
   status: string
   items: OrderItem[]
 }) {
-  const rows = data.items.map((item, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${item.brand}</td>
-      <td>${item.seriesName}</td>
-      <td>${item.skuName}</td>
-      <td>${item.skuCode}</td>
-      <td style="text-align:center">${item.quantity}</td>
-      <td>${item.note}</td>
-    </tr>
-  `).join('')
+  const totalQty = data.items.reduce((a, i) => a + i.quantity, 0)
+  const totalAmount = calcTotal(data.items)
+  const hasPrice = data.items.some((i) => i.unitPrice > 0)
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>訂貨單 ${data.orderNumber}</title>
-  <style>
-    body { font-family: 'Noto Sans TC', sans-serif; margin: 20mm; font-size: 12px; color: #222; }
-    h1 { font-size: 18px; margin-bottom: 4px; }
-    .meta { margin-bottom: 16px; color: #555; }
-    .meta span { margin-right: 24px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th { background: #f5f5f5; font-weight: 600; text-align: left; padding: 6px 8px; border: 1px solid #ddd; font-size: 11px; }
-    td { padding: 5px 8px; border: 1px solid #ddd; }
-    tr:nth-child(even) td { background: #fafafa; }
-    .footer { margin-top: 24px; color: #888; font-size: 11px; }
-  </style>
-  </head><body>
-  <h1>崧達企業 訂貨單</h1>
-  <div class="meta">
-    <span>訂單編號：<strong>${data.orderNumber}</strong></span>
-    <span>日期：${data.date}</span>
-    <span>業務：${data.salesperson}</span>
-    <span>狀態：${data.status}</span>
-    ${data.note ? `<span>備註：${data.note}</span>` : ''}
+  const rows = data.items.map((item, i) => {
+    const lineTotal = item.unitPrice > 0
+      ? (item.quantity * item.unitPrice).toLocaleString()
+      : '—'
+    const unitPriceStr = item.unitPrice > 0 ? item.unitPrice.toLocaleString() : '—'
+    return `
+    <tr>
+      <td style="text-align:center;color:#888">${i + 1}</td>
+      <td style="font-family:monospace;font-size:11px;color:#7a6050">${item.skuCode}</td>
+      <td>${item.brand}</td>
+      <td><strong>${item.skuName}</strong></td>
+      <td style="text-align:center">${item.quantity}</td>
+      ${hasPrice ? `<td style="text-align:right">${unitPriceStr}</td><td style="text-align:right;font-weight:600">${lineTotal}</td>` : ''}
+      <td style="color:#888;font-size:11px">${item.note || ''}</td>
+    </tr>`
+  }).join('')
+
+  const totalRow = hasPrice ? `
+    <tr style="background:#f3ede3;font-weight:700;border-top:2px solid #b8956a">
+      <td colspan="${4}" style="text-align:right;padding:6px 8px">合計</td>
+      <td style="text-align:center;padding:6px 8px">${totalQty}</td>
+      <td style="padding:6px 8px"></td>
+      <td style="text-align:right;padding:6px 8px;color:#a07a52;font-size:14px">${totalAmount.toLocaleString()}</td>
+      <td style="padding:6px 8px"></td>
+    </tr>` : ''
+
+  const priceHeaders = hasPrice
+    ? '<th style="text-align:right">單價</th><th style="text-align:right">金額</th>'
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<title>訂貨單 ${data.orderNumber}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+    font-size: 12px;
+    color: #3d2b1f;
+    background: #fff;
+    padding: 0;
+  }
+  /* ── Header ── */
+  .print-header {
+    background: linear-gradient(135deg, #b8956a 0%, #a07a52 100%);
+    color: white;
+    padding: 18px 28px 14px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .company-name { font-size: 20px; font-weight: 700; letter-spacing: 0.05em; }
+  .doc-title { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+  .order-num { font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: 0.08em; }
+  /* ── Gold line ── */
+  .gold-line {
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, #d4c5ab 30%, #b8956a 50%, #d4c5ab 70%, transparent 100%);
+  }
+  /* ── Meta grid ── */
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-bottom: 1px solid #e8dfd0;
+    background: #faf7f2;
+    padding: 10px 28px;
+  }
+  .meta-item { padding: 4px 0; }
+  .meta-label { font-size: 10px; color: #b8956a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .meta-value { font-size: 13px; font-weight: 500; color: #3d2b1f; }
+  /* ── Table ── */
+  .wrap { padding: 16px 28px 24px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  thead tr { background: linear-gradient(135deg, #b8956a 0%, #a07a52 100%); }
+  th {
+    color: white;
+    font-weight: 600;
+    text-align: left;
+    padding: 7px 8px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  td { padding: 6px 8px; border-bottom: 1px solid #e8dfd0; font-size: 12px; }
+  tbody tr:nth-child(even) td { background: #faf7f2; }
+  tbody tr:hover td { background: #f3ede3; }
+  /* ── Footer ── */
+  .print-footer {
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid #e8dfd0;
+    display: flex;
+    justify-content: space-between;
+    color: #a09080;
+    font-size: 11px;
+  }
+  .sig-block { display: flex; gap: 48px; margin-top: 32px; }
+  .sig-item { border-top: 1px solid #c4a87a; padding-top: 4px; min-width: 100px; font-size: 11px; color: #888; }
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+<!-- Header -->
+<div class="print-header">
+  <div>
+    <div class="company-name">崧達企業股份有限公司</div>
+    <div class="doc-title">內部訂貨單</div>
   </div>
+  <div class="order-num">${data.orderNumber}</div>
+</div>
+<div class="gold-line"></div>
+
+<!-- Meta -->
+<div class="meta-grid">
+  <div class="meta-item">
+    <div class="meta-label">訂貨日期</div>
+    <div class="meta-value">${data.date}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">業務</div>
+    <div class="meta-value">${data.salesperson}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">狀態</div>
+    <div class="meta-value">${data.status}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">備註</div>
+    <div class="meta-value">${data.note || '—'}</div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="wrap">
   <table>
     <thead>
       <tr>
-        <th>#</th><th>品牌</th><th>系列</th><th>品名</th><th>貨品碼</th><th>數量</th><th>備註</th>
+        <th style="width:28px;text-align:center">#</th>
+        <th>貨品代碼</th>
+        <th>品牌</th>
+        <th>品名</th>
+        <th style="text-align:center;width:48px">數量</th>
+        ${priceHeaders}
+        <th>備註</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
+    ${totalRow}
   </table>
-  <div class="footer">共 ${data.items.length} 種品項・總數量 ${data.items.reduce((a, i) => a + i.quantity, 0)} 件</div>
-  </body></html>`
+
+  <div class="print-footer">
+    <span>共 ${data.items.length} 種品項・總數量 ${totalQty} 件${hasPrice ? `・合計 ${totalAmount.toLocaleString()} 元` : ''}</span>
+    <span>列印時間：${new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
+  </div>
+
+  <div class="sig-block">
+    <div class="sig-item">訂貨人</div>
+    <div class="sig-item">核准</div>
+    <div class="sig-item">收貨確認</div>
+  </div>
+</div>
+</body></html>`
 }
