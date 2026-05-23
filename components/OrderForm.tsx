@@ -1154,39 +1154,40 @@ function buildPrintHtml(data: {
   items: OrderItem[]
   customer?: SelectedCustomer
 }) {
-  const totalQty = data.items.reduce((a, i) => a + i.quantity, 0)
-  const totalAmount = calcTotal(data.items)
-  const hasPrice = data.items.some((i) => i.unitPrice > 0)
+  const totalQty  = data.items.reduce((a, i) => a + i.quantity, 0)
+  const totalAmt  = calcTotal(data.items)
+  const hasPrice  = data.items.some((i) => i.unitPrice > 0)
+  const printTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
 
   const rows = data.items.map((item, i) => {
-    const lineTotal = item.unitPrice > 0
-      ? (item.quantity * item.unitPrice).toLocaleString()
-      : '—'
-    const unitPriceStr = item.unitPrice > 0 ? item.unitPrice.toLocaleString() : '—'
-    return `
-    <tr>
-      <td style="text-align:center;color:#888">${i + 1}</td>
-      <td style="font-family:monospace;font-size:11px;color:#7a6050">${item.skuCode}</td>
-      <td>${item.brand}</td>
-      <td><strong>${item.skuName}</strong></td>
-      <td style="text-align:center">${item.quantity}</td>
-      ${hasPrice ? `<td style="text-align:right">${unitPriceStr}</td><td style="text-align:right;font-weight:600">${lineTotal}</td>` : ''}
-      <td style="color:#888;font-size:11px">${item.note || ''}</td>
+    const lineTotal    = item.unitPrice > 0 ? (item.quantity * item.unitPrice).toLocaleString() : ''
+    const unitPriceStr = item.unitPrice > 0 ? item.unitPrice.toLocaleString() : ''
+    return `<tr>
+      <td class="tc gray">${i + 1}</td>
+      <td class="mono sm">${item.skuCode}</td>
+      <td class="sm">${item.brand}</td>
+      <td class="bold">${item.skuName}</td>
+      <td class="tc">${item.quantity}</td>
+      ${hasPrice ? `<td class="tr">${unitPriceStr}</td><td class="tr bold">${lineTotal}</td>` : ''}
+      <td class="sm gray">${item.note || ''}</td>
     </tr>`
   }).join('')
 
   const totalRow = hasPrice ? `
-    <tr style="background:#f3ede3;font-weight:700;border-top:2px solid #b8956a">
-      <td colspan="${4}" style="text-align:right;padding:6px 8px">合計</td>
-      <td style="text-align:center;padding:6px 8px">${totalQty}</td>
-      <td style="padding:6px 8px"></td>
-      <td style="text-align:right;padding:6px 8px;color:#a07a52;font-size:14px">${totalAmount.toLocaleString()}</td>
-      <td style="padding:6px 8px"></td>
-    </tr>` : ''
+    <tr class="total-row">
+      <td colspan="4" class="tr" style="padding-right:12px">小計</td>
+      <td class="tc">${totalQty}</td>
+      <td></td>
+      <td class="tr bold" style="font-size:14px">${totalAmt.toLocaleString()}</td>
+      <td></td>
+    </tr>` : `
+    <tr class="total-row">
+      <td colspan="4" class="tr" style="padding-right:12px">總數量</td>
+      <td class="tc bold">${totalQty}</td>
+      <td></td>
+    </tr>`
 
-  const priceHeaders = hasPrice
-    ? '<th style="text-align:right">單價</th><th style="text-align:right">金額</th>'
-    : ''
+  const c = data.customer
 
   return `<!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -1194,161 +1195,119 @@ function buildPrintHtml(data: {
 <title>訂貨單 ${data.orderNumber}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
-    font-size: 12px;
-    color: #3d2b1f;
-    background: #fff;
-    padding: 0;
-  }
-  /* ── Header ── */
-  .print-header {
-    background: linear-gradient(135deg, #b8956a 0%, #a07a52 100%);
-    color: white;
-    padding: 18px 28px 14px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
-  .company-name { font-size: 20px; font-weight: 700; letter-spacing: 0.05em; }
-  .doc-title { font-size: 13px; opacity: 0.85; margin-top: 2px; }
-  .order-num { font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: 0.08em; }
-  /* ── Gold line ── */
-  .gold-line {
-    height: 3px;
-    background: linear-gradient(90deg, transparent 0%, #d4c5ab 30%, #b8956a 50%, #d4c5ab 70%, transparent 100%);
-  }
-  /* ── Meta grid ── */
-  .meta-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    border-bottom: 1px solid #e8dfd0;
-    background: #faf7f2;
-    padding: 10px 28px;
-  }
-  .meta-item { padding: 4px 0; }
-  .meta-label { font-size: 10px; color: #b8956a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
-  .meta-value { font-size: 13px; font-weight: 500; color: #3d2b1f; }
-  /* ── Table ── */
-  .wrap { padding: 16px 28px 24px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  thead tr { background: linear-gradient(135deg, #b8956a 0%, #a07a52 100%); }
-  th {
-    color: white;
-    font-weight: 600;
-    text-align: left;
-    padding: 7px 8px;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-  }
-  td { padding: 6px 8px; border-bottom: 1px solid #e8dfd0; font-size: 12px; }
-  tbody tr:nth-child(even) td { background: #faf7f2; }
-  tbody tr:hover td { background: #f3ede3; }
-  /* ── Footer ── */
-  .print-footer {
-    margin-top: 20px;
-    padding-top: 12px;
-    border-top: 1px solid #e8dfd0;
-    display: flex;
-    justify-content: space-between;
-    color: #a09080;
-    font-size: 11px;
-  }
-  .sig-block { display: flex; gap: 48px; margin-top: 32px; }
-  .sig-item { border-top: 1px solid #c4a87a; padding-top: 4px; min-width: 100px; font-size: 11px; color: #888; }
-  @media print {
-    body { padding: 0; }
-    .no-print { display: none; }
-  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;font-size:12px;color:#111;background:#fff;padding:28px 32px 40px}
+  /* header */
+  .hd{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid #111;margin-bottom:0}
+  .co{font-size:18px;font-weight:700;letter-spacing:0.02em;line-height:1.2}
+  .co-sub{font-size:10px;color:#666;margin-top:3px;letter-spacing:0.06em}
+  .doc-meta{text-align:right}
+  .doc-type{font-size:11px;color:#666;letter-spacing:0.08em;margin-bottom:4px}
+  .doc-num{font-size:22px;font-weight:700;font-family:monospace;letter-spacing:0.06em}
+  /* info strip */
+  .info{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #ddd;background:#f8f8f8;padding:8px 0;margin-bottom:0}
+  .info-cell{padding:4px 12px}
+  .lbl{font-size:9px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
+  .val{font-size:12px;font-weight:500;color:#111}
+  /* customer */
+  .cust{border-bottom:1px solid #ddd;padding:10px 12px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px 20px}
+  .cust-name{font-size:15px;font-weight:700}
+  .cust-addr{grid-column:1/-1;margin-top:2px}
+  /* table */
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
+  th{background:#111;color:#fff;font-weight:600;text-align:left;padding:7px 8px;font-size:10px;letter-spacing:0.05em;white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid #e8e8e8}
+  tbody tr:nth-child(even) td{background:#f8f8f8}
+  .total-row td{background:#111!important;color:#fff;font-weight:600;padding:7px 8px;border:none}
+  /* utils */
+  .tc{text-align:center}.tr{text-align:right}.bold{font-weight:600}
+  .mono{font-family:monospace;font-size:10px;color:#555}.sm{font-size:11px}.gray{color:#888}
+  /* footer */
+  .ft{display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#999}
+  .sig{display:flex;gap:40px;margin-top:36px}
+  .sig-item{min-width:100px;border-top:1px solid #bbb;padding-top:4px;font-size:10px;color:#888}
+  @media print{body{padding:0}}
 </style>
 </head>
 <body>
+
 <!-- Header -->
-<div class="print-header">
+<div class="hd">
   <div>
-    <div class="company-name">崧達企業股份有限公司</div>
-    <div class="doc-title">內部訂貨單</div>
+    <div class="co">崧達企業股份有限公司</div>
+    <div class="co-sub">SONGTAH TRADING CO., LTD.</div>
   </div>
-  <div class="order-num">${data.orderNumber}</div>
-</div>
-<div class="gold-line"></div>
-
-<!-- Meta -->
-<div class="meta-grid">
-  <div class="meta-item">
-    <div class="meta-label">訂貨日期</div>
-    <div class="meta-value">${data.date}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">業務</div>
-    <div class="meta-value">${data.salesperson}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">狀態</div>
-    <div class="meta-value">${data.status}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">備註</div>
-    <div class="meta-value">${data.note || '—'}</div>
+  <div class="doc-meta">
+    <div class="doc-type">內部訂貨單 PURCHASE ORDER</div>
+    <div class="doc-num">${data.orderNumber}</div>
   </div>
 </div>
 
-${data.customer?.name ? `
-<!-- Customer info -->
-<div style="background:#faf7f2;border-bottom:2px solid #d4c5ab;padding:10px 28px 12px;">
-  <div style="font-size:9px;color:#b8956a;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;border-bottom:1px dashed #e0d0bc;padding-bottom:4px">收貨客戶資訊</div>
-  <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:8px 24px;">
-    <div>
-      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">客戶名稱</div>
-      <div style="font-size:15px;font-weight:700;color:#3d2b1f">${data.customer.name}</div>
-    </div>
-    <div>
-      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">聯絡人</div>
-      <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.contactPerson || '—'}</div>
-    </div>
-    <div>
-      <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">電話</div>
-      <div style="font-size:13px;font-weight:500;color:#3d2b1f">${data.customer.phone || '—'}</div>
-    </div>
+<!-- Order info strip -->
+<div class="info">
+  <div class="info-cell">
+    <div class="lbl">訂貨日期</div>
+    <div class="val">${data.date}</div>
   </div>
-  ${data.customer.address ? `
-  <div style="margin-top:6px;">
-    <div style="font-size:9px;color:#b8956a;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">送貨地址</div>
-    <div style="font-size:12px;font-weight:500;color:#3d2b1f">${data.customer.address}</div>
-  </div>` : ''}
+  <div class="info-cell">
+    <div class="lbl">業務</div>
+    <div class="val">${data.salesperson || '—'}</div>
+  </div>
+  <div class="info-cell">
+    <div class="lbl">狀態</div>
+    <div class="val">${data.status}</div>
+  </div>
+  <div class="info-cell">
+    <div class="lbl">備註</div>
+    <div class="val">${data.note || '—'}</div>
+  </div>
+</div>
+
+${c?.name ? `
+<!-- Customer block -->
+<div class="cust">
+  <div>
+    <div class="lbl">客戶</div>
+    <div class="cust-name">${c.name}</div>
+  </div>
+  <div>
+    <div class="lbl">聯絡人</div>
+    <div class="val">${c.contactPerson || '—'}</div>
+  </div>
+  <div>
+    <div class="lbl">電話</div>
+    <div class="val">${c.phone || '—'}</div>
+  </div>
+  ${c.address ? `<div class="cust-addr"><div class="lbl">地址</div><div class="val">${c.address}</div></div>` : ''}
 </div>` : ''}
 
-<!-- Table -->
-<div class="wrap">
-  <table>
-    <thead>
-      <tr>
-        <th style="width:28px;text-align:center">#</th>
-        <th>貨品代碼</th>
-        <th>品牌</th>
-        <th>品名</th>
-        <th style="text-align:center;width:48px">數量</th>
-        ${priceHeaders}
-        <th>備註</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-    ${totalRow}
-  </table>
+<!-- Items table -->
+<table>
+  <thead>
+    <tr>
+      <th style="width:24px;text-align:center">#</th>
+      <th>貨品代碼</th>
+      <th>品牌</th>
+      <th>品名</th>
+      <th style="text-align:center;width:44px">數量</th>
+      ${hasPrice ? '<th style="text-align:right;width:72px">單價</th><th style="text-align:right;width:80px">金額</th>' : ''}
+      <th>備註</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+  ${totalRow}
+</table>
 
-  <div class="print-footer">
-    <span>共 ${data.items.length} 種品項・總數量 ${totalQty} 件${hasPrice ? `・合計 ${totalAmount.toLocaleString()} 元` : ''}</span>
-    <span>列印時間：${new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
-  </div>
-
-  <div class="sig-block">
-    <div class="sig-item">訂貨人</div>
-    <div class="sig-item">核准</div>
-    <div class="sig-item">收貨確認</div>
-  </div>
+<div class="ft">
+  <span>共 ${data.items.length} 種品項・總數量 ${totalQty} 件${hasPrice ? `・合計 NT$ ${totalAmt.toLocaleString()}` : ''}</span>
+  <span>列印：${printTime}</span>
 </div>
+
+<div class="sig">
+  <div class="sig-item">訂貨人</div>
+  <div class="sig-item">核准</div>
+  <div class="sig-item">收貨確認</div>
+</div>
+
 </body></html>`
 }
