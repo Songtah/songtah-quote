@@ -919,49 +919,60 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
 
       {/* 客戶資訊 */}
       <div className="bg-white border rounded-lg p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
+          <span className="text-xs text-gray-400">可直接填寫，或用 CRM 搜尋自動帶入</span>
+        </div>
+
+        {/* CRM 搜尋（選填，自動填入下方欄位） */}
         <CustomerSearchBox
           value={customer}
           onChange={setCustomer}
         />
-        {/* 聯絡人 + 補充欄（客戶選定後顯示） */}
-        {(customer.name || customer.contactPerson) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">聯絡人</label>
-              <input
-                type="text"
-                value={customer.contactPerson}
-                onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
-                placeholder="聯絡人姓名（選填）"
-                className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">電話（可修改）</label>
-              <input
-                type="text"
-                value={customer.phone}
-                onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
-                placeholder="電話號碼"
-                className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-              />
-            </div>
+
+        {/* 直接可輸入的欄位——永遠顯示 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">客戶名稱</label>
+            <input
+              type="text"
+              value={customer.name}
+              onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))}
+              placeholder="客戶 / 診所名稱"
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
           </div>
-        )}
-        {/* 若尚未選客戶，僅顯示聯絡人欄位 */}
-        {!customer.name && (
           <div>
-            <label className="block text-xs text-gray-500 mb-1">聯絡人（選填）</label>
+            <label className="block text-xs text-gray-500 mb-1">聯絡人</label>
             <input
               type="text"
               value={customer.contactPerson}
               onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
-              placeholder="聯絡人姓名"
+              placeholder="聯絡人姓名（選填）"
               className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
-        )}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">電話</label>
+            <input
+              type="text"
+              value={customer.phone}
+              onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
+              placeholder="電話號碼（選填）"
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">地址</label>
+            <input
+              type="text"
+              value={customer.address}
+              onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
+              placeholder="送貨地址（選填）"
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Items table */}
@@ -1102,7 +1113,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
           >
             取消
           </button>
-          {isEdit && items.length > 0 && (
+          {items.length > 0 && (
             <button
               onClick={handlePrint}
               className="button-secondary px-4 py-2 text-sm rounded"
