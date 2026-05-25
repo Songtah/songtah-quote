@@ -841,7 +841,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header info */}
       <div className="bg-white border rounded-lg p-5 space-y-4">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-wrap items-start gap-3">
           {isEdit && (
             <div>
               <label className="block text-xs text-gray-500 mb-1">訂單編號</label>
@@ -894,7 +894,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               </select>
             </div>
           )}
-          <div className="flex-1 min-w-[180px]">
+          <div className="flex-1 min-w-0 w-full sm:w-auto">
             <label className="block text-xs text-gray-500 mb-1">備註</label>
             <input
               type="text"
@@ -1148,7 +1148,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       )}
 
       {/* Footer actions */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <button
             onClick={() => router.back()}

@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-8 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-5 sm:px-8 lg:grid-cols-[1.15fr_0.85fr]">
         {/* Left info panel */}
         <section className="hidden lg:block py-16">
           <div className="max-w-lg">
@@ -63,7 +63,7 @@ export default function LoginPage() {
 
         {/* Right login card */}
         <motion.section
-          className="mx-auto w-full max-w-sm py-16"
+          className="mx-auto w-full max-w-sm py-8 sm:py-16"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}

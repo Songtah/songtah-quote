@@ -119,32 +119,33 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
-          <div className="flex min-w-0 items-center gap-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 py-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Image
               src="/Logo.svg"
               alt="崧達企業"
               width={520}
               height={78}
-              className="h-auto w-28 object-contain md:w-36"
+              className="h-auto w-24 shrink-0 object-contain sm:w-28 md:w-36"
             />
-            <div className="hidden sm:block h-6 w-px bg-gray-200" />
-            <div className="min-w-0">
+            <div className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" />
+            <div className="hidden sm:block min-w-0">
               <p className="eyebrow text-[10px]">SONGTAH TRADING CO.,LTD.</p>
               <h1 className="truncate text-base font-semibold text-gray-900">{title}</h1>
             </div>
           </div>
-          <Link href="/api/auth/signout" className="button-secondary px-4 py-1.5 text-sm">
+          <Link href="/api/auth/signout" className="button-secondary shrink-0 px-3 py-1.5 text-sm">
             登出
           </Link>
         </div>
-        <div className="mx-auto max-w-7xl px-6 pb-2">
-          <nav className="inline-flex bg-gray-100 rounded-full px-1 py-1 gap-1">
+        {/* Nav — horizontally scrollable on mobile, pill style */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <nav className="inline-flex min-w-max bg-gray-100 rounded-full px-1 py-1 gap-0.5">
             {visibleItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-full px-3 sm:px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
                   (pathname === item.href ||
                     (item.href === '/quotes' && pathname.startsWith('/quote')) ||
                     (item.href === '/orders' && pathname.startsWith('/orders')) ||
@@ -160,7 +161,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-5 sm:py-8">
         <motion.div key={pathname} variants={fadeUp} initial="hidden" animate="show">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
