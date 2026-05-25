@@ -869,28 +869,55 @@ export async function searchSystemCustomers(
 }
 
 export async function getCustomerFilterOptions(): Promise<{
-  cities: string[]; districts: string[]; salespersons: string[]; types: string[]
+  cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {
-  if (!DB.customers) return { cities: [], districts: [], salespersons: [], types: [] }
-  const cacheKey = 'customer-filter-options'
-  const cached = getCachedValue<{ cities: string[]; districts: string[]; salespersons: string[]; types: string[] }>(cacheKey)
+  if (!DB.customers) return { cities: [], districtsByCity: {}, salespersons: [], types: [] }
+  const cacheKey = 'customer-filter-options-v2'
+  const cached = getCachedValue<{ cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[] }>(cacheKey)
   if (cached) return cached
   try {
+    // Schema → cities, salespersons, types
     const db: any = await notionCallWithRetry('getCustomerFilterOptions', () =>
       notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) })
     )
     const opts = (propName: string): string[] =>
       (db.properties?.[propName]?.select?.options ?? []).map((o: any) => o.name).filter(Boolean)
+
+    // Build city → districts[] from actual records (so only real combinations appear)
+    const districtsByCity: Record<string, string[]> = {}
+    let cursor: string | undefined
+    do {
+      const response: any = await notionCallWithRetry('getCustomerFilterOptions:pages', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.customers!),
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        })
+      )
+      for (const page of response.results ?? []) {
+        const city     = getSelect(page, '縣市')
+        const district = getSelect(page, '行政區') || getText(page, '行政區')
+        if (city && district) {
+          if (!districtsByCity[city]) districtsByCity[city] = []
+          if (!districtsByCity[city].includes(district)) districtsByCity[city].push(district)
+        }
+      }
+      cursor = response.has_more ? response.next_cursor : undefined
+    } while (cursor)
+
+    // Sort districts within each city
+    Object.values(districtsByCity).forEach((arr) => arr.sort())
+
     const result = {
       cities: opts('縣市'),
-      districts: opts('行政區'),
+      districtsByCity,
       salespersons: opts('負責業務'),
       types: opts('客戶類型'),
     }
     setCachedValue(cacheKey, result, 300_000)
     return result
   } catch {
-    return { cities: [], districts: [], salespersons: [], types: [] }
+    return { cities: [], districtsByCity: {}, salespersons: [], types: [] }
   }
 }
 

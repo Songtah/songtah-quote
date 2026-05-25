@@ -15,7 +15,7 @@ type Customer = {
 }
 type FilterOptions = {
   cities: string[]
-  districts: string[]
+  districtsByCity: Record<string, string[]>
   salespersons: string[]
   types: string[]
 }
@@ -60,7 +60,7 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [results, setResults] = useState<Customer[]>([])
   const [searching, setSearching] = useState(false)
-  const [options, setOptions] = useState<FilterOptions>({ cities: [], districts: [], salespersons: [], types: [] })
+  const [options, setOptions] = useState<FilterOptions>({ cities: [], districtsByCity: {}, salespersons: [], types: [] })
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Load filter options once
@@ -236,9 +236,14 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
                   value={filters.district}
                   onChange={(e) => setFilters((f) => ({ ...f, district: e.target.value }))}
                   className="input text-sm py-2"
+                  disabled={!filters.city}
                 >
-                  <option value="">全部行政區</option>
-                  {options.districts.map((d) => <option key={d} value={d}>{d}</option>)}
+                  <option value="">
+                    {filters.city ? '全部行政區' : '請先選縣市'}
+                  </option>
+                  {(filters.city ? (options.districtsByCity[filters.city] ?? []) : []).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
               </div>
               <div>

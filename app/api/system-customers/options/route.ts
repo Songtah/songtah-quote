@@ -10,6 +10,6 @@ export async function GET(_req: NextRequest) {
     const options = await getCustomerFilterOptions()
     return NextResponse.json(options)
   } catch {
-    return NextResponse.json({ cities: [], districts: [], salespersons: [], types: [] })
+    return NextResponse.json({ cities: [], districtsByCity: {}, salespersons: [], types: [] })
   }
 }
