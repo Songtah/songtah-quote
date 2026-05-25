@@ -10,7 +10,7 @@ export default async function ProductsPage() {
 
   const [summary, categories] = await Promise.all([
     getProductsSummary().catch(() => ({ total: 0, recent: [] })),
-    getProductCategories().catch(() => ({ brands: [], types: [] })),
+    getProductCategories().catch(() => ({ brands: [], types: [], categories: [] })),
   ])
 
   return (
@@ -23,6 +23,7 @@ export default async function ProductsPage() {
         total={summary.total}
         brands={categories.brands}
         types={categories.types}
+        categories={categories.categories}
       />
     </AppShell>
   )

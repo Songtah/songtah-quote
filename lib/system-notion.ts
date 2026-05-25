@@ -1045,11 +1045,12 @@ export async function searchProducts(query: string): Promise<ProductItem[]> {
   )
 }
 
-export async function getProductCategories(): Promise<{ brands: string[]; types: string[] }> {
+export async function getProductCategories(): Promise<{ brands: string[]; types: string[]; categories: string[] }> {
   const all = await getAllProducts()
-  const brands = Array.from(new Set(all.map((p) => p.manufacturer).filter(Boolean))).sort() as string[]
-  const types = Array.from(new Set(all.map((p) => p.productType).filter(Boolean))).sort() as string[]
-  return { brands, types }
+  const brands     = Array.from(new Set(all.map((p) => p.manufacturer).filter(Boolean))).sort() as string[]
+  const types      = Array.from(new Set(all.map((p) => p.productType).filter(Boolean))).sort() as string[]
+  const categories = Array.from(new Set(all.map((p) => p.category).filter(Boolean))).sort() as string[]
+  return { brands, types, categories }
 }
 
 function getTicketNumber(page: any): string {

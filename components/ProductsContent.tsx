@@ -285,15 +285,18 @@ export function ProductsContent({
   total,
   brands,
   types,
+  categories,
 }: {
   total: number
   brands: string[]
   types: string[]
+  categories: string[]
 }) {
   const debounceRef = useRef<NodeJS.Timeout>()
   const [query, setQuery] = useState('')
-  const [activeBrand, setActiveBrand] = useState('')
   const [activeType, setActiveType] = useState('')
+  const [activeBrand, setActiveBrand] = useState('')
+  const [activeCategory, setActiveCategory] = useState('')
   const [results, setResults] = useState<ProductItem[]>([])
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
@@ -308,7 +311,8 @@ export function ProductsContent({
   const [bugSubmitting, setBugSubmitting] = useState(false)
   const [bugDone, setBugDone] = useState(false)
 
-  const hasActiveFilter = activeBrand !== '' || activeType !== ''
+  const advancedFilterCount = [activeBrand, activeCategory].filter(Boolean).length
+  const hasAnyFilter = activeType !== '' || activeBrand !== '' || activeCategory !== ''
 
   useEffect(() => {
     clearTimeout(debounceRef.current)
@@ -316,9 +320,10 @@ export function ProductsContent({
       setLoading(true)
       try {
         const params = new URLSearchParams()
-        if (query.trim()) params.set('q', query.trim())
-        if (activeBrand) params.set('brand', activeBrand)
-        if (activeType) params.set('type', activeType)
+        if (query.trim())    params.set('q', query.trim())
+        if (activeBrand)     params.set('brand', activeBrand)
+        if (activeType)      params.set('type', activeType)
+        if (activeCategory)  params.set('category', activeCategory)
         const res = await fetch(`/api/products/search?${params.toString()}`)
         const data = await res.json()
         setResults(Array.isArray(data) ? data : [])
@@ -330,7 +335,7 @@ export function ProductsContent({
       }
     }, 250)
     return () => clearTimeout(debounceRef.current)
-  }, [query, activeBrand, activeType])
+  }, [query, activeBrand, activeType, activeCategory])
 
   async function submitBugReport() {
     if (!bugDesc.trim()) return
@@ -356,19 +361,20 @@ export function ProductsContent({
     }
   }
 
-  const filterTag = (label: string, active: boolean, onClick: () => void) => (
-    <button
-      key={label}
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-        active
-          ? 'bg-gray-900 text-white border-gray-900'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-      }`}
-    >
-      {label}
-    </button>
-  )
+  function TypePill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+    return (
+      <button
+        onClick={onClick}
+        className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
+          active
+            ? 'bg-gray-900 text-white border-gray-900'
+            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+        }`}
+      >
+        {label}
+      </button>
+    )
+  }
 
   return (
     <>
@@ -396,84 +402,83 @@ export function ProductsContent({
         )}
       </div>
 
-      {/* 篩選工具列 */}
+      {/* ── 商品類型 quick-filter pills ────────────────────── */}
+      {types.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <TypePill label="全部" active={activeType === ''} onClick={() => setActiveType('')} />
+          {types.map((t) => (
+            <TypePill key={t} label={t} active={activeType === t} onClick={() => setActiveType(activeType === t ? '' : t)} />
+          ))}
+        </div>
+      )}
+
+      {/* ── 進階篩選 bar ────────────────────────────────────── */}
       <div className="mb-6 space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilterOpen((v) => !v)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                filterOpen || hasActiveFilter
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
-              </svg>
-              篩選
-              {hasActiveFilter && (
-                <span className="bg-white text-gray-900 text-xs px-1.5 py-0.5 rounded-full font-bold leading-none">
-                  {(activeBrand ? 1 : 0) + (activeType ? 1 : 0)}
-                </span>
-              )}
-            </button>
-
-            {/* Active filter chips */}
-            {!filterOpen && hasActiveFilter && (
-              <div className="flex flex-wrap gap-1.5 items-center">
-                {activeBrand && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">
-                    {activeBrand}
-                    <button onClick={() => setActiveBrand('')} className="hover:text-gray-900 ml-0.5">✕</button>
-                  </span>
-                )}
-                {activeType && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">
-                    {activeType}
-                    <button onClick={() => setActiveType('')} className="hover:text-gray-900 ml-0.5">✕</button>
-                  </span>
-                )}
-              </div>
+          <button
+            onClick={() => setFilterOpen((v) => !v)}
+            className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              filterOpen || advancedFilterCount > 0 ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
+            </svg>
+            進階篩選
+            {advancedFilterCount > 0 && (
+              <span className="bg-gray-900 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {advancedFilterCount}
+              </span>
             )}
-          </div>
+          </button>
           <span className="text-sm text-gray-400">
             {initialized ? `${results.length} 筆` : `共 ${total} 筆`}
           </span>
         </div>
 
-        {/* 展開的篩選面板 */}
+        {/* 展開的進階篩選面板 */}
         <AnimatePresence>
           {filterOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
               className="panel p-4 space-y-4"
             >
+              {/* 生產商 */}
               {brands.length > 0 && (
                 <div>
-                  <p className="eyebrow mb-2">依生產商</p>
+                  <p className="eyebrow mb-2">生產商</p>
                   <div className="flex flex-wrap gap-2">
-                    {filterTag('全部', activeBrand === '', () => setActiveBrand(''))}
-                    {brands.map((b) => filterTag(b, activeBrand === b, () => setActiveBrand(activeBrand === b ? '' : b)))}
+                    <TypePill label="全部" active={activeBrand === ''} onClick={() => setActiveBrand('')} />
+                    {brands.map((b) => (
+                      <TypePill key={b} label={b} active={activeBrand === b} onClick={() => setActiveBrand(activeBrand === b ? '' : b)} />
+                    ))}
                   </div>
                 </div>
               )}
-              {types.length > 0 && (
+
+              {/* 分類 */}
+              {categories.length > 0 && (
                 <div>
-                  <p className="eyebrow mb-2">依商品類型</p>
+                  <p className="eyebrow mb-2">分類</p>
                   <div className="flex flex-wrap gap-2">
-                    {filterTag('全部', activeType === '', () => setActiveType(''))}
-                    {types.map((t) => filterTag(t, activeType === t, () => setActiveType(activeType === t ? '' : t)))}
+                    <TypePill label="全部" active={activeCategory === ''} onClick={() => setActiveCategory('')} />
+                    {categories.map((c) => (
+                      <TypePill key={c} label={c} active={activeCategory === c} onClick={() => setActiveCategory(activeCategory === c ? '' : c)} />
+                    ))}
                   </div>
                 </div>
               )}
-              {hasActiveFilter && (
+
+              {advancedFilterCount > 0 && (
                 <div className="pt-2 border-t border-gray-100 flex justify-end">
-                  <button onClick={() => { setActiveBrand(''); setActiveType('') }} className="text-xs text-gray-400 hover:text-gray-600">
-                    清除所有篩選
+                  <button
+                    onClick={() => { setActiveBrand(''); setActiveCategory('') }}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition"
+                  >
+                    清除篩選
                   </button>
                 </div>
               )}
