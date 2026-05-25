@@ -54,7 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/bd',                label: 'BD',       module: 'bd' },
   { href: '/products',          label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },
-  { href: '/orders',            label: '訂貨',     module: null },
+  { href: '/orders',            label: '訂貨',     module: 'orders' },
   { href: '/admin',             label: '行政管理', module: null, adminOrStaff: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },

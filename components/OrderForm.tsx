@@ -535,6 +535,7 @@ function ProductPicker({
 }
 
 // ── CustomerSearchBox ─────────────────────────────────────────
+// 單一文字欄位：直接打字即為客戶名稱；同時即時搜尋 CRM，選取後自動填入其他欄位
 
 interface CustomerResult {
   id: string
@@ -549,39 +550,43 @@ interface SelectedCustomer {
   address: string
   phone: string
   contactPerson: string
+  taxId: string
 }
 
-function CustomerSearchBox({
-  value,
+function CustomerNameInput({
+  customer,
   onChange,
+  disabled,
 }: {
-  value: SelectedCustomer
+  customer: SelectedCustomer
   onChange: (c: SelectedCustomer) => void
+  disabled?: boolean
 }) {
-  const [query, setQuery] = useState('')
   const [results, setResults] = useState<CustomerResult[]>([])
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
   const timerRef = useState<ReturnType<typeof setTimeout> | null>(null)
   const wrapRef = useState<HTMLDivElement | null>(null)
 
-  // Debounced search
-  useEffect(() => {
+  // Debounced CRM search
+  const handleNameChange = (val: string) => {
+    onChange({ ...customer, name: val, id: '' })
     if (timerRef[0]) clearTimeout(timerRef[0])
-    if (!query.trim()) { setResults([]); setOpen(false); return }
-    const t = setTimeout(async () => {
+    if (!val.trim()) { setResults([]); setOpen(false); return }
+    timerRef[0] = setTimeout(async () => {
       setSearching(true)
       try {
-        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(query)}`)
-        if (res.ok) { setResults(await res.json()); setOpen(true) }
+        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(val)}`)
+        if (res.ok) {
+          const data = await res.json()
+          setResults(data)
+          setOpen(data.length > 0)
+        }
       } catch { /* ignore */ } finally { setSearching(false) }
     }, 300)
-    timerRef[0] = t
-    return () => clearTimeout(t)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query])
+  }
 
-  // Click-outside to close
+  // Click-outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef[0] && !wrapRef[0].contains(e.target as Node)) setOpen(false)
@@ -593,63 +598,44 @@ function CustomerSearchBox({
 
   const handleSelect = async (c: CustomerResult) => {
     setOpen(false)
-    setQuery('')
-    // Fetch full details (phone)
+    setResults([])
     try {
       const res = await fetch(`/api/customers/${c.id}`)
       if (res.ok) {
         const data = await res.json()
+        const d = data.customer
         onChange({
           id: c.id,
-          name: data.customer?.name ?? c.name,
-          address: data.customer?.address ?? c.address,
-          phone: data.customer?.phone ?? '',
-          contactPerson: value.contactPerson, // keep existing
+          name: d?.name ?? c.name,
+          address: d?.address ?? c.address,
+          phone: d?.phone ?? '',
+          contactPerson: customer.contactPerson,
+          taxId: d?.taxId ?? '',
         })
         return
       }
     } catch { /* fallback */ }
-    onChange({ id: c.id, name: c.name, address: c.address, phone: '', contactPerson: value.contactPerson })
-  }
-
-  const handleClear = () => {
-    onChange({ id: '', name: '', address: '', phone: '', contactPerson: value.contactPerson })
-    setQuery('')
-    setResults([])
-  }
-
-  // Selected state
-  if (value.name) {
-    return (
-      <div className="flex items-start gap-3 bg-brand-50 border border-brand-200 rounded-lg px-4 py-3">
-        <div className="flex-1 min-w-0 space-y-0.5">
-          <div className="font-semibold text-stone-800 text-sm">{value.name}</div>
-          {value.address && <div className="text-xs text-stone-500">📍 {value.address}</div>}
-          {value.phone && <div className="text-xs text-stone-500">📞 {value.phone}</div>}
-        </div>
-        <button
-          onClick={handleClear}
-          className="text-stone-400 hover:text-red-500 text-xs shrink-0 mt-0.5 transition-colors"
-        >
-          ✕ 清除
-        </button>
-      </div>
-    )
+    onChange({ ...customer, id: c.id, name: c.name, address: c.address })
   }
 
   return (
     <div className="relative" ref={(el) => { wrapRef[0] = el }}>
-      <div className="flex items-center border rounded-lg px-3 py-2 gap-2 focus-within:ring-1 focus-within:ring-blue-400 bg-white">
-        <span className="text-gray-400 text-sm">🔍</span>
+      <div className="relative">
         <input
           type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={customer.name}
+          onChange={(e) => handleNameChange(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="輸入客戶名稱搜尋..."
-          className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400"
+          placeholder="輸入客戶 / 診所名稱（可直接填寫，或由 CRM 選取）"
+          disabled={disabled}
+          className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500 pr-16"
         />
-        {searching && <span className="text-xs text-gray-400 animate-pulse">搜尋中</span>}
+        {searching && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">搜尋中…</span>
+        )}
+        {!searching && customer.id && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ CRM</span>
+        )}
       </div>
 
       <AnimatePresence>
@@ -696,10 +682,12 @@ interface OrderFormProps {
     customerAddress?: string
     customerPhone?: string
     contactPerson?: string
+    customerTaxId?: string
   }
+  canEdit?: boolean
 }
 
-export default function OrderForm({ initialOrder }: OrderFormProps) {
+export default function OrderForm({ initialOrder, canEdit = true }: OrderFormProps) {
   const router = useRouter()
   const isEdit = !!initialOrder
 
@@ -730,6 +718,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
     address: initialOrder?.customerAddress ?? '',
     phone: initialOrder?.customerPhone ?? '',
     contactPerson: initialOrder?.contactPerson ?? '',
+    taxId: initialOrder?.customerTaxId ?? '',
   })
 
   // Load product catalog + salesperson options in parallel
@@ -806,6 +795,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
         customerAddress: customer.address,
         customerPhone: customer.phone,
         contactPerson: customer.contactPerson,
+        customerTaxId: customer.taxId,
       }
       if (isEdit && initialOrder) {
         await fetch(`/api/orders/${initialOrder.id}`, {
@@ -831,7 +821,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
 
   // Print
   const handlePrint = () => {
-    const html = buildPrintHtml({ orderNumber: initialOrder?.orderNumber ?? '(未儲存)', date, salesperson, note, status, items, customer })
+    const html = buildPrintHtml({ orderNumber: initialOrder?.orderNumber ?? '草稿', date, salesperson, note, status, items, customer })
     const iframe = document.createElement('iframe')
     iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;'
     document.body.appendChild(iframe)
@@ -918,29 +908,13 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
       </div>
 
       {/* 客戶資訊 */}
-      <div className="bg-white border rounded-lg p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
-          <span className="text-xs text-gray-400">可直接填寫，或用 CRM 搜尋自動帶入</span>
-        </div>
-
-        {/* CRM 搜尋（選填，自動填入下方欄位） */}
-        <CustomerSearchBox
-          value={customer}
-          onChange={setCustomer}
-        />
-
-        {/* 直接可輸入的欄位——永遠顯示 */}
+      <div className="bg-white border rounded-lg p-5 space-y-3">
+        <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* 客戶名稱：單一欄位，打字即搜尋 CRM */}
           <div className="sm:col-span-2">
             <label className="block text-xs text-gray-500 mb-1">客戶名稱</label>
-            <input
-              type="text"
-              value={customer.name}
-              onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))}
-              placeholder="客戶 / 診所名稱"
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-            />
+            <CustomerNameInput customer={customer} onChange={setCustomer} disabled={!canEdit} />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">聯絡人</label>
@@ -949,7 +923,8 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
               value={customer.contactPerson}
               onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
               placeholder="聯絡人姓名（選填）"
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              disabled={!canEdit}
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
             />
           </div>
           <div>
@@ -959,17 +934,30 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
               value={customer.phone}
               onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
               placeholder="電話號碼（選填）"
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              disabled={!canEdit}
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
             />
           </div>
-          <div className="sm:col-span-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">統一編號</label>
+            <input
+              type="text"
+              value={customer.taxId}
+              onChange={(e) => setCustomer((c) => ({ ...c, taxId: e.target.value }))}
+              placeholder="統一編號（選填）"
+              disabled={!canEdit}
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+            />
+          </div>
+          <div>
             <label className="block text-xs text-gray-500 mb-1">地址</label>
             <input
               type="text"
               value={customer.address}
               onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
               placeholder="送貨地址（選填）"
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              disabled={!canEdit}
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
             />
           </div>
         </div>
@@ -986,6 +974,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
               </span>
             )}
           </h2>
+          {canEdit && (
           <button
             onClick={() => setShowPicker(true)}
             disabled={catalogLoading}
@@ -993,6 +982,7 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
           >
             {catalogLoading ? '載入中...' : '+ 新增品項'}
           </button>
+        )}
         </div>
 
         {items.length === 0 ? (
@@ -1097,6 +1087,59 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
         )}
       </div>
 
+      {/* 訂購統計 */}
+      {items.length > 0 && (
+        <div className="bg-white border rounded-lg p-5">
+          <h2 className="font-semibold text-gray-800 text-sm mb-3">訂購統計</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 border-b">
+                  <th className="text-left pb-2 font-medium">品牌</th>
+                  <th className="text-center pb-2 font-medium">種類</th>
+                  <th className="text-center pb-2 font-medium">件數</th>
+                  {totalAmount > 0 && <th className="text-right pb-2 font-medium">小計</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {Object.entries(
+                  items.reduce((acc, it) => {
+                    if (!acc[it.brand]) acc[it.brand] = { kinds: 0, qty: 0, amt: 0 }
+                    acc[it.brand].kinds += 1
+                    acc[it.brand].qty += it.quantity
+                    acc[it.brand].amt += it.quantity * (it.unitPrice || 0)
+                    return acc
+                  }, {} as Record<string, { kinds: number; qty: number; amt: number }>)
+                )
+                  .sort((a, b) => b[1].qty - a[1].qty)
+                  .map(([brand, stat]) => (
+                    <tr key={brand} className="text-gray-700">
+                      <td className="py-1.5">{brand || '—'}</td>
+                      <td className="text-center py-1.5 tabular-nums">{stat.kinds} 種</td>
+                      <td className="text-center py-1.5 tabular-nums font-medium">{stat.qty} 件</td>
+                      {totalAmount > 0 && (
+                        <td className="text-right py-1.5 tabular-nums text-gray-500">
+                          {stat.amt > 0 ? stat.amt.toLocaleString() : '—'}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t font-semibold text-gray-800">
+                  <td className="pt-2">合計</td>
+                  <td className="text-center pt-2 tabular-nums">{items.length} 種</td>
+                  <td className="text-center pt-2 tabular-nums">{totalQty} 件</td>
+                  {totalAmount > 0 && (
+                    <td className="text-right pt-2 tabular-nums">NT$ {totalAmount.toLocaleString()}</td>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
@@ -1122,22 +1165,27 @@ export default function OrderForm({ initialOrder }: OrderFormProps) {
             </button>
           )}
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleSave('草稿')}
-            disabled={saving}
-            className="button-secondary px-5 py-2 text-sm rounded disabled:opacity-50"
-          >
-            {saving ? '儲存中...' : '儲存草稿'}
-          </button>
-          <button
-            onClick={() => handleSave('已送出')}
-            disabled={saving}
-            className="button-primary px-5 py-2 text-sm rounded disabled:opacity-50"
-          >
-            {saving ? '送出中...' : '✓ 送出訂單'}
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSave('草稿')}
+              disabled={saving}
+              className="button-secondary px-5 py-2 text-sm rounded disabled:opacity-50"
+            >
+              {saving ? '儲存中...' : '儲存草稿'}
+            </button>
+            <button
+              onClick={() => handleSave('已送出')}
+              disabled={saving}
+              className="button-primary px-5 py-2 text-sm rounded disabled:opacity-50"
+            >
+              {saving ? '送出中...' : '✓ 送出訂單'}
+            </button>
+          </div>
+        )}
+        {!canEdit && (
+          <span className="text-sm text-gray-400">（僅限閱覽，無編輯權限）</span>
+        )}
       </div>
 
       {/* Product picker panel */}
@@ -1163,7 +1211,7 @@ function buildPrintHtml(data: {
   note: string
   status: string
   items: OrderItem[]
-  customer?: SelectedCustomer
+  customer: SelectedCustomer
 }) {
   const totalQty  = data.items.reduce((a, i) => a + i.quantity, 0)
   const totalAmt  = calcTotal(data.items)
@@ -1199,6 +1247,7 @@ function buildPrintHtml(data: {
     </tr>`
 
   const c = data.customer
+  const hasCustomer = !!(c.name || c.phone || c.address || c.contactPerson || c.taxId)
 
   return `<!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -1274,12 +1323,12 @@ function buildPrintHtml(data: {
   </div>
 </div>
 
-${c?.name ? `
+${hasCustomer ? `
 <!-- Customer block -->
 <div class="cust">
   <div>
-    <div class="lbl">客戶</div>
-    <div class="cust-name">${c.name}</div>
+    <div class="lbl">客戶名稱</div>
+    <div class="cust-name">${c.name || '—'}</div>
   </div>
   <div>
     <div class="lbl">聯絡人</div>
@@ -1289,8 +1338,17 @@ ${c?.name ? `
     <div class="lbl">電話</div>
     <div class="val">${c.phone || '—'}</div>
   </div>
-  ${c.address ? `<div class="cust-addr"><div class="lbl">地址</div><div class="val">${c.address}</div></div>` : ''}
-</div>` : ''}
+  <div class="cust-addr" style="grid-column:1/3">
+    <div class="lbl">地址</div>
+    <div class="val">${c.address || '—'}</div>
+  </div>
+  ${c.taxId ? `<div><div class="lbl">統一編號</div><div class="val">${c.taxId}</div></div>` : ''}
+  ${data.note ? `<div><div class="lbl">訂單備注</div><div class="val">${data.note}</div></div>` : ''}
+</div>` : (data.note ? `
+<div style="background:#f8f8f8;border-bottom:1px solid #ddd;padding:6px 12px;font-size:12px">
+  <span style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:0.08em">備注</span>
+  <span style="margin-left:8px">${data.note}</span>
+</div>` : '')}
 
 <!-- Items table -->
 <table>

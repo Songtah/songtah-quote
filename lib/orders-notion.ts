@@ -96,6 +96,7 @@ export interface Order {
   customerAddress: string
   customerPhone: string
   contactPerson: string
+  customerTaxId: string
 }
 
 /** 計算訂單總金額 */
@@ -147,6 +148,7 @@ export async function createOrder(data: {
   customerAddress?: string
   customerPhone?: string
   contactPerson?: string
+  customerTaxId?: string
 }): Promise<Order> {
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
@@ -169,6 +171,7 @@ export async function createOrder(data: {
       地址:     { rich_text: richText(data.customerAddress ?? '') },
       電話:     { rich_text: richText(data.customerPhone ?? '') },
       聯絡人:   { rich_text: richText(data.contactPerson ?? '') },
+      統一編號: { rich_text: richText(data.customerTaxId ?? '') },
     },
   })
 
@@ -197,6 +200,7 @@ export async function updateOrder(id: string, data: {
   customerAddress?: string
   customerPhone?: string
   contactPerson?: string
+  customerTaxId?: string
 }): Promise<void> {
   const formatted = id.replace(
     /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
@@ -215,7 +219,8 @@ export async function updateOrder(id: string, data: {
   if (data.customerName !== undefined) props['客戶名稱'] = { rich_text: richText(data.customerName) }
   if (data.customerAddress !== undefined) props['地址']  = { rich_text: richText(data.customerAddress) }
   if (data.customerPhone !== undefined)   props['電話']  = { rich_text: richText(data.customerPhone) }
-  if (data.contactPerson !== undefined)   props['聯絡人'] = { rich_text: richText(data.contactPerson) }
+  if (data.contactPerson !== undefined)   props['聯絡人']   = { rich_text: richText(data.contactPerson) }
+  if (data.customerTaxId !== undefined)   props['統一編號'] = { rich_text: richText(data.customerTaxId) }
 
   await notion.pages.update({ page_id: formatted, properties: props })
 }
@@ -257,5 +262,6 @@ function parseOrderPage(page: any): Order {
     customerAddress: getText(page, '地址'),
     customerPhone: getText(page, '電話'),
     contactPerson: getText(page, '聯絡人'),
+    customerTaxId: getText(page, '統一編號'),
   }
 }
