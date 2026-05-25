@@ -1679,7 +1679,7 @@ export type ModulePermission = { view: boolean; edit: boolean }
 export type UserPermissions = Record<ModuleKey, ModulePermission>
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
-  crm:      'CRM',
+  crm:      '客戶管理',
   rma:      'RMA',
   bd:       'BD',
   products: '產品',

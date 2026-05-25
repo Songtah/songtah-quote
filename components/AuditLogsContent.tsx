@@ -21,7 +21,7 @@ function formatDateTime(value: string) {
 const MODULE_LABEL: Record<string, string> = {
   auth:       '登入',
   navigation: '頁面瀏覽',
-  crm:        'CRM',
+  crm:        '客戶管理',
   rma:        'RMA',
   accounts:   '帳號',
   quote:      '報價',

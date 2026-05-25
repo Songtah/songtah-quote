@@ -50,7 +50,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   }, [params.id])
 
   return (
-    <AppShell title="CRM 客戶管理" description="設備詳細資訊。">
+    <AppShell title="客戶管理" description="設備詳細資訊。">
       <div className="mb-4">
         <button
           onClick={() => router.back()}

@@ -19,7 +19,7 @@ type SessionUserLike = {
 function getPageTitle(pathname: string): string {
   const exact: Record<string, string> = {
     '/dashboard':         '首頁總覽',
-    '/customers':         'CRM 客戶列表',
+    '/customers':         '客戶管理',
     '/tickets':           'RMA 工單列表',
     '/bd':                'BD 商機',
     '/products':          '產品管理',
@@ -51,7 +51,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard',         label: '首頁',     module: null },
-  { href: '/customers',         label: 'CRM',      module: 'crm' },
+  { href: '/customers',         label: '客戶',      module: 'crm' },
   { href: '/tickets',           label: 'RMA',      module: 'rma' },
   { href: '/bd',                label: 'BD',       module: 'bd' },
   { href: '/products',          label: '產品',     module: 'products' },

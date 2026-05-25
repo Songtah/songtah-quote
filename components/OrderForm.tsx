@@ -634,7 +634,7 @@ function CustomerNameInput({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">搜尋中…</span>
         )}
         {!searching && customer.id && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ CRM</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ 已連結</span>
         )}
       </div>
 

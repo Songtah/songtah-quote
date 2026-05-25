@@ -134,7 +134,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
   }
 
   return (
-    <AppShell title="CRM 客戶管理" description="客戶主檔、設備清單與相關工單紀錄。">
+    <AppShell title="客戶管理" description="客戶主檔、設備清單與相關工單紀錄。">
       <div className="mb-4">
         <button
           onClick={() => router.back()}
