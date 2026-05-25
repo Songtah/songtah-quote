@@ -875,16 +875,26 @@ export async function getCustomerFilterOptions(): Promise<{
   const cacheKey = 'customer-filter-options-v2'
   const cached = getCachedValue<{ cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[] }>(cacheKey)
   if (cached) return cached
+
+  // ── Step 1: schema → cities, salespersons, types (selects) ──
+  let cities: string[] = []
+  let salespersons: string[] = []
+  let types: string[] = []
   try {
-    // Schema → cities, salespersons, types
-    const db: any = await notionCallWithRetry('getCustomerFilterOptions', () =>
+    const db: any = await notionCallWithRetry('getCustomerFilterOptions:schema', () =>
       notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) })
     )
     const opts = (propName: string): string[] =>
       (db.properties?.[propName]?.select?.options ?? []).map((o: any) => o.name).filter(Boolean)
+    cities      = opts('縣市')
+    salespersons = opts('負責業務')
+    types       = opts('客戶類型')
+  } catch { /* return what we have */ }
 
-    // Build city → districts[] from actual records (so only real combinations appear)
-    const districtsByCity: Record<string, string[]> = {}
+  // ── Step 2: query records to build city → districts[] map ──
+  // 行政區 is a rich_text field, so we read it from actual records.
+  const districtsByCity: Record<string, string[]> = {}
+  try {
     let cursor: string | undefined
     do {
       const response: any = await notionCallWithRetry('getCustomerFilterOptions:pages', () =>
@@ -896,7 +906,8 @@ export async function getCustomerFilterOptions(): Promise<{
       )
       for (const page of response.results ?? []) {
         const city     = getSelect(page, '縣市')
-        const district = getSelect(page, '行政區') || getText(page, '行政區')
+        // 行政區 is rich_text in this DB
+        const district = getText(page, '行政區')
         if (city && district) {
           if (!districtsByCity[city]) districtsByCity[city] = []
           if (!districtsByCity[city].includes(district)) districtsByCity[city].push(district)
@@ -904,21 +915,12 @@ export async function getCustomerFilterOptions(): Promise<{
       }
       cursor = response.has_more ? response.next_cursor : undefined
     } while (cursor)
-
-    // Sort districts within each city
     Object.values(districtsByCity).forEach((arr) => arr.sort())
+  } catch { /* districtsByCity stays partial — that's OK */ }
 
-    const result = {
-      cities: opts('縣市'),
-      districtsByCity,
-      salespersons: opts('負責業務'),
-      types: opts('客戶類型'),
-    }
-    setCachedValue(cacheKey, result, 300_000)
-    return result
-  } catch {
-    return { cities: [], districtsByCity: {}, salespersons: [], types: [] }
-  }
+  const result = { cities, districtsByCity, salespersons, types }
+  setCachedValue(cacheKey, result, 300_000)
+  return result
 }
 
 export type ProductItem = {
