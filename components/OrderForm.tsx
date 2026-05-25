@@ -257,12 +257,9 @@ function ProductPicker({
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [search, filterBrand, filterType])
 
-  // 只有輸入文字關鍵字才進「搜尋模式」（顯示平鋪清單）；
-  // 單純選品牌 / 類型篩選仍停在「瀏覽模式」（系列 Accordion），
-  // filteredFamilies 已依 filterBrand / filterType 過濾。
   const isSearching = search.trim().length > 0
 
-  // 瀏覽模式下，依篩選條件過濾系列
+  // 瀏覽模式：依品牌 / 類型篩選系列
   const filteredFamilies = useMemo(() => {
     if (!filterBrand && !filterType) return families
     return families.filter((f) => {
@@ -271,6 +268,37 @@ function ProductPicker({
       return true
     })
   }, [families, filterBrand, filterType])
+
+  // 搜尋模式：以關鍵字比對系列名稱 / 品牌 / 分類，同時套用 brand/type 篩選
+  const familySearchResults = useMemo(() => {
+    if (!search.trim()) return []
+    const kw = search.trim().toLowerCase()
+    return families.filter((f) => {
+      if (filterBrand && f.brand !== filterBrand) return false
+      if (filterType && f.productType !== filterType) return false
+      return (
+        f.seriesName.toLowerCase().includes(kw) ||
+        f.brand.toLowerCase().includes(kw) ||
+        f.category.toLowerCase().includes(kw) ||
+        f.seriesCode.toLowerCase().includes(kw)
+      )
+    })
+  }, [families, search, filterBrand, filterType])
+
+  // 所有已被規格系列涵蓋的貨品碼（skuMap 中的 value），用於過濾搜尋結果
+  const coveredSkuCodes = useMemo(() => {
+    const s = new Set<string>()
+    families.forEach((f) => {
+      if (f.skuMap) Object.values(f.skuMap).forEach((code) => s.add(code))
+    })
+    return s
+  }, [families])
+
+  // 搜尋模式：去除已有規格系列涵蓋的品項，避免重複顯示
+  const remainingSearchResults = useMemo(
+    () => searchResults.filter((item) => !coveredSkuCodes.has(item.skuCode)),
+    [searchResults, coveredSkuCodes]
+  )
 
   const handleAddItem = useCallback(
     (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => onAdd(item),
@@ -360,37 +388,82 @@ function ProductPicker({
         {/* Results */}
         <div className="flex-1 overflow-y-auto">
           {isSearching ? (
-            /* ── 搜尋 / 篩選模式：平鋪品項 ── */
+            /* ── 搜尋模式：規格系列優先，再顯示其餘個別品項 ── */
             searchLoading ? (
               <div className="text-center text-gray-400 py-12 text-sm animate-pulse">搜尋中...</div>
-            ) : searchResults.length === 0 ? (
+            ) : familySearchResults.length === 0 && remainingSearchResults.length === 0 ? (
               <div className="text-center text-gray-400 py-12 text-sm">無符合品項</div>
             ) : (
               <div className="divide-y">
-                {searchResults.map((item) => (
-                  <div
-                    key={item.skuCode}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
-                      <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
-                        <span className="font-mono">{item.skuCode}</span>
-                        <span>{item.manufacturer} · {item.category}</span>
-                      </div>
+                {/* ① 符合的規格系列 */}
+                {familySearchResults.map((family) => {
+                  const isExpanded = expandedFamilyId === family.id
+                  return (
+                    <div key={family.id}>
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                        onClick={() => toggleFamily(family.id)}
+                      >
+                        <span className="text-gray-400 text-xs w-4 shrink-0">
+                          {isExpanded ? '▾' : '▸'}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-800">{family.seriesName}</div>
+                          <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
+                            <span>{family.brand}</span>
+                            <span>·</span>
+                            <span>{family.productType}</span>
+                            {family.specs.length > 0 && (
+                              <>
+                                <span>·</span>
+                                <span className="text-brand-500">
+                                  {family.specs.map((s) => s.label).join(' × ')}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <FamilySpecPanel family={family} onAdd={handleAddItem} />
+                      )}
                     </div>
-                    <button
-                      onClick={() => handleAddCatalogItem(item)}
-                      className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
-                    >
-                      + 加入
-                    </button>
-                  </div>
-                ))}
-                {searchResults.length >= 80 && (
-                  <div className="text-center text-xs text-gray-400 py-3 bg-gray-50">
-                    顯示前 80 筆，請輸入更精確的關鍵字
-                  </div>
+                  )
+                })}
+                {/* ② 其餘不屬於任何規格系列的個別品項 */}
+                {remainingSearchResults.length > 0 && (
+                  <>
+                    {familySearchResults.length > 0 && (
+                      <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 text-xs text-gray-500 font-medium">
+                        其他品項
+                      </div>
+                    )}
+                    {remainingSearchResults.map((item) => (
+                      <div
+                        key={item.skuCode}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
+                          <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                            <span className="font-mono">{item.skuCode}</span>
+                            <span>{item.manufacturer} · {item.category}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddCatalogItem(item)}
+                          className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                        >
+                          + 加入
+                        </button>
+                      </div>
+                    ))}
+                    {remainingSearchResults.length >= 80 && (
+                      <div className="text-center text-xs text-gray-400 py-3 bg-gray-50">
+                        顯示前 80 筆，請輸入更精確的關鍵字
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )
@@ -450,7 +523,7 @@ function ProductPicker({
         {/* Footer */}
         <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-gray-400 text-center bg-gray-50">
           {isSearching
-            ? `搜尋結果 ${searchResults.length} 項（共 6,037 筆商品）`
+            ? `${familySearchResults.length} 個系列・${remainingSearchResults.length} 筆其他品項`
             : `${filteredFamilies.length} 個規格系列 · 搜尋可找到全部 6,037 筆`}
         </div>
       </motion.div>
