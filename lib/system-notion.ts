@@ -531,6 +531,7 @@ export type SystemCustomerDetail = {
   address: string
   phone: string
   taxId: string
+  institutionCode: string
   dentistCount: number
   technicianCount: number
   technicianTraineeCount: number
@@ -551,6 +552,7 @@ export async function getSystemCustomerById(id: string): Promise<SystemCustomerD
       address: getText(page, '地址'),
       phone: page.properties?.['電話']?.phone_number ?? getText(page, '電話'),
       taxId: getText(page, '統一編號'),
+      institutionCode: getText(page, '機構代碼'),
       dentistCount: getNumber(page, '牙醫師數'),
       technicianCount: getNumber(page, '牙體技術師數'),
       technicianTraineeCount: getNumber(page, '牙體技術生數量'),
@@ -823,11 +825,11 @@ export type CustomerSearchResult = {
 
 export async function searchSystemCustomers(
   query: string,
-  filters?: { city?: string; district?: string; salesperson?: string }
+  filters?: { city?: string; district?: string; salesperson?: string; type?: string }
 ): Promise<CustomerSearchResult[]> {
   if (!DB.customers) return []
   const keyword = query.trim()
-  const hasFilters = !!(filters?.city || filters?.district || filters?.salesperson)
+  const hasFilters = !!(filters?.city || filters?.district || filters?.salesperson || filters?.type)
   if (!keyword && !hasFilters) return []
 
   const cacheKey = `sys-customers:${keyword}:${JSON.stringify(filters ?? {})}`.toLowerCase()
@@ -839,6 +841,7 @@ export async function searchSystemCustomers(
   if (filters?.city) clauses.push({ property: '縣市', select: { equals: filters.city } })
   if (filters?.district) clauses.push({ property: '行政區', select: { equals: filters.district } })
   if (filters?.salesperson) clauses.push({ property: '負責業務', select: { equals: filters.salesperson } })
+  if (filters?.type) clauses.push({ property: '客戶類型', select: { equals: filters.type } })
 
   const notionFilter = clauses.length === 1 ? clauses[0] : { and: clauses }
 
@@ -866,11 +869,11 @@ export async function searchSystemCustomers(
 }
 
 export async function getCustomerFilterOptions(): Promise<{
-  cities: string[]; districts: string[]; salespersons: string[]
+  cities: string[]; districts: string[]; salespersons: string[]; types: string[]
 }> {
-  if (!DB.customers) return { cities: [], districts: [], salespersons: [] }
+  if (!DB.customers) return { cities: [], districts: [], salespersons: [], types: [] }
   const cacheKey = 'customer-filter-options'
-  const cached = getCachedValue<{ cities: string[]; districts: string[]; salespersons: string[] }>(cacheKey)
+  const cached = getCachedValue<{ cities: string[]; districts: string[]; salespersons: string[]; types: string[] }>(cacheKey)
   if (cached) return cached
   try {
     const db: any = await notionCallWithRetry('getCustomerFilterOptions', () =>
@@ -882,11 +885,12 @@ export async function getCustomerFilterOptions(): Promise<{
       cities: opts('縣市'),
       districts: opts('行政區'),
       salespersons: opts('負責業務'),
+      types: opts('客戶類型'),
     }
     setCachedValue(cacheKey, result, 300_000)
     return result
   } catch {
-    return { cities: [], districts: [], salespersons: [] }
+    return { cities: [], districts: [], salespersons: [], types: [] }
   }
 }
 

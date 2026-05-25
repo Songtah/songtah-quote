@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
   const city = req.nextUrl.searchParams.get('city') || undefined
   const district = req.nextUrl.searchParams.get('district') || undefined
   const salesperson = req.nextUrl.searchParams.get('salesperson') || undefined
+  const type = req.nextUrl.searchParams.get('type') || undefined
 
   try {
-    const customers = await searchSystemCustomers(q, { city, district, salesperson })
+    const customers = await searchSystemCustomers(q, { city, district, salesperson, type })
     return NextResponse.json(customers)
   } catch (error) {
     console.error('searchSystemCustomers error:', error)

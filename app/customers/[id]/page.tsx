@@ -165,6 +165,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
               <Info label="客戶名稱" value={data.customer.name} />
               <Info label="縣市" value={data.customer.city} />
               <Info label="客戶類型" value={data.customer.type} />
+              <Info label="機構代碼" value={data.customer.institutionCode} />
               <Info label="狀態" value={data.customer.status} />
               {data.customer.phone && <Info label="電話" value={data.customer.phone} />}
               {data.customer.taxId && <Info label="統一編號" value={data.customer.taxId} />}
