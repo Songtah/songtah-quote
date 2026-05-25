@@ -548,6 +548,54 @@
     ]
   },
   {
+    "id": "YMH-WAX",
+    "seriesCode": "YMH-31/32/37/38",
+    "seriesName": "Wax Disk 蠟塊",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "蠟塊",
+    "skuPattern": "",
+    "namePattern": "Wax Disk {顏色} ({直徑}*{厚度}mm)",
+    "specs": [
+      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
+      { "key": "顏色", "label": "顏色", "options": ["白色", "綠色", "象牙白"] },
+      { "key": "厚度", "label": "厚度 (mm)", "options": ["10", "12", "14", "16", "18", "20", "22", "25"] }
+    ],
+    "skuMap": {
+      "95|綠色|10":    "YMH-32-10",
+      "95|綠色|14":    "YMH-32-14",
+      "95|綠色|16":    "YMH-32",
+      "95|綠色|18":    "YMH-32-18",
+      "95|綠色|20":    "YMH-32-20",
+      "95|象牙白|16":  "YMH-38-16",
+      "95|象牙白|20":  "YMH-38-20",
+      "98.5|白色|10":  "YMH-31-10",
+      "98.5|白色|12":  "YMH-31-12",
+      "98.5|白色|14":  "YMH-31-14",
+      "98.5|白色|16":  "YMH-31-16",
+      "98.5|白色|18":  "YMH-31-18",
+      "98.5|白色|20":  "YMH-31",
+      "98.5|白色|22":  "YMH-31-22",
+      "98.5|白色|25":  "YMH-31-25",
+      "98.5|象牙白|14": "YMH-37-14",
+      "98.5|象牙白|16": "YMH-37-16",
+      "98.5|象牙白|20": "YMH-37-20"
+    }
+  },
+  {
+    "id": "ZZ-WAX",
+    "seriesCode": "ZZ-999-024",
+    "seriesName": "Wax White 蠟塊",
+    "brand": "Zirkonzahn",
+    "productType": "材料",
+    "category": "蠟塊",
+    "skuPattern": "ZZ-999-024-95H{厚度}",
+    "namePattern": "Wax White 95H{厚度}",
+    "specs": [
+      { "key": "厚度", "label": "厚度 (mm)", "options": ["10", "16"] }
+    ]
+  },
+  {
     "id": "YMH-PMMA-VITA",
     "seriesCode": "YMH-34/35",
     "seriesName": "PMMA 牙色塊",
