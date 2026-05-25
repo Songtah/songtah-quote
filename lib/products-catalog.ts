@@ -35,6 +35,8 @@ export interface ProductFamily {
   skuPattern: string  // template: "BS-STML-{直徑}H{厚度}-{顏色}"
   namePattern: string // template: "3D Master {直徑}H{厚度}-{顏色}"
   specs: SpecDefinition[]
+  /** 貨品碼不規則時，用查表取代 pattern。key 格式：各規格值以 "|" 串接 */
+  skuMap?: Record<string, string>
 }
 
 // ── Data loading (server-side, cached in module scope) ───────────────────────
