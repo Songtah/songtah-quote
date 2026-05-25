@@ -21,6 +21,8 @@ export default function OrdersContent() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -38,6 +40,17 @@ export default function OrdersContent() {
   }, [])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    setConfirmDeleteId(null)
+    try {
+      await fetch(`/api/orders/${id}`, { method: 'DELETE' })
+      setOrders((prev) => prev.filter((o) => o.id !== id))
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     setUpdatingId(id)
@@ -144,12 +157,40 @@ export default function OrdersContent() {
                       </select>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="text-blue-500 hover:text-blue-700 text-xs"
-                      >
-                        查看 ›
-                      </Link>
+                      <div className="flex items-center justify-center gap-3">
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="text-blue-500 hover:text-blue-700 text-xs"
+                        >
+                          查看 ›
+                        </Link>
+                        {confirmDeleteId === order.id ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-xs text-gray-500">確定刪除？</span>
+                            <button
+                              onClick={() => handleDelete(order.id)}
+                              disabled={deletingId === order.id}
+                              className="text-xs text-red-600 font-semibold hover:text-red-800 disabled:opacity-50"
+                            >
+                              {deletingId === order.id ? '刪除中…' : '確定'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs text-gray-400 hover:text-gray-600"
+                            >
+                              取消
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(order.id)}
+                            disabled={deletingId === order.id}
+                            className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50"
+                          >
+                            刪除
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

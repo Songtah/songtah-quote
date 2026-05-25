@@ -181,6 +181,14 @@ export async function createOrder(data: {
   return parseOrderPage(page)
 }
 
+export async function archiveOrder(id: string): Promise<void> {
+  const formatted = id.replace(
+    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
+    '$1-$2-$3-$4-$5'
+  )
+  await notion.pages.update({ page_id: formatted, archived: true })
+}
+
 export async function updateOrderStatus(id: string, status: string): Promise<void> {
   const formatted = id.replace(
     /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
