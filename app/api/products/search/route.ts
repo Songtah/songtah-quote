@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
-import { searchProducts } from '@/lib/system-notion'
+import { searchCatalog } from '@/lib/products-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,16 +9,34 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const q        = req.nextUrl.searchParams.get('q')        ?? ''
-  const brand    = req.nextUrl.searchParams.get('brand')    ?? ''
-  const type     = req.nextUrl.searchParams.get('type')     ?? ''
-  const category = req.nextUrl.searchParams.get('category') ?? ''
+  const q           = req.nextUrl.searchParams.get('q')           ?? ''
+  const brand       = req.nextUrl.searchParams.get('brand')       ?? ''
+  const productType = req.nextUrl.searchParams.get('type')        ?? ''
+  const category    = req.nextUrl.searchParams.get('category')    ?? ''
+  const limitParam  = req.nextUrl.searchParams.get('limit')       ?? '50'
+  const limit       = Math.min(parseInt(limitParam, 10) || 50, 200)
 
-  let products = await searchProducts(q)
+  const products = searchCatalog({
+    q,
+    brand:       brand       || undefined,
+    productType: productType || undefined,
+    category:    category    || undefined,
+    limit,
+  })
 
-  if (brand)    products = products.filter((p) => p.manufacturer === brand)
-  if (type)     products = products.filter((p) => p.productType  === type)
-  if (category) products = products.filter((p) => p.category     === category)
-
-  return NextResponse.json(products)
+  // Map to the shape the existing UI expects (OrderForm / QuoteForm)
+  return NextResponse.json(
+    products.map((p) => ({
+      id:           p.code,  // use code as ID for catalog items
+      name:         p.name,
+      manufacturer: p.brand,
+      productType:  p.productType,
+      category:     p.category,
+      skuCode:      p.code,
+      // Fields not in the static catalog — left empty; Notion-backed entries fill these
+      price:        null,
+      salePrice:    null,
+      notes:        '',
+    }))
+  )
 }

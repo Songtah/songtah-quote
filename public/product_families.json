@@ -1,0 +1,606 @@
+[
+  {
+    "id": "BS-STML",
+    "seriesCode": "BS-STML",
+    "seriesName": "3D Master 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "BS-STML-{直徑}H{厚度}-{顏色}",
+    "namePattern": "3D Master {直徑}H{厚度}-{顏色}",
+    "specs": [
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "12",
+          "14",
+          "16",
+          "18",
+          "20",
+          "22",
+          "25"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4",
+          "OM1",
+          "OM2",
+          "OM3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-SHTML",
+    "seriesCode": "BS-SHTML",
+    "seriesName": "3D HTML 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "BS-SHTML-{直徑}H{厚度}-{顏色}",
+    "namePattern": "3D HTML {直徑}H{厚度}-{顏色}",
+    "specs": [
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "12",
+          "14",
+          "16",
+          "18",
+          "20",
+          "22",
+          "25"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4",
+          "OM1",
+          "OM2",
+          "OM3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-HT+",
+    "seriesCode": "BS-HT+",
+    "seriesName": "HT+ 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "BS-HT+{直徑}H{厚度}",
+    "namePattern": "HT+ {直徑}H{厚度}",
+    "specs": [
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "12",
+          "14",
+          "16",
+          "18",
+          "20",
+          "22",
+          "25"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-GL",
+    "seriesCode": "BS-GL",
+    "seriesName": "Glass Ceramic 玻璃陶瓷塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "玻璃陶瓷塊",
+    "skuPattern": "BS-GL-{透明度}-{顏色}",
+    "namePattern": "Glass Ceramic {透明度} {顏色}",
+    "specs": [
+      {
+        "key": "透明度",
+        "label": "透明度",
+        "options": [
+          "HT",
+          "LT"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "OM1",
+          "OM2"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-14",
+    "seriesCode": "BS-14",
+    "seriesName": "Artamic Stain/Glaze",
+    "brand": "貝施美",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "BS-14-{色號}",
+    "namePattern": "Artamic Stain/Glaze {色號}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "1 (Purple-Gray)",
+          "2 (Orange)",
+          "3 (White)",
+          "4 (Black)",
+          "5 (Red)",
+          "6 (Brown)",
+          "7 (Pink)",
+          "8 (Blue)",
+          "9 (Purple Grey)",
+          "10 (Glaze)",
+          "10-2 (3D Glaze)",
+          "11 (Stain Glaze A)",
+          "12 (Stain Glaze B)",
+          "13 (Stain Glaze C)",
+          "14 (D3)",
+          "14-D4 (D4)",
+          "15 (Yellow)",
+          "16 (Light Brown)",
+          "17 (Terracotta)",
+          "18 (Purplish Red)",
+          "21 (Light Pink)",
+          "21-3D (3D Light Pink)",
+          "22 (Orange Pink)",
+          "22-3D (3D Orange Pink)",
+          "23 (Reddish Brown)",
+          "25 (Blending Liquid)",
+          "26 (Translucent Glaze)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-50",
+    "seriesCode": "BS-50",
+    "seriesName": "SHT 3D 內染液",
+    "brand": "貝施美",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "BS-50-{色號}",
+    "namePattern": "內染液 SHT-{色號} 50ml",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號 (3D Master)",
+        "options": [
+          "1M1",
+          "1M2",
+          "2L1.5",
+          "2L2.5",
+          "2M1",
+          "2M2",
+          "2M3",
+          "2R1.5",
+          "2R2.5",
+          "3L1.5",
+          "3L2.5",
+          "3M1",
+          "3M2",
+          "3M3",
+          "3R1.5",
+          "3R2.5",
+          "4L1.5",
+          "4L2.5",
+          "4M1",
+          "4M2",
+          "4M3",
+          "4R1.5",
+          "4R2.5",
+          "5M1",
+          "5M2",
+          "5M3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "BS-20",
+    "seriesCode": "BS-20",
+    "seriesName": "BSM 內染液",
+    "brand": "貝施美",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "BS-20-{色號}",
+    "namePattern": "內染液 {色號} 20ml",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "03 Vanilla",
+          "01 Orange",
+          "02 Brown",
+          "G1 Pink",
+          "G2 RED",
+          "G3 Violet",
+          "P1 Sunrise",
+          "P2 Sunset",
+          "P3 Olive",
+          "TO1 (切端透明)",
+          "TO2 切端藍色",
+          "TO3 切端灰色",
+          "TO4 切端色",
+          "TOB",
+          "TOG",
+          "V1 Opaque (white)",
+          "V1-1 Opaque (yellow)",
+          "V2 Grey",
+          "V3 Blue"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "YM-DENTINE",
+    "seriesCode": "YM-DA",
+    "seriesName": "ZEO Dentine 牙本質瓷粉",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉 / 陶瓷",
+    "skuPattern": "YM-DA{顏色}-{容量}",
+    "namePattern": "ZEO Dentine {顏色} ({容量}g)",
+    "specs": [
+      {
+        "key": "顏色",
+        "label": "顏色 (Shade)",
+        "options": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      {
+        "key": "容量",
+        "label": "容量 (g)",
+        "options": [
+          "20",
+          "50",
+          "200"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "YM-ENAMEL",
+    "seriesCode": "YM-EN",
+    "seriesName": "ZEO Enamel 琺瑯質瓷粉",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉 / 陶瓷",
+    "skuPattern": "YM-EN{顏色}-{容量}",
+    "namePattern": "ZEO Enamel {顏色} ({容量}g)",
+    "specs": [
+      {
+        "key": "顏色",
+        "label": "顏色 (Shade)",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "C1",
+          "C2",
+          "D2"
+        ]
+      },
+      {
+        "key": "容量",
+        "label": "容量 (g)",
+        "options": [
+          "20",
+          "50",
+          "200"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "YM-ACCENT",
+    "seriesCode": "YM-ACC",
+    "seriesName": "ZEO Accent 效果瓷粉",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉 / 陶瓷",
+    "skuPattern": "YM-ACC-{型號}-{容量}",
+    "namePattern": "ZEO Accent {型號} ({容量}g)",
+    "specs": [
+      {
+        "key": "型號",
+        "label": "型號",
+        "options": [
+          "T-Clear",
+          "T-Natural",
+          "T-Salmon",
+          "T-Amber",
+          "T-Buff",
+          "T-Glass",
+          "T-Gray",
+          "T-Blue",
+          "T-Violet",
+          "T-Pink",
+          "T-Baby Pink",
+          "T-Opacity",
+          "Opal 1",
+          "Opal 2",
+          "White",
+          "Snow White",
+          "Milky",
+          "Vanilla",
+          "Yellow-Ocher",
+          "Mamelon-Vanilla",
+          "Mamelon-Orange",
+          "Mamelon-Yellow",
+          "Occlusal-Brown",
+          "Occlusal-Enamel",
+          "Occlusal-Orange",
+          "Opal-Amber"
+        ]
+      },
+      {
+        "key": "容量",
+        "label": "容量 (g)",
+        "options": [
+          "20",
+          "50",
+          "200"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ZZ-PRETTAU-COLOR",
+    "seriesCode": "ZZ-46",
+    "seriesName": "Prettau Color Liquid 上色液",
+    "brand": "Zirkonzahn",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "ZZ-46-{顏色}",
+    "namePattern": "Prettau Color Liquid {顏色}",
+    "specs": [
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4",
+          "Tissue A",
+          "Tissue B",
+          "Tissue C",
+          "Orange 1",
+          "Brown 2",
+          "Grey",
+          "Violet"
+        ]
+      },
+      {
+        "key": "容量",
+        "label": "容量",
+        "options": [
+          "20ml",
+          "50ml"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ZZ-PRETTAU-STAIN",
+    "seriesCode": "ZZ-47",
+    "seriesName": "Prettau Stain 上色瓷",
+    "brand": "Zirkonzahn",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "ZZ-47-{色號}",
+    "namePattern": "Prettau Stain {色號} (1g)",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A2-A3.5",
+          "B2-B4",
+          "A1",
+          "D2-D3",
+          "C3-C4",
+          "C1-C2",
+          "D4",
+          "B1"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ZZ-3D-STAIN",
+    "seriesCode": "ZZ-49-3D",
+    "seriesName": "Prettau 3D Stain",
+    "brand": "Zirkonzahn",
+    "productType": "藥液",
+    "category": "染液 / 色料",
+    "skuPattern": "ZZ-49-3D-{色號}",
+    "namePattern": "3D Stain {色號}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "White",
+          "Orange 1",
+          "Orange 2",
+          "Brown",
+          "Blue 1",
+          "Blue 2",
+          "LuNe",
+          "Black",
+          "Transpa 1",
+          "Transpa 3",
+          "Vanilla",
+          "Base A",
+          "Base B",
+          "Base C",
+          "Base D"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ADB",
+    "seriesCode": "ADB",
+    "seriesName": "Prima Carbide Bur 鎢鋼車針",
+    "brand": "Prima Dental",
+    "productType": "耗材",
+    "category": "車針 / 鑽針",
+    "skuPattern": "ADB-{型號}",
+    "namePattern": "Carbide Bur {型號}",
+    "specs": [
+      {
+        "key": "型號",
+        "label": "型號",
+        "options": [
+          "HP1",
+          "HP2",
+          "HP3",
+          "HP4",
+          "HP5",
+          "HP6",
+          "HP7",
+          "HP8",
+          "HP9",
+          "HP10",
+          "HP11",
+          "HP12",
+          "HP13",
+          "HP14",
+          "HP15",
+          "HP16",
+          "HP17",
+          "HP18",
+          "HP19",
+          "HP20",
+          "HP21",
+          "HP22",
+          "HP23",
+          "HP24",
+          "HP25",
+          "HP26",
+          "HP27",
+          "HP28",
+          "HP29",
+          "HP30",
+          "HP31",
+          "HP32",
+          "HP33",
+          "HP34",
+          "HP35",
+          "HP36",
+          "HP37",
+          "HP38"
+        ]
+      }
+    ]
+  }
+]
