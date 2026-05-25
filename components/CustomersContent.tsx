@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { staggerFast, listItem, slideDown } from '@/lib/motion'
 
 type Customer = { id: string; name: string; city: string; district: string; type: string; salesperson: string }
 type FilterOptions = { cities: string[]; districts: string[]; salespersons: string[] }
@@ -128,55 +130,63 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
         </div>
 
         {/* Filter panel */}
-        {showFilters && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">縣市</label>
-                <select
-                  value={filters.city}
-                  onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value, district: '' }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
-                >
-                  <option value="">全部縣市</option>
-                  {options.cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              variants={slideDown}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">縣市</label>
+                  <select
+                    value={filters.city}
+                    onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value, district: '' }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
+                  >
+                    <option value="">全部縣市</option>
+                    {options.cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">鄉鎮市區</label>
+                  <select
+                    value={filters.district}
+                    onChange={(e) => setFilters((f) => ({ ...f, district: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
+                  >
+                    <option value="">全部行政區</option>
+                    {options.districts.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">業務</label>
+                  <select
+                    value={filters.salesperson}
+                    onChange={(e) => setFilters((f) => ({ ...f, salesperson: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
+                  >
+                    <option value="">全部業務</option>
+                    {options.salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">鄉鎮市區</label>
-                <select
-                  value={filters.district}
-                  onChange={(e) => setFilters((f) => ({ ...f, district: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
-                >
-                  <option value="">全部行政區</option>
-                  {options.districts.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">業務</label>
-                <select
-                  value={filters.salesperson}
-                  onChange={(e) => setFilters((f) => ({ ...f, salesperson: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
-                >
-                  <option value="">全部業務</option>
-                  {options.salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
-            {activeFilterCount > 0 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition"
-                >
-                  清除篩選
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {activeFilterCount > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition"
+                  >
+                    清除篩選
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Active filter chips */}
         {activeFilterCount > 0 && !showFilters && (
@@ -223,30 +233,37 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
             {isActive && !searching ? '找不到符合的客戶' : isActive ? '搜尋中…' : '尚未載入客戶資料'}
           </div>
         ) : (
-          <div className={`divide-y divide-gray-50 ${searching ? 'opacity-50' : ''} transition-opacity`}>
+          <motion.div
+            key={displayList.map((c) => c.id).join(',')}
+            variants={staggerFast}
+            initial="hidden"
+            animate="show"
+            className={`divide-y divide-gray-50 ${searching ? 'opacity-50' : ''} transition-opacity`}
+          >
             {displayList.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => router.push(`/customers/${c.id}`)}
-                className="w-full text-left px-6 py-4 hover:bg-green-50 transition flex items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="font-semibold text-slate-900">{c.name}</div>
-                  {(c.city || c.type) && (
-                    <div className="text-sm text-slate-500 mt-0.5">
-                      {[c.city, c.district, c.type].filter(Boolean).join('・')}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {c.salesperson && (
-                    <span className="text-xs text-slate-400">{c.salesperson}</span>
-                  )}
-                  <span className="text-slate-300">›</span>
-                </div>
-              </button>
+              <motion.div key={c.id} variants={listItem}>
+                <button
+                  onClick={() => router.push(`/customers/${c.id}`)}
+                  className="w-full text-left px-6 py-4 hover:bg-green-50 transition flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="font-semibold text-slate-900">{c.name}</div>
+                    {(c.city || c.type) && (
+                      <div className="text-sm text-slate-500 mt-0.5">
+                        {[c.city, c.district, c.type].filter(Boolean).join('・')}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {c.salesperson && (
+                      <span className="text-xs text-slate-400">{c.salesperson}</span>
+                    )}
+                    <span className="text-slate-300">›</span>
+                  </div>
+                </button>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
     </>

@@ -5,7 +5,9 @@ import Image from 'next/image'
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { motion } from 'framer-motion'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
+import { fadeUp } from '@/lib/motion'
 
 type SessionUserLike = {
   role?: string
@@ -159,11 +161,13 @@ export function AppShell({
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <p className="muted mt-1 max-w-3xl">{description}</p>
-        </div>
-        {children}
+        <motion.div key={pathname} variants={fadeUp} initial="hidden" animate="show">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            <p className="muted mt-1 max-w-3xl">{description}</p>
+          </div>
+          {children}
+        </motion.div>
       </main>
     </div>
   )

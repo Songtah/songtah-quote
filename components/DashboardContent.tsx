@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { ModuleCard } from '@/components/ModuleCard'
 import { RecordList } from '@/components/RecordList'
 import type { DashboardSummary } from '@/lib/system-notion'
+import { stagger, staggerFast, listItem } from '@/lib/motion'
 
 const EMPTY_SUMMARY: DashboardSummary = {
   customers: { total: 0, recent: [] },
@@ -88,7 +90,12 @@ export function DashboardContent({
 
   return (
     <>
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+      <motion.section
+        className="grid gap-5 md:grid-cols-2 xl:grid-cols-5"
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+      >
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
@@ -100,7 +107,7 @@ export function DashboardContent({
             <ModuleCard title="帳號權限" count={s.users.total} hasMore={s.users.hasMore} description="使用者帳號、角色與後續 RBAC 權限設定。" href="/settings/accounts" accent="#dc2626" />
           </>
         )}
-      </section>
+      </motion.section>
 
       {loading && !error && (
         <p className="mt-4 text-sm text-slate-500">
@@ -143,22 +150,35 @@ export function DashboardContent({
         ) : (
           <>
             <RecordList title="重點客戶" items={s.customers.recent} emptyLabel="目前尚未讀到客戶資料。" />
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.45)]">
-              <h3 className="text-lg font-bold text-slate-900">快速操作</h3>
-              <div className="mt-4 grid gap-3">
-                <Link href="/quote/new" className="rounded-2xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900">
-                  建立報價單
-                </Link>
-                <Link href="/tickets/new" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
-                  建立工單
-                </Link>
-                <Link href="/tickets" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
-                  查看維修案件
-                </Link>
-                <Link href="/settings/accounts" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
-                  檢視帳號權限
-                </Link>
-              </div>
+            <div className="panel p-6">
+              <h3 className="text-base font-semibold text-gray-900">快速操作</h3>
+              <motion.div
+                className="mt-4 grid gap-3"
+                variants={staggerFast}
+                initial="hidden"
+                animate="show"
+              >
+                <motion.div variants={listItem}>
+                  <Link href="/quote/new" className="button-primary w-full justify-start py-3">
+                    建立報價單
+                  </Link>
+                </motion.div>
+                <motion.div variants={listItem}>
+                  <Link href="/tickets/new" className="button-secondary w-full justify-start py-3">
+                    建立工單
+                  </Link>
+                </motion.div>
+                <motion.div variants={listItem}>
+                  <Link href="/tickets" className="button-secondary w-full justify-start py-3">
+                    查看維修案件
+                  </Link>
+                </motion.div>
+                <motion.div variants={listItem}>
+                  <Link href="/settings/accounts" className="button-secondary w-full justify-start py-3">
+                    檢視帳號權限
+                  </Link>
+                </motion.div>
+              </motion.div>
             </div>
           </>
         )}

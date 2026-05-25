@@ -1,3 +1,7 @@
+'use client'
+import { motion, AnimatePresence } from 'framer-motion'
+import { staggerFast, listItem, fadeUp } from '@/lib/motion'
+
 export function RecordList({
   title,
   items,
@@ -8,7 +12,7 @@ export function RecordList({
   emptyLabel: string
 }) {
   return (
-    <section className="panel p-6">
+    <motion.section variants={fadeUp} initial="hidden" animate="show" className="panel p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="eyebrow mb-1">Overview</p>
@@ -23,17 +27,22 @@ export function RecordList({
           {emptyLabel}
         </div>
       ) : (
-        <div className="mt-2 divide-y divide-gray-100">
+        <motion.ul
+          variants={staggerFast}
+          initial="hidden"
+          animate="show"
+          className="mt-2 divide-y divide-gray-100 list-none"
+        >
           {items.map((item) => (
-            <div key={item.id} className="py-3">
+            <motion.li key={item.id} variants={listItem} className="py-3">
               <div className="text-sm font-medium text-gray-900">{item.title}</div>
               <div className="mt-0.5 text-sm text-gray-500">
                 {item.meta || '尚未補充資訊'}
               </div>
-            </div>
+            </motion.li>
           ))}
-        </div>
+        </motion.ul>
       )}
-    </section>
+    </motion.section>
   )
 }
