@@ -548,6 +548,111 @@
     ]
   },
   {
+    "id": "YMH-PMMA-VITA",
+    "seriesCode": "YMH-34/35",
+    "seriesName": "PMMA 牙色塊",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "",
+    "namePattern": "PMMA {顏色} ({直徑}*{厚度}mm)",
+    "specs": [
+      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
+      { "key": "厚度", "label": "厚度 (mm)", "options": ["15", "16", "20", "25"] },
+      { "key": "顏色", "label": "顏色", "options": ["A1", "A2", "A3", "A3.5"] }
+    ],
+    "skuMap": {
+      "95|20|A1":    "YMH-34-A1",
+      "95|25|A1":    "YMH-34-A1-25",
+      "95|16|A2":    "YMH-34-A2-16",
+      "95|20|A2":    "YMH-34-A2",
+      "95|25|A2":    "YMH-34-A2-25",
+      "95|16|A3":    "YMH-34-A3-16",
+      "95|20|A3":    "YMH-34-A3",
+      "95|25|A3":    "YMH-34-A3-25",
+      "98.5|15|A1":  "YMH-35-A1-15",
+      "98.5|20|A1":  "YMH-35-A1",
+      "98.5|25|A1":  "YMH-35-A1-25",
+      "98.5|16|A2":  "YMH-35-A2-16",
+      "98.5|20|A2":  "YMH-35-A2",
+      "98.5|25|A2":  "YMH-35-A2-25",
+      "98.5|16|A3":  "YMH-35-A3-16",
+      "98.5|20|A3":  "YMH-35-A3",
+      "98.5|25|A3":  "YMH-35-A3-25",
+      "98.5|20|A3.5":"YMH-35-A3.5"
+    }
+  },
+  {
+    "id": "YMH-PMMA-PINK",
+    "seriesCode": "YMH-34/36",
+    "seriesName": "PMMA Pink 牙肉色",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "",
+    "namePattern": "PMMA Pink ({直徑}*{厚度}mm)",
+    "specs": [
+      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
+      { "key": "厚度", "label": "厚度 (mm)", "options": ["20", "25", "30", "35"] }
+    ],
+    "skuMap": {
+      "95|25":    "YMH-34-25",
+      "98.5|20":  "YMH-36-20",
+      "98.5|25":  "YMH-36-25",
+      "98.5|30":  "YMH-36-30",
+      "98.5|35":  "YMH-36-35"
+    }
+  },
+  {
+    "id": "YMH-PMMA-CLEAR",
+    "seriesCode": "YMH-39/40",
+    "seriesName": "PMMA Clear 透明",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "",
+    "namePattern": "PMMA Clear ({直徑}*{厚度}mm)",
+    "specs": [
+      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
+      { "key": "厚度", "label": "厚度 (mm)", "options": ["16", "20", "25", "30"] }
+    ],
+    "skuMap": {
+      "95|16":    "YMH-39-20-16",
+      "95|20":    "YMH-39-20",
+      "95|25":    "YMH-39-25",
+      "98.5|16":  "YMH-39-1-16",
+      "98.5|20":  "YMH-39",
+      "98.5|25":  "YMH-40-25",
+      "98.5|30":  "YMH-40-30"
+    }
+  },
+  {
+    "id": "YMH-PMMA-DUAL",
+    "seriesCode": "YMH-35-1",
+    "seriesName": "PMMA Dual Color 雙色",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "YMH-35-1-{顏色}",
+    "namePattern": "PMMA Dual Color {顏色} (98.5*35mm)",
+    "specs": [
+      { "key": "顏色", "label": "顏色", "options": ["A1", "A2", "A3"] }
+    ]
+  },
+  {
+    "id": "YMH-PMMA-MLAYER",
+    "seriesCode": "YMH-36",
+    "seriesName": "PMMA 多層透",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "YMH-36-{顏色}",
+    "namePattern": "PMMA 多層透 {顏色}+ (98.5*20mm)",
+    "specs": [
+      { "key": "顏色", "label": "顏色", "options": ["A2", "A3"] }
+    ]
+  },
+  {
     "id": "ADB",
     "seriesCode": "ADB",
     "seriesName": "Prima Carbide Bur 鎢鋼車針",

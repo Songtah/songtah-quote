@@ -39,6 +39,8 @@ interface ProductFamily {
   skuPattern: string
   namePattern: string
   specs: FamilySpec[]
+  /** 規格選項不規則時，用查表取代 pattern 生成 SKU。key 格式：spec值以 "|" 串接 */
+  skuMap?: Record<string, string>
 }
 
 /** 從樣板字串與規格選擇建立貨品碼或品名 */
@@ -74,6 +76,31 @@ function FamilySpecPanel({
 }) {
   const [selected, setSelected] = useState<Record<string, string>>({})
 
+  /**
+   * 對有 skuMap 的系列，依已選規格動態過濾下一個規格的可用選項。
+   * 例如：選了 直徑=95，厚度只顯示 95mm 實際有貨的厚度，顏色同理。
+   */
+  const validOptionsList = useMemo(() => {
+    if (!family.skuMap) return family.specs.map((s) => s.options)
+    const keys = Object.keys(family.skuMap)
+    return family.specs.map((spec, i) => {
+      if (i === 0) {
+        const valid = new Set(keys.map((k) => k.split('|')[0]))
+        return spec.options.filter((o) => valid.has(o))
+      }
+      const allPrevSelected = family.specs.slice(0, i).every((s) => !!selected[s.key])
+      if (!allPrevSelected) return spec.options   // 前面未選完，暫時顯示全部（disabled 狀態）
+      const prefix = family.specs.slice(0, i).map((s) => selected[s.key]).join('|')
+      const valid = new Set(
+        keys
+          .filter((k) => k.startsWith(prefix + '|'))
+          .map((k) => k.split('|')[i])
+          .filter(Boolean)
+      )
+      return spec.options.filter((o) => valid.has(o))
+    })
+  }, [family, selected])
+
   const handleChip = (specKey: string, specIdx: number, value: string) => {
     setSelected((prev) => {
       const next: Record<string, string> = {}
@@ -88,18 +115,23 @@ function FamilySpecPanel({
   }
 
   const allSelected = family.specs.length > 0 && family.specs.every((s) => !!selected[s.key])
-  const skuCode = allSelected ? buildFromPattern(family.skuPattern, selected) : ''
+  const skuKey = family.specs.map((s) => selected[s.key] ?? '').join('|')
+  const skuCode = allSelected
+    ? (family.skuMap ? (family.skuMap[skuKey] ?? '') : buildFromPattern(family.skuPattern, selected))
+    : ''
   const skuName = allSelected ? buildFromPattern(family.namePattern, selected) : ''
+  const isValid = allSelected && skuCode !== ''
 
   return (
     <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
       {family.specs.map((spec, idx) => {
         const prevSelected = idx === 0 || !!selected[family.specs[idx - 1].key]
+        const options = validOptionsList[idx]
         return (
           <div key={spec.key}>
             <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>
             <div className="flex flex-wrap gap-1.5">
-              {spec.options.map((opt) => {
+              {options.map((opt) => {
                 const isSelected = selected[spec.key] === opt
                 return (
                   <button
@@ -127,28 +159,34 @@ function FamilySpecPanel({
       {/* 結果區 */}
       <div className="pt-1">
         {allSelected ? (
-          <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-800 leading-snug">{skuName}</div>
-              <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{skuCode}</div>
+          isValid ? (
+            <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-800 leading-snug">{skuName}</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{skuCode}</div>
+              </div>
+              <button
+                onClick={() => {
+                  onAdd({
+                    skuCode,
+                    skuName,
+                    brand: family.brand,
+                    seriesName: family.seriesName,
+                    seriesId: family.id,
+                    unitPrice: 0,
+                  })
+                  setSelected({})
+                }}
+                className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
+              >
+                + 加入
+              </button>
             </div>
-            <button
-              onClick={() => {
-                onAdd({
-                  skuCode,
-                  skuName,
-                  brand: family.brand,
-                  seriesName: family.seriesName,
-                  seriesId: family.id,
-                  unitPrice: 0,
-                })
-                setSelected({})
-              }}
-              className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
-            >
-              + 加入
-            </button>
-          </div>
+          ) : (
+            <div className="text-xs text-amber-600 bg-amber-50 rounded px-3 py-2">
+              此規格組合無對應貨品，請重新選擇
+            </div>
+          )
         ) : (
           <div className="text-xs text-gray-400">
             請選擇{family.specs.find((s) => !selected[s.key])?.label ?? ''}
