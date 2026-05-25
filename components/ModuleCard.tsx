@@ -20,28 +20,23 @@ export function ModuleCard({
   return (
     <Link
       href={href}
-      className="group panel relative overflow-hidden p-6 transition hover:-translate-y-1 hover:shadow-[0_28px_70px_-38px_rgba(16,185,129,0.45)]"
+      className="group panel p-6 transition hover:border-gray-300 hover:shadow-sm"
     >
-      <div
-        className="absolute right-0 top-0 h-24 w-24 translate-x-6 -translate-y-6 rounded-full opacity-10 blur-2xl"
-        style={{ backgroundColor: accent }}
-      />
-      <div className="eyebrow mb-4">Module</div>
-      <div className="mb-4 h-2 w-24 rounded-full" style={{ backgroundColor: accent }} />
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+      <div className="eyebrow mb-3">Module</div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
           {countLabel && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-1">
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
               {countLabel}
             </p>
           )}
         </div>
-        <div className="text-3xl font-black text-slate-900 shrink-0">{count}{hasMore ? '+' : ''}</div>
+        <div className="shrink-0 text-3xl font-black text-gray-900">{count}{hasMore ? '+' : ''}</div>
       </div>
       <p className="muted mt-3">{description}</p>
-      <div className="mt-5 text-sm font-semibold text-emerald-700 transition group-hover:text-emerald-800">
-        進入模組
+      <div className="mt-4 text-sm font-medium text-gray-500 transition group-hover:text-gray-900">
+        進入模組 →
       </div>
     </Link>
   )
