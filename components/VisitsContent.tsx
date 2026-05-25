@@ -421,13 +421,10 @@ export default function VisitsContent() {
       </div>
 
       {/* Search + Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        {/* Search */}
-        <div className="relative flex-1">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
+      <div className="space-y-2 mb-4">
+        {/* Search row */}
+        <div className="relative">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
           <input
@@ -435,160 +432,173 @@ export default function VisitsContent() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜尋客戶名稱、拜訪性質、內容…"
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-brand-200/60 bg-white text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition"
+            className="input pl-10 pr-10"
           />
           {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition"
-            >
-              ✕
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           )}
         </div>
-
-        {/* Salesperson filter (server-side) */}
-        <select
-          value={filterSalesperson}
-          onChange={(e) => handleSalespersonFilter(e.target.value)}
-          className={`py-2.5 px-3 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-400 ${
-            filterSalesperson
-              ? 'border-brand-400 bg-brand-50 text-brand-700 font-medium'
-              : 'border-brand-200/60 bg-white text-stone-500'
-          }`}
-        >
-          <option value="">全部業務</option>
-          {salespersonFilterOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-
-        {/* City filter */}
-        <select
-          value={filterCity}
-          onChange={(e) => setFilterCity(e.target.value)}
-          className={`py-2.5 px-3 rounded-xl border text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-400 ${
-            filterCity
-              ? 'border-brand-400 bg-brand-50 text-brand-700 font-medium'
-              : 'border-brand-200/60 bg-white text-stone-500'
-          }`}
-        >
-          <option value="">全部縣市</option>
-          {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        {/* Clear all */}
-        {isFiltered && (
-          <button
-            onClick={clearAll}
-            className="px-3 py-2.5 rounded-xl border border-brand-200/60 bg-white text-xs text-stone-400 hover:text-stone-600 hover:border-brand-300 transition whitespace-nowrap"
+        {/* Filter selects row */}
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={filterSalesperson}
+            onChange={(e) => handleSalespersonFilter(e.target.value)}
+            className="input text-sm py-2 flex-1 min-w-[130px]"
           >
-            清除篩選
-          </button>
-        )}
+            <option value="">全部業務</option>
+            {salespersonFilterOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            value={filterCity}
+            onChange={(e) => setFilterCity(e.target.value)}
+            className="input text-sm py-2 flex-1 min-w-[130px]"
+          >
+            <option value="">全部縣市</option>
+            {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {isFiltered && (
+            <button onClick={clearAll} className="button-secondary px-4 py-2 text-sm whitespace-nowrap">
+              清除篩選
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
+      {/* List */}
+      <div className="panel overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-sm text-stone-400">載入中…</div>
+          <div className="p-8 text-center text-sm text-gray-400">載入中…</div>
         ) : visits.length === 0 ? (
-          <div className="p-10 text-center text-sm text-stone-400 border-2 border-dashed border-brand-200/40 rounded-2xl m-4">
+          <div className="p-10 text-center text-sm text-gray-400">
             尚無拜訪紀錄，點擊「新增拜訪」開始記錄。
           </div>
         ) : filteredVisits.length === 0 ? (
-          <div className="p-10 text-center text-sm text-stone-400">
+          <div className="p-10 text-center text-sm text-gray-400">
             找不到符合條件的拜訪紀錄
           </div>
         ) : (
           <>
+            {/* Filter result summary */}
             {isFiltered && (
-              <div className="px-4 py-2.5 border-b border-brand-100/40 bg-cream-50/60 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-xs text-stone-500">
-                  篩選結果：<span className="font-medium text-brand-600">{filteredVisits.length}</span> 筆
-                  <span className="text-stone-400">（共 {visits.length} 筆）</span>
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-xs text-gray-500">
+                  篩選結果：<span className="font-medium text-gray-900">{filteredVisits.length}</span> 筆
+                  <span className="text-gray-400">（共 {visits.length} 筆）</span>
                 </span>
                 {filterSalesperson && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-brand-50 text-brand-600 border border-brand-200/50 px-2 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
                     業務：{filterSalesperson}
-                    <button onClick={() => setFilterSalesperson('')} className="hover:text-brand-800">✕</button>
+                    <button onClick={() => setFilterSalesperson('')} className="hover:text-gray-900">✕</button>
                   </span>
                 )}
                 {filterCity && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-brand-50 text-brand-600 border border-brand-200/50 px-2 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
                     縣市：{filterCity}
-                    <button onClick={() => setFilterCity('')} className="hover:text-brand-800">✕</button>
+                    <button onClick={() => setFilterCity('')} className="hover:text-gray-900">✕</button>
                   </span>
                 )}
               </div>
             )}
-            <div className="overflow-x-auto">
+
+            {/* ── Mobile / iPad card list (< lg) ── */}
+            <div className="divide-y divide-gray-50 lg:hidden">
+              {filteredVisits.map((v) => (
+                <div
+                  key={v.id}
+                  onClick={() => setViewingVisit(v)}
+                  className="px-4 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Left: main info */}
+                    <div className="flex-1 min-w-0">
+                      {/* Name + follow-up dot */}
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="font-medium text-gray-900 truncate">{v.customerName}</span>
+                        {v.needsFollowUp && (
+                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-orange-400" title="需要追蹤" />
+                        )}
+                      </div>
+                      {/* Badges + city */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                        <InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} />
+                        <ReactionBadge reaction={v.customerReaction} />
+                        {v.city && <span className="text-xs text-gray-400">{v.city}</span>}
+                      </div>
+                      {/* Content preview */}
+                      {v.content && (
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-2">{v.content}</p>
+                      )}
+                      {/* Meta: date + salesperson */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{formatDate(v.date)}</span>
+                        {v.salesperson && <span className="text-xs text-gray-400">{v.salesperson}</span>}
+                      </div>
+                    </div>
+                    {/* Right: actions */}
+                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {deleteConfirmId === v.id ? (
+                        <div className="flex flex-col items-end gap-1.5">
+                          <span className="text-xs text-gray-500">確認刪除？</span>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleDelete(v.id)} disabled={deleting} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">
+                              {deleting ? '…' : '確認'}
+                            </button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-3">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingVisit(v); setDeleteConfirmId(null) }} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">編輯</button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(v.id) }} className="text-xs text-gray-300 hover:text-red-500 transition-colors">刪除</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Desktop table (lg+) ── */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-cream-50 text-stone-400 text-xs border-b border-brand-100/40">
+                <thead className="bg-gray-50 text-gray-400 text-xs border-b border-gray-100">
                   <tr>
-                    <th className="px-4 py-3 text-left">日期</th>
-                    <th className="px-4 py-3 text-left">客戶名稱</th>
-                    <th className="px-4 py-3 text-left">縣市</th>
-                    <th className="px-4 py-3 text-left">互動類型</th>
-                    <th className="px-4 py-3 text-left">客戶反應</th>
-                    <th className="px-4 py-3 text-left">業務人員</th>
-                    <th className="px-4 py-3 text-left">拜訪內容</th>
-                    <th className="px-4 py-3 text-right">操作</th>
+                    <th className="px-4 py-3 text-left font-medium">日期</th>
+                    <th className="px-4 py-3 text-left font-medium">客戶名稱</th>
+                    <th className="px-4 py-3 text-left font-medium">縣市</th>
+                    <th className="px-4 py-3 text-left font-medium">互動類型</th>
+                    <th className="px-4 py-3 text-left font-medium">客戶反應</th>
+                    <th className="px-4 py-3 text-left font-medium">業務人員</th>
+                    <th className="px-4 py-3 text-left font-medium">拜訪內容</th>
+                    <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-brand-100/30">
+                <tbody className="divide-y divide-gray-50">
                   {filteredVisits.map((v) => (
-                    <tr
-                      key={v.id}
-                      onClick={() => setViewingVisit(v)}
-                      className="hover:bg-cream-50/60 transition-colors cursor-pointer group"
-                    >
-                      <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{formatDate(v.date)}</td>
-                      <td className="px-4 py-3 font-medium text-stone-800 group-hover:text-brand-700 transition-colors">
+                    <tr key={v.id} onClick={() => setViewingVisit(v)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(v.date)}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
                         {v.customerName}
-                        {v.needsFollowUp && (
-                          <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-orange-400 align-middle" title="需要追蹤" />
-                        )}
+                        {v.needsFollowUp && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-orange-400 align-middle" title="需要追蹤" />}
                       </td>
-                      <td className="px-4 py-3 text-stone-500">{v.city || '—'}</td>
-                      <td className="px-4 py-3">
-                        <InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <ReactionBadge reaction={v.customerReaction} />
-                      </td>
-                      <td className="px-4 py-3 text-stone-500">{v.salesperson || '—'}</td>
-                      <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{v.content || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{v.city || '—'}</td>
+                      <td className="px-4 py-3"><InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} /></td>
+                      <td className="px-4 py-3"><ReactionBadge reaction={v.customerReaction} /></td>
+                      <td className="px-4 py-3 text-gray-500">{v.salesperson || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{v.content || '—'}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {deleteConfirmId === v.id ? (
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="text-xs text-stone-500">確認刪除？</span>
-                            <button
-                              onClick={() => handleDelete(v.id)}
-                              disabled={deleting}
-                              className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                            >
-                              {deleting ? '…' : '確認'}
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="text-xs text-stone-400 hover:text-stone-600"
-                            >
-                              取消
-                            </button>
+                            <span className="text-xs text-gray-500">確認刪除？</span>
+                            <button onClick={() => handleDelete(v.id)} disabled={deleting} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">{deleting ? '…' : '確認'}</button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }}
-                              className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
-                            >
-                              編輯
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(v.id)}
-                              className="text-xs text-stone-300 hover:text-red-500 transition-colors"
-                            >
-                              刪除
-                            </button>
+                            <button onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">編輯</button>
+                            <button onClick={() => setDeleteConfirmId(v.id)} className="text-xs text-gray-300 hover:text-red-500 transition-colors">刪除</button>
                           </div>
                         )}
                       </td>
@@ -612,7 +622,7 @@ export default function VisitsContent() {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="px-5 py-2 rounded-full border border-brand-200/60 bg-white text-sm text-stone-500 hover:text-brand-600 hover:border-brand-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="button-secondary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loadingMore ? '載入中…' : '載入更多'}
           </button>
