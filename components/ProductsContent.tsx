@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { fadeUp, stagger } from '@/lib/motion'
 
 type ProductItem = {
   id: string
@@ -27,8 +28,7 @@ type ProductItem = {
   fieldDepth: string
 }
 
-const inputCls =
-  'w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-4 py-2.5 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition'
+const inputCls = 'input'
 
 function formatPrice(price: number | null) {
   if (price == null) return null
@@ -107,7 +107,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
         transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-brand-100/60">
+        <div className="flex items-start gap-4 px-6 py-5 border-b border-gray-100">
           <ProductThumb id={p.id} name={p.name} size={72} />
           <div className="flex-1 min-w-0">
             <p className="eyebrow mb-1">
@@ -116,7 +116,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
             <h2 className="text-xl font-bold text-slate-900 leading-snug">{p.name || '（未命名）'}</h2>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {p.manufacturer && (
-                <span className="px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700 font-medium">
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-600 font-medium">
                   {p.manufacturer}
                 </span>
               )}
@@ -150,9 +150,9 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
                   </div>
                 )}
                 {p.salePrice != null && (
-                  <div className="flex-1 bg-brand-50 rounded-xl p-4 border border-brand-100">
-                    <p className="text-xs text-brand-600 mb-1">優惠價</p>
-                    <p className="text-lg font-bold text-brand-800">{formatPrice(p.salePrice)}</p>
+                  <div className="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">優惠價</p>
+                    <p className="text-lg font-bold text-gray-900">{formatPrice(p.salePrice)}</p>
                   </div>
                 )}
               </div>
@@ -208,46 +208,54 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
 // ── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
-      className="w-full text-left flex items-start gap-4 px-5 py-4 hover:bg-cream-50/50 transition group"
+      variants={fadeUp}
+      whileHover={{ y: -3, boxShadow: '0 8px 24px -4px rgba(0,0,0,0.10)' }}
+      transition={{ duration: 0.2 }}
+      className="panel text-left flex flex-col overflow-hidden hover:border-gray-300 w-full"
     >
-      <ProductThumb id={p.id} name={p.name} size={64} />
+      {/* Thumbnail area */}
+      <div className="flex items-center justify-center bg-gray-50 border-b border-gray-100 py-5">
+        <ProductThumb id={p.id} name={p.name} size={80} />
+      </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-slate-900 truncate leading-snug">
+      {/* Content */}
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-2.5 line-clamp-2 min-h-[2.5rem]">
           {p.name || '（未命名）'}
-        </div>
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
+        </h3>
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {p.manufacturer && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700 font-medium">
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-600 font-medium">
               {p.manufacturer}
             </span>
           )}
           {p.category && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
+            <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium">
               {p.category}
             </span>
           )}
-          {p.productType && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-xs text-gray-600">
+          {p.productType && !p.category && (
+            <span className="px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-xs text-gray-500">
               {p.productType}
             </span>
           )}
         </div>
+
+        {/* Price — pushed to bottom */}
+        {p.price != null ? (
+          <div className="mt-auto pt-3 border-t border-gray-50">
+            <p className="text-sm font-bold text-gray-900">{formatPrice(p.price)}</p>
+            {p.salePrice != null && (
+              <p className="text-xs text-gray-400 mt-0.5">優惠價 {formatPrice(p.salePrice)}</p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-auto" />
+        )}
       </div>
-
-      {p.price != null && (
-        <div className="shrink-0 text-right">
-          <div className="text-sm font-bold text-slate-800">{formatPrice(p.price)}</div>
-          <div className="text-xs text-slate-400 mt-0.5">定價</div>
-        </div>
-      )}
-
-      <svg className="w-4 h-4 text-stone-300 group-hover:text-brand-500 transition shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
+    </motion.button>
   )
 }
 
@@ -331,10 +339,10 @@ export function ProductsContent({
     <button
       key={label}
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
         active
-          ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm'
-          : 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
+          ? 'bg-gray-900 text-white border-gray-900'
+          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
       }`}
     >
       {label}
@@ -343,161 +351,146 @@ export function ProductsContent({
 
   return (
     <>
-      {/* 統計卡片 */}
-      <div className="mb-8">
-        <div className="panel p-6 inline-flex flex-col gap-1 min-w-[180px]">
-          <p className="eyebrow">Products</p>
-          <p className="text-4xl font-black text-slate-900">{total}</p>
-          <p className="text-sm text-slate-500">可供報價與售後查詢的產品主檔數量</p>
-        </div>
-      </div>
-
       {/* 搜尋列 */}
-      <div className="mb-5 relative">
+      <div className="mb-4 relative">
+        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="搜尋產品名稱、生產商、分類..."
-          className={inputCls + ' pr-10'}
+          className="input pl-10 pr-10"
           autoComplete="off"
         />
         {loading && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-            搜尋中...
+          <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
+            <span className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin inline-block" />
           </span>
         )}
         {query && !loading && (
-          <button
-            onClick={() => setQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-          >
-            ✕
+          <button onClick={() => setQuery('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         )}
       </div>
 
       {/* 篩選工具列 */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setFilterOpen((v) => !v)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-              filterOpen || hasActiveFilter
-                ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white border-brand-500 shadow-sm'
-                : 'bg-white text-stone-600 border-brand-200/60 hover:border-brand-400 hover:text-brand-700'
-            }`}
-          >
-            <svg className={`w-4 h-4 transition-transform ${filterOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm2 4a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm2 4a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
-            篩選
-            {hasActiveFilter && (
-              <span className="bg-white/30 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold leading-none">
-                {(activeBrand ? 1 : 0) + (activeType ? 1 : 0)}
-              </span>
-            )}
-          </button>
-
-          {/* 已啟用的篩選標籤（收合狀態也顯示） */}
-          {!filterOpen && hasActiveFilter && (
-            <div className="flex flex-wrap gap-2 items-center">
-              {activeBrand && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 border border-green-200 text-xs text-green-800 font-medium">
-                  {activeBrand}
-                  <button onClick={() => setActiveBrand('')} className="hover:text-green-600 leading-none">✕</button>
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                filterOpen || hasActiveFilter
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
+              </svg>
+              篩選
+              {hasActiveFilter && (
+                <span className="bg-white text-gray-900 text-xs px-1.5 py-0.5 rounded-full font-bold leading-none">
+                  {(activeBrand ? 1 : 0) + (activeType ? 1 : 0)}
                 </span>
               )}
-              {activeType && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium">
-                  {activeType}
-                  <button onClick={() => setActiveType('')} className="hover:text-blue-500 leading-none">✕</button>
-                </span>
-              )}
-              <button
-                onClick={() => { setActiveBrand(''); setActiveType('') }}
-                className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2"
-              >
-                清除全部
-              </button>
-            </div>
-          )}
-        </div>
+            </button>
 
-        {/* 展開的篩選面板 */}
-        {filterOpen && (
-          <div className="mt-4 p-4 bg-white rounded-2xl border border-gray-200 shadow-sm space-y-4">
-            {brands.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">依生產商</p>
-                <div className="flex flex-wrap gap-2">
-                  {filterTag('全部', activeBrand === '', () => setActiveBrand(''))}
-                  {brands.map((b) =>
-                    filterTag(b, activeBrand === b, () => setActiveBrand(activeBrand === b ? '' : b))
-                  )}
-                </div>
-              </div>
-            )}
-            {types.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">依商品類型</p>
-                <div className="flex flex-wrap gap-2">
-                  {filterTag('全部', activeType === '', () => setActiveType(''))}
-                  {types.map((t) =>
-                    filterTag(t, activeType === t, () => setActiveType(activeType === t ? '' : t))
-                  )}
-                </div>
-              </div>
-            )}
-            {hasActiveFilter && (
-              <div className="pt-2 border-t border-gray-100">
-                <button
-                  onClick={() => { setActiveBrand(''); setActiveType('') }}
-                  className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2"
-                >
-                  清除所有篩選
-                </button>
+            {/* Active filter chips */}
+            {!filterOpen && hasActiveFilter && (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {activeBrand && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">
+                    {activeBrand}
+                    <button onClick={() => setActiveBrand('')} className="hover:text-gray-900 ml-0.5">✕</button>
+                  </span>
+                )}
+                {activeType && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">
+                    {activeType}
+                    <button onClick={() => setActiveType('')} className="hover:text-gray-900 ml-0.5">✕</button>
+                  </span>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* 產品列表 */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100/40">
-          <div>
-            <p className="eyebrow mb-0.5">Products</p>
-            <h3 className="text-lg font-bold text-stone-900">產品清單</h3>
-          </div>
-          <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+          <span className="text-sm text-gray-400">
             {initialized ? `${results.length} 筆` : `共 ${total} 筆`}
           </span>
         </div>
 
-        {!initialized ? (
-          <div className="divide-y divide-gray-50">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-4">
-                <div className="w-16 h-16 rounded-xl bg-gray-100 animate-pulse shrink-0" />
-                <div className="flex-1">
-                  <div className="h-4 w-48 bg-gray-100 rounded animate-pulse mb-2" />
-                  <div className="h-3 w-28 bg-gray-50 rounded animate-pulse" />
+        {/* 展開的篩選面板 */}
+        <AnimatePresence>
+          {filterOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="panel p-4 space-y-4"
+            >
+              {brands.length > 0 && (
+                <div>
+                  <p className="eyebrow mb-2">依生產商</p>
+                  <div className="flex flex-wrap gap-2">
+                    {filterTag('全部', activeBrand === '', () => setActiveBrand(''))}
+                    {brands.map((b) => filterTag(b, activeBrand === b, () => setActiveBrand(activeBrand === b ? '' : b)))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : results.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-slate-400">
-            {query.trim() || activeBrand || activeType ? '找不到符合的產品' : '尚無產品資料'}
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {results.map((p) => (
-              <ProductCard key={p.id} p={p} onClick={() => setSelectedProduct(p)} />
-            ))}
-          </div>
-        )}
+              )}
+              {types.length > 0 && (
+                <div>
+                  <p className="eyebrow mb-2">依商品類型</p>
+                  <div className="flex flex-wrap gap-2">
+                    {filterTag('全部', activeType === '', () => setActiveType(''))}
+                    {types.map((t) => filterTag(t, activeType === t, () => setActiveType(activeType === t ? '' : t)))}
+                  </div>
+                </div>
+              )}
+              {hasActiveFilter && (
+                <div className="pt-2 border-t border-gray-100 flex justify-end">
+                  <button onClick={() => { setActiveBrand(''); setActiveType('') }} className="text-xs text-gray-400 hover:text-gray-600">
+                    清除所有篩選
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* 產品卡牌 Grid */}
+      {!initialized ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="panel overflow-hidden">
+              <div className="bg-gray-100 animate-pulse h-28" />
+              <div className="p-4 space-y-2">
+                <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
+                <div className="h-3 w-1/2 bg-gray-50 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : results.length === 0 ? (
+        <div className="panel px-5 py-16 text-center text-sm text-gray-400">
+          {query.trim() || activeBrand || activeType ? '找不到符合的產品' : '尚無產品資料'}
+        </div>
+      ) : (
+        <motion.div
+          key={results.map(p => p.id).join(',')}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+        >
+          {results.map((p) => (
+            <ProductCard key={p.id} p={p} onClick={() => setSelectedProduct(p)} />
+          ))}
+        </motion.div>
+      )}
 
       {/* 產品詳細側板 */}
       {selectedProduct && (
@@ -567,7 +560,7 @@ export function ProductsContent({
                             value={bugPage}
                             onChange={(e) => setBugPage(e.target.value)}
                             placeholder="例：產品頁面、報價單、工單列表..."
-                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
+                            className="w-full input"
                           />
                         </div>
                         <div>
@@ -579,7 +572,7 @@ export function ProductsContent({
                             onChange={(e) => setBugDesc(e.target.value)}
                             placeholder="請描述遇到的問題、重現步驟或預期行為..."
                             rows={4}
-                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none transition"
+                            className="w-full input resize-none"
                           />
                         </div>
                         <div>
@@ -588,11 +581,11 @@ export function ProductsContent({
                             value={bugReporter}
                             onChange={(e) => setBugReporter(e.target.value)}
                             placeholder="您的姓名或帳號"
-                            className="w-full border border-brand-200/60 bg-cream-50/50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
+                            className="w-full input"
                           />
                         </div>
                       </div>
-                      <div className="flex gap-3 mt-6 pt-4 border-t border-brand-100/40">
+                      <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
                         <button
                           onClick={() => setBugOpen(false)}
                           className="button-secondary flex-1 rounded-lg px-4 py-2.5 text-sm font-medium"
