@@ -1247,7 +1247,6 @@ function buildPrintHtml(data: {
     </tr>`
 
   const c = data.customer
-  const hasCustomer = !!(c.name || c.phone || c.address || c.contactPerson || c.taxId)
 
   return `<!DOCTYPE html>
 <html lang="zh-TW"><head>
@@ -1257,34 +1256,35 @@ function buildPrintHtml(data: {
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;font-size:12px;color:#111;background:#fff;padding:28px 32px 40px}
-  /* header */
-  .hd{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid #111;margin-bottom:0}
-  .co{font-size:18px;font-weight:700;letter-spacing:0.02em;line-height:1.2}
-  .co-sub{font-size:10px;color:#666;margin-top:3px;letter-spacing:0.06em}
+  .hd{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid #111}
+  .co{font-size:18px;font-weight:700;letter-spacing:0.02em;line-height:1.3}
+  .co-sub{font-size:10px;color:#777;margin-top:2px;letter-spacing:0.06em}
   .doc-meta{text-align:right}
-  .doc-type{font-size:11px;color:#666;letter-spacing:0.08em;margin-bottom:4px}
+  .doc-type{font-size:10px;color:#777;letter-spacing:0.08em;margin-bottom:4px}
   .doc-num{font-size:22px;font-weight:700;font-family:monospace;letter-spacing:0.06em}
-  /* info strip */
-  .info{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #ddd;background:#f8f8f8;padding:8px 0;margin-bottom:0}
-  .info-cell{padding:4px 12px}
-  .lbl{font-size:9px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
+  /* ── 訂單資訊列 ── */
+  .info{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #ddd;background:#f8f8f8}
+  .info-cell{padding:6px 12px}
+  .lbl{font-size:9px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
   .val{font-size:12px;font-weight:500;color:#111}
-  /* customer */
-  .cust{border-bottom:1px solid #ddd;padding:10px 12px;display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px 20px}
-  .cust-name{font-size:15px;font-weight:700}
-  .cust-addr{grid-column:1/-1;margin-top:2px}
-  /* table */
+  /* ── 客戶區塊 ── */
+  .cust-block{border:1px solid #ddd;border-top:none;background:#fff}
+  .cust-title{background:#333;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 12px;text-transform:uppercase}
+  .cust-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0}
+  .cust-cell{padding:6px 12px;border-right:1px solid #eee}
+  .cust-cell:last-child{border-right:none}
+  .cust-name-val{font-size:14px;font-weight:700;color:#111}
+  .cust-addr{border-top:1px solid #eee;padding:6px 12px}
+  /* ── 品項表格 ── */
   table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
-  th{background:#111;color:#fff;font-weight:600;text-align:left;padding:7px 8px;font-size:10px;letter-spacing:0.05em;white-space:nowrap}
+  th{background:#111;color:#fff;font-weight:600;text-align:left;padding:7px 8px;font-size:10px;letter-spacing:0.04em;white-space:nowrap}
   td{padding:6px 8px;border-bottom:1px solid #e8e8e8}
   tbody tr:nth-child(even) td{background:#f8f8f8}
-  .total-row td{background:#111!important;color:#fff;font-weight:600;padding:7px 8px;border:none}
-  /* utils */
+  .total-row td{background:#333!important;color:#fff;font-weight:600;padding:7px 8px;border:none}
   .tc{text-align:center}.tr{text-align:right}.bold{font-weight:600}
-  .mono{font-family:monospace;font-size:10px;color:#555}.sm{font-size:11px}.gray{color:#888}
-  /* footer */
-  .ft{display:flex;justify-content:space-between;margin-top:14px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#999}
-  .sig{display:flex;gap:40px;margin-top:36px}
+  .mono{font-family:monospace;font-size:10px;color:#666}.sm{font-size:11px}.gray{color:#999}
+  .ft{display:flex;justify-content:space-between;margin-top:12px;padding-top:8px;border-top:1px solid #ddd;font-size:10px;color:#aaa}
+  .sig{display:flex;gap:40px;margin-top:40px}
   .sig-item{min-width:100px;border-top:1px solid #bbb;padding-top:4px;font-size:10px;color:#888}
   @media print{body{padding:0}}
 </style>
@@ -1303,52 +1303,40 @@ function buildPrintHtml(data: {
   </div>
 </div>
 
-<!-- Order info strip -->
+<!-- 訂單資訊列 -->
 <div class="info">
-  <div class="info-cell">
-    <div class="lbl">訂貨日期</div>
-    <div class="val">${data.date}</div>
-  </div>
-  <div class="info-cell">
-    <div class="lbl">業務</div>
-    <div class="val">${data.salesperson || '—'}</div>
-  </div>
-  <div class="info-cell">
-    <div class="lbl">狀態</div>
-    <div class="val">${data.status}</div>
-  </div>
-  <div class="info-cell">
-    <div class="lbl">備註</div>
-    <div class="val">${data.note || '—'}</div>
-  </div>
+  <div class="info-cell"><div class="lbl">訂貨日期</div><div class="val">${data.date || '—'}</div></div>
+  <div class="info-cell"><div class="lbl">業務</div><div class="val">${data.salesperson || '—'}</div></div>
+  <div class="info-cell"><div class="lbl">狀態</div><div class="val">${data.status || '—'}</div></div>
+  <div class="info-cell"><div class="lbl">備注</div><div class="val">${data.note || '—'}</div></div>
 </div>
 
-${hasCustomer ? `
-<!-- Customer block -->
-<div class="cust">
-  <div>
-    <div class="lbl">客戶名稱</div>
-    <div class="cust-name">${c.name || '—'}</div>
+<!-- 客戶資訊（永遠顯示） -->
+<div class="cust-block">
+  <div class="cust-title">收貨客戶資訊</div>
+  <div class="cust-grid">
+    <div class="cust-cell">
+      <div class="lbl">客戶名稱</div>
+      <div class="cust-name-val">${c.name || '—'}</div>
+    </div>
+    <div class="cust-cell">
+      <div class="lbl">聯絡人</div>
+      <div class="val">${c.contactPerson || '—'}</div>
+    </div>
+    <div class="cust-cell">
+      <div class="lbl">電話</div>
+      <div class="val">${c.phone || '—'}</div>
+    </div>
+    <div class="cust-cell">
+      <div class="lbl">統一編號</div>
+      <div class="val">${c.taxId || '—'}</div>
+    </div>
   </div>
-  <div>
-    <div class="lbl">聯絡人</div>
-    <div class="val">${c.contactPerson || '—'}</div>
-  </div>
-  <div>
-    <div class="lbl">電話</div>
-    <div class="val">${c.phone || '—'}</div>
-  </div>
-  <div class="cust-addr" style="grid-column:1/3">
+  <div class="cust-addr">
     <div class="lbl">地址</div>
     <div class="val">${c.address || '—'}</div>
   </div>
-  ${c.taxId ? `<div><div class="lbl">統一編號</div><div class="val">${c.taxId}</div></div>` : ''}
-  ${data.note ? `<div><div class="lbl">訂單備注</div><div class="val">${data.note}</div></div>` : ''}
-</div>` : (data.note ? `
-<div style="background:#f8f8f8;border-bottom:1px solid #ddd;padding:6px 12px;font-size:12px">
-  <span style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:0.08em">備注</span>
-  <span style="margin-left:8px">${data.note}</span>
-</div>` : '')}
+</div>
 
 <!-- Items table -->
 <table>
