@@ -548,6 +548,95 @@
     ]
   },
   {
+    "id": "YMH-PMMA",
+    "seriesCode": "YMH-34/35/36/39/40",
+    "seriesName": "PMMA 塊",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "PMMA 塊",
+    "skuPattern": "",
+    "namePattern": "PMMA {顏色} ({直徑}*{厚度}mm)",
+    "specs": [
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98.5"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "PINK",
+          "Clear",
+          "Dual Color A1",
+          "Dual Color A2",
+          "Dual Color A3",
+          "多層透 A2+",
+          "多層透 A3+",
+          "W0.5"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "15",
+          "16",
+          "18",
+          "20",
+          "25",
+          "30",
+          "35"
+        ]
+      }
+    ],
+    "skuMap": {
+      "95|A1|20": "YMH-34-A1",
+      "95|A1|25": "YMH-34-A1-25",
+      "95|A2|16": "YMH-34-A2-16",
+      "95|A2|20": "YMH-34-A2",
+      "95|A2|25": "YMH-34-A2-25",
+      "95|A3|16": "YMH-34-A3-16",
+      "95|A3|20": "YMH-34-A3",
+      "95|A3|25": "YMH-34-A3-25",
+      "95|PINK|25": "YMH-34-25",
+      "95|Clear|16": "YMH-39-20-16",
+      "95|Clear|20": "YMH-39-20",
+      "95|Clear|25": "YMH-39-25",
+      "98.5|A1|15": "YMH-35-A1-15",
+      "98.5|A1|20": "YMH-35-A1",
+      "98.5|A1|25": "YMH-35-A1-25",
+      "98.5|A2|16": "YMH-35-A2-16",
+      "98.5|A2|20": "YMH-35-A2",
+      "98.5|A2|25": "YMH-35-A2-25",
+      "98.5|A3|16": "YMH-35-A3-16",
+      "98.5|A3|20": "YMH-35-A3",
+      "98.5|A3|25": "YMH-35-A3-25",
+      "98.5|A3.5|20": "YMH-35-A3.5",
+      "98.5|PINK|20": "YMH-36-20",
+      "98.5|PINK|25": "YMH-36-25",
+      "98.5|PINK|30": "YMH-36-30",
+      "98.5|PINK|35": "YMH-36-35",
+      "98.5|Clear|16": "YMH-39-1-16",
+      "98.5|Clear|20": "YMH-39",
+      "98.5|Clear|25": "YMH-40-25",
+      "98.5|Clear|30": "YMH-40-30",
+      "98.5|Dual Color A1|35": "YMH-35-1-A1",
+      "98.5|Dual Color A2|35": "YMH-35-1-A2",
+      "98.5|Dual Color A3|35": "YMH-35-1-A3",
+      "98.5|多層透 A2+|20": "YMH-36-A2",
+      "98.5|多層透 A3+|20": "YMH-36-A3",
+      "98.5|W0.5|18": "YMH-35-W-18"
+    }
+  },
+  {
     "id": "YMH-WAX",
     "seriesCode": "YMH-31/32/37/38",
     "seriesName": "Wax Disk 蠟塊",
@@ -557,26 +646,54 @@
     "skuPattern": "",
     "namePattern": "Wax Disk {顏色} ({直徑}*{厚度}mm)",
     "specs": [
-      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
-      { "key": "顏色", "label": "顏色", "options": ["白色", "綠色", "象牙白"] },
-      { "key": "厚度", "label": "厚度 (mm)", "options": ["10", "12", "14", "16", "18", "20", "22", "25"] }
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98.5"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色",
+        "options": [
+          "白色",
+          "綠色",
+          "象牙白"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "10",
+          "12",
+          "14",
+          "16",
+          "18",
+          "20",
+          "22",
+          "25"
+        ]
+      }
     ],
     "skuMap": {
-      "95|綠色|10":    "YMH-32-10",
-      "95|綠色|14":    "YMH-32-14",
-      "95|綠色|16":    "YMH-32",
-      "95|綠色|18":    "YMH-32-18",
-      "95|綠色|20":    "YMH-32-20",
-      "95|象牙白|16":  "YMH-38-16",
-      "95|象牙白|20":  "YMH-38-20",
-      "98.5|白色|10":  "YMH-31-10",
-      "98.5|白色|12":  "YMH-31-12",
-      "98.5|白色|14":  "YMH-31-14",
-      "98.5|白色|16":  "YMH-31-16",
-      "98.5|白色|18":  "YMH-31-18",
-      "98.5|白色|20":  "YMH-31",
-      "98.5|白色|22":  "YMH-31-22",
-      "98.5|白色|25":  "YMH-31-25",
+      "95|綠色|10": "YMH-32-10",
+      "95|綠色|14": "YMH-32-14",
+      "95|綠色|16": "YMH-32",
+      "95|綠色|18": "YMH-32-18",
+      "95|綠色|20": "YMH-32-20",
+      "95|象牙白|16": "YMH-38-16",
+      "95|象牙白|20": "YMH-38-20",
+      "98.5|白色|10": "YMH-31-10",
+      "98.5|白色|12": "YMH-31-12",
+      "98.5|白色|14": "YMH-31-14",
+      "98.5|白色|16": "YMH-31-16",
+      "98.5|白色|18": "YMH-31-18",
+      "98.5|白色|20": "YMH-31",
+      "98.5|白色|22": "YMH-31-22",
+      "98.5|白色|25": "YMH-31-25",
       "98.5|象牙白|14": "YMH-37-14",
       "98.5|象牙白|16": "YMH-37-16",
       "98.5|象牙白|20": "YMH-37-20"
@@ -592,112 +709,14 @@
     "skuPattern": "ZZ-999-024-95H{厚度}",
     "namePattern": "Wax White 95H{厚度}",
     "specs": [
-      { "key": "厚度", "label": "厚度 (mm)", "options": ["10", "16"] }
-    ]
-  },
-  {
-    "id": "YMH-PMMA-VITA",
-    "seriesCode": "YMH-34/35",
-    "seriesName": "PMMA 牙色塊",
-    "brand": "YAMAHACHI",
-    "productType": "材料",
-    "category": "PMMA 塊",
-    "skuPattern": "",
-    "namePattern": "PMMA {顏色} ({直徑}*{厚度}mm)",
-    "specs": [
-      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
-      { "key": "厚度", "label": "厚度 (mm)", "options": ["15", "16", "20", "25"] },
-      { "key": "顏色", "label": "顏色", "options": ["A1", "A2", "A3", "A3.5"] }
-    ],
-    "skuMap": {
-      "95|20|A1":    "YMH-34-A1",
-      "95|25|A1":    "YMH-34-A1-25",
-      "95|16|A2":    "YMH-34-A2-16",
-      "95|20|A2":    "YMH-34-A2",
-      "95|25|A2":    "YMH-34-A2-25",
-      "95|16|A3":    "YMH-34-A3-16",
-      "95|20|A3":    "YMH-34-A3",
-      "95|25|A3":    "YMH-34-A3-25",
-      "98.5|15|A1":  "YMH-35-A1-15",
-      "98.5|20|A1":  "YMH-35-A1",
-      "98.5|25|A1":  "YMH-35-A1-25",
-      "98.5|16|A2":  "YMH-35-A2-16",
-      "98.5|20|A2":  "YMH-35-A2",
-      "98.5|25|A2":  "YMH-35-A2-25",
-      "98.5|16|A3":  "YMH-35-A3-16",
-      "98.5|20|A3":  "YMH-35-A3",
-      "98.5|25|A3":  "YMH-35-A3-25",
-      "98.5|20|A3.5":"YMH-35-A3.5"
-    }
-  },
-  {
-    "id": "YMH-PMMA-PINK",
-    "seriesCode": "YMH-34/36",
-    "seriesName": "PMMA Pink 牙肉色",
-    "brand": "YAMAHACHI",
-    "productType": "材料",
-    "category": "PMMA 塊",
-    "skuPattern": "",
-    "namePattern": "PMMA Pink ({直徑}*{厚度}mm)",
-    "specs": [
-      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
-      { "key": "厚度", "label": "厚度 (mm)", "options": ["20", "25", "30", "35"] }
-    ],
-    "skuMap": {
-      "95|25":    "YMH-34-25",
-      "98.5|20":  "YMH-36-20",
-      "98.5|25":  "YMH-36-25",
-      "98.5|30":  "YMH-36-30",
-      "98.5|35":  "YMH-36-35"
-    }
-  },
-  {
-    "id": "YMH-PMMA-CLEAR",
-    "seriesCode": "YMH-39/40",
-    "seriesName": "PMMA Clear 透明",
-    "brand": "YAMAHACHI",
-    "productType": "材料",
-    "category": "PMMA 塊",
-    "skuPattern": "",
-    "namePattern": "PMMA Clear ({直徑}*{厚度}mm)",
-    "specs": [
-      { "key": "直徑", "label": "直徑 (mm)", "options": ["95", "98.5"] },
-      { "key": "厚度", "label": "厚度 (mm)", "options": ["16", "20", "25", "30"] }
-    ],
-    "skuMap": {
-      "95|16":    "YMH-39-20-16",
-      "95|20":    "YMH-39-20",
-      "95|25":    "YMH-39-25",
-      "98.5|16":  "YMH-39-1-16",
-      "98.5|20":  "YMH-39",
-      "98.5|25":  "YMH-40-25",
-      "98.5|30":  "YMH-40-30"
-    }
-  },
-  {
-    "id": "YMH-PMMA-DUAL",
-    "seriesCode": "YMH-35-1",
-    "seriesName": "PMMA Dual Color 雙色",
-    "brand": "YAMAHACHI",
-    "productType": "材料",
-    "category": "PMMA 塊",
-    "skuPattern": "YMH-35-1-{顏色}",
-    "namePattern": "PMMA Dual Color {顏色} (98.5*35mm)",
-    "specs": [
-      { "key": "顏色", "label": "顏色", "options": ["A1", "A2", "A3"] }
-    ]
-  },
-  {
-    "id": "YMH-PMMA-MLAYER",
-    "seriesCode": "YMH-36",
-    "seriesName": "PMMA 多層透",
-    "brand": "YAMAHACHI",
-    "productType": "材料",
-    "category": "PMMA 塊",
-    "skuPattern": "YMH-36-{顏色}",
-    "namePattern": "PMMA 多層透 {顏色}+ (98.5*20mm)",
-    "specs": [
-      { "key": "顏色", "label": "顏色", "options": ["A2", "A3"] }
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "10",
+          "16"
+        ]
+      }
     ]
   },
   {
