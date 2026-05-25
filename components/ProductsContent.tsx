@@ -206,6 +206,29 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
 }
 
 // ── Product Card ─────────────────────────────────────────────────────────────
+function ProductCardThumb({ id, name }: { id: string; name: string }) {
+  const [imgError, setImgError] = useState(false)
+  const proxySrc = `/api/notion-image?pageId=${id}`
+  return (
+    <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden border-b border-gray-100">
+      {!imgError ? (
+        <Image
+          src={proxySrc}
+          alt={name}
+          fill
+          className="object-cover"
+          onError={() => setImgError(true)}
+          unoptimized
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-4xl select-none">📦</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
   return (
     <motion.button
@@ -215,10 +238,8 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
       transition={{ duration: 0.2 }}
       className="panel text-left flex flex-col overflow-hidden hover:border-gray-300 w-full"
     >
-      {/* Thumbnail area */}
-      <div className="flex items-center justify-center bg-gray-50 border-b border-gray-100 py-5">
-        <ProductThumb id={p.id} name={p.name} size={80} />
-      </div>
+      {/* Thumbnail area — full bleed */}
+      <ProductCardThumb id={p.id} name={p.name} />
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
@@ -466,7 +487,7 @@ export function ProductsContent({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="panel overflow-hidden">
-              <div className="bg-gray-100 animate-pulse h-28" />
+              <div className="bg-gray-100 animate-pulse aspect-[4/3]" />
               <div className="p-4 space-y-2">
                 <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
                 <div className="h-3 w-1/2 bg-gray-50 rounded animate-pulse" />
