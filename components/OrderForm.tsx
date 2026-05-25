@@ -234,11 +234,11 @@ function ProductPicker({
       .catch(() => {})
   }, [])
 
-  // 防抖搜尋（文字 or 篩選有值時觸發）
+  // 防抖搜尋：只有輸入文字關鍵字時才送 API（品牌 / 類型篩選由瀏覽模式 Accordion 處理）
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     const q = search.trim()
-    if (!q && !filterBrand && !filterType) {
+    if (!q) {
       setSearchResults([])
       setSearchLoading(false)
       return
@@ -247,7 +247,7 @@ function ProductPicker({
     timerRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ limit: '80' })
-        if (q) params.set('q', q)
+        params.set('q', q)
         if (filterBrand) params.set('brand', filterBrand)
         if (filterType) params.set('type', filterType)
         const res = await fetch(`/api/products/search?${params}`)
@@ -257,7 +257,10 @@ function ProductPicker({
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [search, filterBrand, filterType])
 
-  const isSearching = search.trim().length > 0 || !!filterBrand || !!filterType
+  // 只有輸入文字關鍵字才進「搜尋模式」（顯示平鋪清單）；
+  // 單純選品牌 / 類型篩選仍停在「瀏覽模式」（系列 Accordion），
+  // filteredFamilies 已依 filterBrand / filterType 過濾。
+  const isSearching = search.trim().length > 0
 
   // 瀏覽模式下，依篩選條件過濾系列
   const filteredFamilies = useMemo(() => {
