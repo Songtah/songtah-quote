@@ -1,10 +1,10 @@
 import { Client } from '@notionhq/client'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
-const ORDERS_DB = process.env.NOTION_ORDERS_DB!
+const ORDERS_DB      = process.env.NOTION_ORDERS_DB!
+const ORDER_ITEMS_DB = process.env.NOTION_ORDER_ITEMS_DB!
 
 function richText(content: string) {
-  // Notion rich_text has a 2000 char limit per block — truncate safely
   return [{ text: { content: content.slice(0, 2000) } }]
 }
 
@@ -29,6 +29,11 @@ function getCreatedTime(page: any, field: string): string {
   return page.properties?.[field]?.created_time ?? ''
 }
 
+/** 32-char hex → UUID with hyphens */
+function formatId(id: string): string {
+  return id.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5')
+}
+
 // ── 台灣時區日期前綴 ──────────────────────────────────────────
 
 function getTWDatePrefix(): string {
@@ -41,7 +46,7 @@ function getTWDatePrefix(): string {
 
 async function generateOrderNumber(): Promise<string> {
   const prefix = getTWDatePrefix()
-  const twNow = new Date(Date.now() + 8 * 60 * 60 * 1000)
+  const twNow  = new Date(Date.now() + 8 * 60 * 60 * 1000)
   const mm = String(twNow.getUTCMonth() + 1).padStart(2, '0')
   const dd = String(twNow.getUTCDate()).padStart(2, '0')
   const todayStart = new Date(
@@ -66,7 +71,7 @@ async function generateOrderNumber(): Promise<string> {
   return `${prefix}-${String(maxSeq + 1).padStart(2, '0')}`
 }
 
-// ── types ─────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 
 export interface OrderItem {
   id: string          // local UUID, not stored in Notion
@@ -76,7 +81,7 @@ export interface OrderItem {
   seriesName: string
   seriesId: string
   quantity: number
-  unitPrice: number   // 單價（0 = 未填）
+  unitPrice: number
   note: string
 }
 
@@ -90,7 +95,6 @@ export interface Order {
   items: OrderItem[]
   totalAmount: number
   createdTime: string
-  // 客戶資訊
   customerId: string
   customerName: string
   companyTitle?: string
@@ -100,39 +104,163 @@ export interface Order {
   customerTaxId: string
 }
 
-/** 計算訂單總金額 */
 export function calcTotal(items: OrderItem[]): number {
   return items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
+}
+
+// ── Item helpers ───────────────────────────────────────────────
+
+function parseItemPage(page: any): OrderItem & { orderId: string } {
+  const relations: any[] = page.properties?.['訂購單']?.relation ?? []
+  const orderId = (relations[0]?.id ?? '').replace(/-/g, '')
+  return {
+    id:         `item-${page.id}`,
+    skuCode:    getText(page, '貨品碼'),
+    skuName:    getText(page, '品名'),
+    brand:      getText(page, '品牌'),
+    seriesName: getText(page, '系列'),
+    seriesId:   '',
+    quantity:   page.properties?.['數量']?.number ?? 1,
+    unitPrice:  page.properties?.['單價']?.number ?? 0,
+    note:       getText(page, '備註'),
+    orderId,
+  }
+}
+
+/** Fetch ALL items across all orders (two API calls: orders list + all items) */
+async function getAllOrderItems(): Promise<Array<OrderItem & { orderId: string }>> {
+  if (!ORDER_ITEMS_DB) return []
+  const results: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDER_ITEMS_DB,
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    results.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return results.map(parseItemPage)
+}
+
+/** Fetch items for a single order (UUID format) */
+async function getItemsByOrderId(formattedId: string): Promise<OrderItem[]> {
+  if (!ORDER_ITEMS_DB) return []
+  const resp: any = await notion.databases.query({
+    database_id: ORDER_ITEMS_DB,
+    filter: { property: '訂購單', relation: { contains: formattedId } },
+    page_size: 100,
+  })
+  return (resp.results ?? []).map((p: any) => {
+    const { orderId: _oid, ...item } = parseItemPage(p)
+    return item
+  })
+}
+
+/** Create item pages in 訂購明細, linked to the order */
+async function createOrderItems(orderId: string, items: OrderItem[]): Promise<void> {
+  if (!ORDER_ITEMS_DB || items.length === 0) return
+  await Promise.all(
+    items.map((item) =>
+      notion.pages.create({
+        parent: { database_id: ORDER_ITEMS_DB },
+        properties: {
+          品名:   { title: richText(item.skuName) },
+          貨品碼: { rich_text: richText(item.skuCode) },
+          品牌:   { rich_text: richText(item.brand) },
+          系列:   { rich_text: richText(item.seriesName) },
+          數量:   { number: item.quantity },
+          單價:   { number: item.unitPrice },
+          備註:   { rich_text: richText(item.note ?? '') },
+          訂購單: { relation: [{ id: orderId }] },
+        },
+      })
+    )
+  )
+}
+
+/** Archive (soft-delete) all item pages for an order */
+async function deleteOrderItems(formattedId: string): Promise<void> {
+  if (!ORDER_ITEMS_DB) return
+  const resp: any = await notion.databases.query({
+    database_id: ORDER_ITEMS_DB,
+    filter: { property: '訂購單', relation: { contains: formattedId } },
+    page_size: 100,
+  })
+  await Promise.all(
+    (resp.results ?? []).map((p: any) =>
+      notion.pages.update({ page_id: p.id, archived: true })
+    )
+  )
+}
+
+// ── Parse order page ───────────────────────────────────────────
+
+function parseOrderPage(page: any, items: OrderItem[] = []): Order {
+  return {
+    id:           page.id.replace(/-/g, ''),
+    orderNumber:  getText(page, '訂單編號'),
+    date:         getDate(page, '日期'),
+    salesperson:  getText(page, '業務'),
+    status:       getSelect(page, '狀態'),
+    note:         getText(page, '備註'),
+    items,
+    totalAmount:  page.properties?.['總金額']?.number ?? 0,
+    createdTime:  getCreatedTime(page, '建立時間'),
+    customerId:   getText(page, '客戶ID'),
+    customerName: getText(page, '客戶名稱'),
+    companyTitle: getText(page, '公司抬頭'),
+    customerAddress: getText(page, '地址'),
+    customerPhone:   getText(page, '電話'),
+    contactPerson:   getText(page, '聯絡人'),
+    customerTaxId:   getText(page, '統一編號'),
+  }
 }
 
 // ── CRUD ──────────────────────────────────────────────────────
 
 export async function listOrders(): Promise<Order[]> {
-  const pages: any[] = []
-  let cursor: string | undefined
+  // Fetch orders and all items in parallel
+  const orderPagesPromise = (async () => {
+    const pages: any[] = []
+    let cursor: string | undefined
+    do {
+      const resp: any = await notion.databases.query({
+        database_id: ORDERS_DB,
+        sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+      pages.push(...resp.results)
+      cursor = resp.has_more ? resp.next_cursor : undefined
+    } while (cursor)
+    return pages
+  })()
 
-  do {
-    const resp: any = await notion.databases.query({
-      database_id: ORDERS_DB,
-      sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-      page_size: 100,
-      ...(cursor ? { start_cursor: cursor } : {}),
-    })
-    pages.push(...resp.results)
-    cursor = resp.has_more ? resp.next_cursor : undefined
-  } while (cursor)
+  const [orderPages, allItems] = await Promise.all([orderPagesPromise, getAllOrderItems()])
 
-  return pages.map(parseOrderPage)
+  // Group items by order ID
+  const itemsByOrder: Record<string, OrderItem[]> = {}
+  for (const { orderId, ...item } of allItems) {
+    if (!itemsByOrder[orderId]) itemsByOrder[orderId] = []
+    itemsByOrder[orderId].push(item)
+  }
+
+  return orderPages.map((page) => {
+    const orderId = page.id.replace(/-/g, '')
+    return parseOrderPage(page, itemsByOrder[orderId] ?? [])
+  })
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  const formatted = id.replace(
-    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
-    '$1-$2-$3-$4-$5'
-  )
+  const formatted = formatId(id)
   try {
-    const page: any = await notion.pages.retrieve({ page_id: formatted })
-    return parseOrderPage(page)
+    const [page, items] = await Promise.all([
+      notion.pages.retrieve({ page_id: formatted }),
+      getItemsByOrderId(formatted),
+    ])
+    return parseOrderPage(page as any, items)
   } catch {
     return null
   }
@@ -154,9 +282,6 @@ export async function createOrder(data: {
 }): Promise<Order> {
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
-  const itemsJson = JSON.stringify(
-    data.items.map(({ id: _id, ...rest }) => rest)
-  )
 
   const page: any = await notion.pages.create({
     parent: { database_id: ORDERS_DB },
@@ -166,7 +291,6 @@ export async function createOrder(data: {
       業務:     { rich_text: richText(data.salesperson) },
       狀態:     { select: { name: data.status ?? '草稿' } },
       備註:     { rich_text: richText(data.note) },
-      明細JSON: { rich_text: richText(itemsJson) },
       總金額:   { number: total },
       客戶ID:   { rich_text: richText(data.customerId ?? '') },
       客戶名稱: { rich_text: richText(data.customerName ?? '') },
@@ -178,24 +302,22 @@ export async function createOrder(data: {
     },
   })
 
-  return parseOrderPage(page)
+  // Create item pages in 訂購明細, linked to this order
+  await createOrderItems(page.id, data.items)
+
+  return parseOrderPage(page, data.items.map((item, idx) => ({ ...item, id: `item-${idx}` })))
 }
 
 export async function archiveOrder(id: string): Promise<void> {
-  const formatted = id.replace(
-    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
-    '$1-$2-$3-$4-$5'
-  )
+  const formatted = formatId(id)
+  // Archive item pages first, then the order
+  await deleteOrderItems(formatted)
   await notion.pages.update({ page_id: formatted, archived: true })
 }
 
 export async function updateOrderStatus(id: string, status: string): Promise<void> {
-  const formatted = id.replace(
-    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
-    '$1-$2-$3-$4-$5'
-  )
   await notion.pages.update({
-    page_id: formatted,
+    page_id: formatId(id),
     properties: { 狀態: { select: { name: status } } },
   })
 }
@@ -214,68 +336,29 @@ export async function updateOrder(id: string, data: {
   contactPerson?: string
   customerTaxId?: string
 }): Promise<void> {
-  const formatted = id.replace(
-    /^(.{8})(.{4})(.{4})(.{4})(.{12})$/,
-    '$1-$2-$3-$4-$5'
-  )
+  const formatted = formatId(id)
   const props: any = {}
-  if (data.date)                      props['日期']     = { date: { start: data.date } }
-  if (data.salesperson !== undefined) props['業務']     = { rich_text: richText(data.salesperson) }
-  if (data.note !== undefined)        props['備註']     = { rich_text: richText(data.note) }
-  if (data.status)                    props['狀態']     = { select: { name: data.status } }
+
+  if (data.date)                           props['日期']     = { date: { start: data.date } }
+  if (data.salesperson !== undefined)      props['業務']     = { rich_text: richText(data.salesperson) }
+  if (data.note !== undefined)             props['備註']     = { rich_text: richText(data.note) }
+  if (data.status)                         props['狀態']     = { select: { name: data.status } }
+  if (data.customerId   !== undefined)     props['客戶ID']   = { rich_text: richText(data.customerId) }
+  if (data.customerName !== undefined)     props['客戶名稱'] = { rich_text: richText(data.customerName) }
+  if (data.companyTitle !== undefined)     props['公司抬頭'] = { rich_text: richText(data.companyTitle) }
+  if (data.customerAddress !== undefined)  props['地址']     = { rich_text: richText(data.customerAddress) }
+  if (data.customerPhone !== undefined)    props['電話']     = { rich_text: richText(data.customerPhone) }
+  if (data.contactPerson !== undefined)    props['聯絡人']   = { rich_text: richText(data.contactPerson) }
+  if (data.customerTaxId !== undefined)    props['統一編號'] = { rich_text: richText(data.customerTaxId) }
+
   if (data.items) {
-    props['明細JSON'] = { rich_text: richText(JSON.stringify(data.items.map(({ id: _id, ...rest }) => rest))) }
-    props['總金額']   = { number: calcTotal(data.items) }
+    // Replace all item pages
+    await deleteOrderItems(formatted)
+    await createOrderItems(formatted, data.items)
+    props['總金額'] = { number: calcTotal(data.items) }
   }
-  if (data.customerId   !== undefined) props['客戶ID']   = { rich_text: richText(data.customerId) }
-  if (data.customerName !== undefined) props['客戶名稱'] = { rich_text: richText(data.customerName) }
-  if (data.companyTitle !== undefined) props['公司抬頭'] = { rich_text: richText(data.companyTitle) }
-  if (data.customerAddress !== undefined) props['地址']  = { rich_text: richText(data.customerAddress) }
-  if (data.customerPhone !== undefined)   props['電話']  = { rich_text: richText(data.customerPhone) }
-  if (data.contactPerson !== undefined)   props['聯絡人']   = { rich_text: richText(data.contactPerson) }
-  if (data.customerTaxId !== undefined)   props['統一編號'] = { rich_text: richText(data.customerTaxId) }
 
-  await notion.pages.update({ page_id: formatted, properties: props })
-}
-
-// ── helper ────────────────────────────────────────────────────
-
-function parseOrderPage(page: any): Order {
-  const itemsRaw = getText(page, '明細JSON')
-  let items: OrderItem[] = []
-  try {
-    const parsed = JSON.parse(itemsRaw)
-    if (Array.isArray(parsed)) {
-      items = parsed.map((item: any, idx: number) => ({
-        id: `item-${idx}`,
-        skuCode: item.skuCode ?? '',
-        skuName: item.skuName ?? '',
-        brand: item.brand ?? '',
-        seriesName: item.seriesName ?? '',
-        seriesId: item.seriesId ?? '',
-        quantity: item.quantity ?? 1,
-        unitPrice: item.unitPrice ?? 0,
-        note: item.note ?? '',
-      }))
-    }
-  } catch { /* ignore parse errors */ }
-
-  return {
-    id: page.id.replace(/-/g, ''),
-    orderNumber: getText(page, '訂單編號'),
-    date: getDate(page, '日期'),
-    salesperson: getText(page, '業務'),
-    status: getSelect(page, '狀態'),
-    note: getText(page, '備註'),
-    items,
-    totalAmount: page.properties?.['總金額']?.number ?? 0,
-    createdTime: getCreatedTime(page, '建立時間'),
-    customerId: getText(page, '客戶ID'),
-    customerName: getText(page, '客戶名稱'),
-    companyTitle: getText(page, '公司抬頭'),
-    customerAddress: getText(page, '地址'),
-    customerPhone: getText(page, '電話'),
-    contactPerson: getText(page, '聯絡人'),
-    customerTaxId: getText(page, '統一編號'),
+  if (Object.keys(props).length > 0) {
+    await notion.pages.update({ page_id: formatted, properties: props })
   }
 }
