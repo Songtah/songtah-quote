@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OrderItem } from '@/lib/orders-notion'
@@ -9,35 +9,45 @@ import type { OrderItem } from '@/lib/orders-notion'
 const calcTotal = (items: OrderItem[]): number =>
   items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
 
-// ── 產品目錄型別 ──────────────────────────────────────────────
+// ── 產品目錄型別 (對應 /api/products/search + /api/products/families) ──
 
-interface SkuEntry {
-  code: string
-  name: string
-  color?: string
-  size?: string
-  weight?: string
-  material?: string
-  colorOpt?: string
-  model?: string
-  summary?: string
-  specValues?: Record<string, string>   // chip-based spec selection
-}
-
-interface SeriesSpec {
-  name: string
-  options: string[]
-  order: number
-}
-
-interface SeriesEntry {
+interface CatalogItem {
   id: string
-  brand: string
   name: string
-  type: string
-  mode: '直接選品項' | '選擇式規格'
-  skus: SkuEntry[]
-  specs?: SeriesSpec[]
+  manufacturer: string
+  productType: string
+  category: string
+  skuCode: string
+  price: number | null
+  salePrice: number | null
+  notes: string
+}
+
+interface FamilySpec {
+  key: string
+  label: string
+  options: string[]
+}
+
+interface ProductFamily {
+  id: string
+  seriesCode: string
+  seriesName: string
+  brand: string
+  productType: string
+  category: string
+  skuPattern: string
+  namePattern: string
+  specs: FamilySpec[]
+}
+
+/** 從樣板字串與規格選擇建立貨品碼或品名 */
+function buildFromPattern(pattern: string, selections: Record<string, string>): string {
+  let result = pattern
+  for (const [key, val] of Object.entries(selections)) {
+    result = result.replace(`{${key}}`, val)
+  }
+  return result
 }
 
 // ── 狀態顏色 ──────────────────────────────────────────────────
@@ -53,107 +63,54 @@ const STATUS_COLOR: Record<StatusType, string> = {
   已取消: 'bg-red-100 text-red-600',
 }
 
-// ── 規格欄位定義（舊式 dropdown 用） ──────────────────────────
+// ── FamilySpecPanel（按鈕式串聯規格選擇） ─────────────────────
 
-const SPEC_FIELDS: Array<{ key: keyof SkuEntry; label: string }> = [
-  { key: 'material',  label: '材質' },
-  { key: 'colorOpt',  label: '顏色' },
-  { key: 'color',     label: '色號' },
-  { key: 'size',      label: '尺寸/高度' },
-  { key: 'weight',    label: '容量/重量' },
-  { key: 'model',     label: '型號' },
-]
-
-function computeSpecFilters(skus: SkuEntry[]) {
-  const result: Array<{ key: keyof SkuEntry; label: string; options: string[] }> = []
-  for (const { key, label } of SPEC_FIELDS) {
-    const vals = Array.from(
-      new Set(skus.map((s) => (s[key] as string | undefined) ?? '').filter(Boolean))
-    ).sort()
-    if (vals.length >= 2) result.push({ key, label, options: vals })
-  }
-  return result
-}
-
-function filterSkusBySpecs(skus: SkuEntry[], selected: Record<string, string>) {
-  return skus.filter((sku) =>
-    Object.entries(selected).every(([key, val]) => {
-      if (!val) return true
-      return ((sku[key as keyof SkuEntry] as string | undefined) ?? '') === val
-    })
-  )
-}
-
-// ── ChipSpecPanel（新式串聯卡片規格選擇） ─────────────────────
-
-function ChipSpecPanel({
-  series,
+function FamilySpecPanel({
+  family,
   onAdd,
 }: {
-  series: SeriesEntry
-  onAdd: (series: SeriesEntry, sku: SkuEntry) => void
+  family: ProductFamily
+  onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
 }) {
-  const specs = useMemo(
-    () => [...(series.specs ?? [])].sort((a, b) => a.order - b.order),
-    [series.specs]
-  )
   const [selected, setSelected] = useState<Record<string, string>>({})
 
-  // For spec at index i, get the options available given previous selections
-  const availableOptions = useCallback(
-    (specIndex: number): string[] => {
-      const spec = specs[specIndex]
-      if (!spec) return []
-      const filtered = series.skus.filter((sku) =>
-        specs.slice(0, specIndex).every(
-          (prev) => !selected[prev.name] || sku.specValues?.[prev.name] === selected[prev.name]
-        )
-      )
-      const have = new Set(filtered.map((s) => s.specValues?.[spec.name] ?? '').filter(Boolean))
-      return spec.options.filter((o) => have.has(o))
-    },
-    [series.skus, specs, selected]
-  )
-
-  const handleChip = (specIndex: number, specName: string, value: string) => {
+  const handleChip = (specKey: string, specIdx: number, value: string) => {
     setSelected((prev) => {
       const next: Record<string, string> = {}
-      // Keep selections before this level, set this level, clear subsequent
-      specs.slice(0, specIndex).forEach((s) => { if (prev[s.name]) next[s.name] = prev[s.name] })
-      next[specName] = prev[specName] === value ? '' : value  // toggle
+      // Keep selections from specs before this one
+      family.specs.slice(0, specIdx).forEach((s) => {
+        if (prev[s.key]) next[s.key] = prev[s.key]
+      })
+      // Toggle: click same value to deselect
+      if (prev[specKey] !== value) next[specKey] = value
       return next
     })
   }
 
-  const allSelected = specs.length > 0 && specs.every((s) => !!selected[s.name])
-  const matchedSku = allSelected
-    ? series.skus.find((sku) =>
-        specs.every((s) => sku.specValues?.[s.name] === selected[s.name])
-      )
-    : null
+  const allSelected = family.specs.length > 0 && family.specs.every((s) => !!selected[s.key])
+  const skuCode = allSelected ? buildFromPattern(family.skuPattern, selected) : ''
+  const skuName = allSelected ? buildFromPattern(family.namePattern, selected) : ''
 
   return (
     <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
-      {specs.map((spec, idx) => {
-        const prevSelected = idx === 0 || !!selected[specs[idx - 1].name]
-        const opts = availableOptions(idx)
+      {family.specs.map((spec, idx) => {
+        const prevSelected = idx === 0 || !!selected[family.specs[idx - 1].key]
         return (
-          <div key={spec.name}>
-            <div className="text-xs font-semibold text-brand-600 mb-2">{spec.name}</div>
+          <div key={spec.key}>
+            <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>
             <div className="flex flex-wrap gap-1.5">
-              {(prevSelected ? opts : spec.options).map((opt) => {
-                const isSelected = selected[spec.name] === opt
-                const isAvailable = prevSelected && opts.includes(opt)
+              {spec.options.map((opt) => {
+                const isSelected = selected[spec.key] === opt
                 return (
                   <button
                     key={opt}
-                    disabled={!isAvailable}
-                    onClick={() => handleChip(idx, spec.name, opt)}
+                    disabled={!prevSelected}
+                    onClick={() => handleChip(spec.key, idx, opt)}
                     className={[
                       'px-3 py-1 rounded-full text-xs font-medium border transition-all',
                       isSelected
                         ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-                        : isAvailable
+                        : prevSelected
                           ? 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600'
                           : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed',
                     ].join(' ')}
@@ -169,119 +126,34 @@ function ChipSpecPanel({
 
       {/* 結果區 */}
       <div className="pt-1">
-        {allSelected && matchedSku && (
+        {allSelected ? (
           <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">{matchedSku.name}</div>
-              <div className="text-xs text-gray-400 font-mono">{matchedSku.code}</div>
+              <div className="text-sm font-medium text-gray-800 truncate">{skuName}</div>
+              <div className="text-xs text-gray-400 font-mono">{skuCode}</div>
             </div>
             <button
-              onClick={() => { onAdd(series, matchedSku); setSelected({}) }}
+              onClick={() => {
+                onAdd({
+                  skuCode,
+                  skuName,
+                  brand: family.brand,
+                  seriesName: family.seriesName,
+                  seriesId: family.id,
+                  unitPrice: 0,
+                })
+                setSelected({})
+              }}
               className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
             >
               + 加入
             </button>
           </div>
-        )}
-        {allSelected && !matchedSku && (
-          <div className="text-xs text-red-400 bg-red-50 rounded-lg px-3 py-2">
-            此規格組合無對應品項
-          </div>
-        )}
-        {!allSelected && specs.length > 0 && (
+        ) : (
           <div className="text-xs text-gray-400">
-            請選擇{specs.find((s) => !selected[s.name])?.name}
+            請選擇{family.specs.find((s) => !selected[s.key])?.label ?? ''}
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-// ── SeriesPanel（分流：chip 卡片 or 舊式列表） ────────────────
-
-function SeriesPanel({
-  series,
-  onAdd,
-}: {
-  series: SeriesEntry
-  onAdd: (series: SeriesEntry, sku: SkuEntry) => void
-}) {
-  // Use chip UI when series has specValues in SKUs
-  const useChips = series.mode === '選擇式規格' &&
-    (series.specs?.length ?? 0) > 0 &&
-    series.skus.some((s) => s.specValues && Object.keys(s.specValues).length > 0)
-
-  if (useChips) {
-    return <ChipSpecPanel series={series} onAdd={onAdd} />
-  }
-
-  // ── 舊式：dropdown 篩選 + SKU 列表 ──
-  const specFilters = computeSpecFilters(series.skus)
-  return <LegacySpecPanel series={series} onAdd={onAdd} specFilters={specFilters} />
-}
-
-function LegacySpecPanel({
-  series,
-  onAdd,
-  specFilters,
-}: {
-  series: SeriesEntry
-  onAdd: (series: SeriesEntry, sku: SkuEntry) => void
-  specFilters: Array<{ key: keyof SkuEntry; label: string; options: string[] }>
-}) {
-  const [selected, setSelected] = useState<Record<string, string>>(() =>
-    Object.fromEntries(specFilters.map((f) => [f.key, '']))
-  )
-  const filteredSkus = useMemo(
-    () => filterSkusBySpecs(series.skus, selected),
-    [series.skus, selected]
-  )
-  const showFilters = series.mode === '選擇式規格' && specFilters.length > 0
-
-  return (
-    <div className="bg-gray-50 border-t border-gray-100">
-      {showFilters && (
-        <div className="px-5 py-3 space-y-2 border-b border-gray-200 bg-blue-50/50">
-          <div className="text-xs font-medium text-blue-700 mb-1.5">選擇規格</div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {specFilters.map((f) => (
-              <div key={String(f.key)} className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500 whitespace-nowrap">{f.label}</span>
-                <select
-                  value={selected[f.key] ?? ''}
-                  onChange={(e) => setSelected((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                  className="border rounded px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
-                >
-                  <option value="">全部</option>
-                  {f.options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
-          <div className="text-xs text-gray-400">
-            {filteredSkus.length === 0 ? '無符合規格的品項' : `符合 ${filteredSkus.length} 項`}
-          </div>
-        </div>
-      )}
-      <div className="divide-y divide-gray-100">
-        {filteredSkus.map((sku) => (
-          <div key={sku.code} className="flex items-center gap-3 px-5 py-2.5 hover:bg-blue-50">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-800">{sku.name}</div>
-              <div className="text-xs text-gray-400 flex gap-2 flex-wrap mt-0.5">
-                <span className="font-mono">{sku.code}</span>
-                {sku.summary && <span>{sku.summary}</span>}
-              </div>
-            </div>
-            <button
-              onClick={() => onAdd(series, sku)}
-              className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
-            >
-              + 加入
-            </button>
-          </div>
-        ))}
       </div>
     </div>
   )
@@ -290,92 +162,95 @@ function LegacySpecPanel({
 // ── ProductPicker ─────────────────────────────────────────────
 
 function ProductPicker({
-  catalog,
   onAdd,
   onClose,
 }: {
-  catalog: SeriesEntry[]
   onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
   onClose: () => void
 }) {
   const [search, setSearch] = useState('')
   const [filterBrand, setFilterBrand] = useState('')
   const [filterType, setFilterType] = useState('')
-  const [expandedSeries, setExpandedSeries] = useState<string | null>(null)
+  const [families, setFamilies] = useState<ProductFamily[]>([])
+  const [familiesLoading, setFamiliesLoading] = useState(true)
+  const [searchResults, setSearchResults] = useState<CatalogItem[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [expandedFamilyId, setExpandedFamilyId] = useState<string | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const brands = useMemo(
-    () => Array.from(new Set(catalog.map((s) => s.brand))).sort(),
-    [catalog]
+  // 載入規格系列
+  useEffect(() => {
+    fetch('/api/products/families')
+      .then((r) => r.json())
+      .then((data) => { setFamilies(data); setFamiliesLoading(false) })
+      .catch(() => setFamiliesLoading(false))
+  }, [])
+
+  // 防抖搜尋（文字 or 篩選有值時觸發）
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const q = search.trim()
+    if (!q && !filterBrand && !filterType) {
+      setSearchResults([])
+      setSearchLoading(false)
+      return
+    }
+    setSearchLoading(true)
+    timerRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ limit: '80' })
+        if (q) params.set('q', q)
+        if (filterBrand) params.set('brand', filterBrand)
+        if (filterType) params.set('type', filterType)
+        const res = await fetch(`/api/products/search?${params}`)
+        if (res.ok) setSearchResults(await res.json())
+      } catch { /* ignore */ } finally { setSearchLoading(false) }
+    }, 300)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [search, filterBrand, filterType])
+
+  const isSearching = search.trim().length > 0 || !!filterBrand || !!filterType
+
+  const allBrands = useMemo(
+    () => Array.from(new Set(families.map((f) => f.brand))).sort(),
+    [families]
+  )
+  const allTypes = useMemo(
+    () => Array.from(new Set(families.map((f) => f.productType))).sort(),
+    [families]
   )
 
-  // 品牌切換時，類型只顯示此品牌有的選項
-  const availableTypes = useMemo(() => {
-    const base = filterBrand ? catalog.filter((s) => s.brand === filterBrand) : catalog
-    return Array.from(new Set(base.map((s) => s.type))).sort()
-  }, [catalog, filterBrand])
-
-  // 若當前選的類型在新品牌裡不存在，自動清除
-  useEffect(() => {
-    if (filterType && !availableTypes.includes(filterType)) {
-      setFilterType('')
-    }
-  }, [availableTypes, filterType])
-
-  const searchLower = search.toLowerCase()
-  const isSearching = search.trim().length > 0
-
-  // Safe lowercase helper – never crashes on null/undefined
-  const lc = (v: string | null | undefined) => (v ?? '').toLowerCase()
-
-  const filteredSeries = useMemo(() => {
-    return catalog.filter((s) => {
-      if (filterBrand && s.brand !== filterBrand) return false
-      if (filterType && s.type !== filterType) return false
-      if (!isSearching) return true
-      if (lc(s.name).includes(searchLower)) return true
-      return s.skus.some(
-        (sku) =>
-          lc(sku.name).includes(searchLower) ||
-          lc(sku.code).includes(searchLower)
-      )
+  // 瀏覽模式下，依篩選條件過濾系列
+  const filteredFamilies = useMemo(() => {
+    if (!filterBrand && !filterType) return families
+    return families.filter((f) => {
+      if (filterBrand && f.brand !== filterBrand) return false
+      if (filterType && f.productType !== filterType) return false
+      return true
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalog, filterBrand, filterType, searchLower, isSearching])
+  }, [families, filterBrand, filterType])
 
-  // 搜尋結果：展開到 SKU 層
-  const searchResults = useMemo(() => {
-    if (!isSearching) return []
-    const results: Array<{ series: SeriesEntry; sku: SkuEntry }> = []
-    for (const s of filteredSeries) {
-      for (const sku of s.skus) {
-        if (
-          lc(sku.name).includes(searchLower) ||
-          lc(sku.code).includes(searchLower) ||
-          lc(s.name).includes(searchLower)
-        ) {
-          results.push({ series: s, sku })
-        }
-      }
-    }
-    return results.slice(0, 120)
-  }, [filteredSeries, searchLower, isSearching])
+  const handleAddItem = useCallback(
+    (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => onAdd(item),
+    [onAdd]
+  )
 
-  const handleAddSku = useCallback(
-    (series: SeriesEntry, sku: SkuEntry) => {
+  const handleAddCatalogItem = useCallback(
+    (item: CatalogItem) => {
       onAdd({
-        skuCode: sku.code,
-        skuName: sku.name,
-        brand: series.brand,
-        seriesName: series.name,
-        seriesId: series.id,
+        skuCode: item.skuCode,
+        skuName: item.name,
+        brand: item.manufacturer,
+        seriesName: item.category,
+        seriesId: '',
         unitPrice: 0,
       })
     },
     [onAdd]
   )
 
-  const toggleSeries = useCallback((id: string) => {
-    setExpandedSeries((prev) => (prev === id ? null : id))
+  const toggleFamily = useCallback((id: string) => {
+    setExpandedFamilyId((prev) => (prev === id ? null : id))
   }, [])
 
   return (
@@ -410,12 +285,12 @@ function ProductPicker({
           </button>
         </div>
 
-        {/* Top filters */}
+        {/* Filters */}
         <div className="px-4 py-3 border-b space-y-2">
           <input
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setExpandedSeries(null) }}
+            onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null) }}
             placeholder="搜尋品名、貨品編號..."
             className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             autoFocus
@@ -423,19 +298,19 @@ function ProductPicker({
           <div className="flex gap-2">
             <select
               value={filterBrand}
-              onChange={(e) => { setFilterBrand(e.target.value); setExpandedSeries(null) }}
+              onChange={(e) => { setFilterBrand(e.target.value); setExpandedFamilyId(null) }}
               className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
             >
               <option value="">全部品牌</option>
-              {brands.map((b) => <option key={b} value={b}>{b}</option>)}
+              {allBrands.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
             <select
               value={filterType}
-              onChange={(e) => { setFilterType(e.target.value); setExpandedSeries(null) }}
+              onChange={(e) => { setFilterType(e.target.value); setExpandedFamilyId(null) }}
               className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
             >
               <option value="">全部類型</option>
-              {availableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+              {allTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
@@ -443,77 +318,78 @@ function ProductPicker({
         {/* Results */}
         <div className="flex-1 overflow-y-auto">
           {isSearching ? (
-            /* ── 搜尋模式：平鋪 SKU ── */
-            searchResults.length === 0 ? (
+            /* ── 搜尋 / 篩選模式：平鋪品項 ── */
+            searchLoading ? (
+              <div className="text-center text-gray-400 py-12 text-sm animate-pulse">搜尋中...</div>
+            ) : searchResults.length === 0 ? (
               <div className="text-center text-gray-400 py-12 text-sm">無符合品項</div>
             ) : (
               <div className="divide-y">
-                {searchResults.map(({ series, sku }) => (
+                {searchResults.map((item) => (
                   <div
-                    key={`${series.id}-${sku.code}`}
+                    key={item.skuCode}
                     className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 truncate">
-                        {sku.name}
-                      </div>
+                      <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
                       <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
-                        <span className="font-mono">{sku.code}</span>
-                        <span>{series.brand} · {series.name}</span>
-                        {sku.summary && <span>· {sku.summary}</span>}
+                        <span className="font-mono">{item.skuCode}</span>
+                        <span>{item.manufacturer} · {item.category}</span>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleAddSku(series, sku)}
-                      className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded"
+                      onClick={() => handleAddCatalogItem(item)}
+                      className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
                     >
                       + 加入
                     </button>
                   </div>
                 ))}
+                {searchResults.length >= 80 && (
+                  <div className="text-center text-xs text-gray-400 py-3 bg-gray-50">
+                    顯示前 80 筆，請輸入更精確的關鍵字
+                  </div>
+                )}
               </div>
             )
           ) : (
-            /* ── 瀏覽模式：系列 Accordion ── */
-            filteredSeries.length === 0 ? (
-              <div className="text-center text-gray-400 py-12 text-sm">沒有符合的系列</div>
+            /* ── 瀏覽模式：規格系列 Accordion ── */
+            familiesLoading ? (
+              <div className="text-center text-gray-400 py-12 text-sm animate-pulse">載入中...</div>
+            ) : filteredFamilies.length === 0 ? (
+              <div className="text-center text-gray-400 py-12 text-sm">沒有符合條件的系列</div>
             ) : (
               <div className="divide-y">
-                {filteredSeries.map((series) => {
-                  const isExpanded = expandedSeries === series.id
-                  // 只在此系列為規格式且有多個 SKU 時才顯示「含規格選項」提示
-                  const hasSpecFilter =
-                    series.mode === '選擇式規格' && series.skus.length > 1
+                {filteredFamilies.map((family) => {
+                  const isExpanded = expandedFamilyId === family.id
                   return (
-                    <div key={series.id}>
-                      {/* Series header row */}
+                    <div key={family.id}>
                       <button
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
-                        onClick={() => toggleSeries(series.id)}
+                        onClick={() => toggleFamily(family.id)}
                       >
                         <span className="text-gray-400 text-xs w-4 shrink-0">
                           {isExpanded ? '▾' : '▸'}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-800">
-                            {series.name}
-                          </div>
-                          <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
-                            <span>{series.brand}</span>
+                          <div className="text-sm font-medium text-gray-800">{family.seriesName}</div>
+                          <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
+                            <span>{family.brand}</span>
                             <span>·</span>
-                            <span>{series.type}</span>
-                            <span>·</span>
-                            <span>{series.skus.length} 項</span>
-                            {hasSpecFilter && (
-                              <span className="text-blue-400">· 含規格選項</span>
+                            <span>{family.productType}</span>
+                            {family.specs.length > 0 && (
+                              <>
+                                <span>·</span>
+                                <span className="text-brand-500">
+                                  {family.specs.map((s) => s.label).join(' × ')}
+                                </span>
+                              </>
                             )}
                           </div>
                         </div>
                       </button>
-
-                      {/* Expanded: spec filters + SKU list */}
                       {isExpanded && (
-                        <SeriesPanel series={series} onAdd={handleAddSku} />
+                        <FamilySpecPanel family={family} onAdd={handleAddItem} />
                       )}
                     </div>
                   )
@@ -527,7 +403,7 @@ function ProductPicker({
         <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-gray-400 text-center bg-gray-50">
           {isSearching
             ? `搜尋結果 ${searchResults.length} 項`
-            : `共 ${filteredSeries.length} 個系列`}
+            : `共 ${filteredFamilies.length} 個規格系列`}
         </div>
       </motion.div>
     </div>
@@ -709,8 +585,6 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
   const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? [])
   const [showPicker, setShowPicker] = useState(false)
-  const [catalog, setCatalog] = useState<SeriesEntry[]>([])
-  const [catalogLoading, setCatalogLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -725,13 +599,8 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
     taxId: initialOrder?.customerTaxId ?? '',
   })
 
-  // Load product catalog + salesperson options in parallel
+  // Load salesperson options
   useEffect(() => {
-    fetch('/products_catalog.json')
-      .then((r) => r.json())
-      .then((data) => { setCatalog(data); setCatalogLoading(false) })
-      .catch(() => setCatalogLoading(false))
-
     fetch('/api/visits/options')
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data?.salespersons)) setSalespersonOptions(data.salespersons) })
@@ -995,10 +864,9 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
           {canEdit && (
           <button
             onClick={() => setShowPicker(true)}
-            disabled={catalogLoading}
-            className="button-primary px-4 py-1.5 text-sm rounded disabled:opacity-50"
+            className="button-primary px-4 py-1.5 text-sm rounded"
           >
-            {catalogLoading ? '載入中...' : '+ 新增品項'}
+            + 新增品項
           </button>
         )}
         </div>
@@ -1208,9 +1076,8 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
 
       {/* Product picker panel */}
       <AnimatePresence>
-        {showPicker && catalog.length > 0 && (
+        {showPicker && (
           <ProductPicker
-            catalog={catalog}
             onAdd={handleAddItem}
             onClose={() => setShowPicker(false)}
           />
