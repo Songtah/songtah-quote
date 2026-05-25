@@ -68,6 +68,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-brand-100/50">
             {[
               ['客戶名稱', quote.customerName],
+              ...(quote.companyTitle ? [['公司抬頭', quote.companyTitle]] : []),
               ['電話', quote.customerPhone || '—'],
               ['地址', quote.customerAddress || '—'],
               ['統一編號', quote.customerTaxId || '—'],

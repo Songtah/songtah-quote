@@ -97,6 +97,7 @@ export interface Quote {
   quoteNumber: string        // e.g. "26040901"
   customerName: string
   customerId: string
+  companyTitle?: string
   customerPhone: string
   customerAddress: string
   customerTaxId: string
@@ -115,6 +116,7 @@ export interface Quote {
 export interface CreateQuotePayload {
   customerName: string
   customerId: string
+  companyTitle?: string
   customerPhone: string
   customerAddress: string
   customerTaxId: string

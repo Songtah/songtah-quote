@@ -547,6 +547,7 @@ interface CustomerResult {
 interface SelectedCustomer {
   id: string
   name: string
+  companyTitle: string
   address: string
   phone: string
   contactPerson: string
@@ -607,6 +608,7 @@ function CustomerNameInput({
         onChange({
           id: c.id,
           name: d?.name ?? c.name,
+          companyTitle: customer.companyTitle,
           address: d?.address ?? c.address,
           phone: d?.phone ?? '',
           contactPerson: customer.contactPerson,
@@ -679,6 +681,7 @@ interface OrderFormProps {
     items: OrderItem[]
     customerId?: string
     customerName?: string
+    companyTitle?: string
     customerAddress?: string
     customerPhone?: string
     contactPerson?: string
@@ -715,6 +718,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
   const [customer, setCustomer] = useState<SelectedCustomer>({
     id: initialOrder?.customerId ?? '',
     name: initialOrder?.customerName ?? '',
+    companyTitle: initialOrder?.companyTitle ?? '',
     address: initialOrder?.customerAddress ?? '',
     phone: initialOrder?.customerPhone ?? '',
     contactPerson: initialOrder?.contactPerson ?? '',
@@ -792,6 +796,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       const customerPayload = {
         customerId: customer.id,
         customerName: customer.name,
+        companyTitle: customer.companyTitle,
         customerAddress: customer.address,
         customerPhone: customer.phone,
         contactPerson: customer.contactPerson,
@@ -945,6 +950,19 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               value={customer.taxId}
               onChange={(e) => setCustomer((c) => ({ ...c, taxId: e.target.value }))}
               placeholder="統一編號（選填）"
+              disabled={!canEdit}
+              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              公司抬頭 <span className="text-gray-400 text-[10px]">（選填）</span>
+            </label>
+            <input
+              type="text"
+              value={customer.companyTitle}
+              onChange={(e) => setCustomer((c) => ({ ...c, companyTitle: e.target.value }))}
+              placeholder="如：XX 牙醫診所"
               disabled={!canEdit}
               className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
             />
@@ -1211,7 +1229,7 @@ function buildPrintHtml(data: {
   note: string
   status: string
   items: OrderItem[]
-  customer: SelectedCustomer
+  customer: SelectedCustomer  // includes companyTitle
 }) {
   const totalQty  = data.items.reduce((a, i) => a + i.quantity, 0)
   const totalAmt  = calcTotal(data.items)
@@ -1270,7 +1288,7 @@ function buildPrintHtml(data: {
   /* ── 客戶區塊 ── */
   .cust-block{border:1px solid #ddd;border-top:none;background:#fff}
   .cust-title{background:#333;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 12px;text-transform:uppercase}
-  .cust-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0}
+  .cust-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0}
   .cust-cell{padding:6px 12px;border-right:1px solid #eee}
   .cust-cell:last-child{border-right:none}
   .cust-name-val{font-size:14px;font-weight:700;color:#111}
@@ -1318,6 +1336,10 @@ function buildPrintHtml(data: {
     <div class="cust-cell">
       <div class="lbl">客戶名稱</div>
       <div class="cust-name-val">${c.name || '—'}</div>
+    </div>
+    <div class="cust-cell">
+      <div class="lbl">公司抬頭</div>
+      <div class="val">${c.companyTitle || '—'}</div>
     </div>
     <div class="cust-cell">
       <div class="lbl">聯絡人</div>

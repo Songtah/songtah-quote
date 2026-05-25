@@ -83,6 +83,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerAddress, setCustomerAddress] = useState('')
   const [customerTaxId, setCustomerTaxId] = useState('')
+  const [companyTitle, setCompanyTitle] = useState('')
   const [showCustomerList, setShowCustomerList] = useState(false)
   const customerDebounce = useRef<NodeJS.Timeout>()
 
@@ -118,6 +119,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
     setCustomerPhone('')
     setCustomerAddress('')
     setCustomerTaxId('')
+    setCompanyTitle('')
   }
 
   const effectiveCustomerName = selectedCustomer?.name || manualCustomer.trim()
@@ -245,6 +247,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
       body: JSON.stringify({
         customerName: effectiveCustomerName,
         customerId: selectedCustomer?.id ?? '',
+        companyTitle,
         customerPhone,
         customerAddress,
         customerTaxId,
@@ -391,6 +394,18 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               onChange={(e) => setCustomerTaxId(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
               placeholder="輸入統一編號"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              公司抬頭 <span className="text-gray-400 font-normal text-xs">（選填）</span>
+            </label>
+            <input
+              type="text"
+              value={companyTitle}
+              onChange={(e) => setCompanyTitle(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              placeholder="如：XX 牙醫診所"
             />
           </div>
           <div className="col-span-full">

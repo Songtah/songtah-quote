@@ -22,13 +22,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { date, salesperson, note, items, status } = body
+    const {
+      date, salesperson, note, items, status,
+      customerId, customerName, companyTitle,
+      customerAddress, customerPhone, contactPerson, customerTaxId,
+    } = body
 
     if (!date || !salesperson || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: '缺少必要欄位（日期、業務、品項）' }, { status: 400 })
     }
 
-    const order = await createOrder({ date, salesperson, note: note ?? '', items, status })
+    const order = await createOrder({
+      date, salesperson, note: note ?? '', items, status,
+      customerId, customerName, companyTitle,
+      customerAddress, customerPhone, contactPerson, customerTaxId,
+    })
     return NextResponse.json(order, { status: 201 })
   } catch (error) {
     console.error('createOrder error:', error)

@@ -207,6 +207,7 @@ export async function searchCustomers(query: string): Promise<Customer[]> {
 export async function createQuote(data: {
   customerName: string
   customerId: string
+  companyTitle?: string
   customerPhone: string
   customerAddress: string
   customerTaxId: string
@@ -230,6 +231,7 @@ export async function createQuote(data: {
       編號:         { rich_text: richText(quoteNumber) },
       客戶名稱:     { rich_text: richText(data.customerName) },
       客戶ID:       { rich_text: richText(data.customerId) },
+      公司抬頭:     { rich_text: richText(data.companyTitle ?? '') },
       電話:         { rich_text: richText(data.customerPhone) },
       地址:         { rich_text: richText(data.customerAddress) },
       統一編號:     { rich_text: richText(data.customerTaxId) },
@@ -278,6 +280,7 @@ export async function createQuote(data: {
     quoteNumber,
     customerName: data.customerName,
     customerId:   data.customerId,
+    companyTitle: data.companyTitle ?? '',
     customerPhone: data.customerPhone,
     customerAddress: data.customerAddress,
     customerTaxId: data.customerTaxId,
@@ -307,6 +310,7 @@ export async function listQuotes(): Promise<Quote[]> {
       quoteNumber:  getQuoteNumber(p),
       customerName: getText(p, '客戶名稱'),
       customerId:   getText(p, '客戶ID'),
+      companyTitle: getText(p, '公司抬頭'),
       customerPhone: getText(p, '電話'),
       customerAddress: getText(p, '地址'),
       customerTaxId: getText(p, '統一編號'),
@@ -359,6 +363,7 @@ export async function getQuote(pageId: string): Promise<Quote | null> {
       quoteNumber:  getQuoteNumber(page),
       customerName: getText(page, '客戶名稱'),
       customerId:   getText(page, '客戶ID'),
+      companyTitle: getText(page, '公司抬頭'),
       customerPhone: getText(page, '電話'),
       customerAddress: getText(page, '地址'),
       customerTaxId: getText(page, '統一編號'),

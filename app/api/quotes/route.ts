@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const {
       customerName,
       customerId,
+      companyTitle,
       customerPhone,
       customerAddress,
       customerTaxId,
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     const quote = await createQuote({
       customerName,
       customerId: customerId ?? '',
+      companyTitle: companyTitle ?? '',
       customerPhone: customerPhone ?? '',
       customerAddress: customerAddress ?? '',
       customerTaxId: customerTaxId ?? '',

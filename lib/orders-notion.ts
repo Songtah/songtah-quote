@@ -93,6 +93,7 @@ export interface Order {
   // 客戶資訊
   customerId: string
   customerName: string
+  companyTitle?: string
   customerAddress: string
   customerPhone: string
   contactPerson: string
@@ -145,6 +146,7 @@ export async function createOrder(data: {
   status?: string
   customerId?: string
   customerName?: string
+  companyTitle?: string
   customerAddress?: string
   customerPhone?: string
   contactPerson?: string
@@ -168,6 +170,7 @@ export async function createOrder(data: {
       總金額:   { number: total },
       客戶ID:   { rich_text: richText(data.customerId ?? '') },
       客戶名稱: { rich_text: richText(data.customerName ?? '') },
+      公司抬頭: { rich_text: richText(data.companyTitle ?? '') },
       地址:     { rich_text: richText(data.customerAddress ?? '') },
       電話:     { rich_text: richText(data.customerPhone ?? '') },
       聯絡人:   { rich_text: richText(data.contactPerson ?? '') },
@@ -197,6 +200,7 @@ export async function updateOrder(id: string, data: {
   status?: string
   customerId?: string
   customerName?: string
+  companyTitle?: string
   customerAddress?: string
   customerPhone?: string
   contactPerson?: string
@@ -217,6 +221,7 @@ export async function updateOrder(id: string, data: {
   }
   if (data.customerId   !== undefined) props['客戶ID']   = { rich_text: richText(data.customerId) }
   if (data.customerName !== undefined) props['客戶名稱'] = { rich_text: richText(data.customerName) }
+  if (data.companyTitle !== undefined) props['公司抬頭'] = { rich_text: richText(data.companyTitle) }
   if (data.customerAddress !== undefined) props['地址']  = { rich_text: richText(data.customerAddress) }
   if (data.customerPhone !== undefined)   props['電話']  = { rich_text: richText(data.customerPhone) }
   if (data.contactPerson !== undefined)   props['聯絡人']   = { rich_text: richText(data.contactPerson) }
@@ -259,6 +264,7 @@ function parseOrderPage(page: any): Order {
     createdTime: getCreatedTime(page, '建立時間'),
     customerId: getText(page, '客戶ID'),
     customerName: getText(page, '客戶名稱'),
+    companyTitle: getText(page, '公司抬頭'),
     customerAddress: getText(page, '地址'),
     customerPhone: getText(page, '電話'),
     contactPerson: getText(page, '聯絡人'),
