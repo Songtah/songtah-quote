@@ -354,11 +354,40 @@ export async function listAllSystemCustomers(): Promise<{ id: string; name: stri
   return items
 }
 
+/** Count tickets created in the current calendar month. */
+async function getTicketsThisMonth(): Promise<number> {
+  if (!DB.tickets) return 0
+  const now = new Date()
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  let count = 0
+  let cursor: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('ticketsThisMonth', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.tickets!),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        filter: {
+          timestamp: 'created_time',
+          created_time: { on_or_after: firstOfMonth },
+        },
+      })
+    )
+    count += (response.results ?? []).length
+    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  return count
+}
+
 async function getTicketsSummary(): Promise<ModuleSummary> {
-  const { rows, total, hasMore } = await querySummary(DB.tickets)
+  const [{ rows, total, hasMore }, activeThisMonth] = await Promise.all([
+    querySummary(DB.tickets),
+    getTicketsThisMonth(),
+  ])
   return {
     total,
     hasMore,
+    activeThisMonth,
     recent: rows.slice(0, 6).map((page: any) => ({
       id: page.id,
       title:
@@ -1714,7 +1743,7 @@ export type UserPermissions = Record<ModuleKey, ModulePermission>
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   crm:      '客戶管理',
   rma:      'RMA',
-  bd:       'BD',
+  bd:       '業務開發',
   products: '產品',
   quote:    '報價',
   orders:   '訂貨',

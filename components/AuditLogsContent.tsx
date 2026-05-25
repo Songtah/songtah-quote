@@ -25,7 +25,7 @@ const MODULE_LABEL: Record<string, string> = {
   rma:        'RMA',
   accounts:   '帳號',
   quote:      '報價',
-  bd:         'BD',
+  bd:         '業務開發',
 }
 
 const ACTION_LABEL: Record<string, { label: string; cls: string }> = {

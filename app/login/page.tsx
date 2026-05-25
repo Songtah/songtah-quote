@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 const modules = [
   { badge: '客戶', title: '客戶管理', description: '客戶主檔、聯繫紀錄、區域管理' },
   { badge: 'RMA', title: '維修案件與設備追蹤', description: '工單管理、設備序號、維護排程' },
-  { badge: 'BD', title: '商機與報價流程', description: '商機追蹤、報價建立、PDF 匯出' },
+  { badge: '業務開發', title: '商機與報價流程', description: '商機追蹤、報價建立、PDF 匯出' },
 ]
 
 export default function LoginPage() {

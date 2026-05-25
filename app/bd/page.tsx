@@ -9,7 +9,7 @@ export default async function BdPage() {
 
   return (
     <AppShell
-      title="BD 客情紀錄"
+      title="業務開發・客情紀錄"
       description="記錄每日客戶拜訪情況，掌握各地區業務動態。"
     >
       <VisitsContent />
