@@ -173,17 +173,27 @@ function ProductPicker({
   const [filterType, setFilterType] = useState('')
   const [families, setFamilies] = useState<ProductFamily[]>([])
   const [familiesLoading, setFamiliesLoading] = useState(true)
+  const [allBrands, setAllBrands] = useState<string[]>([])
+  const [allTypes, setAllTypes] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<CatalogItem[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [expandedFamilyId, setExpandedFamilyId] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 載入規格系列
+  // 同時載入規格系列 + 完整目錄的篩選選項（44 品牌、7 類型）
   useEffect(() => {
     fetch('/api/products/families')
       .then((r) => r.json())
       .then((data) => { setFamilies(data); setFamiliesLoading(false) })
       .catch(() => setFamiliesLoading(false))
+
+    fetch('/api/products/options')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.brands) setAllBrands(data.brands)
+        if (data.productTypes) setAllTypes(data.productTypes)
+      })
+      .catch(() => {})
   }, [])
 
   // 防抖搜尋（文字 or 篩選有值時觸發）
@@ -210,15 +220,6 @@ function ProductPicker({
   }, [search, filterBrand, filterType])
 
   const isSearching = search.trim().length > 0 || !!filterBrand || !!filterType
-
-  const allBrands = useMemo(
-    () => Array.from(new Set(families.map((f) => f.brand))).sort(),
-    [families]
-  )
-  const allTypes = useMemo(
-    () => Array.from(new Set(families.map((f) => f.productType))).sort(),
-    [families]
-  )
 
   // 瀏覽模式下，依篩選條件過濾系列
   const filteredFamilies = useMemo(() => {
