@@ -382,6 +382,10 @@ export function QuoteDocument({ quote }: { quote: Quote }) {
             <Text style={styles.infoValue}>{quote.customerName || '—'}</Text>
           </View>
           <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>公司抬頭</Text>
+            <Text style={styles.infoValue}>{quote.companyTitle || '—'}</Text>
+          </View>
+          <View style={styles.infoBlock}>
             <Text style={styles.infoLabel}>電話</Text>
             <Text style={styles.infoValue}>{quote.customerPhone || '—'}</Text>
           </View>
