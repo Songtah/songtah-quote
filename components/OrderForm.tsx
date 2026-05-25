@@ -291,7 +291,7 @@ function ProductPicker({
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null) }}
-            placeholder="搜尋品名、貨品編號..."
+            placeholder="搜尋全部 6,037 筆商品（品名 / 貨品碼）..."
             className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             autoFocus
           />
@@ -394,6 +394,12 @@ function ProductPicker({
                     </div>
                   )
                 })}
+                {/* 提示：規格系列以外的品項請搜尋 */}
+                <div className="px-4 py-3 bg-blue-50/60 border-t border-blue-100">
+                  <p className="text-xs text-blue-600 leading-relaxed">
+                    💡 以上為含規格選項的系列。其餘 <span className="font-semibold">6,037 筆</span> 商品請在上方搜尋欄輸入品名或貨品碼，或選擇品牌 / 類型篩選。
+                  </p>
+                </div>
               </div>
             )
           )}
@@ -402,8 +408,8 @@ function ProductPicker({
         {/* Footer */}
         <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-gray-400 text-center bg-gray-50">
           {isSearching
-            ? `搜尋結果 ${searchResults.length} 項`
-            : `共 ${filteredFamilies.length} 個規格系列`}
+            ? `搜尋結果 ${searchResults.length} 項（共 6,037 筆商品）`
+            : `${filteredFamilies.length} 個規格系列 · 搜尋可找到全部 6,037 筆`}
         </div>
       </motion.div>
     </div>
