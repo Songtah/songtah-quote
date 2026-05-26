@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import { FloatingFontSizeToggle } from '@/components/FontSizeToggle'
 
 export const metadata: Metadata = {
   title: '崧達企業管理系統',
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>{children}</Providers>
+        <FloatingFontSizeToggle />
       </body>
     </html>
   )
