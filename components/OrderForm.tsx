@@ -69,11 +69,14 @@ const STATUS_COLOR: Record<StatusType, string> = {
 
 // ── YMHToothGridPanel（YAMAHACHI 牙型座標格） ─────────────────
 
-/** 判斷貨品碼中是否為「單顆位置」後綴，如 C4-L1、C4-R2 */
+/** 判斷貨品碼中是否為「單顆位置」後綴
+ *  前牙: C4-L1, C4-R2 → 後綴 /^[LR]\d+$/
+ *  後牙: 28-LU4, 28-RL7 → 後綴 /^[LR][LU]\d+$/ */
 function isSubPos(code: string): boolean {
   const parts = code.split('-')
   if (parts.length < 2) return false
-  return /^[LR]\d+$/.test(parts[parts.length - 1])
+  const last = parts[parts.length - 1]
+  return /^[LR]\d+$/.test(last) || /^[LR][LU]\d+$/.test(last)
 }
 
 /** 牙形前綴 → 中文標籤 */
@@ -112,10 +115,16 @@ function buildToothGrid(moulds: string[]): { prefix: string; label: string; item
 
 const SUBPOS_LABEL: Record<string, string> = {
   整排:'整排', L1:'左1', L2:'左2', L3:'左3', R1:'右1', R2:'右2', R3:'右3',
+  // 後牙位置（臼齒）
+  LL4:'左下4', LL5:'左下5', LL6:'左下6', LL7:'左下7',
+  LU4:'左上4', LU5:'左上5', LU6:'左上6', LU7:'左上7',
+  RL4:'右下4', RL5:'右下5', RL6:'右下6', RL7:'右下7',
+  RU4:'右上4', RU5:'右上5', RU6:'右上6', RU7:'右上7',
 }
 
-// ── ToothArchDiagram (EFC-A 牙弓選位) ───────────────────────
-// 從患者視角排列：左犬齒 → 左側切 → 左中切 ‖ 右中切 → 右側切 → 右犬齒
+// ── ToothArchDiagram (牙弓選位，前牙 / 後牙共用) ──────────────
+// 前牙（anterior）: 左3 → 左1 ‖ 右1 → 右3（6顆）
+// 後牙（posterior）: 左7 → 左4 ‖ 右4 → 右7（8顆）
 
 const ARCH_TEETH = [
   { id: 'L3', w: 36, h: 44, label: '左3' },
@@ -126,16 +135,30 @@ const ARCH_TEETH = [
   { id: 'R3', w: 36, h: 44, label: '右3' },
 ] as const
 
+// 後牙牙弓（解剖比例：臼齒最寬最高，小臼齒較窄）
+const POSTERIOR_ARCH_TEETH = [
+  { id: 'L7', w: 48, h: 38, label: '左7' },
+  { id: 'L6', w: 50, h: 42, label: '左6' },
+  { id: 'L5', w: 38, h: 36, label: '左5' },
+  { id: 'L4', w: 34, h: 33, label: '左4' },
+  { id: 'R4', w: 34, h: 33, label: '右4' },
+  { id: 'R5', w: 38, h: 36, label: '右5' },
+  { id: 'R6', w: 50, h: 42, label: '右6' },
+  { id: 'R7', w: 48, h: 38, label: '右7' },
+] as const
+
 function ToothArchDiagram({
   available,
   selected,
   onSelect,
   jaw,
+  isPosterior = false,
 }: {
   available: Set<string>
   selected: string
   onSelect: (pos: string) => void
   jaw: '上顎' | '下顎'
+  isPosterior?: boolean
 }) {
   const isUpper = jaw === '上顎'
   const BRAND   = '#b8956a'
@@ -145,8 +168,9 @@ function ToothArchDiagram({
   const SVG_H   = 88
 
   // Calculate x positions
+  const archDef = isPosterior ? POSTERIOR_ARCH_TEETH : ARCH_TEETH
   let cx = PAD
-  const teeth = ARCH_TEETH.map((t) => {
+  const teeth = archDef.map((t) => {
     const x = cx; cx += t.w + GAP
     return { ...t, x }
   })
@@ -308,6 +332,18 @@ function YMHToothGridPanel({
     return subs
   }, [family, color, jaw, base, qty, hasQty, isSingleQty])
 
+  // 後牙模式：subPositions 含有 LL/LU/RL/RU 開頭的位置碼
+  const isPosterior = subPositions.some((p) => /^[LR][LU]\d+$/.test(p))
+
+  // 後牙：將 LU4/LL4 等完整位置碼轉為牙弓圖中的顯示 ID（L4/R4）
+  const posteriorToArchId = (pos: string) =>
+    /^[LR][LU]\d+$/.test(pos) ? pos[0] + pos.slice(2) : pos
+  // 後牙：從牙弓圖 ID（L4）+ 顎（上/下）還原位置碼（LU4/LL4）
+  const archIdToPosteriorPos = (id: string, j: '上顎'|'下顎') =>
+    /^[LR]\d+$/.test(id) && parseInt(id.slice(1)) >= 4
+      ? id[0] + (j === '上顎' ? 'U' : 'L') + id.slice(1)
+      : id
+
   /** 最終查 skuMap 的 key */
   const skuKey = useMemo(() => {
     if (!color || !base) return ''
@@ -376,10 +412,12 @@ function YMHToothGridPanel({
           </div>
         </div>
 
-        {/* ③ 牙型座標格 */}
+        {/* ③ 牙型座標格（前牙）或尺寸選擇（後牙） */}
         {toothGrid.length > 0 && (
           <div>
-            <div className="text-xs font-semibold text-brand-600 mb-2">牙型座標</div>
+            <div className="text-xs font-semibold text-brand-600 mb-2">
+              {toothGrid.length === 1 && /^\d+$/.test(toothGrid[0].items[0]) ? '尺寸 (mm)' : '牙型座標'}
+            </div>
             <div className="space-y-2">
               {toothGrid.map(({ prefix, label, items }) => (
                 <div key={prefix} className="flex items-start gap-2">
@@ -432,12 +470,25 @@ function YMHToothGridPanel({
             {subPositions.some((p) => p !== '整排') && (
               <div className="bg-white rounded-lg border border-gray-100 px-3 py-2">
                 <div className="text-[10px] text-gray-400 mb-1 text-center">
-                  {jaw === '上顎' ? '↑ 上顎前牙（點選牙位）' : '↓ 下顎前牙（點選牙位）'}
+                  {isPosterior
+                    ? (jaw === '上顎' ? '↑ 上顎臼齒（點選牙位 4–7）' : '↓ 下顎臼齒（點選牙位 4–7）')
+                    : (jaw === '上顎' ? '↑ 上顎前牙（點選牙位）' : '↓ 下顎前牙（點選牙位）')}
                 </div>
                 <ToothArchDiagram
-                  available={new Set(subPositions.filter((p) => p !== '整排'))}
-                  selected={subPos === '整排' ? '' : subPos}
-                  onSelect={(pos) => setSubPos(subPos === pos ? '' : pos)}
+                  isPosterior={isPosterior}
+                  available={new Set(
+                    subPositions
+                      .filter((p) => p !== '整排')
+                      .map((p) => isPosterior ? posteriorToArchId(p) : p)
+                  )}
+                  selected={
+                    subPos === '整排' ? '' :
+                    isPosterior ? posteriorToArchId(subPos) : subPos
+                  }
+                  onSelect={(archId) => {
+                    const pos = isPosterior ? archIdToPosteriorPos(archId, jaw) : archId
+                    setSubPos(subPos === pos ? '' : pos)
+                  }}
                   jaw={jaw}
                 />
               </div>
@@ -467,7 +518,7 @@ function YMHToothGridPanel({
         ) : (
           <div className="text-xs text-gray-400">
             {!color                               ? '請選擇顏色' :
-             !base                                ? '請在上方點選牙型座標' :
+             !base                                ? '請在上方選擇尺寸或牙型座標' :
              hasQty && !qty                       ? '請選擇包裝數量' :
              hasQty && isSingleQty && !subPos     ? '請點選牙弓圖選擇牙位，或選「整排」' :
              ''}
@@ -628,6 +679,7 @@ function ProductPicker({
   const [allTypes, setAllTypes] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<CatalogItem[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
+  const [browseItems, setBrowseItems] = useState<CatalogItem[]>([])
   const [expandedFamilyId, setExpandedFamilyId] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -712,6 +764,21 @@ function ProductPicker({
     () => searchResults.filter((item) => !coveredSkuCodes.has(item.skuCode)),
     [searchResults, coveredSkuCodes]
   )
+
+  // 瀏覽模式 fallback：當篩選條件有效但沒有符合的規格系列時，直接從目錄 API 拉個別品項
+  useEffect(() => {
+    if (isSearching) { setBrowseItems([]); return }
+    if (!filterBrand && !filterType) { setBrowseItems([]); return }
+    const params = new URLSearchParams({ limit: '200' })
+    if (filterBrand) params.set('brand', filterBrand)
+    if (filterType)  params.set('type', filterType)
+    fetch(`/api/products/search?${params}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((items: CatalogItem[]) => {
+        setBrowseItems(items.filter((it) => !coveredSkuCodes.has(it.skuCode)))
+      })
+      .catch(() => setBrowseItems([]))
+  }, [isSearching, filterBrand, filterType, coveredSkuCodes])
 
   const handleAddItem = useCallback(
     (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => onAdd(item),
@@ -887,7 +954,29 @@ function ProductPicker({
             familiesLoading ? (
               <div className="text-center text-gray-400 py-12 text-sm animate-pulse">載入中...</div>
             ) : filteredFamilies.length === 0 ? (
-              <div className="text-center text-gray-400 py-12 text-sm">沒有符合條件的系列</div>
+              browseItems.length > 0 ? (
+                <div className="divide-y">
+                  {browseItems.map((item) => (
+                    <div key={item.skuCode} className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
+                        <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                          <span className="font-mono">{item.skuCode}</span>
+                          <span>{item.manufacturer} · {item.category}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddCatalogItem(item)}
+                        className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                      >
+                        + 加入
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 py-12 text-sm">沒有符合條件的品項</div>
+              )
             ) : (
               <div className="divide-y">
                 {filteredFamilies.map((family) => {
@@ -926,12 +1015,39 @@ function ProductPicker({
                     </div>
                   )
                 })}
+                {/* 篩選模式下，屬於該品牌/類型但不在規格系列中的個別品項 */}
+                {browseItems.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 text-xs text-gray-500 font-medium">
+                      其他品項
+                    </div>
+                    {browseItems.map((item) => (
+                      <div key={item.skuCode} className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
+                          <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                            <span className="font-mono">{item.skuCode}</span>
+                            <span>{item.manufacturer} · {item.category}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddCatalogItem(item)}
+                          className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                        >
+                          + 加入
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
                 {/* 提示：規格系列以外的品項請搜尋 */}
+                {!filterBrand && !filterType && (
                 <div className="px-4 py-3 bg-blue-50/60 border-t border-blue-100">
                   <p className="text-xs text-blue-600 leading-relaxed">
                     💡 以上為含規格選項的系列。其餘 <span className="font-semibold">6,037 筆</span> 商品請在上方搜尋欄輸入品名或貨品碼，或選擇品牌 / 類型篩選。
                   </p>
                 </div>
+                )}
               </div>
             )
           )}
@@ -941,7 +1057,9 @@ function ProductPicker({
         <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-gray-400 text-center bg-gray-50">
           {isSearching
             ? `${familySearchResults.length} 個系列・${remainingSearchResults.length} 筆其他品項`
-            : `${filteredFamilies.length} 個規格系列 · 搜尋可找到全部 6,037 筆`}
+            : browseItems.length > 0
+              ? `${filteredFamilies.length} 個規格系列・${browseItems.length} 筆其他品項`
+              : `${filteredFamilies.length} 個規格系列 · 搜尋可找到全部 6,037 筆`}
         </div>
       </motion.div>
     </div>
