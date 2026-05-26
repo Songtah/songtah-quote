@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
 import { fadeUp } from '@/lib/motion'
+import { FontSizeToggle } from '@/components/FontSizeToggle'
 
 type SessionUserLike = {
   role?: string
@@ -134,9 +135,12 @@ export function AppShell({
               <h1 className="truncate text-base font-semibold text-gray-900">{title}</h1>
             </div>
           </div>
-          <Link href="/api/auth/signout" className="button-secondary shrink-0 px-3 py-1.5 text-sm">
-            登出
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <FontSizeToggle />
+            <Link href="/api/auth/signout" className="button-secondary px-3 py-1.5 text-sm">
+              登出
+            </Link>
+          </div>
         </div>
         {/* Nav — horizontally scrollable on mobile, pill style */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

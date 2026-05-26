@@ -21,6 +21,10 @@
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
+/* ── 字體大小三段 ── 以 html font-size 控制，所有 rem 值等比縮放 */
+html[data-fs="large"]  { font-size: 118.75%; }   /* ≈ 19px */
+html[data-fs="xlarge"] { font-size: 137.5%;  }   /* ≈ 22px */
+
 @layer base {
   html {
     color-scheme: light;

@@ -13,6 +13,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-TW">
+      {/* 在 React hydration 前套用字體大小設定，避免畫面閃爍 */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            var fs = localStorage.getItem('songtah-fs');
+            if (fs && fs !== 'normal') document.documentElement.setAttribute('data-fs', fs);
+          })();
+        `}} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>
