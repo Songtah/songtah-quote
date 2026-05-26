@@ -21,7 +21,7 @@ function getPageTitle(pathname: string): string {
   const exact: Record<string, string> = {
     '/dashboard':         '首頁總覽',
     '/customers':         '客戶管理',
-    '/tickets':           'RMA 工單列表',
+    '/tickets':           '技術支援工單列表',
     '/bd':                '業務開發',
     '/products':          '產品管理',
     '/quote/new':         '新增報價單',
@@ -34,7 +34,7 @@ function getPageTitle(pathname: string): string {
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
-  if (/^\/tickets\//.test(pathname)) return 'RMA 工單詳情'
+  if (/^\/tickets\//.test(pathname)) return '技術支援工單詳情'
   if (/^\/quote\//.test(pathname)) return '報價單詳情'
   if (/^\/quotes/.test(pathname)) return '報價單管理'
   if (/^\/share\//.test(pathname)) return '報價單分享頁'
@@ -53,7 +53,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard',         label: '首頁',     module: null },
   { href: '/customers',         label: '客戶',      module: 'crm' },
-  { href: '/tickets',           label: 'RMA',      module: 'rma' },
+  { href: '/tickets',           label: '技術支援', module: 'rma' },
   { href: '/bd',                label: '業務開發', module: 'bd' },
   { href: '/products',          label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },

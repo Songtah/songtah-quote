@@ -305,10 +305,10 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
             )}
           </div>
 
-          {/* RMA 工單紀錄 */}
+          {/* 技術支援工單紀錄 */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">RMA工單紀錄</h2>
+              <h2 className="font-semibold text-gray-800">技術支援工單紀錄</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.tickets.length} 筆
               </span>

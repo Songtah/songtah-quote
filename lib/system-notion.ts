@@ -1743,7 +1743,7 @@ export type UserPermissions = Record<ModuleKey, ModulePermission>
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   crm:      '客戶管理',
-  rma:      'RMA',
+  rma:      '技術支援',
   bd:       '業務開發',
   products: '產品',
   quote:    '報價',

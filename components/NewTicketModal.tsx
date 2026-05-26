@@ -189,7 +189,7 @@ export default function NewTicketModal({ onCreated }: { onCreated?: () => void }
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-brand-200/50 bg-white rounded-t-2xl">
                   <div>
-                    <p className="eyebrow text-[10px]">RMA 技術支援</p>
+                    <p className="eyebrow text-[10px]">技術支援</p>
                     <h2 className="text-lg font-bold text-stone-800">新建工單</h2>
                   </div>
                   <button
