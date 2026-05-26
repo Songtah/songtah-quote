@@ -25,6 +25,12 @@
 html[data-fs="large"]  { font-size: 118.75%; }   /* ≈ 19px */
 html[data-fs="xlarge"] { font-size: 137.5%;  }   /* ≈ 22px */
 
+/* ── input[type=date] 正規化：讓行高、高度與 text/select 一致 ── */
+input[type="date"] {
+  line-height: 1.5;       /* 與 Tailwind 預設相同，防止瀏覽器內建行高跑版 */
+  box-sizing: border-box;
+}
+
 @layer base {
   html {
     color-scheme: light;

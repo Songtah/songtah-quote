@@ -1266,7 +1266,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border rounded px-3 py-1.5 text-sm w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
           <div>
