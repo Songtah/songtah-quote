@@ -326,11 +326,6 @@ function FamilySpecPanel({
   family: ProductFamily
   onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
 }) {
-  // YAMAHACHI 牙型座標格 UI
-  if (family.uiVariant === 'ymh-tooth-grid') {
-    return <YMHToothGridPanel family={family} onAdd={onAdd} />
-  }
-
   const [selected, setSelected] = useState<Record<string, string>>({})
 
   /**
@@ -682,7 +677,9 @@ function ProductPicker({
                         </div>
                       </button>
                       {isExpanded && (
-                        <FamilySpecPanel family={family} onAdd={handleAddItem} />
+                        family.uiVariant === 'ymh-tooth-grid'
+                          ? <YMHToothGridPanel family={family} onAdd={handleAddItem} />
+                          : <FamilySpecPanel   family={family} onAdd={handleAddItem} />
                       )}
                     </div>
                   )
@@ -761,7 +758,9 @@ function ProductPicker({
                         </div>
                       </button>
                       {isExpanded && (
-                        <FamilySpecPanel family={family} onAdd={handleAddItem} />
+                        family.uiVariant === 'ymh-tooth-grid'
+                          ? <YMHToothGridPanel family={family} onAdd={handleAddItem} />
+                          : <FamilySpecPanel   family={family} onAdd={handleAddItem} />
                       )}
                     </div>
                   )
