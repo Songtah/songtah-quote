@@ -37,6 +37,8 @@ export interface ProductFamily {
   specs: SpecDefinition[]
   /** 貨品碼不規則時，用查表取代 pattern。key 格式：各規格值以 "|" 串接 */
   skuMap?: Record<string, string>
+  /** 特殊 UI 變體（前端用）。'ymh-tooth-grid' = YAMAHACHI 牙型座標格 */
+  uiVariant?: string
 }
 
 // ── Data loading (server-side, cached in module scope) ───────────────────────

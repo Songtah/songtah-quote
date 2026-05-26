@@ -41,6 +41,8 @@ interface ProductFamily {
   specs: FamilySpec[]
   /** 規格選項不規則時，用查表取代 pattern 生成 SKU。key 格式：spec值以 "|" 串接 */
   skuMap?: Record<string, string>
+  /** 特殊 UI 變體。'ymh-tooth-grid' = YAMAHACHI 牙型座標格 */
+  uiVariant?: string
 }
 
 /** 從樣板字串與規格選擇建立貨品碼或品名 */
@@ -65,6 +67,256 @@ const STATUS_COLOR: Record<StatusType, string> = {
   已取消: 'bg-red-100 text-red-600',
 }
 
+// ── YMHToothGridPanel（YAMAHACHI 牙型座標格） ─────────────────
+
+/** 判斷貨品碼中是否為「單顆位置」後綴，如 C4-L1、C4-R2 */
+function isSubPos(code: string): boolean {
+  const parts = code.split('-')
+  if (parts.length < 2) return false
+  return /^[LR]\d+$/.test(parts[parts.length - 1])
+}
+
+/** 牙形前綴 → 中文標籤 */
+const TOOTH_FORM_LABEL: Record<string, string> = {
+  C:  '組合形', S:  '方形',   SS: '短方形', T:  '尖形',
+  TL: '長尖形', O:  '卵形',   LA: 'LA形',   LB: 'LB形',
+  L:  'L形',    N:  'N形',    '': '基本',
+}
+
+/** 各前綴的排列優先順序（上顎 → 下顎） */
+const PREFIX_ORDER = ['C','S','SS','T','TL','O','','LA','LB','L','N']
+
+/** 從牙型碼清單建立「前綴 → [碼]」格線資料（排除單顆子位置） */
+function buildToothGrid(moulds: string[]): { prefix: string; label: string; items: string[] }[] {
+  const map = new Map<string, string[]>()
+  for (const m of moulds) {
+    if (isSubPos(m)) continue          // 跳過 C4-L1 等單顆子位置
+    const pfx = m.match(/^([A-Z]*)(.+)$/)?.[1] ?? ''
+    if (!map.has(pfx)) map.set(pfx, [])
+    map.get(pfx)!.push(m)
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => {
+      const ia = PREFIX_ORDER.indexOf(a), ib = PREFIX_ORDER.indexOf(b)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+    })
+    .map(([prefix, items]) => ({
+      prefix,
+      label: TOOTH_FORM_LABEL[prefix] ?? prefix,
+      items: items.sort((a, b) => {
+        const na = parseFloat(a.replace(/^[A-Z]*/,'')), nb = parseFloat(b.replace(/^[A-Z]*/,''))
+        return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b)
+      }),
+    }))
+}
+
+const SUBPOS_LABEL: Record<string, string> = {
+  整排:'整排', L1:'左1', L2:'左2', L3:'左3', R1:'右1', R2:'右2', R3:'右3',
+}
+
+function YMHToothGridPanel({
+  family,
+  onAdd,
+}: {
+  family: ProductFamily
+  onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
+}) {
+  const colorSpec = family.specs.find((s) => s.key === '顏色')
+  const hasQty    = family.specs.some((s)  => s.key === '數量')  // 僅 EFC-A
+
+  const [color,  setColor]  = useState('')
+  const [jaw,    setJaw]    = useState<'上顎'|'下顎'>('上顎')
+  const [qty,    setQty]    = useState('6顆')
+  const [base,   setBase]   = useState('')
+  const [subPos, setSubPos] = useState('')
+
+  const handleColor = (c: string) => { setColor(c); setBase(''); setSubPos('') }
+  const handleJaw   = (j: string) => { setJaw(j as '上顎'|'下顎'); setBase(''); setSubPos('') }
+  const handleQty   = (q: string) => { setQty(q); setBase(''); setSubPos('') }
+  const handleBase  = (b: string) => { setBase(b); setSubPos('') }
+
+  /** 當前顏色 + 上下顎下，可用的牙型座標（排除單顆子位置） */
+  const baseMoulds = useMemo(() => {
+    if (!family.skuMap || !color) return []
+    const set = new Set<string>()
+    Object.keys(family.skuMap).forEach((k) => {
+      const parts = k.split('|')
+      if (parts[0] === color && parts[1] === jaw) {
+        const mould = parts[2]
+        if (!isSubPos(mould)) set.add(mould)
+      }
+    })
+    return Array.from(set)
+  }, [family, color, jaw])
+
+  const toothGrid = useMemo(() => buildToothGrid(baseMoulds), [baseMoulds])
+
+  /** 單顆子位置（EFC-A 12顆模式，選完 base 後出現） */
+  const subPositions = useMemo(() => {
+    if (!hasQty || qty !== '12顆' || !base || !color || !family.skuMap) return []
+    const pfx = `${color}|${jaw}|`
+    const subs: string[] = []
+    // 有「整排」（就是 base 本身的 12 顆）
+    if (family.skuMap[`${pfx}${base}|12顆`]) subs.push('整排')
+    // 再找 L/R 子位置
+    Object.keys(family.skuMap)
+      .filter((k) => k.startsWith(`${pfx}${base}-`) && k.endsWith('|12顆'))
+      .forEach((k) => {
+        const sub = k.split('|')[2].slice(base.length + 1)
+        if (!subs.includes(sub)) subs.push(sub)
+      })
+    return subs
+  }, [family, color, jaw, base, qty, hasQty])
+
+  /** 最終查 skuMap 的 key */
+  const skuKey = useMemo(() => {
+    if (!color || !base) return ''
+    if (hasQty) {
+      if (qty === '6顆') return `${color}|${jaw}|${base}|6顆`
+      if (!subPos)       return ''   // 12 顆需再選子位置
+      return subPos === '整排'
+        ? `${color}|${jaw}|${base}|12顆`
+        : `${color}|${jaw}|${base}-${subPos}|12顆`
+    }
+    return `${color}|${jaw}|${base}`
+  }, [color, jaw, base, qty, subPos, hasQty])
+
+  const skuCode = skuKey && family.skuMap ? (family.skuMap[skuKey] ?? '') : ''
+  const skuName = skuCode
+    ? buildFromPattern(family.namePattern, {
+        顏色:  color,
+        上下顎: jaw,
+        牙型:  subPos && subPos !== '整排' ? `${base}-${subPos}` : base,
+        數量:  hasQty ? qty : '',
+      })
+    : ''
+
+  // 共用樣式工具
+  const chip = (sel: boolean, disabled = false) => [
+    'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+    disabled ? 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed' :
+    sel       ? 'bg-brand-500 border-brand-500 text-white shadow-sm' :
+                'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600',
+  ].join(' ')
+
+  const tab = (sel: boolean) => [
+    'px-5 py-1.5 rounded-lg text-sm font-medium border transition-all',
+    sel ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
+        : 'bg-white border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+  ].join(' ')
+
+  const toothBtn = (sel: boolean) => [
+    'px-2.5 py-1 rounded text-xs font-mono font-medium border transition-all min-w-[2.5rem] text-center',
+    sel ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
+        : 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:bg-brand-50',
+  ].join(' ')
+
+  return (
+    <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
+
+      {/* ① 顏色 */}
+      <div>
+        <div className="text-xs font-semibold text-brand-600 mb-2">顏色 (Shade)</div>
+        <div className="flex flex-wrap gap-1.5">
+          {colorSpec?.options.map((c) => (
+            <button key={c} onClick={() => handleColor(c)} className={chip(color === c)}>{c}</button>
+          ))}
+        </div>
+      </div>
+
+      {color && <>
+        {/* ② 包裝數量（EFC-A 才有） */}
+        {hasQty && (
+          <div>
+            <div className="text-xs font-semibold text-brand-600 mb-2">包裝數量</div>
+            <div className="flex gap-2">
+              <button onClick={() => handleQty('6顆')}  className={chip(qty === '6顆')}>6顆 / 排</button>
+              <button onClick={() => handleQty('12顆')} className={chip(qty === '12顆')}>
+                12顆 / 排（可選單顆位置）
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ③ 上下顎 */}
+        <div>
+          <div className="text-xs font-semibold text-brand-600 mb-2">上下顎</div>
+          <div className="flex gap-2">
+            {(['上顎','下顎'] as const).map((j) => (
+              <button key={j} onClick={() => handleJaw(j)} className={tab(jaw === j)}>{j}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* ④ 牙型座標格 */}
+        {toothGrid.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-brand-600 mb-2">牙型座標</div>
+            <div className="space-y-2">
+              {toothGrid.map(({ prefix, label, items }) => (
+                <div key={prefix} className="flex items-start gap-2">
+                  <span className="text-xs text-gray-400 w-14 text-right pt-1 shrink-0">{label}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((item) => (
+                      <button key={item} onClick={() => handleBase(item)} className={toothBtn(base === item)}>
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ⑤ 單顆位置（EFC-A 12顆 + 已選 base） */}
+        {hasQty && qty === '12顆' && base && subPositions.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-brand-600 mb-2">
+              {base} · 單顆位置
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {subPositions.map((sp) => (
+                <button key={sp} onClick={() => setSubPos(sp)} className={chip(subPos === sp)}>
+                  {SUBPOS_LABEL[sp] ?? sp}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </>}
+
+      {/* 結果區 */}
+      <div className="pt-1">
+        {skuCode ? (
+          <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-800 leading-snug">{skuName}</div>
+              <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{skuCode}</div>
+            </div>
+            <button
+              onClick={() => {
+                onAdd({ skuCode, skuName, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })
+                setBase(''); setSubPos('')
+              }}
+              className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
+            >
+              + 加入
+            </button>
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400">
+            {!color  ? '請選擇顏色' :
+             !base   ? '請在上方點選牙型座標' :
+             hasQty && qty === '12顆' && !subPos ? '請選擇單顆位置' :
+             ''}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── FamilySpecPanel（按鈕式串聯規格選擇） ─────────────────────
 
 function FamilySpecPanel({
@@ -74,6 +326,11 @@ function FamilySpecPanel({
   family: ProductFamily
   onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
 }) {
+  // YAMAHACHI 牙型座標格 UI
+  if (family.uiVariant === 'ymh-tooth-grid') {
+    return <YMHToothGridPanel family={family} onAdd={onAdd} />
+  }
+
   const [selected, setSelected] = useState<Record<string, string>>({})
 
   /**

@@ -2214,7 +2214,8 @@
       "A3|上顎|T7-R1|12顆": "YMH-T03-T7-R1",
       "A3|上顎|T7-R2|12顆": "YMH-T03-T7-R2",
       "A3|上顎|T7-R3|12顆": "YMH-T03-T7-R3"
-    }
+    },
+    "uiVariant": "ymh-tooth-grid"
   },
   {
     "id": "YMH-FX",
@@ -2375,7 +2376,8 @@
       "A4|上顎|T5": "YMH-T27-A4-T5",
       "A4|上顎|T6": "YMH-T27-A4-T6",
       "A4|上顎|T7": "YMH-T27-A4-T7"
-    }
+    },
+    "uiVariant": "ymh-tooth-grid"
   },
   {
     "id": "YMH-CROWNPX",
@@ -2629,7 +2631,8 @@
       "A4|上顎|T51S": "YMH-T60-A4-T51S",
       "A4|上顎|T61": "YMH-T60-A4-T61",
       "A4|上顎|T61S": "YMH-T60-A4-T61S"
-    }
+    },
+    "uiVariant": "ymh-tooth-grid"
   },
   {
     "id": "YMH-NEWACE",
@@ -2794,7 +2797,8 @@
       "A3.5|上顎|TL4": "YMH-T70-A3.5-TL4",
       "A3.5|上顎|TL5": "YMH-T70-A3.5-TL5",
       "A3.5|上顎|TL6": "YMH-T70-A3.5-TL6"
-    }
+    },
+    "uiVariant": "ymh-tooth-grid"
   },
   {
     "id": "YMH-T28",
