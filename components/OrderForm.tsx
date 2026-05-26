@@ -227,6 +227,16 @@ function ToothArchDiagram({
   )
 }
 
+// 整排 vs 單顆包裝的顯示標籤
+const QTY_LABEL: Record<string, string> = {
+  '6顆':  '6顆 / 排（前牙整排）',
+  '8顆':  '8顆 / 排（後牙整排）',
+  '12顆': '12顆 / 盒（前牙單顆）',
+  '20顆': '20顆 / 盒（後牙單顆）',
+}
+// 視為「整排」型的 qty key（非單顆）
+const SET_QTY_KEYS = new Set(['6顆', '8顆'])
+
 function YMHToothGridPanel({
   family,
   onAdd,
@@ -235,20 +245,21 @@ function YMHToothGridPanel({
   onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
 }) {
   const colorSpec = family.specs.find((s) => s.key === '顏色')
-  const hasQty    = family.specs.some((s)  => s.key === '數量')  // 僅 EFC-A
+  const hasQty    = family.specs.some((s) => s.key === '數量')  // 目前僅 EFC-A
 
   const [color,  setColor]  = useState('')
   const [jaw,    setJaw]    = useState<'上顎'|'下顎'>('上顎')
-  const [qty,    setQty]    = useState('6顆')
   const [base,   setBase]   = useState('')
+  const [qty,    setQty]    = useState('')
   const [subPos, setSubPos] = useState('')
 
-  const handleColor = (c: string) => { setColor(c); setBase(''); setSubPos('') }
-  const handleJaw   = (j: string) => { setJaw(j as '上顎'|'下顎'); setBase(''); setSubPos('') }
-  const handleQty   = (q: string) => { setQty(q); setBase(''); setSubPos('') }
-  const handleBase  = (b: string) => { setBase(b); setSubPos('') }
+  // 重置規則：往前改動會清掉後面的選擇
+  const handleColor = (c: string) => { setColor(c); setBase(''); setQty(''); setSubPos('') }
+  const handleJaw   = (j: string) => { setJaw(j as '上顎'|'下顎'); setBase(''); setQty(''); setSubPos('') }
+  const handleBase  = (b: string) => { setBase(b === base ? '' : b); setSubPos('') }
+  const handleQty   = (q: string) => { setQty(q); setSubPos('') }
 
-  /** 當前顏色 + 上下顎下，可用的牙型座標（排除單顆子位置） */
+  /** 目前顏色 + 上下顎下，可用的牙型座標（排除 L/R 子位置） */
   const baseMoulds = useMemo(() => {
     if (!family.skuMap || !color) return []
     const set = new Set<string>()
@@ -264,35 +275,52 @@ function YMHToothGridPanel({
 
   const toothGrid = useMemo(() => buildToothGrid(baseMoulds), [baseMoulds])
 
-  /** 單顆子位置（EFC-A 12顆模式，選完 base 後出現） */
+  /** 選完 base 後，動態算出可用的包裝數量選項（含整排與單顆） */
+  const availableQtys = useMemo(() => {
+    if (!hasQty || !family.skuMap || !color || !base) return []
+    const prefix = `${color}|${jaw}|${base}|`
+    const qtys = new Set<string>()
+    Object.keys(family.skuMap).forEach((k) => {
+      if (k.startsWith(prefix)) qtys.add(k.slice(prefix.length).split('|')[0])
+    })
+    // 排序：整排類（6顆/8顆）排前面，單顆類（12顆/20顆）排後面
+    return Array.from(qtys).sort((a, b) => {
+      const aSet = SET_QTY_KEYS.has(a), bSet = SET_QTY_KEYS.has(b)
+      if (aSet !== bSet) return aSet ? -1 : 1
+      return parseInt(a) - parseInt(b)
+    })
+  }, [family, color, jaw, base, hasQty])
+
+  const isSingleQty = !!qty && !SET_QTY_KEYS.has(qty)  // 12顆 / 20顆 = 單顆型
+
+  /** 單顆子位置（選完 base + 單顆 qty 後，找 L1/L2/R1… 子位置） */
   const subPositions = useMemo(() => {
-    if (!hasQty || qty !== '12顆' || !base || !color || !family.skuMap) return []
+    if (!hasQty || !isSingleQty || !base || !color || !family.skuMap) return []
     const pfx = `${color}|${jaw}|`
     const subs: string[] = []
-    // 有「整排」（就是 base 本身的 12 顆）
-    if (family.skuMap[`${pfx}${base}|12顆`]) subs.push('整排')
-    // 再找 L/R 子位置
+    if (family.skuMap[`${pfx}${base}|${qty}`]) subs.push('整排')
     Object.keys(family.skuMap)
-      .filter((k) => k.startsWith(`${pfx}${base}-`) && k.endsWith('|12顆'))
+      .filter((k) => k.startsWith(`${pfx}${base}-`) && k.endsWith(`|${qty}`))
       .forEach((k) => {
         const sub = k.split('|')[2].slice(base.length + 1)
         if (!subs.includes(sub)) subs.push(sub)
       })
     return subs
-  }, [family, color, jaw, base, qty, hasQty])
+  }, [family, color, jaw, base, qty, hasQty, isSingleQty])
 
   /** 最終查 skuMap 的 key */
   const skuKey = useMemo(() => {
     if (!color || !base) return ''
     if (hasQty) {
-      if (qty === '6顆') return `${color}|${jaw}|${base}|6顆`
-      if (!subPos)       return ''   // 12 顆需再選子位置
+      if (!qty) return ''
+      if (!isSingleQty) return `${color}|${jaw}|${base}|${qty}`
+      if (!subPos) return ''
       return subPos === '整排'
-        ? `${color}|${jaw}|${base}|12顆`
-        : `${color}|${jaw}|${base}-${subPos}|12顆`
+        ? `${color}|${jaw}|${base}|${qty}`
+        : `${color}|${jaw}|${base}-${subPos}|${qty}`
     }
     return `${color}|${jaw}|${base}`
-  }, [color, jaw, base, qty, subPos, hasQty])
+  }, [color, jaw, base, qty, subPos, hasQty, isSingleQty])
 
   const skuCode = skuKey && family.skuMap ? (family.skuMap[skuKey] ?? '') : ''
   const skuName = skuCode
@@ -338,20 +366,7 @@ function YMHToothGridPanel({
       </div>
 
       {color && <>
-        {/* ② 包裝數量（EFC-A 才有） */}
-        {hasQty && (
-          <div>
-            <div className="text-xs font-semibold text-brand-600 mb-2">包裝數量</div>
-            <div className="flex gap-2">
-              <button onClick={() => handleQty('6顆')}  className={chip(qty === '6顆')}>6顆 / 排</button>
-              <button onClick={() => handleQty('12顆')} className={chip(qty === '12顆')}>
-                12顆 / 排（可選單顆位置）
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ③ 上下顎 */}
+        {/* ② 上下顎 */}
         <div>
           <div className="text-xs font-semibold text-brand-600 mb-2">上下顎</div>
           <div className="flex gap-2">
@@ -361,7 +376,7 @@ function YMHToothGridPanel({
           </div>
         </div>
 
-        {/* ④ 牙型座標格 */}
+        {/* ③ 牙型座標格 */}
         {toothGrid.length > 0 && (
           <div>
             <div className="text-xs font-semibold text-brand-600 mb-2">牙型座標</div>
@@ -382,28 +397,42 @@ function YMHToothGridPanel({
           </div>
         )}
 
-        {/* ⑤ 單顆牙位（EFC-A 12顆 + 已選 base） */}
-        {hasQty && qty === '12顆' && base && subPositions.length > 0 && (
+        {/* ④ 包裝數量（選完牙型後才出現；EFC-A 有整排 vs 單顆之分） */}
+        {hasQty && base && availableQtys.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-brand-600 mb-2">包裝數量</div>
+            <div className="flex flex-wrap gap-2">
+              {availableQtys.map((q) => (
+                <button key={q} onClick={() => handleQty(q)} className={chip(qty === q)}>
+                  {QTY_LABEL[q] ?? q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ⑤ 牙弓示意圖（單顆型 qty + 已選 base + 有子位置） */}
+        {hasQty && base && isSingleQty && subPositions.length > 0 && (
           <div>
             <div className="text-xs font-semibold text-brand-600 mb-2.5">
               {base} · 選擇牙位
             </div>
-            {/* 整排：選取整個牙型全部6顆 */}
+            {/* 整排選項：12顆混合（不指定單顆位置） */}
             {subPositions.includes('整排') && (
               <div className="mb-3">
                 <button
                   onClick={() => setSubPos(subPos === '整排' ? '' : '整排')}
                   className={chip(subPos === '整排')}
                 >
-                  整排（6顆全部）
+                  整排（不指定牙位）
                 </button>
               </div>
             )}
-            {/* 牙弓示意圖：點選單顆牙位 */}
+            {/* 牙弓 SVG：點選單顆位置 */}
             {subPositions.some((p) => p !== '整排') && (
               <div className="bg-white rounded-lg border border-gray-100 px-3 py-2">
                 <div className="text-[10px] text-gray-400 mb-1 text-center">
-                  {jaw === '上顎' ? '↑ 上顎（點選單顆位置）' : '↓ 下顎（點選單顆位置）'}
+                  {jaw === '上顎' ? '↑ 上顎前牙（點選牙位）' : '↓ 下顎前牙（點選牙位）'}
                 </div>
                 <ToothArchDiagram
                   available={new Set(subPositions.filter((p) => p !== '整排'))}
@@ -428,7 +457,7 @@ function YMHToothGridPanel({
             <button
               onClick={() => {
                 onAdd({ skuCode, skuName, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })
-                setBase(''); setSubPos('')
+                setBase(''); setSubPos(''); setQty('')
               }}
               className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
             >
@@ -437,9 +466,10 @@ function YMHToothGridPanel({
           </div>
         ) : (
           <div className="text-xs text-gray-400">
-            {!color  ? '請選擇顏色' :
-             !base   ? '請在上方點選牙型座標' :
-             hasQty && qty === '12顆' && !subPos ? '請選擇單顆位置' :
+            {!color                               ? '請選擇顏色' :
+             !base                                ? '請在上方點選牙型座標' :
+             hasQty && !qty                       ? '請選擇包裝數量' :
+             hasQty && isSingleQty && !subPos     ? '請點選牙弓圖選擇牙位，或選「整排」' :
              ''}
           </div>
         )}
