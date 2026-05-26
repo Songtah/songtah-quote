@@ -114,6 +114,119 @@ const SUBPOS_LABEL: Record<string, string> = {
   整排:'整排', L1:'左1', L2:'左2', L3:'左3', R1:'右1', R2:'右2', R3:'右3',
 }
 
+// ── ToothArchDiagram (EFC-A 牙弓選位) ───────────────────────
+// 從患者視角排列：左犬齒 → 左側切 → 左中切 ‖ 右中切 → 右側切 → 右犬齒
+
+const ARCH_TEETH = [
+  { id: 'L3', w: 36, h: 44, label: '左3' },
+  { id: 'L2', w: 33, h: 40, label: '左2' },
+  { id: 'L1', w: 40, h: 49, label: '左1' },
+  { id: 'R1', w: 40, h: 49, label: '右1' },
+  { id: 'R2', w: 33, h: 40, label: '右2' },
+  { id: 'R3', w: 36, h: 44, label: '右3' },
+] as const
+
+function ToothArchDiagram({
+  available,
+  selected,
+  onSelect,
+  jaw,
+}: {
+  available: Set<string>
+  selected: string
+  onSelect: (pos: string) => void
+  jaw: '上顎' | '下顎'
+}) {
+  const isUpper = jaw === '上顎'
+  const BRAND   = '#b8956a'
+  const GAP     = 3
+  const PAD     = 12
+  const LBL_H   = 14   // label area height
+  const SVG_H   = 88
+
+  // Calculate x positions
+  let cx = PAD
+  const teeth = ARCH_TEETH.map((t) => {
+    const x = cx; cx += t.w + GAP
+    return { ...t, x }
+  })
+  const svgW = cx - GAP + PAD
+
+  // Upper jaw: labels at top, teeth aligned at top y, gum below
+  // Lower jaw: labels at bottom, teeth aligned at bottom y, gum above
+  const toothTopY = LBL_H + 2                          // = 16 (upper jaw origin)
+  const toothBotY = SVG_H - LBL_H - 4                  // = 70 (lower jaw bottom baseline)
+  const labelY    = isUpper ? LBL_H - 3 : SVG_H - 3
+
+  const getY = (h: number) => isUpper ? toothTopY : toothBotY - h
+
+  // Gum line: connects the free (incisal) edges of all teeth
+  const gumPts = teeth.map((t) => ({
+    x: t.x + t.w / 2,
+    y: isUpper ? toothTopY + t.h : toothBotY - t.h,
+  }))
+  const gumPath = gumPts.reduce((d, p, i) => {
+    if (i === 0) return `M ${p.x} ${p.y}`
+    const prev = gumPts[i - 1]
+    const cpx  = (prev.x + p.x) / 2
+    return `${d} C ${cpx} ${prev.y} ${cpx} ${p.y} ${p.x} ${p.y}`
+  }, '')
+
+  return (
+    <svg viewBox={`0 0 ${svgW} ${SVG_H}`} style={{ width: '100%', maxWidth: svgW }}>
+      {/* Midline */}
+      <line
+        x1={svgW / 2} y1={isUpper ? LBL_H : 2}
+        x2={svgW / 2} y2={isUpper ? SVG_H - 2 : SVG_H - LBL_H}
+        stroke="#e5e7eb" strokeDasharray="3,3" strokeWidth={1}
+      />
+
+      {/* Gum contour */}
+      <path
+        d={gumPath} fill="none"
+        stroke="#e8c4b8" strokeWidth={2} strokeLinecap="round" opacity={0.9}
+      />
+
+      {/* Teeth */}
+      {teeth.map((t) => {
+        const isAvail = available.has(t.id)
+        const isSel   = selected === t.id
+        const ty      = getY(t.h)
+        const fill    = isSel ? BRAND   : isAvail ? '#ffffff' : '#f9fafb'
+        const stroke  = isSel ? '#a07a52' : isAvail ? '#d1d5db' : '#e5e7eb'
+
+        return (
+          <g key={t.id}
+            onClick={() => isAvail && onSelect(t.id)}
+            style={{ cursor: isAvail ? 'pointer' : 'default' }}
+          >
+            <rect x={t.x} y={ty} width={t.w} height={t.h} rx={5}
+              fill={fill} stroke={stroke} strokeWidth={isSel ? 2 : 1.5}
+            />
+            {/* Subtle surface highlight */}
+            {isAvail && !isSel && (
+              <rect
+                x={t.x + 5} y={isUpper ? ty + 5 : ty + t.h - 8}
+                width={t.w - 10} height={2.5} rx={1.2}
+                fill="#eeeeee" opacity={0.7}
+              />
+            )}
+            {/* Position label */}
+            <text
+              x={t.x + t.w / 2} y={labelY}
+              textAnchor="middle" fontSize={9}
+              fill={isSel ? BRAND : isAvail ? '#9ca3af' : '#d1d5db'}
+              fontWeight={isSel ? '600' : '400'}
+            >
+              {t.label}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 function YMHToothGridPanel({
   family,
   onAdd,
@@ -269,19 +382,37 @@ function YMHToothGridPanel({
           </div>
         )}
 
-        {/* ⑤ 單顆位置（EFC-A 12顆 + 已選 base） */}
+        {/* ⑤ 單顆牙位（EFC-A 12顆 + 已選 base） */}
         {hasQty && qty === '12顆' && base && subPositions.length > 0 && (
           <div>
-            <div className="text-xs font-semibold text-brand-600 mb-2">
-              {base} · 單顆位置
+            <div className="text-xs font-semibold text-brand-600 mb-2.5">
+              {base} · 選擇牙位
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {subPositions.map((sp) => (
-                <button key={sp} onClick={() => setSubPos(sp)} className={chip(subPos === sp)}>
-                  {SUBPOS_LABEL[sp] ?? sp}
+            {/* 整排：選取整個牙型全部6顆 */}
+            {subPositions.includes('整排') && (
+              <div className="mb-3">
+                <button
+                  onClick={() => setSubPos(subPos === '整排' ? '' : '整排')}
+                  className={chip(subPos === '整排')}
+                >
+                  整排（6顆全部）
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
+            {/* 牙弓示意圖：點選單顆牙位 */}
+            {subPositions.some((p) => p !== '整排') && (
+              <div className="bg-white rounded-lg border border-gray-100 px-3 py-2">
+                <div className="text-[10px] text-gray-400 mb-1 text-center">
+                  {jaw === '上顎' ? '↑ 上顎（點選單顆位置）' : '↓ 下顎（點選單顆位置）'}
+                </div>
+                <ToothArchDiagram
+                  available={new Set(subPositions.filter((p) => p !== '整排'))}
+                  selected={subPos === '整排' ? '' : subPos}
+                  onSelect={(pos) => setSubPos(subPos === pos ? '' : pos)}
+                  jaw={jaw}
+                />
+              </div>
+            )}
           </div>
         )}
       </>}
