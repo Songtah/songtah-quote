@@ -160,7 +160,8 @@ async function getItemsByOrderId(formattedId: string): Promise<OrderItem[]> {
 
 /** Create item pages in 訂購明細, linked to the order */
 async function createOrderItems(orderId: string, items: OrderItem[]): Promise<void> {
-  if (!ORDER_ITEMS_DB || items.length === 0) return
+  if (items.length === 0) return
+  if (!ORDER_ITEMS_DB) throw new Error('NOTION_ORDER_ITEMS_DB 環境變數未設定，訂購明細無法儲存')
   await Promise.all(
     items.map((item) =>
       notion.pages.create({

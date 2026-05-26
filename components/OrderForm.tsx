@@ -1209,23 +1209,24 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
         contactPerson: customer.contactPerson,
         customerTaxId: customer.taxId,
       }
-      if (isEdit && initialOrder) {
-        await fetch(`/api/orders/${initialOrder.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload }),
-        })
-      } else {
-        await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload }),
-        })
+      const body = JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload })
+      const res = isEdit && initialOrder
+        ? await fetch(`/api/orders/${initialOrder.id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body,
+          })
+        : await fetch('/api/orders', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+          })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `伺服器錯誤 (${res.status})`)
       }
+
       router.push('/orders')
       router.refresh()
-    } catch {
-      setError('儲存失敗，請重試')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '儲存失敗，請重試')
     } finally {
       setSaving(false)
     }
