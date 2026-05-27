@@ -3560,80 +3560,29 @@
     }
   },
   {
-    "id": "BS-BM520D-BUR",
-    "seriesCode": "BS-BM520D-BUR",
-    "seriesName": "BM-520D 車針",
+    "id": "BS-BUR",
+    "seriesCode": "BS-BUR",
+    "seriesName": "貝施美 車針",
     "brand": "貝施美",
     "productType": "耗材",
     "category": "車針 / 鑽針",
     "specs": [
       {
-        "key": "型號",
-        "label": "型號",
+        "key": "機型",
+        "label": "機型",
         "options": [
-          "0.6",
-          "1.0",
-          "2.0",
-          "1.0 平頭"
+          "BM-520D",
+          "400DW",
+          "500D",
+          "BSM 520D"
         ]
-      }
-    ],
-    "skuMap": {
-      "0.6": "BS-12-0.6",
-      "1.0": "BS-12-1.0",
-      "2.0": "BS-12-2.0",
-      "1.0 平頭": "BS-12-F1.0"
-    }
-  },
-  {
-    "id": "BS-400DW-BUR",
-    "seriesCode": "BS-400DW-BUR",
-    "seriesName": "400DW 車針",
-    "brand": "貝施美",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
+      },
       {
         "key": "材質",
         "label": "材質",
         "options": [
           "玻璃陶瓷",
-          "金屬"
-        ]
-      },
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "0.6",
-          "1L",
-          "2.5",
-          "2L",
-          "3L"
-        ]
-      }
-    ],
-    "skuMap": {
-      "玻璃陶瓷|1L": "BS-400DW-01",
-      "玻璃陶瓷|2.5": "BS-400DW-02",
-      "玻璃陶瓷|0.6": "BS-400DW-03",
-      "金屬|1L": "BS-400DW-11",
-      "金屬|2L": "BS-400DW-12",
-      "金屬|3L": "BS-400DW-13"
-    }
-  },
-  {
-    "id": "BS-500D-BUR",
-    "seriesCode": "BS-500D-BUR",
-    "seriesName": "500D 車針",
-    "brand": "貝施美",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "材質",
-        "label": "材質",
-        "options": [
+          "金屬",
           "Zirconia",
           "Resin"
         ]
@@ -3645,31 +3594,11 @@
           "0.6",
           "1.0",
           "2.0",
-          "1.0 平頭"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Zirconia|0.6": "BS-500D-0.6",
-      "Zirconia|1.0": "BS-500D-1.0",
-      "Zirconia|2.0": "BS-500D-2.0",
-      "Resin|1.0": "BS-500D-R1.0",
-      "Resin|2.0": "BS-500D-R2.0",
-      "Resin|1.0 平頭": "BS-500D-R-1"
-    }
-  },
-  {
-    "id": "BS-520D-BUR",
-    "seriesCode": "BS-520D-BUR",
-    "seriesName": "BSM 520D 車針",
-    "brand": "貝施美",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "1.0 平頭",
+          "1L",
+          "2.5",
+          "2L",
+          "3L",
           "刃 0.6",
           "刃 1.0",
           "平 1.0",
@@ -3678,20 +3607,58 @@
       }
     ],
     "skuMap": {
-      "刃 0.6": "BS-520D-0.6",
-      "刃 1.0": "BS-520D-1.0",
-      "平 1.0": "BS-520D-1.0-1",
-      "刃 2.0": "BS-520D-2.0"
+      "BM-520D|0.6": "BS-12-0.6",
+      "BM-520D|1.0": "BS-12-1.0",
+      "BM-520D|2.0": "BS-12-2.0",
+      "BM-520D|1.0 平頭": "BS-12-F1.0",
+      "400DW|玻璃陶瓷|1L": "BS-400DW-01",
+      "400DW|玻璃陶瓷|2.5": "BS-400DW-02",
+      "400DW|玻璃陶瓷|0.6": "BS-400DW-03",
+      "400DW|金屬|1L": "BS-400DW-11",
+      "400DW|金屬|2L": "BS-400DW-12",
+      "400DW|金屬|3L": "BS-400DW-13",
+      "500D|Zirconia|0.6": "BS-500D-0.6",
+      "500D|Zirconia|1.0": "BS-500D-1.0",
+      "500D|Zirconia|2.0": "BS-500D-2.0",
+      "500D|Resin|1.0": "BS-500D-R1.0",
+      "500D|Resin|2.0": "BS-500D-R2.0",
+      "500D|Resin|1.0 平頭": "BS-500D-R-1",
+      "BSM 520D|刃 0.6": "BS-520D-0.6",
+      "BSM 520D|刃 1.0": "BS-520D-1.0",
+      "BSM 520D|平 1.0": "BS-520D-1.0-1",
+      "BSM 520D|刃 2.0": "BS-520D-2.0"
     }
   },
   {
-    "id": "GEN-MAI-ZR",
-    "seriesCode": "GEN-MAI-ZR",
-    "seriesName": "MAI ZR 車針（白色匣）",
+    "id": "GEN-BUR",
+    "seriesCode": "GEN-BUR",
+    "seriesName": "GenCore 車針",
     "brand": "GenCore",
     "productType": "耗材",
     "category": "車針 / 鑽針",
     "specs": [
+      {
+        "key": "機型",
+        "label": "機型",
+        "options": [
+          "MAI",
+          "MillFix"
+        ]
+      },
+      {
+        "key": "刀具分類",
+        "label": "刀具分類",
+        "options": [
+          "ZR 白色匣",
+          "玻璃陶瓷 藍色匣",
+          "金屬/PMMA 紅色匣",
+          "T型/螺牙 黃色匣",
+          "ZR 乾式",
+          "Hybrid Ceramic",
+          "PMMA",
+          "PMMA ZR"
+        ]
+      },
       {
         "key": "型號",
         "label": "型號",
@@ -3699,55 +3666,11 @@
           "T1 · 2.0B",
           "T2 · 1.0B",
           "T3 · 0.6B",
-          "T4 · 0.3B"
-        ]
-      }
-    ],
-    "skuMap": {
-      "T1 · 2.0B": "GEN-T01-2.0B",
-      "T2 · 1.0B": "GEN-T02-1.0B",
-      "T3 · 0.6B": "GEN-T03-0.6B",
-      "T4 · 0.3B": "GEN-T04-0.3B"
-    }
-  },
-  {
-    "id": "GEN-MAI-G",
-    "seriesCode": "GEN-MAI-G",
-    "seriesName": "MAI 玻璃/Hybrid Ceramic 車針（藍色匣）",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "T4 · 0.3B",
           "T5 · G2.5R",
           "T6 · G1.5B",
           "T7 · G1.0B",
-          "T8 · G0.6B"
-        ]
-      }
-    ],
-    "skuMap": {
-      "T5 · G2.5R": "GEN-T5-G2.5R",
-      "T6 · G1.5B": "GEN-T6-G2.5R",
-      "T7 · G1.0B": "GEN-T7-G1.0B",
-      "T8 · G0.6B": "GEN-T8-G0.6B"
-    }
-  },
-  {
-    "id": "GEN-MAI-M",
-    "seriesCode": "GEN-MAI-M",
-    "seriesName": "MAI 金屬/PMMA 車針（紅色匣）",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "T8 · G0.6B",
           "T9 · 3.0B",
           "T10 · 2.0B",
           "T11 · 1.5B",
@@ -3759,139 +3682,20 @@
           "T17 · 1.5F",
           "T18 · 1.5R",
           "T19 · 1.0F",
-          "T20 · 0.5F"
-        ]
-      }
-    ],
-    "skuMap": {
-      "T9 · 3.0B": "GEN-T09-3.0B",
-      "T10 · 2.0B": "GEN-T10-2.0B",
-      "T11 · 1.5B": "GEN-T11-1.5B",
-      "T12 · 1.0B": "GEN-T12-1.0B",
-      "T13 · 0.6B": "GEN-T13-0.6B",
-      "T14 · 2.0BL": "GEN-T14-2.0BL",
-      "T15 · 1.5RL": "GEN-T15-1.5RL",
-      "T16 · 1.5FL": "GEN-T16-1.5FL",
-      "T17 · 1.5F": "GEN-T17-1.5F",
-      "T18 · 1.5R": "GEN-T18-1.5R",
-      "T19 · 1.0F": "GEN-T19-1.0F",
-      "T20 · 0.5F": "GEN-T20-0.5F"
-    }
-  },
-  {
-    "id": "GEN-MAI-Y",
-    "seriesCode": "GEN-MAI-Y",
-    "seriesName": "MAI T型 / 螺牙車針（黃色匣）",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "T20 · 0.5F",
           "T23 · 1.5T",
           "T24 · 2.0T",
           "T25 · 2.0TH",
           "T26 · 1.8TH",
           "T27 · 1.6TH",
-          "T28 · 1.4TH"
-        ]
-      }
-    ],
-    "skuMap": {
-      "T23 · 1.5T": "GEN-T23-1.5T",
-      "T24 · 2.0T": "GEN-T24-2.0T",
-      "T25 · 2.0TH": "GEN-T25-2.0TH",
-      "T26 · 1.8TH": "GEN-T26-1.8TH",
-      "T27 · 1.6TH": "GEN-T27-1.6TH",
-      "T28 · 1.4TH": "GEN-T28-1.4TH"
-    }
-  },
-  {
-    "id": "GEN-MF-ZR",
-    "seriesCode": "GEN-MF-ZR",
-    "seriesName": "MillFix ZR 車針（乾式）",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "T28 · 1.4TH",
           "2.0",
           "1.0",
           "0.6",
-          "0.3"
-        ]
-      }
-    ],
-    "skuMap": {
-      "2.0": "GEN-T31-2.0",
-      "1.0": "GEN-T32-1.0",
-      "0.6": "GEN-T33-0.6",
-      "0.3": "GEN-T34-0.3"
-    }
-  },
-  {
-    "id": "GEN-MF-HC",
-    "seriesCode": "GEN-MF-HC",
-    "seriesName": "MillFix Hybrid Ceramic 車針",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "0.3",
           "T35 · 2.0",
           "T36 · 1.0",
-          "T37 · 0.6"
-        ]
-      }
-    ],
-    "skuMap": {
-      "T35 · 2.0": "GEN-T35-2.0",
-      "T36 · 1.0": "GEN-T36-1.0",
-      "T37 · 0.6": "GEN-T37-0.6"
-    }
-  },
-  {
-    "id": "GEN-MF-PMMA",
-    "seriesCode": "GEN-MF-PMMA",
-    "seriesName": "MillFix PMMA 車針",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "2.0",
-          "1.0"
-        ]
-      }
-    ],
-    "skuMap": {
-      "2.0": "GEN-T38-2.0",
-      "1.0": "GEN-T39-1.0"
-    }
-  },
-  {
-    "id": "GEN-MF-PMMA-ZR",
-    "seriesCode": "GEN-MF-PMMA-ZR",
-    "seriesName": "MillFix PMMA ZR 車針",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "T37 · 0.6",
           "T42 · 1.5FL",
           "T43 · 1.0F",
           "T44 · 1.5R",
@@ -3900,20 +3704,78 @@
       }
     ],
     "skuMap": {
-      "T42 · 1.5FL": "GEN-T42-1.5FL",
-      "T43 · 1.0F": "GEN-T43-1.0F",
-      "T44 · 1.5R": "GEN-T44-1.5R",
-      "T45 · 1.5T": "GEN-T45-1.5T"
+      "MAI|ZR 白色匣|T1 · 2.0B": "GEN-T01-2.0B",
+      "MAI|ZR 白色匣|T2 · 1.0B": "GEN-T02-1.0B",
+      "MAI|ZR 白色匣|T3 · 0.6B": "GEN-T03-0.6B",
+      "MAI|ZR 白色匣|T4 · 0.3B": "GEN-T04-0.3B",
+      "MAI|玻璃陶瓷 藍色匣|T5 · G2.5R": "GEN-T5-G2.5R",
+      "MAI|玻璃陶瓷 藍色匣|T6 · G1.5B": "GEN-T6-G2.5R",
+      "MAI|玻璃陶瓷 藍色匣|T7 · G1.0B": "GEN-T7-G1.0B",
+      "MAI|玻璃陶瓷 藍色匣|T8 · G0.6B": "GEN-T08-G0.6B",
+      "MAI|金屬/PMMA 紅色匣|T9 · 3.0B": "GEN-T09-3.0B",
+      "MAI|金屬/PMMA 紅色匣|T10 · 2.0B": "GEN-T10-2.0B",
+      "MAI|金屬/PMMA 紅色匣|T11 · 1.5B": "GEN-T11-1.5B",
+      "MAI|金屬/PMMA 紅色匣|T12 · 1.0B": "GEN-T12-1.0B",
+      "MAI|金屬/PMMA 紅色匣|T13 · 0.6B": "GEN-T13-0.6B",
+      "MAI|金屬/PMMA 紅色匣|T14 · 2.0BL": "GEN-T14-2.0BL",
+      "MAI|金屬/PMMA 紅色匣|T15 · 1.5RL": "GEN-T15-1.5RL",
+      "MAI|金屬/PMMA 紅色匣|T16 · 1.5FL": "GEN-T16-1.5FL",
+      "MAI|金屬/PMMA 紅色匣|T17 · 1.5F": "GEN-T17-1.5F",
+      "MAI|金屬/PMMA 紅色匣|T18 · 1.5R": "GEN-T18-1.5R",
+      "MAI|金屬/PMMA 紅色匣|T19 · 1.0F": "GEN-T19-1.0F",
+      "MAI|金屬/PMMA 紅色匣|T20 · 0.5F": "GEN-T20-0.5F",
+      "MAI|T型/螺牙 黃色匣|T23 · 1.5T": "GEN-T23-1.5T",
+      "MAI|T型/螺牙 黃色匣|T24 · 2.0T": "GEN-T24-2.0T",
+      "MAI|T型/螺牙 黃色匣|T25 · 2.0TH": "GEN-T25-2.0TH",
+      "MAI|T型/螺牙 黃色匣|T26 · 1.8TH": "GEN-T26-1.8TH",
+      "MAI|T型/螺牙 黃色匣|T27 · 1.6TH": "GEN-T27-1.6TH",
+      "MAI|T型/螺牙 黃色匣|T28 · 1.4TH": "GEN-T28-1.4TH",
+      "MillFix|ZR 乾式|2.0": "GEN-T31-2.0",
+      "MillFix|ZR 乾式|1.0": "GEN-T32-1.0",
+      "MillFix|ZR 乾式|0.6": "GEN-T33-0.6",
+      "MillFix|ZR 乾式|0.3": "GEN-T34-0.3",
+      "MillFix|Hybrid Ceramic|T35 · 2.0": "GEN-T35-2.0",
+      "MillFix|Hybrid Ceramic|T36 · 1.0": "GEN-T36-1.0",
+      "MillFix|Hybrid Ceramic|T37 · 0.6": "GEN-T37-0.6",
+      "MillFix|PMMA|2.0": "GEN-T38-2.0",
+      "MillFix|PMMA|1.0": "GEN-T39-1.0",
+      "MillFix|PMMA ZR|T42 · 1.5FL": "GEN-T42-1.5FL",
+      "MillFix|PMMA ZR|T43 · 1.0F": "GEN-T43-1.0F",
+      "MillFix|PMMA ZR|T44 · 1.5R": "GEN-T44-1.5R",
+      "MillFix|PMMA ZR|T45 · 1.5T": "GEN-T45-1.5T"
     }
   },
   {
-    "id": "ZZ-BUR-ZR",
-    "seriesCode": "ZZ-BUR-ZR",
-    "seriesName": "Zirconia Milling Bur",
+    "id": "ZZ-BUR",
+    "seriesCode": "ZZ-BUR",
+    "seriesName": "Zirkonzahn 車針",
     "brand": "Zirkonzahn",
     "productType": "耗材",
     "category": "車針 / 鑽針",
     "specs": [
+      {
+        "key": "機型",
+        "label": "機型",
+        "options": [
+          "M1 / M2 / M4",
+          "5-TEC"
+        ]
+      },
+      {
+        "key": "材質",
+        "label": "材質",
+        "options": [
+          "Zirconia",
+          "玻璃陶瓷 4mm",
+          "玻璃陶瓷 6mm",
+          "Titanium",
+          "CrCo",
+          "Sintermetall",
+          "WAX 4mm",
+          "WAX 6mm",
+          "Thread"
+        ]
+      },
       {
         "key": "型號",
         "label": "型號",
@@ -3925,72 +3787,12 @@
           "0.5S (FR5005)",
           "0.3C (FR5006)",
           "1.5AXL (FR5008)",
-          "3R (FR5031)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "2L (FR5001)": "ZZ-999-010-6-2L",
-      "1.5A (FR5002)": "ZZ-999-010-6-1.5A",
-      "1L (FR5003)": "ZZ-999-010-6-1L",
-      "0.6A (FR5004)": "ZZ-999-010-6-0.6A",
-      "0.5S (FR5005)": "ZZ-999-010-6-0.5S",
-      "0.3C (FR5006)": "ZZ-999-010-6-0.3C",
-      "1.5AXL (FR5008)": "ZZ-999-010-6-1.5AXL",
-      "3R (FR5031)": "ZZ-FR5031"
-    }
-  },
-  {
-    "id": "ZZ-BUR-DIA",
-    "seriesCode": "ZZ-BUR-DIA",
-    "seriesName": "CAD/CAM Diamond Bur（玻璃陶瓷）",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "刀柄",
-        "label": "刀柄",
-        "options": [
-          "4mm",
-          "6mm"
-        ]
-      },
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "0.3",
+          "3R (FR5031)",
           "0.6",
           "1.25",
           "2.5",
-          "3T"
-        ]
-      }
-    ],
-    "skuMap": {
-      "4mm|0.6": "ZZ-999-016-0.6",
-      "4mm|1.25": "ZZ-999-016-1.25",
-      "4mm|2.5": "ZZ-999-016-2.5",
-      "6mm|0.3": "ZZ-999-016-6-0.3",
-      "6mm|0.6": "ZZ-999-016-6-0.6",
-      "6mm|1.25": "ZZ-999-016-6-1.25",
-      "6mm|2.5": "ZZ-999-016-6-2.5",
-      "6mm|3T": "ZZ-999-016-6-3T"
-    }
-  },
-  {
-    "id": "ZZ-BUR-TI",
-    "seriesCode": "ZZ-BUR-TI",
-    "seriesName": "Titanium Milling Bur",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "0.3",
+          "3T",
           "3T (FR1001)",
           "2T (FR1011)",
           "1.5T (FR1021)",
@@ -4007,160 +3809,96 @@
           "1.4ASC (FR1252)",
           "2G (FR1401)",
           "1T",
-          "2K (FR1501)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "3T (FR1001)": "ZZ-999-017-3T",
-      "2T (FR1011)": "ZZ-999-017-2T",
-      "1.5T (FR1021)": "ZZ-999-017-1.5T",
-      "1R (FR1101)": "ZZ-999-017-1R",
-      "2R (FR1121)": "ZZ-999-017-2R",
-      "3R (FR1131)": "ZZ-999-017-3R",
-      "0.5R (FR1151)": "ZZ-999-017-0.5R",
-      "0.5S (FR1111)": "ZZ-999-017-0.5S",
-      "1.5S (FR1201)": "ZZ-999-017-1.5S",
-      "1.2S (FR1211)": "ZZ-999-017-1.2S",
-      "1.5SXL (FR1231)": "ZZ-FR1231",
-      "2S (FR1241)": "ZZ-FR1241",
-      "1.6ASC (FR1251)": "ZZ-FR1251",
-      "1.4ASC (FR1252)": "ZZ-FR1252",
-      "2G (FR1401)": "ZZ-FR1401",
-      "1T": "ZZ-999-017-1T",
-      "2K (FR1501)": "ZZ-FR1501"
-    }
-  },
-  {
-    "id": "ZZ-BUR-CRCO",
-    "seriesCode": "ZZ-BUR-CRCO",
-    "seriesName": "CrCo / Sintermetall Milling Bur",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "3T",
-          "2T",
-          "1.5T",
-          "1T",
-          "1R",
-          "2R",
-          "0.5R",
-          "0.5S",
-          "1.5S",
-          "1.2S",
-          "1.5SXL",
-          "2G",
-          "2L Sintermetall",
-          "1L Sintermetall",
-          "0.5S Sintermetall",
-          "1.5A Sintermetall",
-          "0.6A Sintermetall"
-        ]
-      }
-    ],
-    "skuMap": {
-      "3T": "ZZ-999-019-3T",
-      "2T": "ZZ-999-019-2T",
-      "1.5T": "ZZ-999-019-1.5T",
-      "1T": "ZZ-999-019-1T",
-      "1R": "ZZ-999-019-1R",
-      "2R": "ZZ-999-019-2R",
-      "0.5R": "ZZ-999-019-0.5R",
-      "0.5S": "ZZ-999-019-0.5S",
-      "1.5S": "ZZ-999-019-1.5S",
-      "1.2S": "ZZ-999-019-1.2S",
-      "1.5SXL": "ZZ-999-019-1.5SXL",
-      "2G": "ZZ-999-019-2G",
-      "2L Sintermetall": "ZZ-FR3006",
-      "1L Sintermetall": "ZZ-FR3016",
-      "0.5S Sintermetall": "ZZ-FR3026",
-      "1.5A Sintermetall": "ZZ-FR3036",
-      "0.6A Sintermetall": "ZZ-FR3046"
-    }
-  },
-  {
-    "id": "ZZ-BUR-WAX-5TEC",
-    "seriesCode": "ZZ-BUR-WAX-5TEC",
-    "seriesName": "5-TEC WAX Milling Bur（4mm）",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "2L (FR037)",
-          "1L (FR047)",
-          "0.5S (FR057)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "2L (FR037)": "ZZ-999-012-2L",
-      "1L (FR047)": "ZZ-999-012-1L",
-      "0.5S (FR057)": "ZZ-999-012-0.5S"
-    }
-  },
-  {
-    "id": "ZZ-BUR-WAX",
-    "seriesCode": "ZZ-BUR-WAX",
-    "seriesName": "WAX Milling Bur（6mm）",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
+          "2K (FR1501)",
+          "3T (CrCo)",
+          "2T (CrCo)",
+          "1.5T (CrCo)",
+          "1T (CrCo)",
+          "1R (CrCo)",
+          "2R (CrCo)",
+          "0.5R (CrCo)",
+          "0.5S (CrCo)",
+          "1.5S (CrCo)",
+          "1.2S (CrCo)",
+          "1.5SXL (CrCo)",
+          "2G (CrCo)",
           "2L",
-          "1.5A",
           "1L",
+          "1.5A",
           "0.6A",
-          "0.5S",
-          "0.3C",
           "1.5AXL",
           "6T",
-          "3R"
+          "2L (FR037)",
+          "1L (FR047)",
+          "0.5S (FR057)",
+          "1.8G (FR8006)"
         ]
       }
     ],
     "skuMap": {
-      "2L": "ZZ-FR7001",
-      "1.5A": "ZZ-FR7002",
-      "1L": "ZZ-FR7003",
-      "0.6A": "ZZ-FR7004",
-      "0.5S": "ZZ-FR7005",
-      "0.3C": "ZZ-FR7006",
-      "1.5AXL": "ZZ-FR7008",
-      "6T": "ZZ-FR7009",
-      "3R": "ZZ-FR7031"
-    }
-  },
-  {
-    "id": "ZZ-BUR-THREAD",
-    "seriesCode": "ZZ-BUR-THREAD",
-    "seriesName": "Thread Milling Bur",
-    "brand": "Zirkonzahn",
-    "productType": "耗材",
-    "category": "車針 / 鑽針",
-    "specs": [
-      {
-        "key": "型號",
-        "label": "型號",
-        "options": [
-          "1.8G Zirconia (FR8006)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "1.8G Zirconia (FR8006)": "ZZ-FR8006"
+      "M1 / M2 / M4|Zirconia|2L (FR5001)": "ZZ-999-010-6-2L",
+      "M1 / M2 / M4|Zirconia|1.5A (FR5002)": "ZZ-999-010-6-1.5A",
+      "M1 / M2 / M4|Zirconia|1L (FR5003)": "ZZ-999-010-6-1L",
+      "M1 / M2 / M4|Zirconia|0.6A (FR5004)": "ZZ-999-010-6-0.6A",
+      "M1 / M2 / M4|Zirconia|0.5S (FR5005)": "ZZ-999-010-6-0.5S",
+      "M1 / M2 / M4|Zirconia|0.3C (FR5006)": "ZZ-999-010-6-0.3C",
+      "M1 / M2 / M4|Zirconia|1.5AXL (FR5008)": "ZZ-999-010-6-1.5AXL",
+      "M1 / M2 / M4|Zirconia|3R (FR5031)": "ZZ-FR5031",
+      "M1 / M2 / M4|玻璃陶瓷 4mm|0.6": "ZZ-999-016-0.6",
+      "M1 / M2 / M4|玻璃陶瓷 4mm|1.25": "ZZ-999-016-1.25",
+      "M1 / M2 / M4|玻璃陶瓷 4mm|2.5": "ZZ-999-016-2.5",
+      "M1 / M2 / M4|玻璃陶瓷 6mm|0.3": "ZZ-999-016-6-0.3",
+      "M1 / M2 / M4|玻璃陶瓷 6mm|0.6": "ZZ-999-016-6-0.6",
+      "M1 / M2 / M4|玻璃陶瓷 6mm|1.25": "ZZ-999-016-6-1.25",
+      "M1 / M2 / M4|玻璃陶瓷 6mm|2.5": "ZZ-999-016-6-2.5",
+      "M1 / M2 / M4|玻璃陶瓷 6mm|3T": "ZZ-999-016-6-3T",
+      "M1 / M2 / M4|Titanium|3T (FR1001)": "ZZ-999-017-3T",
+      "M1 / M2 / M4|Titanium|2T (FR1011)": "ZZ-999-017-2T",
+      "M1 / M2 / M4|Titanium|1.5T (FR1021)": "ZZ-999-017-1.5T",
+      "M1 / M2 / M4|Titanium|1R (FR1101)": "ZZ-999-017-1R",
+      "M1 / M2 / M4|Titanium|2R (FR1121)": "ZZ-999-017-2R",
+      "M1 / M2 / M4|Titanium|3R (FR1131)": "ZZ-999-017-3R",
+      "M1 / M2 / M4|Titanium|0.5R (FR1151)": "ZZ-999-017-0.5R",
+      "M1 / M2 / M4|Titanium|0.5S (FR1111)": "ZZ-999-017-0.5S",
+      "M1 / M2 / M4|Titanium|1.5S (FR1201)": "ZZ-999-017-1.5S",
+      "M1 / M2 / M4|Titanium|1.2S (FR1211)": "ZZ-999-017-1.2S",
+      "M1 / M2 / M4|Titanium|1.5SXL (FR1231)": "ZZ-FR1231",
+      "M1 / M2 / M4|Titanium|2S (FR1241)": "ZZ-FR1241",
+      "M1 / M2 / M4|Titanium|1.6ASC (FR1251)": "ZZ-FR1251",
+      "M1 / M2 / M4|Titanium|1.4ASC (FR1252)": "ZZ-FR1252",
+      "M1 / M2 / M4|Titanium|2G (FR1401)": "ZZ-FR1401",
+      "M1 / M2 / M4|Titanium|1T": "ZZ-999-017-1T",
+      "M1 / M2 / M4|Titanium|2K (FR1501)": "ZZ-FR1501",
+      "M1 / M2 / M4|CrCo|3T (CrCo)": "ZZ-999-019-3T",
+      "M1 / M2 / M4|CrCo|2T (CrCo)": "ZZ-999-019-2T",
+      "M1 / M2 / M4|CrCo|1.5T (CrCo)": "ZZ-999-019-1.5T",
+      "M1 / M2 / M4|CrCo|1T (CrCo)": "ZZ-999-019-1T",
+      "M1 / M2 / M4|CrCo|1R (CrCo)": "ZZ-999-019-1R",
+      "M1 / M2 / M4|CrCo|2R (CrCo)": "ZZ-999-019-2R",
+      "M1 / M2 / M4|CrCo|0.5R (CrCo)": "ZZ-999-019-0.5R",
+      "M1 / M2 / M4|CrCo|0.5S (CrCo)": "ZZ-999-019-0.5S",
+      "M1 / M2 / M4|CrCo|1.5S (CrCo)": "ZZ-999-019-1.5S",
+      "M1 / M2 / M4|CrCo|1.2S (CrCo)": "ZZ-999-019-1.2S",
+      "M1 / M2 / M4|CrCo|1.5SXL (CrCo)": "ZZ-999-019-1.5SXL",
+      "M1 / M2 / M4|CrCo|2G (CrCo)": "ZZ-999-019-2G",
+      "M1 / M2 / M4|Sintermetall|2L": "ZZ-FR3006",
+      "M1 / M2 / M4|Sintermetall|1L": "ZZ-FR3016",
+      "M1 / M2 / M4|Sintermetall|0.5S (FR5005)": "ZZ-FR3026",
+      "M1 / M2 / M4|Sintermetall|1.5A": "ZZ-FR3036",
+      "M1 / M2 / M4|Sintermetall|0.6A": "ZZ-FR3046",
+      "M1 / M2 / M4|WAX 6mm|2L": "ZZ-FR7001",
+      "M1 / M2 / M4|WAX 6mm|1.5A": "ZZ-FR7002",
+      "M1 / M2 / M4|WAX 6mm|1L": "ZZ-FR7003",
+      "M1 / M2 / M4|WAX 6mm|0.6A": "ZZ-FR7004",
+      "M1 / M2 / M4|WAX 6mm|0.5S (FR5005)": "ZZ-FR7005",
+      "M1 / M2 / M4|WAX 6mm|0.3C (FR5006)": "ZZ-FR7006",
+      "M1 / M2 / M4|WAX 6mm|1.5AXL": "ZZ-FR7008",
+      "M1 / M2 / M4|WAX 6mm|6T": "ZZ-FR7009",
+      "M1 / M2 / M4|WAX 6mm|3R": "ZZ-FR7031",
+      "M1 / M2 / M4|Thread|1.8G (FR8006)": "ZZ-FR8006",
+      "5-TEC|WAX 4mm|2L (FR037)": "ZZ-999-012-2L",
+      "5-TEC|WAX 4mm|1L (FR047)": "ZZ-999-012-1L",
+      "5-TEC|WAX 4mm|0.5S (FR057)": "ZZ-999-012-0.5S"
     }
   }
 ]

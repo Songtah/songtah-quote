@@ -546,8 +546,11 @@ function FamilySpecPanel({
    * (e.g. a unified Detax family where Temp only needs 品項+顏色 but Crown needs 品項+顏色+容量,
    * and single-SKU products only need 品項).
    *
-   * Once a level has no valid options after all previous *visible* specs are selected,
-   * that level and all subsequent levels become invisible (dead-end reached).
+   * Supports "skip-level" mixed-depth families: if a spec level has no valid options
+   * given the current visible prefix, that level is hidden but subsequent levels still
+   * get a chance — each spec independently evaluates against the current visible prefix.
+   * A level with no options is simply invisible; it does NOT cascade-hide later levels.
+   * This allows e.g. 機型 → (材質 hidden for some machines) → 型號 to work correctly.
    */
   const specRows = useMemo(() => {
     type Row = { spec: typeof family.specs[0]; options: string[]; visible: boolean; specIdx: number }
@@ -556,11 +559,9 @@ function FamilySpecPanel({
     }
     const keys = Object.keys(family.skuMap)
     const rows: Row[] = []
-    let deadEnd = false
 
     for (let i = 0; i < family.specs.length; i++) {
       const spec = family.specs[i]
-      if (deadEnd) { rows.push({ spec, options: [], visible: false, specIdx: i }); continue }
 
       if (i === 0) {
         const valid = new Set(keys.map((k) => k.split('|')[0]))
@@ -572,28 +573,26 @@ function FamilySpecPanel({
       const prevVisibleAllSelected = rows.every((r) => !r.visible || !!selected[r.spec.key])
 
       if (!prevVisibleAllSelected) {
-        // Not done yet → show disabled with every option that appears at this depth anywhere
+        // Not done yet → show with every option that appears at this depth anywhere
         const valid = new Set(keys.map((k) => k.split('|')[i]).filter(Boolean))
         rows.push({ spec, options: spec.options.filter((o) => valid.has(o)), visible: true, specIdx: i })
         continue
       }
 
-      // Filter using the effective prefix built from visible selections only
-      const prefix = rows.filter((r) => r.visible).map((r) => selected[r.spec.key]).join('|')
-      const activeDepth = rows.filter((r) => r.visible).length
+      // Filter using the effective prefix built from *visible* selections only.
+      // If this level has no valid options, hide it — but do NOT propagate a dead-end;
+      // the next spec will re-evaluate with the same prefix (effectively skipping this level).
+      const visibleSoFar = rows.filter((r) => r.visible)
+      const prefix = visibleSoFar.map((r) => selected[r.spec.key]).join('|')
+      const depth = visibleSoFar.length
       const valid = new Set(
         keys
           .filter((k) => k.startsWith(prefix + '|'))
-          .map((k) => k.split('|')[activeDepth])
+          .map((k) => k.split('|')[depth])
           .filter(Boolean)
       )
       const opts = spec.options.filter((o) => valid.has(o))
-      if (opts.length === 0) {
-        deadEnd = true
-        rows.push({ spec, options: [], visible: false, specIdx: i })
-      } else {
-        rows.push({ spec, options: opts, visible: true, specIdx: i })
-      }
+      rows.push({ spec, options: opts, visible: opts.length > 0, specIdx: i })
     }
     return rows
   }, [family, selected])
