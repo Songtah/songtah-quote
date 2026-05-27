@@ -18,7 +18,17 @@
           "Model 2.0 模型",
           "Denture 全口義齒",
           "Splintmaster 咬合板",
-          "Denture Flex 彈性義齒"
+          "Denture Flex 彈性義齒",
+          "Splint 2.0 咬合板",
+          "Model T 模型",
+          "Tray 2.0 托盤",
+          "Cast 2.0 鑄造",
+          "Gingiva 牙齦",
+          "Ortho 矯正",
+          "IBT",
+          "Tryin A2 試戴",
+          "Flex 彈性樹脂",
+          "Denture Impact 義齒"
         ]
       },
       {
@@ -74,7 +84,17 @@
       "Splintmaster 咬合板|Flex": "DT-04432",
       "Splintmaster 咬合板|Taff": "DT-04433",
       "Denture Flex 彈性義齒|Pink-transparent": "DT-04625",
-      "Denture Flex 彈性義齒|Clear": "DT-04626"
+      "Denture Flex 彈性義齒|Clear": "DT-04626",
+      "Splint 2.0 咬合板": "DT-02076",
+      "Model T 模型": "DT-02332",
+      "Tray 2.0 托盤": "DT-02505",
+      "Cast 2.0 鑄造": "DT-02632",
+      "Gingiva 牙齦": "DT-02843",
+      "Ortho 矯正": "DT-03989",
+      "IBT": "DT-04249",
+      "Tryin A2 試戴": "DT-04427",
+      "Flex 彈性樹脂": "DT-09900-2",
+      "Denture Impact 義齒": "DT-04436"
     }
   },
   {
