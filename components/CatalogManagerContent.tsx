@@ -5,6 +5,24 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 // ── Types ─────────────────────────────────────────────────────
 
+export interface SpecTable {
+  columns: string[]
+  rows:    string[][]
+}
+
+function defaultSpecs(): SpecTable {
+  return { columns: ['規格項目', '規格值'], rows: [] }
+}
+
+function parseSpecs(raw: string): SpecTable {
+  if (!raw) return defaultSpecs()
+  try {
+    const p = JSON.parse(raw)
+    if (p && Array.isArray(p.columns) && Array.isArray(p.rows)) return p as SpecTable
+  } catch {}
+  return defaultSpecs()
+}
+
 interface CatalogItem {
   code: string
   name: string
@@ -256,6 +274,197 @@ function ImageUploadZone({
   )
 }
 
+// ── Specs Editor ──────────────────────────────────────────────
+
+function SpecsEditor({
+  specs,
+  onChange,
+  disabled,
+}: {
+  specs:    SpecTable
+  onChange: (s: SpecTable) => void
+  disabled: boolean
+}) {
+  const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const colCount = specs.columns.length
+  const rowCount = specs.rows.length
+
+  function regRef(ri: number, ci: number, el: HTMLInputElement | null) {
+    const key = `${ri}-${ci}`
+    if (el) cellRefs.current.set(key, el)
+    else cellRefs.current.delete(key)
+  }
+  function focusCell(ri: number, ci: number) {
+    setTimeout(() => cellRefs.current.get(`${ri}-${ci}`)?.focus(), 30)
+  }
+
+  // ── Column ops ────────────────────────────────────────────
+  function updateCol(ci: number, val: string) {
+    onChange({ ...specs, columns: specs.columns.map((c, i) => i === ci ? val : c) })
+  }
+  function addCol() {
+    onChange({
+      columns: [...specs.columns, `欄位 ${colCount + 1}`],
+      rows:    specs.rows.map(r => [...r, '']),
+    })
+  }
+  function removeCol(ci: number) {
+    if (colCount <= 1) return
+    onChange({
+      columns: specs.columns.filter((_, i) => i !== ci),
+      rows:    specs.rows.map(r => r.filter((_, i) => i !== ci)),
+    })
+  }
+
+  // ── Row ops ───────────────────────────────────────────────
+  function updateCell(ri: number, ci: number, val: string) {
+    onChange({
+      ...specs,
+      rows: specs.rows.map((r, i) =>
+        i === ri ? r.map((c, j) => j === ci ? val : c) : r
+      ),
+    })
+  }
+  function addRow(focusAfter = false) {
+    const newRowIdx = rowCount
+    onChange({ ...specs, rows: [...specs.rows, Array(colCount).fill('')] })
+    if (focusAfter) focusCell(newRowIdx, 0)
+  }
+  function removeRow(ri: number) {
+    onChange({ ...specs, rows: specs.rows.filter((_, i) => i !== ri) })
+  }
+
+  // Tab key: move to next cell, or create new row on last cell
+  function handleCellTab(e: React.KeyboardEvent, ri: number, ci: number) {
+    if (e.key !== 'Tab') return
+    e.preventDefault()
+    if (ci + 1 < colCount) {
+      focusCell(ri, ci + 1)
+    } else if (ri + 1 < rowCount) {
+      focusCell(ri + 1, 0)
+    } else {
+      addRow(true)
+    }
+  }
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${colCount}, minmax(72px, 1fr)) 28px`,
+  }
+
+  const hdrInput = [
+    'w-full px-2.5 py-2 text-xs font-semibold text-slate-600 bg-transparent',
+    'border-0 focus:outline-none focus:bg-brand-50/70 rounded',
+    'placeholder:text-gray-300 disabled:opacity-50',
+  ].join(' ')
+
+  const cellInput = [
+    'w-full px-2.5 py-2 text-sm text-gray-800 bg-transparent',
+    'border-0 focus:outline-none focus:bg-brand-50/70 rounded',
+    'placeholder:text-gray-300 disabled:opacity-50',
+  ].join(' ')
+
+  return (
+    <div>
+      <div className="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
+
+        {/* ── Header row ─────────────────────────────────────── */}
+        <div style={gridStyle} className="bg-slate-50 border-b border-gray-200">
+          {specs.columns.map((col, ci) => (
+            <div key={ci} className="relative group flex items-center border-r border-gray-200"
+              style={ci === colCount - 1 ? { borderRight: 'none' } : {}}>
+              <input
+                value={col}
+                onChange={e => updateCol(ci, e.target.value)}
+                className={hdrInput}
+                placeholder={`欄 ${ci + 1}`}
+                disabled={disabled}
+              />
+              {/* Delete column — appears on hover, only when >1 col */}
+              {colCount > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeCol(ci)}
+                  disabled={disabled}
+                  title="刪除此欄"
+                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded flex items-center justify-center
+                             text-[10px] leading-none text-gray-300 hover:text-red-500 hover:bg-red-50
+                             opacity-0 group-hover:opacity-100 transition disabled:hidden"
+                >✕</button>
+              )}
+            </div>
+          ))}
+          {/* Add column */}
+          <div className="flex items-center justify-center border-l border-gray-200">
+            <button
+              type="button"
+              onClick={addCol}
+              disabled={disabled}
+              title="新增欄"
+              className="w-5 h-5 flex items-center justify-center rounded-full
+                         text-sm font-bold leading-none
+                         text-gray-400 hover:text-brand-600 hover:bg-brand-50
+                         transition disabled:opacity-30"
+            >＋</button>
+          </div>
+        </div>
+
+        {/* ── Data rows ──────────────────────────────────────── */}
+        {specs.rows.map((row, ri) => (
+          <div key={ri} style={gridStyle}
+            className="group border-b border-gray-100 last:border-0 hover:bg-gray-50/60 transition-colors">
+            {row.map((cell, ci) => (
+              <div key={ci} className="border-r border-gray-100"
+                style={ci === colCount - 1 ? { borderRight: 'none' } : {}}>
+                <input
+                  ref={el => regRef(ri, ci, el)}
+                  value={cell}
+                  onChange={e => updateCell(ri, ci, e.target.value)}
+                  onKeyDown={e => handleCellTab(e, ri, ci)}
+                  className={cellInput}
+                  placeholder="—"
+                  disabled={disabled}
+                />
+              </div>
+            ))}
+            {/* Delete row — appears on hover */}
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => removeRow(ri)}
+                disabled={disabled}
+                title="刪除此列"
+                className="w-5 h-5 flex items-center justify-center rounded-full
+                           text-[11px] leading-none
+                           text-gray-300 hover:text-red-500 hover:bg-red-50
+                           opacity-0 group-hover:opacity-100 transition disabled:hidden"
+              >✕</button>
+            </div>
+          </div>
+        ))}
+
+        {/* ── Empty state ────────────────────────────────────── */}
+        {rowCount === 0 && (
+          <div className="py-5 text-center text-xs text-gray-400 select-none">
+            尚無規格，點擊下方「新增列」開始填寫
+          </div>
+        )}
+      </div>
+
+      {/* Add row */}
+      <button
+        type="button"
+        onClick={() => addRow(true)}
+        disabled={disabled}
+        className="mt-2 flex items-center gap-1 text-xs font-medium text-brand-600
+                   hover:text-brand-700 transition disabled:opacity-40"
+      >
+        <span className="text-base leading-none">＋</span> 新增列
+      </button>
+    </div>
+  )
+}
+
 // ── Product Edit Drawer ───────────────────────────────────────
 
 function ProductEditDrawer({
@@ -276,6 +485,7 @@ function ProductEditDrawer({
   const [price,       setPrice]       = useState('')
   const [imageUrl,    setImageUrl]    = useState('')
   const [description, setDescription] = useState('')
+  const [specs,       setSpecs]       = useState<SpecTable>(defaultSpecs())
 
   useEffect(() => {
     setLoading(true)
@@ -288,6 +498,7 @@ function ProductEditDrawer({
         setPrice(data.rich.price != null ? String(data.rich.price) : '')
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
+        setSpecs(parseSpecs(data.rich.specsJson ?? ''))
       })
       .catch(() => setError('無法載入商品資料'))
       .finally(() => setLoading(false))
@@ -302,10 +513,13 @@ function ProductEditDrawer({
       setSaving(false)
       return
     }
+    // Only save specs if there's actual data (at least one non-empty row)
+    const hasSpecs = specs.rows.some(r => r.some(c => c.trim()))
+    const specsJson = hasSpecs ? JSON.stringify(specs) : ''
     const res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description }),
+      body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson }),
     }).catch(() => null)
 
     if (!res?.ok) {
@@ -414,6 +628,19 @@ function ProductEditDrawer({
               placeholder="填入產品特色、規格說明、使用注意事項…"
               rows={6}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent leading-relaxed"
+              disabled={loading}
+            />
+          </div>
+
+          {/* 技術規格 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-slate-700">技術規格</label>
+              <span className="text-[10px] text-gray-400">點擊欄位名稱可修改・Tab 鍵跳格・最後格自動新增列</span>
+            </div>
+            <SpecsEditor
+              specs={specs}
+              onChange={setSpecs}
               disabled={loading}
             />
           </div>

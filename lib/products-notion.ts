@@ -26,10 +26,10 @@ async function ensureFields() {
         '售價':     { number: { format: 'number' } },
         '圖片URL':  { url: {} },
         '商品介紹': { rich_text: {} },
+        '技術規格': { rich_text: {} },   // JSON string: { columns: string[], rows: string[][] }
       } as any,
     })
   } catch (e) {
-    // Best-effort: fields may already exist or permissions may differ
     console.warn('[products-notion] ensureFields warning:', e)
   }
 }
@@ -58,10 +58,11 @@ function readUrl(page: any, field: string): string {
 // ── Types ────────────────────────────────────────────────────
 
 export interface ProductRichData {
-  notionId: string
+  notionId:    string
   price:       number | null   // 售價
   imageUrl:    string          // 圖片URL
   description: string          // 商品介紹
+  specsJson:   string          // 技術規格 — raw JSON stored in Notion; parse on client
 }
 
 export interface CatalogSnapshot {
@@ -93,6 +94,7 @@ export async function getProductRichData(skuCode: string): Promise<ProductRichDa
     price:       readNumber(page, '售價'),
     imageUrl:    readUrl(page, '圖片URL'),
     description: readRichText(page, '商品介紹'),
+    specsJson:   readRichText(page, '技術規格'),
   }
 }
 
@@ -109,6 +111,7 @@ export async function upsertProductRichData(
     price?:       number | null
     imageUrl?:    string
     description?: string
+    specsJson?:   string
   }
 ): Promise<string> {
   await ensureFields()
@@ -121,6 +124,8 @@ export async function upsertProductRichData(
     props['圖片URL'] = data.imageUrl ? { url: data.imageUrl } : { url: null }
   if (data.description !== undefined)
     props['商品介紹'] = { rich_text: richText(data.description) }
+  if (data.specsJson !== undefined)
+    props['技術規格'] = { rich_text: richText(data.specsJson) }
 
   // Check if a page already exists for this SKU
   const existing = await getProductRichData(skuCode)
