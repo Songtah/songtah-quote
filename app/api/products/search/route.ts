@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const productType = req.nextUrl.searchParams.get('type')        ?? ''
   const category    = req.nextUrl.searchParams.get('category')    ?? ''
   const limitParam  = req.nextUrl.searchParams.get('limit')       ?? '50'
-  const limit       = Math.min(parseInt(limitParam, 10) || 50, 200)
+  const limit       = Math.min(parseInt(limitParam, 10) || 50, 9999)
 
   const products = searchCatalog({
     q,

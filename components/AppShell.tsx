@@ -24,6 +24,7 @@ function getPageTitle(pathname: string): string {
     '/tickets':           '技術支援工單列表',
     '/bd':                '業務開發',
     '/products':          '產品管理',
+    '/products/catalog':  '商品目錄管理',
     '/quote/new':         '新增報價單',
     '/quotes':            '報價單管理',
     '/settings/accounts': '帳號管理',
