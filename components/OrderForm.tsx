@@ -578,8 +578,23 @@ function FamilySpecPanel({
     })
   }
 
-  const allSelected = family.specs.length > 0 && family.specs.every((s) => !!selected[s.key])
-  const skuKey = family.specs.map((s) => selected[s.key] ?? '').join('|')
+  // A spec is "optional" when all previous specs are chosen but this level has no valid options
+  // (e.g. a unified family where some products don't need a volume level)
+  const allSelected = family.specs.length > 0 && family.specs.every((spec, i) => {
+    const allPrev = i === 0 || family.specs.slice(0, i).every((s) => !!selected[s.key])
+    if (allPrev && validOptionsList[i].length === 0) return true  // optional spec → skip
+    return !!selected[spec.key]
+  })
+  // Build the lookup key only up to the last non-optional spec
+  const skuKey = (() => {
+    const parts: string[] = []
+    for (let i = 0; i < family.specs.length; i++) {
+      const allPrev = i === 0 || family.specs.slice(0, i).every((s) => !!selected[s.key])
+      if (allPrev && validOptionsList[i].length === 0) break  // optional level has no options → stop
+      parts.push(selected[family.specs[i].key] ?? '')
+    }
+    return parts.join('|')
+  })()
   const skuCode = allSelected
     ? (family.skuMap ? (family.skuMap[skuKey] ?? '') : buildFromPattern(family.skuPattern, selected))
     : ''
@@ -591,6 +606,9 @@ function FamilySpecPanel({
       {family.specs.map((spec, idx) => {
         const prevSelected = idx === 0 || !!selected[family.specs[idx - 1].key]
         const options = validOptionsList[idx]
+        // Hide spec row when all previous are selected but this level has no valid options
+        const allPrevSelected = idx === 0 || family.specs.slice(0, idx).every((s) => !!selected[s.key])
+        if (allPrevSelected && options.length === 0) return null
         return (
           <div key={spec.key}>
             <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>

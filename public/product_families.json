@@ -1,5 +1,83 @@
 [
   {
+    "id": "DT-ALL",
+    "seriesCode": "DT-FREEPRINT",
+    "seriesName": "Detax Freeprint 系列",
+    "brand": "Detax",
+    "productType": "3D列印樹脂",
+    "category": "材料",
+    "skuPattern": "DT-{SKU}",
+    "namePattern": "Detax {品項} {顏色} {容量}",
+    "specs": [
+      {
+        "key": "品項",
+        "label": "品項",
+        "options": [
+          "Crown 牙冠",
+          "Temp 臨時冠",
+          "Model 2.0 模型",
+          "Denture 全口義齒",
+          "Splintmaster 咬合板",
+          "Denture Flex 彈性義齒"
+        ]
+      },
+      {
+        "key": "顏色",
+        "label": "顏色 / 類型",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "BL",
+          "Light Grey",
+          "Sand",
+          "Grey",
+          "Caramel",
+          "WW",
+          "Pink-trasp",
+          "Pink",
+          "Tray A2",
+          "Flex",
+          "Taff",
+          "Pink-transparent",
+          "Clear"
+        ]
+      },
+      {
+        "key": "容量",
+        "label": "容量",
+        "options": [
+          "500g",
+          "1000g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Crown 牙冠|A1|1000g": "DT-02376",
+      "Crown 牙冠|A2|500g": "DT-02378",
+      "Crown 牙冠|A2|1000g": "DT-02415",
+      "Crown 牙冠|A3|500g": "DT-02417",
+      "Crown 牙冠|A3|1000g": "DT-02446",
+      "Crown 牙冠|BL|500g": "DT-02845",
+      "Crown 牙冠|BL|1000g": "DT-02884",
+      "Temp 臨時冠|A1": "DT-04062",
+      "Temp 臨時冠|A2": "DT-04063",
+      "Temp 臨時冠|A3": "DT-04064",
+      "Model 2.0 模型|Light Grey": "DT-02099",
+      "Model 2.0 模型|Sand": "DT-02128",
+      "Model 2.0 模型|Grey": "DT-02177",
+      "Model 2.0 模型|Caramel": "DT-02850",
+      "Model 2.0 模型|WW": "DT-03105",
+      "Denture 全口義齒|Pink-trasp": "DT-02040",
+      "Denture 全口義齒|Pink": "DT-04092",
+      "Denture 全口義齒|Tray A2": "DT-04101",
+      "Splintmaster 咬合板|Flex": "DT-04432",
+      "Splintmaster 咬合板|Taff": "DT-04433",
+      "Denture Flex 彈性義齒|Pink-transparent": "DT-04625",
+      "Denture Flex 彈性義齒|Clear": "DT-04626"
+    }
+  },
+  {
     "id": "BS-STML",
     "seriesCode": "BS-STML",
     "seriesName": "3D Master 氧化鋯塊",
@@ -2817,175 +2895,6 @@
     ],
     "skuMap": {
       "4號": "YMH-T38-1"
-    }
-  },
-  {
-    "id": "DT-CROWN",
-    "seriesCode": "DT-CROWN",
-    "seriesName": "Freeprint Crown 牙冠樹脂",
-    "brand": "Detax",
-    "productType": "設備",
-    "category": "3D列印機",
-    "skuPattern": "",
-    "namePattern": "Freeprint Crown {色號} ({容量})",
-    "specs": [
-      {
-        "key": "色號",
-        "label": "色號",
-        "options": [
-          "A1",
-          "A2",
-          "A3",
-          "BL"
-        ]
-      },
-      {
-        "key": "容量",
-        "label": "容量",
-        "options": [
-          "500g",
-          "1000g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "A1|1000g": "DT-02376",
-      "A2|500g": "DT-02378",
-      "A2|1000g": "DT-02415",
-      "A3|500g": "DT-02417",
-      "A3|1000g": "DT-02446",
-      "BL|500g": "DT-02845",
-      "BL|1000g": "DT-02884"
-    }
-  },
-  {
-    "id": "DT-TEMP",
-    "seriesCode": "DT-TEMP",
-    "seriesName": "Freeprint Temp 臨時冠樹脂",
-    "brand": "Detax",
-    "productType": "設備",
-    "category": "3D列印機",
-    "skuPattern": "",
-    "namePattern": "Freeprint Temp {色號} (1000g)",
-    "specs": [
-      {
-        "key": "色號",
-        "label": "色號",
-        "options": [
-          "A1",
-          "A2",
-          "A3"
-        ]
-      }
-    ],
-    "skuMap": {
-      "A1": "DT-04062",
-      "A2": "DT-04063",
-      "A3": "DT-04064"
-    }
-  },
-  {
-    "id": "DT-MODEL",
-    "seriesCode": "DT-MODEL",
-    "seriesName": "Freeprint Model 2.0 模型樹脂",
-    "brand": "Detax",
-    "productType": "設備",
-    "category": "3D列印機",
-    "skuPattern": "",
-    "namePattern": "Freeprint Model 2.0 {顏色} (1000g)",
-    "specs": [
-      {
-        "key": "顏色",
-        "label": "顏色",
-        "options": [
-          "Light Grey",
-          "Sand",
-          "Grey",
-          "Caramel",
-          "WW"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Light Grey": "DT-02099",
-      "Sand": "DT-02128",
-      "Grey": "DT-02177",
-      "Caramel": "DT-02850",
-      "WW": "DT-03105"
-    }
-  },
-  {
-    "id": "DT-DENTURE",
-    "seriesCode": "DT-DENTURE",
-    "seriesName": "Freeprint Denture 全口義齒樹脂",
-    "brand": "Detax",
-    "productType": "設備",
-    "category": "3D列印機",
-    "skuPattern": "",
-    "namePattern": "Freeprint Denture {類型} (1000g)",
-    "specs": [
-      {
-        "key": "類型",
-        "label": "類型",
-        "options": [
-          "Pink-trasp",
-          "Pink",
-          "Tray A2"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Pink-trasp": "DT-02040",
-      "Pink": "DT-04092",
-      "Tray A2": "DT-04101"
-    }
-  },
-  {
-    "id": "DT-SPLINTMASTER",
-    "seriesCode": "DT-SPLINTMASTER",
-    "seriesName": "Freeprint Splintmaster 咬合板樹脂",
-    "brand": "Detax",
-    "productType": "設備",
-    "category": "3D列印機",
-    "skuPattern": "",
-    "namePattern": "Freeprint Splintmaster {材質} (1000g)",
-    "specs": [
-      {
-        "key": "材質",
-        "label": "材質",
-        "options": [
-          "Flex",
-          "Taff"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Flex": "DT-04432",
-      "Taff": "DT-04433"
-    }
-  },
-  {
-    "id": "DT-DENTURE-FLEX",
-    "seriesCode": "DT-DENTURE-FLEX",
-    "seriesName": "Denture Flex 彈性義齒樹脂",
-    "brand": "Detax",
-    "productType": "其他",
-    "category": "其他",
-    "skuPattern": "",
-    "namePattern": "Denture Flex {顏色} (1000g)",
-    "specs": [
-      {
-        "key": "顏色",
-        "label": "顏色",
-        "options": [
-          "Pink-transparent",
-          "Clear"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Pink-transparent": "DT-04625",
-      "Clear": "DT-04626"
     }
   },
   {
