@@ -331,6 +331,240 @@ function ImageUploadZone({
   )
 }
 
+// ── Multi-Image Upload Zone ──────────────────────────────────────
+
+type UploadTask = {
+  id:      string
+  preview: string  // object URL for thumbnail preview
+  status:  'compressing' | 'uploading' | 'done' | 'error'
+  errMsg?: string
+}
+
+function MultiImageUploadZone({
+  images,
+  onAddImage,
+  onRemoveImage,
+  disabled,
+}: {
+  images:        string[]
+  onAddImage:    (url: string) => void
+  onRemoveImage: (index: number) => void
+  disabled:      boolean
+}) {
+  const [dragging, setDragging] = useState(false)
+  const [tasks,    setTasks]    = useState<UploadTask[]>([])
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const counterRef = useRef(0)
+
+  function updateTask(id: string, patch: Partial<UploadTask>) {
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t))
+  }
+  function removeTask(id: string) {
+    setTasks((prev) => {
+      const t = prev.find((t) => t.id === id)
+      if (t?.preview) URL.revokeObjectURL(t.preview)
+      return prev.filter((t) => t.id !== id)
+    })
+  }
+
+  const processFiles = useCallback(async (fileList: File[]) => {
+    const valid = fileList.filter((f) => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024)
+    if (!valid.length) return
+
+    const newTasks: UploadTask[] = valid.map((f) => ({
+      id:      String(++counterRef.current),
+      preview: URL.createObjectURL(f),
+      status:  'compressing' as const,
+    }))
+    setTasks((prev) => [...prev, ...newTasks])
+
+    // Upload sequentially — safer than parallel for Vercel serverless
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i]
+      const task = newTasks[i]
+      try {
+        updateTask(task.id, { status: 'compressing' })
+        const compressed = await compressForUpload(file)
+
+        updateTask(task.id, { status: 'uploading' })
+        const fd = new FormData()
+        fd.append('file', compressed)
+        const { ok, data, errMsg } = await postForm('/api/products/upload-image', fd)
+
+        if (!ok) {
+          updateTask(task.id, { status: 'error', errMsg })
+        } else {
+          updateTask(task.id, { status: 'done' })
+          onAddImage(data.url)
+          // Fade out the task card after brief success pause
+          setTimeout(() => removeTask(task.id), 900)
+        }
+      } catch (err: any) {
+        updateTask(task.id, { status: 'error', errMsg: err.message ?? '上傳失敗' })
+      }
+    }
+  }, [onAddImage])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    processFiles(Array.from(e.dataTransfer.files))
+  }, [processFiles])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) processFiles(Array.from(e.target.files))
+    e.target.value = ''
+  }
+
+  const isEmpty      = images.length === 0 && tasks.length === 0
+  const isUploading  = tasks.some((t) => t.status === 'compressing' || t.status === 'uploading')
+
+  return (
+    <div>
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !disabled && !isUploading && fileRef.current?.click()}
+        className={[
+          'relative w-full rounded-2xl border-2 border-dashed transition',
+          disabled || isUploading ? 'cursor-default' : 'cursor-pointer',
+          dragging   ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
+          isUploading ? 'border-blue-300 bg-blue-50' :
+                        'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+          disabled   ? 'opacity-50 pointer-events-none' : '',
+        ].join(' ')}
+        style={{ minHeight: isEmpty ? 140 : 64 }}
+      >
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-8 px-4">
+            {dragging ? (
+              <>
+                <span className="text-4xl">📥</span>
+                <span className="text-sm font-semibold text-brand-600">放開以上傳</span>
+              </>
+            ) : (
+              <>
+                <span className="text-4xl text-gray-300">🗂</span>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-600">拖曳多張圖片到這裡</p>
+                  <p className="text-xs text-gray-400 mt-1">或點擊選擇檔案（可複選）</p>
+                </div>
+                <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                  JPG / PNG / WebP · 支援批次上傳
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 py-4 px-4">
+            {isUploading ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <span className="text-sm text-brand-500 font-medium">上傳中，請稍候…</span>
+              </>
+            ) : dragging ? (
+              <>
+                <span className="text-lg">📥</span>
+                <span className="text-sm font-semibold text-brand-600">放開以繼續上傳</span>
+              </>
+            ) : (
+              <>
+                <span className="text-base text-gray-400">＋</span>
+                <span className="text-sm font-medium text-gray-500">繼續新增圖片</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* Thumbnail grid */}
+      {(images.length > 0 || tasks.length > 0) && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {/* Saved images */}
+          {images.map((url, i) => (
+            <div key={`${url}-${i}`}
+              className="group relative aspect-square rounded-xl overflow-hidden bg-white border border-gray-200">
+              <img src={url} alt={`形象素材 ${i + 1}`} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onRemoveImage(i)}
+                disabled={disabled}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px]
+                           flex items-center justify-center opacity-0 group-hover:opacity-100 transition
+                           hover:bg-red-500 disabled:hidden"
+              >✕</button>
+              <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded">
+                {i + 1}
+              </div>
+            </div>
+          ))}
+
+          {/* Uploading tasks */}
+          {tasks.map((task) => (
+            <div key={task.id}
+              className="relative aspect-square rounded-xl overflow-hidden bg-white border border-gray-200">
+              <img src={task.preview} alt="上傳中" className="w-full h-full object-cover" />
+              {/* Status overlay */}
+              <div className={[
+                'absolute inset-0 flex flex-col items-center justify-center gap-1',
+                task.status === 'error' ? 'bg-red-900/65' :
+                task.status === 'done'  ? 'bg-emerald-900/50' :
+                                          'bg-black/55',
+              ].join(' ')}>
+                {(task.status === 'compressing' || task.status === 'uploading') && (
+                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                )}
+                {task.status === 'done' && (
+                  <span className="text-white text-xl font-bold">✓</span>
+                )}
+                {task.status === 'error' && (
+                  <>
+                    <span className="text-white text-lg">✕</span>
+                    <button type="button" onClick={() => removeTask(task.id)}
+                      className="text-[10px] text-white/80 hover:text-white underline mt-0.5">
+                      移除
+                    </button>
+                  </>
+                )}
+              </div>
+              {/* Status label */}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-0.5">
+                <p className="text-[9px] text-white text-center truncate">
+                  {task.status === 'compressing' ? '壓縮中…' :
+                   task.status === 'uploading'   ? '上傳中…' :
+                   task.status === 'done'         ? '完成' :
+                   (task.errMsg ?? '失敗')}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {images.length > 0 && (
+        <p className="mt-1.5 text-[11px] text-gray-400">已上傳 {images.length} 張・PNG 自動轉白底</p>
+      )}
+    </div>
+  )
+}
+
 // ── Specs Editor ──────────────────────────────────────────────
 
 function SpecsEditor({
@@ -539,10 +773,11 @@ function ProductEditDrawer({
   const [error,   setError]   = useState('')
 
   // Form state
-  const [price,       setPrice]       = useState('')
-  const [imageUrl,    setImageUrl]    = useState('')
-  const [description, setDescription] = useState('')
-  const [specs,       setSpecs]       = useState<SpecTable>(defaultSpecs())
+  const [price,         setPrice]         = useState('')
+  const [imageUrl,      setImageUrl]      = useState('')
+  const [description,   setDescription]   = useState('')
+  const [specs,         setSpecs]         = useState<SpecTable>(defaultSpecs())
+  const [galleryImages, setGalleryImages] = useState<string[]>([])
 
   useEffect(() => {
     setLoading(true)
@@ -556,6 +791,12 @@ function ProductEditDrawer({
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
+        try {
+          const parsed = JSON.parse(data.rich.galleryJson ?? '[]')
+          setGalleryImages(Array.isArray(parsed) ? parsed : [])
+        } catch {
+          setGalleryImages([])
+        }
       })
       .catch(() => setError('無法載入商品資料'))
       .finally(() => setLoading(false))
@@ -573,12 +814,13 @@ function ProductEditDrawer({
     // Only save specs if there's actual data (at least one non-empty row)
     const hasSpecs = specs.rows.some(r => r.some(c => c.trim()))
     const specsJson = hasSpecs ? JSON.stringify(specs) : ''
+    const galleryJson = galleryImages.length > 0 ? JSON.stringify(galleryImages) : ''
     let res: Response | null = null
     try {
       res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson }),
+        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson, galleryJson }),
       })
     } catch (err: any) {
       setError(err.message ?? '網路中斷，請稍後再試')
@@ -681,6 +923,20 @@ function ProductEditDrawer({
             <ImageUploadZone
               imageUrl={imageUrl}
               onUrlChange={setImageUrl}
+              disabled={loading}
+            />
+          </div>
+
+          {/* 形象素材 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-slate-700">形象素材</label>
+              <span className="text-[10px] text-gray-400">可上傳多張・拖曳或點選圖片複選</span>
+            </div>
+            <MultiImageUploadZone
+              images={galleryImages}
+              onAddImage={(url) => setGalleryImages((prev) => [...prev, url])}
+              onRemoveImage={(i) => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
               disabled={loading}
             />
           </div>

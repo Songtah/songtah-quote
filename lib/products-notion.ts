@@ -31,6 +31,7 @@ function ensureFields(): Promise<void> {
             '圖片URL':  { url: {} },
             '商品介紹': { rich_text: {} },
             '技術規格': { rich_text: {} },  // JSON: { columns, rows }
+            '形象素材': { rich_text: {} },  // JSON: string[] of image URLs
           } as any,
         })
         _specsFieldReady = true
@@ -75,6 +76,7 @@ export interface ProductRichData {
   imageUrl:    string          // 圖片URL
   description: string          // 商品介紹
   specsJson:   string          // 技術規格 — raw JSON stored in Notion; parse on client
+  galleryJson: string          // 形象素材 — JSON: string[] of image URLs
 }
 
 export interface CatalogSnapshot {
@@ -107,6 +109,7 @@ export async function getProductRichData(skuCode: string): Promise<ProductRichDa
     imageUrl:    readUrl(page, '圖片URL'),
     description: readRichText(page, '商品介紹'),
     specsJson:   readRichText(page, '技術規格'),
+    galleryJson: readRichText(page, '形象素材'),
   }
 }
 
@@ -124,6 +127,7 @@ export async function upsertProductRichData(
     imageUrl?:    string
     description?: string
     specsJson?:   string
+    galleryJson?: string
   }
 ): Promise<string> {
   await ensureFields()
@@ -136,9 +140,11 @@ export async function upsertProductRichData(
     props['圖片URL'] = data.imageUrl ? { url: data.imageUrl } : { url: null }
   if (data.description !== undefined)
     props['商品介紹'] = { rich_text: richText(data.description) }
-  // Only write 技術規格 if we confirmed the field exists in the DB schema
+  // Only write 技術規格 / 形象素材 if we confirmed the fields exist in the DB schema
   if (data.specsJson !== undefined && _specsFieldReady)
     props['技術規格'] = { rich_text: richText(data.specsJson) }
+  if (data.galleryJson !== undefined && _specsFieldReady)
+    props['形象素材'] = { rich_text: richText(data.galleryJson) }
 
   // Check if a page already exists for this SKU
   const existing = await getProductRichData(skuCode)
