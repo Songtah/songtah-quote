@@ -73,8 +73,14 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
       }
     )
     return NextResponse.json({ ok: true, notionId })
-  } catch (err) {
-    console.error('[PUT /api/products/sku]', err)
-    return NextResponse.json({ error: '儲存失敗，請稍後再試' }, { status: 500 })
+  } catch (err: any) {
+    const msg: string = err?.message ?? String(err)
+    const code: string = err?.code ?? ''
+    console.error('[PUT /api/products/sku]', skuCode, code, msg)
+    // Surface the real error so it's visible in the UI (helps diagnose Notion errors)
+    return NextResponse.json(
+      { error: `儲存失敗：${code ? code + ' — ' : ''}${msg.slice(0, 200)}` },
+      { status: 500 },
+    )
   }
 }

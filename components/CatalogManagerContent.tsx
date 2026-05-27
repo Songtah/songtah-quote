@@ -561,15 +561,24 @@ function ProductEditDrawer({
     // Only save specs if there's actual data (at least one non-empty row)
     const hasSpecs = specs.rows.some(r => r.some(c => c.trim()))
     const specsJson = hasSpecs ? JSON.stringify(specs) : ''
-    const res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson }),
-    }).catch(() => null)
+    let res: Response | null = null
+    try {
+      res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson }),
+      })
+    } catch (err: any) {
+      setError(err.message ?? '網路中斷，請稍後再試')
+      setSaving(false)
+      return
+    }
 
-    if (!res?.ok) {
-      const d = await res?.json().catch(() => ({}))
-      setError(d?.error ?? '儲存失敗，請稍後再試')
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      let errMsg = `儲存失敗（HTTP ${res.status}）`
+      try { errMsg = JSON.parse(text)?.error ?? errMsg } catch {}
+      setError(errMsg)
       setSaving(false)
       return
     }

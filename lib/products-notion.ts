@@ -12,31 +12,43 @@ import { Client } from '@notionhq/client'
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_PRODUCTS = process.env.NOTION_PRODUCTS_DB!
 
-// ── Field ensure (run once per process) ─────────────────────
+// ── Field ensure ────────────────────────────────────────────
+// _specsFieldReady tracks whether '技術規格' was successfully added
+// to the DB schema — we only write that field when we're sure it exists.
 
-let _fieldsEnsured = false
-async function ensureFields() {
-  if (_fieldsEnsured) return
-  _fieldsEnsured = true
-  try {
-    await notion.databases.update({
-      database_id: DB_PRODUCTS,
-      properties: {
-        '貨號':     { rich_text: {} },
-        '售價':     { number: { format: 'number' } },
-        '圖片URL':  { url: {} },
-        '商品介紹': { rich_text: {} },
-        '技術規格': { rich_text: {} },   // JSON string: { columns: string[], rows: string[][] }
-      } as any,
-    })
-  } catch (e) {
-    console.warn('[products-notion] ensureFields warning:', e)
+let _ensurePromise:    Promise<void> | null = null
+let _specsFieldReady:  boolean              = false
+
+function ensureFields(): Promise<void> {
+  if (!_ensurePromise) {
+    _ensurePromise = (async () => {
+      try {
+        await notion.databases.update({
+          database_id: DB_PRODUCTS,
+          properties: {
+            '貨號':     { rich_text: {} },
+            '售價':     { number: { format: 'number' } },
+            '圖片URL':  { url: {} },
+            '商品介紹': { rich_text: {} },
+            '技術規格': { rich_text: {} },  // JSON: { columns, rows }
+          } as any,
+        })
+        _specsFieldReady = true
+      } catch (e: any) {
+        console.warn('[products-notion] ensureFields warning:', e?.message ?? e)
+        // Allow retry after 60 s so transient failures don't block forever
+        setTimeout(() => { _ensurePromise = null }, 60_000)
+      }
+    })()
   }
+  return _ensurePromise
 }
 
 // ── Helpers ──────────────────────────────────────────────────
 
 function richText(content: string) {
+  // Empty string → empty array (Notion's canonical empty rich_text)
+  if (!content) return []
   return [{ text: { content: content.slice(0, 2000) } }]
 }
 
@@ -124,7 +136,8 @@ export async function upsertProductRichData(
     props['圖片URL'] = data.imageUrl ? { url: data.imageUrl } : { url: null }
   if (data.description !== undefined)
     props['商品介紹'] = { rich_text: richText(data.description) }
-  if (data.specsJson !== undefined)
+  // Only write 技術規格 if we confirmed the field exists in the DB schema
+  if (data.specsJson !== undefined && _specsFieldReady)
     props['技術規格'] = { rich_text: richText(data.specsJson) }
 
   // Check if a page already exists for this SKU
