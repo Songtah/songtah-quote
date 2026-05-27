@@ -1365,17 +1365,293 @@ function ProductEditDrawer({
   )
 }
 
+// ── Product Detail Card ───────────────────────────────────────
+
+function ProductDetailCard({
+  skuCode,
+  onClose,
+  onEdit,
+}: {
+  skuCode: string
+  onClose: () => void
+  onEdit:  () => void
+}) {
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState('')
+  const [catalog, setCatalog] = useState<CatalogItem | null>(null)
+  const [rich,    setRich]    = useState<{
+    price:       number | null
+    imageUrl:    string
+    description: string
+    specsJson:   string
+    galleryJson: string
+    docsJson:    string
+  } | null>(null)
+
+  useEffect(() => {
+    setLoading(true); setError('')
+    fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) { setError(data.error); return }
+        setCatalog(data.catalog)
+        setRich(data.rich)
+      })
+      .catch(() => setError('無法載入商品資料'))
+      .finally(() => setLoading(false))
+  }, [skuCode])
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  const specs: SpecTable = rich ? parseSpecs(rich.specsJson) : defaultSpecs()
+  const galleryImages: string[] = (() => {
+    try { const p = JSON.parse(rich?.galleryJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
+  })()
+  const docs: DocFile[] = (() => {
+    try { const p = JSON.parse(rich?.docsJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
+  })()
+
+  const hasAnyRich = rich && (
+    rich.imageUrl || rich.description || rich.price != null ||
+    specs.rows.length > 0 || galleryImages.length > 0 || docs.length > 0
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        onClick={onClose}
+      />
+
+      <motion.div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1,    y: 0 }}
+        exit={{    opacity: 0, scale: 0.96, y: 10 }}
+        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        {/* ── Header ───────────────────────────────────────── */}
+        <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              {/* Tags */}
+              {catalog && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {catalog.brand && (
+                    <span className="text-xs font-semibold bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">
+                      {catalog.brand}
+                    </span>
+                  )}
+                  {catalog.category && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                      {catalog.category}
+                    </span>
+                  )}
+                  {catalog.productType && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                      {catalog.productType}
+                    </span>
+                  )}
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-slate-900 leading-snug">
+                {loading ? '載入中…' : (catalog?.name ?? skuCode)}
+              </h2>
+              <p className="text-xs font-mono text-gray-400 mt-1">{skuCode}</p>
+            </div>
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0 mt-0.5">
+              {!loading && !error && (
+                <button
+                  onClick={onEdit}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600
+                             hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition"
+                >
+                  ✏️ 編輯
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+              >✕</button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Body ─────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-24">
+              <svg className="animate-spin h-6 w-6 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path  className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="m-6 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+          )}
+
+          {/* Empty (no rich data yet) */}
+          {!loading && !error && !hasAnyRich && (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
+              <span className="text-5xl">📦</span>
+              <p className="text-sm">尚未填寫商品資料</p>
+              <button
+                onClick={onEdit}
+                className="mt-1 text-xs font-medium text-brand-600 hover:text-brand-700 underline"
+              >點擊「編輯」開始填寫</button>
+            </div>
+          )}
+
+          {/* Content */}
+          {!loading && !error && hasAnyRich && (
+            <>
+              {/* ── Top: image + price + description ────────── */}
+              <div className="p-6 flex gap-5">
+                {/* Main image */}
+                {rich!.imageUrl ? (
+                  <div className="w-44 h-44 shrink-0 rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm">
+                    <img src={rich!.imageUrl} alt={catalog?.name} className="w-full h-full object-contain"/>
+                  </div>
+                ) : (
+                  <div className="w-44 h-44 shrink-0 rounded-xl bg-gray-50 border border-dashed border-gray-200
+                                  flex items-center justify-center">
+                    <span className="text-5xl text-gray-200">🖼</span>
+                  </div>
+                )}
+
+                {/* Price + description */}
+                <div className="flex-1 min-w-0">
+                  {rich!.price != null && (
+                    <div className="mb-4">
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-0.5">售價</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        NT${rich!.price.toLocaleString('zh-TW')}
+                      </p>
+                    </div>
+                  )}
+                  {rich!.description ? (
+                    <div>
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1.5">商品介紹</p>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {rich!.description}
+                      </p>
+                    </div>
+                  ) : !rich!.price && (
+                    <p className="text-sm text-gray-400 italic mt-2">尚未填寫介紹與售價</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Technical specs ──────────────────────────── */}
+              {specs.rows.length > 0 && (
+                <div className="px-6 pb-6">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">技術規格</p>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
+                    {/* Header */}
+                    <div className="bg-slate-50 border-b border-gray-200"
+                      style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.columns.length}, minmax(80px, 1fr))` }}>
+                      {specs.columns.map((col, ci) => (
+                        <div key={ci} className={`px-3 py-2 text-xs font-semibold text-slate-600 ${ci < specs.columns.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                          {col}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Rows */}
+                    {specs.rows.map((row, ri) => (
+                      <div key={ri} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                        style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.columns.length}, minmax(80px, 1fr))` }}>
+                        {row.map((cell, ci) => (
+                          <div key={ci} className={`px-3 py-2 text-sm text-gray-700 ${ci < specs.columns.length - 1 ? 'border-r border-gray-100' : ''}`}>
+                            {cell || <span className="text-gray-300">—</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Gallery ──────────────────────────────────── */}
+              {galleryImages.length > 0 && (
+                <div className="px-6 pb-6">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                    形象素材 <span className="text-gray-300 font-normal normal-case tracking-normal">（點擊放大）</span>
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {galleryImages.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                        className="shrink-0 w-28 h-28 rounded-xl overflow-hidden bg-white border border-gray-200
+                                   hover:border-brand-300 hover:shadow-md transition-all">
+                        <img src={url} alt={`素材 ${i + 1}`} className="w-full h-full object-cover"/>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Documents ────────────────────────────────── */}
+              {docs.length > 0 && (
+                <div className="px-6 pb-6">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">文件資料</p>
+                  <div className="rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+                    {docs.map((doc, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition">
+                        <span className="text-xl shrink-0">{docIcon(doc.name)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
+                          <p className="text-[11px] text-gray-400">{formatFileSize(doc.size)}</p>
+                        </div>
+                        <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"
+                          className="shrink-0 text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500
+                                     hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
+                          下載
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── SKU Row ───────────────────────────────────────────────────
 
 function SkuRow({
   item,
   priceCache,
   imageFlagCache,
+  onView,
   onEdit,
 }: {
   item: CatalogItem
   priceCache: Map<string, number | null>
   imageFlagCache: Set<string>
+  onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
 }) {
   const hasPrice = priceCache.has(item.code)
@@ -1383,7 +1659,11 @@ function SkuRow({
   const price    = priceCache.get(item.code)
 
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 group">
+    <div
+      onClick={() => onView(item)}
+      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 group
+                 cursor-pointer hover:bg-brand-50/40 -mx-2 px-2 rounded-lg transition-colors"
+    >
       {/* Image dot */}
       <div className={`w-2 h-2 rounded-full shrink-0 ${hasImage ? 'bg-blue-400' : 'bg-gray-200'}`} />
 
@@ -1399,8 +1679,10 @@ function SkuRow({
       )}
 
       <button
-        onClick={() => onEdit(item)}
-        className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition opacity-0 group-hover:opacity-100"
+        onClick={(e) => { e.stopPropagation(); onEdit(item) }}
+        className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500
+                   hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition
+                   opacity-0 group-hover:opacity-100"
       >
         編輯
       </button>
@@ -1417,12 +1699,14 @@ function FamilyCard({
   allItems,
   priceCache,
   imageFlagCache,
+  onView,
   onEdit,
 }: {
   family: ProductFamily
   allItems: CatalogItem[]
   priceCache: Map<string, number | null>
   imageFlagCache: Set<string>
+  onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
 }) {
   const [open,         setOpen]         = useState(false)
@@ -1497,6 +1781,7 @@ function FamilyCard({
                   item={item}
                   priceCache={priceCache}
                   imageFlagCache={imageFlagCache}
+                  onView={onView}
                   onEdit={onEdit}
                 />
               ))}
@@ -1531,6 +1816,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
   const [filterBrand,    setFilterBrand]    = useState('')
   const [filterCategory, setFilterCategory] = useState('')
 
+  const [viewingItem, setViewingItem] = useState<CatalogItem | null>(null)
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null)
 
   // Cache: skuCode → price (and whether image is set)
@@ -1692,6 +1978,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
                 item={item}
                 priceCache={priceCache}
                 imageFlagCache={imageFlagCache}
+                onView={setViewingItem}
                 onEdit={setEditingItem}
               />
             ))}
@@ -1710,11 +1997,28 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
               allItems={allItems}
               priceCache={priceCache}
               imageFlagCache={imageFlagCache}
+              onView={setViewingItem}
               onEdit={setEditingItem}
             />
           ))}
         </div>
       )}
+
+      {/* Detail Card */}
+      <AnimatePresence>
+        {viewingItem && !editingItem && (
+          <ProductDetailCard
+            key={`view-${viewingItem.code}`}
+            skuCode={viewingItem.code}
+            onClose={() => setViewingItem(null)}
+            onEdit={() => {
+              const item = viewingItem
+              setViewingItem(null)
+              setEditingItem(item)
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Edit Drawer */}
       <AnimatePresence>
