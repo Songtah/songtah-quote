@@ -152,14 +152,18 @@ export async function upsertProductRichData(
   }
 
   // Create new page
+  // Field names must match the actual Notion DB schema:
+  //   Title  → 'Name'  (Notion default title property)
+  //   分類   → '系列'  (select)
+  //   商品類型 → '類型' (select)
   const page = await notion.pages.create({
     parent: { database_id: DB_PRODUCTS },
     properties: {
-      '品名':     { title: richText(catalog.name) },
-      '貨號':     { rich_text: richText(skuCode) },
-      '生產商':   { select: { name: catalog.brand || '其他' } },
-      '分類':     { select: { name: catalog.category || '其他' } },
-      '商品類型': { select: { name: catalog.productType || '其他' } },
+      'Name':   { title: richText(catalog.name) },
+      '貨號':   { rich_text: richText(skuCode) },
+      '生產商': { select: { name: catalog.brand || '其他' } },
+      '系列':   { select: { name: catalog.category || '其他' } },
+      '類型':   { select: { name: catalog.productType || '其他' } },
       ...props,
     },
   } as any) as any
