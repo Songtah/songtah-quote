@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-const MAX_SIZE = 5 * 1024 * 1024  // 5 MB
+const MAX_SIZE = 4 * 1024 * 1024  // 4 MB (Vercel serverless body limit is 4.5 MB; leave headroom for multipart overhead)
 const ALLOWED  = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
 export async function POST(req: NextRequest) {
@@ -33,17 +33,15 @@ export async function POST(req: NextRequest) {
   const safeName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
   try {
-    const blob = await put(safeName, file, { access: 'public' })
+    const blob = await put(safeName, file, { access: 'public', allowOverwrite: true })
     return NextResponse.json({ url: blob.url })
   } catch (err: any) {
-    // Surface a helpful message if the Blob token is not configured
-    if (err?.message?.includes('BLOB_READ_WRITE_TOKEN')) {
-      return NextResponse.json(
-        { error: '尚未設定 Vercel Blob 儲存空間，請至 Vercel 後台啟用 Blob Storage。' },
-        { status: 503 }
-      )
-    }
-    console.error('[upload-image]', err)
-    return NextResponse.json({ error: '圖片上傳失敗，請稍後再試' }, { status: 500 })
+    const msg: string = err?.message ?? ''
+    console.error('[upload-image]', msg)
+    if (msg.includes('BLOB_READ_WRITE_TOKEN') || msg.includes('token'))
+      return NextResponse.json({ error: '圖片儲存服務未設定，請通知管理員。' }, { status: 503 })
+    if (msg.includes('private'))
+      return NextResponse.json({ error: 'Blob 儲存空間設定錯誤（private store）。' }, { status: 503 })
+    return NextResponse.json({ error: `上傳失敗：${msg.slice(0, 120)}` }, { status: 500 })
   }
 }

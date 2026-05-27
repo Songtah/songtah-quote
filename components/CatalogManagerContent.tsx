@@ -64,6 +64,50 @@ interface Props {
   productTypes: string[]
 }
 
+// ── Client-side compression (keeps payload under Vercel's 4.5MB limit) ──────
+
+async function compressForUpload(file: File, maxPx = 1800, quality = 0.85): Promise<File> {
+  // Small files don't need compression
+  if (file.size <= 1.5 * 1024 * 1024) return file
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width  = Math.round(img.width  * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+          else reject(new Error('壓縮失敗'))
+        },
+        'image/jpeg',
+        quality,
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error('圖片讀取失敗')) }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
+/** Fetch wrapper that always returns parsed JSON and a clear error string */
+async function postForm(url: string, fd: FormData): Promise<{ ok: boolean; data: any; errMsg: string }> {
+  try {
+    const res  = await fetch(url, { method: 'POST', body: fd })
+    const text = await res.text()
+    let data: any = {}
+    try { data = JSON.parse(text) } catch {
+      // Server returned non-JSON (e.g. Vercel HTML 413 page)
+      data = { error: `伺服器錯誤（HTTP ${res.status}）` }
+    }
+    return { ok: res.ok, data, errMsg: res.ok ? '' : (data.error ?? `上傳失敗（${res.status}）`) }
+  } catch (err: any) {
+    return { ok: false, data: {}, errMsg: err.message ?? '網路中斷，請稍後再試' }
+  }
+}
+
 // ── Image Upload Zone (drag-and-drop) ────────────────────────
 
 function ImageUploadZone({
@@ -90,37 +134,38 @@ function ImageUploadZone({
       setUploadErr('只支援圖片格式（JPG、PNG、WebP、GIF）')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadErr('圖片大小不能超過 5 MB')
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadErr('圖片大小不能超過 10 MB')
       return
     }
     setUploadErr('')
     setUploading(true)
     setProgress(10)
 
-    // Simulate progress while uploading
     const interval = setInterval(() => {
-      setProgress((p) => Math.min(p + 15, 85))
+      setProgress((p) => Math.min(p + 12, 80))
     }, 200)
 
-    const fd = new FormData()
-    fd.append('file', file)
-
     try {
-      const res = await fetch('/api/products/upload-image', { method: 'POST', body: fd })
-      const data = await res.json()
+      // Compress large images before upload (Vercel body limit: 4.5 MB)
+      const toUpload = await compressForUpload(file)
+      const fd = new FormData()
+      fd.append('file', toUpload)
+
+      const { ok, data, errMsg } = await postForm('/api/products/upload-image', fd)
       clearInterval(interval)
-      if (!res.ok) {
-        setUploadErr(data.error ?? '上傳失敗')
+
+      if (!ok) {
+        setUploadErr(errMsg)
       } else {
         setProgress(100)
         onUrlChange(data.url)
         setImgError(false)
         setTimeout(() => setProgress(0), 600)
       }
-    } catch {
+    } catch (err: any) {
       clearInterval(interval)
-      setUploadErr('網路錯誤，請稍後再試')
+      setUploadErr(err.message ?? '上傳失敗，請稍後再試')
     } finally {
       setUploading(false)
     }

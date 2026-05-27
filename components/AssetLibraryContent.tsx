@@ -56,9 +56,14 @@ async function uploadToBlob(blob: Blob, folder: 'originals' | 'compressed', orig
   const fd   = new FormData()
   fd.append('file',   file)
   fd.append('folder', folder)
+
   const res  = await fetch('/api/assets/upload', { method: 'POST', body: fd })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error ?? '上傳失敗')
+  const text = await res.text()
+  let data: any = {}
+  try { data = JSON.parse(text) } catch {
+    throw new Error(`伺服器錯誤（HTTP ${res.status}）`)
+  }
+  if (!res.ok) throw new Error(data.error ?? `上傳失敗（${res.status}）`)
   return data.url as string
 }
 
