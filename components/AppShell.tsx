@@ -23,8 +23,7 @@ function getPageTitle(pathname: string): string {
     '/customers':         '客戶管理',
     '/tickets':           '技術支援工單列表',
     '/bd':                '業務開發',
-    '/products':          '產品管理',
-    '/products/catalog':  '商品目錄管理',
+    '/products/catalog':  '產品管理',
     '/assets':            '品牌素材庫',
     '/quote/new':         '新增報價單',
     '/quotes':            '報價單管理',
@@ -57,7 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/customers',         label: '客戶',      module: 'crm' },
   { href: '/tickets',           label: '技術支援', module: 'rma' },
   { href: '/bd',                label: '業務開發', module: 'bd' },
-  { href: '/products',          label: '產品',     module: 'products' },
+  { href: '/products/catalog',  label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },
   { href: '/orders',            label: '訂貨',     module: 'orders' },
   { href: '/assets',            label: '素材庫',   module: null },
@@ -154,9 +153,10 @@ export function AppShell({
                 href={item.href}
                 className={`rounded-full px-3 sm:px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
                   (pathname === item.href ||
-                    (item.href === '/quotes' && pathname.startsWith('/quote')) ||
-                    (item.href === '/orders' && pathname.startsWith('/orders')) ||
-                    (item.href === '/admin'  && pathname.startsWith('/admin')))
+                    (item.href === '/quotes'           && pathname.startsWith('/quote')) ||
+                    (item.href === '/orders'           && pathname.startsWith('/orders')) ||
+                    (item.href === '/admin'            && pathname.startsWith('/admin')) ||
+                    (item.href === '/products/catalog' && pathname.startsWith('/products')))
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
