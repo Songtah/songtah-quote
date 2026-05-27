@@ -1453,21 +1453,21 @@
     "name": "400DW 金屬車針1L",
     "brand": "貝施美",
     "productType": "材料",
-    "category": "金屬材料"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "BS-400DW-12",
     "name": "400DW 金屬車針2L",
     "brand": "貝施美",
     "productType": "材料",
-    "category": "金屬材料"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "BS-400DW-13",
     "name": "400DW 金屬車針3L",
     "brand": "貝施美",
     "productType": "材料",
-    "category": "金屬材料"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "BS-420W",
@@ -16128,34 +16128,6 @@
     "category": "車針 / 鑽針"
   },
   {
-    "code": "GEN-T05-G2.5R",
-    "name": "MAI車針 T5-G2.5R",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針"
-  },
-  {
-    "code": "GEN-T06-G1.5B",
-    "name": "MAI車針 T6-G1.5B",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針"
-  },
-  {
-    "code": "GEN-T06-G2.5R",
-    "name": "MAI車針 T6-G1.5B",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針"
-  },
-  {
-    "code": "GEN-T07-G1.0B",
-    "name": "MAI車針 T7-G1.0B",
-    "brand": "GenCore",
-    "productType": "耗材",
-    "category": "車針 / 鑽針"
-  },
-  {
     "code": "GEN-T08-G0.6B",
     "name": "MAI車針 T8-0.6B",
     "brand": "GenCore",
@@ -16331,14 +16303,14 @@
     "category": "車針 / 鑽針"
   },
   {
-    "code": "GEN-T36-2.0",
+    "code": "GEN-T36-1.0",
     "name": "Hybird Ceramic 車針 1.0",
     "brand": "GenCore",
     "productType": "耗材",
     "category": "車針 / 鑽針"
   },
   {
-    "code": "GEN-T37-2.0",
+    "code": "GEN-T37-0.6",
     "name": "Hybird Ceramic 車針 0.6",
     "brand": "GenCore",
     "productType": "耗材",
@@ -16349,42 +16321,42 @@
     "name": "PMMA 車針 2.0",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T39-1.0",
     "name": "PMMA 車針 1.0",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T42-1.5FL",
     "name": "PMMA ZR 車針 1.5FL",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T43-1.0F",
     "name": "PMMA ZR 車針 M1.0F",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T44-1.5R",
     "name": "PMMA ZR 車針 1.5R",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T45-1.5T",
     "name": "PMMA ZR 車針 1.5T",
     "brand": "GenCore",
     "productType": "耗材",
-    "category": "PMMA 塊"
+    "category": "車針 / 鑽針"
   },
   {
     "code": "GEN-T5-G2.5R",
