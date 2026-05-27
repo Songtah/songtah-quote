@@ -1981,6 +1981,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
   const [search,         setSearch]         = useState('')
   const [filterBrand,    setFilterBrand]    = useState('')
   const [filterCategory, setFilterCategory] = useState('')
+  const [filtersOpen,    setFiltersOpen]    = useState(false)
 
   const [viewingItem, setViewingItem] = useState<CatalogItem | null>(null)
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null)
@@ -2074,38 +2075,94 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
   return (
     <>
       {/* Search + Filters */}
-      <div className="mb-6 space-y-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="搜尋貨號、品名、品牌…"
-          className="w-full max-w-lg px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
-        />
+      <div className="mb-6">
+        {/* Row: search + filter toggle */}
+        <div className="flex items-center gap-2">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜尋貨號、品名、品牌…"
+            className="flex-1 max-w-lg px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className={[
+              'relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0',
+              filtersOpen || filterBrand || filterCategory
+                ? 'border-brand-400 bg-brand-50 text-brand-700'
+                : 'border-gray-300 bg-white text-gray-600 hover:border-brand-300 hover:text-brand-600',
+            ].join(' ')}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2M13 16h-2" />
+            </svg>
+            篩選
+            {(filterBrand || filterCategory) && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                {(filterBrand ? 1 : 0) + (filterCategory ? 1 : 0)}
+              </span>
+            )}
+          </button>
+        </div>
 
-        {/* Brand filter */}
-        {brands.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            <button onClick={() => setFilterBrand('')} className={chip(!filterBrand)}>全部品牌</button>
-            {brands.map((b) => (
-              <button key={b} onClick={() => setFilterBrand(filterBrand === b ? '' : b)} className={chip(filterBrand === b)}>
-                {b}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Collapsible filter panel */}
+        <AnimatePresence>
+          {filtersOpen && (
+            <motion.div
+              key="filter-panel"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="pt-3 space-y-2.5">
+                {/* Brand filter */}
+                {brands.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">品牌</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => setFilterBrand('')} className={chip(!filterBrand)}>全部</button>
+                      {brands.map((b) => (
+                        <button key={b} onClick={() => setFilterBrand(filterBrand === b ? '' : b)} className={chip(filterBrand === b)}>
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-        {/* Category filter */}
-        {categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            <button onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部分類</button>
-            {categories.map((c) => (
-              <button key={c} onClick={() => setFilterCategory(filterCategory === c ? '' : c)} className={chip(filterCategory === c)}>
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
+                {/* Category filter */}
+                {categories.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">分類</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部</button>
+                      {categories.map((c) => (
+                        <button key={c} onClick={() => setFilterCategory(filterCategory === c ? '' : c)} className={chip(filterCategory === c)}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Clear all */}
+                {(filterBrand || filterCategory) && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilterBrand(''); setFilterCategory('') }}
+                    className="text-xs text-gray-400 hover:text-red-500 transition"
+                  >
+                    ✕ 清除全部篩選
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Legend */}
