@@ -37,8 +37,8 @@ interface ProductFamily {
   brand: string
   productType: string
   category: string
-  skuPattern: string
-  namePattern: string
+  skuPattern?: string
+  namePattern?: string
   specs: FamilySpec[]
   /** 規格選項不規則時，用查表取代 pattern 生成 SKU。key 格式：spec值以 "|" 串接 */
   skuMap?: Record<string, string>
@@ -360,14 +360,14 @@ function YMHToothGridPanel({
   }, [color, jaw, base, qty, subPos, hasQty, isSingleQty])
 
   const skuCode = skuKey && family.skuMap ? (family.skuMap[skuKey] ?? '') : ''
-  const skuName = skuCode
+  const skuName = skuCode && family.namePattern
     ? buildFromPattern(family.namePattern, {
         顏色:  color,
         上下顎: jaw,
         牙型:  subPos && subPos !== '整排' ? `${base}-${subPos}` : base,
         數量:  hasQty ? qty : '',
       })
-    : ''
+    : skuCode
 
   // 共用樣式工具
   const chip = (sel: boolean, disabled = false) => [
@@ -616,9 +616,13 @@ function FamilySpecPanel({
   const allSelected = visibleRows.length > 0 && visibleRows.every((r) => !!selected[r.spec.key])
   const skuKey = visibleRows.map((r) => selected[r.spec.key] ?? '').join('|')
   const skuCode = allSelected
-    ? (family.skuMap ? (family.skuMap[skuKey] ?? '') : buildFromPattern(family.skuPattern, selected))
+    ? (family.skuMap ? (family.skuMap[skuKey] ?? '') : (family.skuPattern ? buildFromPattern(family.skuPattern, selected) : skuKey))
     : ''
-  const skuName = allSelected ? buildFromPattern(family.namePattern, selected) : ''
+  const skuName = allSelected
+    ? (family.namePattern
+        ? buildFromPattern(family.namePattern, selected)
+        : visibleRows.map((r) => selected[r.spec.key]).filter(Boolean).join(' · '))
+    : ''
   const isValid = allSelected && skuCode !== ''
 
   // Bur profile diagram: show when 型號 is selected in a bur family
