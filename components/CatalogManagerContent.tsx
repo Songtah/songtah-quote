@@ -66,18 +66,30 @@ interface Props {
 
 // ── Client-side compression (keeps payload under Vercel's 4.5MB limit) ──────
 
+/**
+ * Compress image before upload.
+ * - Resizes to maxPx on the long edge
+ * - Fills white background (so PNG transparency becomes white, not black/transparent)
+ * - Outputs as JPEG at the given quality
+ * Always runs (even on small files) so the white-background conversion always applies.
+ */
 async function compressForUpload(file: File, maxPx = 1800, quality = 0.85): Promise<File> {
-  // Small files don't need compression
-  if (file.size <= 1.5 * 1024 * 1024) return file
   return new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => {
       URL.revokeObjectURL(img.src)
       const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      const w = Math.round(img.width  * scale)
+      const h = Math.round(img.height * scale)
       const canvas = document.createElement('canvas')
-      canvas.width  = Math.round(img.width  * scale)
-      canvas.height = Math.round(img.height * scale)
-      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.width  = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      // ① White background — handles PNG transparency
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, w, h)
+      // ② Draw the image on top
+      ctx.drawImage(img, 0, 0, w, h)
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
@@ -226,8 +238,8 @@ function ImageUploadZone({
             )}
 
             {previewUrl && !imgError ? (
-              /* Preview */
-              <div className="relative">
+              /* Preview — white background handles PNG transparency */
+              <div className="relative bg-white">
                 <img
                   src={previewUrl}
                   alt="商品圖片"
