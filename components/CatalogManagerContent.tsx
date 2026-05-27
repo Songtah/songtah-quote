@@ -1490,22 +1490,35 @@ function ProductDetailCard({
       .finally(() => setLoading(false))
   }, [skuCode])
 
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [onClose])
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
 
   const specs: SpecTable = rich ? parseSpecs(rich.specsJson) : defaultSpecs()
   const galleryImages: GalleryImage[] = parseGallery(rich?.galleryJson ?? '[]')
   const docs: DocFile[] = (() => {
     try { const p = JSON.parse(rich?.docsJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
   })()
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (lightboxIdx !== null) { setLightboxIdx(null); return }
+        onClose()
+      }
+      if (lightboxIdx !== null) {
+        if (e.key === 'ArrowRight')
+          setLightboxIdx((i) => i !== null ? Math.min(i + 1, galleryImages.length - 1) : null)
+        if (e.key === 'ArrowLeft')
+          setLightboxIdx((i) => i !== null ? Math.max(i - 1, 0) : null)
+      }
+    }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose, lightboxIdx, galleryImages.length])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   const hasAnyRich = rich && (
     rich.imageUrl || rich.description || rich.price != null ||
@@ -1686,12 +1699,16 @@ function ProductDetailCard({
                   </p>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {galleryImages.map((img, i) => (
-                      <a key={i} href={img.url} target="_blank" rel="noopener noreferrer"
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setLightboxIdx(i)}
                         className="shrink-0 w-28 h-28 rounded-xl overflow-hidden bg-white border border-gray-200
-                                   hover:border-brand-300 hover:shadow-md transition-all">
+                                   hover:border-brand-300 hover:shadow-md transition-all focus:outline-none"
+                      >
                         <img src={img.url} alt={`素材 ${i + 1}`} className="w-full h-full object-cover"
                           style={{ objectPosition: img.pos }} />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -1722,6 +1739,67 @@ function ProductDetailCard({
             </>
           )}
         </div>
+
+        {/* ── Lightbox ─────────────────────────────────────── */}
+        <AnimatePresence>
+          {lightboxIdx !== null && galleryImages[lightboxIdx] && (
+            <motion.div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/90 rounded-2xl"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setLightboxIdx(null)}
+            >
+              {/* Image */}
+              <motion.img
+                key={lightboxIdx}
+                src={galleryImages[lightboxIdx].url}
+                alt={`素材 ${lightboxIdx + 1}`}
+                className="max-w-full max-h-full object-contain rounded-lg select-none"
+                style={{ maxHeight: 'calc(90vh - 80px)', padding: '48px 56px' }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                onClick={(e) => e.stopPropagation()}
+                draggable={false}
+              />
+
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => setLightboxIdx(null)}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full
+                           bg-white/10 text-white hover:bg-white/20 transition text-sm"
+              >✕</button>
+
+              {/* Counter */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/40 text-white text-xs
+                              px-3 py-1 rounded-full font-medium pointer-events-none">
+                {lightboxIdx + 1} / {galleryImages.length}
+              </div>
+
+              {/* Prev */}
+              {lightboxIdx > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx - 1) }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center
+                             rounded-full bg-white/10 text-white hover:bg-white/25 transition text-lg"
+                >‹</button>
+              )}
+
+              {/* Next */}
+              {lightboxIdx < galleryImages.length - 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx + 1) }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center
+                             rounded-full bg-white/10 text-white hover:bg-white/25 transition text-lg"
+                >›</button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )
