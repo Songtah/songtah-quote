@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import Image from 'next/image'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -47,6 +46,216 @@ interface Props {
   productTypes: string[]
 }
 
+// ── Image Upload Zone (drag-and-drop) ────────────────────────
+
+function ImageUploadZone({
+  imageUrl,
+  onUrlChange,
+  disabled,
+}: {
+  imageUrl: string
+  onUrlChange: (url: string) => void
+  disabled: boolean
+}) {
+  const [tab,       setTab]       = useState<'upload' | 'url'>('upload')
+  const [dragging,  setDragging]  = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [progress,  setProgress]  = useState(0)
+  const [imgError,  setImgError]  = useState(false)
+  const [uploadErr, setUploadErr] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const previewUrl = imageUrl.trim()
+
+  const uploadFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setUploadErr('只支援圖片格式（JPG、PNG、WebP、GIF）')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadErr('圖片大小不能超過 5 MB')
+      return
+    }
+    setUploadErr('')
+    setUploading(true)
+    setProgress(10)
+
+    // Simulate progress while uploading
+    const interval = setInterval(() => {
+      setProgress((p) => Math.min(p + 15, 85))
+    }, 200)
+
+    const fd = new FormData()
+    fd.append('file', file)
+
+    try {
+      const res = await fetch('/api/products/upload-image', { method: 'POST', body: fd })
+      const data = await res.json()
+      clearInterval(interval)
+      if (!res.ok) {
+        setUploadErr(data.error ?? '上傳失敗')
+      } else {
+        setProgress(100)
+        onUrlChange(data.url)
+        setImgError(false)
+        setTimeout(() => setProgress(0), 600)
+      }
+    } catch {
+      clearInterval(interval)
+      setUploadErr('網路錯誤，請稍後再試')
+    } finally {
+      setUploading(false)
+    }
+  }, [onUrlChange])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) uploadFile(file)
+  }, [uploadFile])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) uploadFile(file)
+    e.target.value = ''
+  }
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-3 p-1 bg-gray-100 rounded-xl w-fit">
+        {(['upload', 'url'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={[
+              'px-4 py-1.5 rounded-lg text-xs font-semibold transition',
+              tab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700',
+            ].join(' ')}
+          >
+            {t === 'upload' ? '📁 上傳圖片' : '🔗 貼入網址'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'upload' ? (
+        <>
+          {/* Drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => !disabled && !uploading && fileRef.current?.click()}
+            className={[
+              'relative w-full rounded-2xl border-2 border-dashed transition cursor-pointer overflow-hidden',
+              dragging  ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
+              uploading ? 'border-blue-300 bg-blue-50 cursor-default' :
+                          'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+              disabled  ? 'opacity-50 pointer-events-none' : '',
+            ].join(' ')}
+            style={{ minHeight: 180 }}
+          >
+            {/* Progress bar */}
+            {uploading && progress > 0 && (
+              <div className="absolute top-0 left-0 h-1 bg-brand-400 rounded-full transition-all duration-200"
+                style={{ width: `${progress}%` }} />
+            )}
+
+            {previewUrl && !imgError ? (
+              /* Preview */
+              <div className="relative">
+                <img
+                  src={previewUrl}
+                  alt="商品圖片"
+                  className="w-full object-contain max-h-56"
+                  onError={() => setImgError(true)}
+                />
+                {/* Hover overlay */}
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition flex items-center justify-center">
+                  <span className="text-white text-sm font-medium opacity-0 hover:opacity-100 bg-black/50 px-3 py-1 rounded-full">
+                    點擊或拖曳更換
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 px-4">
+                {uploading ? (
+                  <>
+                    <svg className="animate-spin h-8 w-8 text-brand-400" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <span className="text-sm text-brand-500 font-medium">上傳中…</span>
+                  </>
+                ) : dragging ? (
+                  <>
+                    <span className="text-4xl">📥</span>
+                    <span className="text-sm font-semibold text-brand-600">放開以上傳</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl text-gray-300">🖼</span>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-600">拖曳圖片到這裡</p>
+                      <p className="text-xs text-gray-400 mt-1">或點擊選擇檔案</p>
+                    </div>
+                    <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                      JPG / PNG / WebP · 最大 5 MB
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {uploadErr && (
+            <p className="text-xs text-red-500 mt-2">{uploadErr}</p>
+          )}
+          {previewUrl && !imgError && (
+            <button
+              type="button"
+              onClick={() => { onUrlChange(''); setImgError(false) }}
+              className="mt-2 text-xs text-gray-400 hover:text-red-500 transition"
+            >
+              ✕ 移除圖片
+            </button>
+          )}
+        </>
+      ) : (
+        /* URL tab */
+        <>
+          {previewUrl && !imgError && (
+            <div className="mb-3 w-full h-44 rounded-2xl overflow-hidden bg-gray-50 border border-gray-200">
+              <img src={previewUrl} alt="預覽" className="w-full h-full object-contain"
+                onError={() => setImgError(true)} />
+            </div>
+          )}
+          <input
+            type="url"
+            value={imageUrl}
+            onChange={(e) => { onUrlChange(e.target.value); setImgError(false) }}
+            placeholder="貼上圖片網址（https://…）"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+            disabled={disabled}
+          />
+          <p className="text-xs text-gray-400 mt-1.5">
+            可貼入 Google Drive 公開連結、Notion 附件連結或任何公開圖片 URL。
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Product Edit Drawer ───────────────────────────────────────
 
 function ProductEditDrawer({
@@ -59,13 +268,11 @@ function ProductEditDrawer({
   onSaved: (skuCode: string, price: number | null, imageUrl: string) => void
 }) {
   const [catalog, setCatalog] = useState<CatalogItem | null>(null)
-  const [rich, setRich]       = useState<RichData>({ notionId: null, price: null, imageUrl: '', description: '' })
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')
-  const [imgError, setImgError] = useState(false)
 
-  // Form state (controlled)
+  // Form state
   const [price,       setPrice]       = useState('')
   const [imageUrl,    setImageUrl]    = useState('')
   const [description, setDescription] = useState('')
@@ -73,13 +280,11 @@ function ProductEditDrawer({
   useEffect(() => {
     setLoading(true)
     setError('')
-    setImgError(false)
     fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) { setError(data.error); return }
         setCatalog(data.catalog)
-        setRich(data.rich)
         setPrice(data.rich.price != null ? String(data.rich.price) : '')
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
@@ -114,31 +319,25 @@ function ProductEditDrawer({
     onClose()
   }
 
-  // Close on Escape
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
   }, [onClose])
 
-  // Prevent background scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  const previewUrl = imageUrl.trim()
-
   return (
     <div className="fixed inset-0 z-50 flex" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      {/* Backdrop */}
       <motion.div
         className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }} onClick={onClose}
       />
 
-      {/* Drawer */}
       <motion.div
         className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden"
         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
@@ -148,15 +347,15 @@ function ProductEditDrawer({
         <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-500 mb-1">編輯商品</p>
-            <h2 className="text-lg font-bold text-slate-900 leading-snug truncate">
+            <h2 className="text-lg font-bold text-slate-900 leading-snug">
               {loading ? '載入中…' : (catalog?.name ?? skuCode)}
             </h2>
             <p className="text-xs font-mono text-gray-400 mt-0.5">{skuCode}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-          >✕</button>
+          <button onClick={onClose}
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
+            ✕
+          </button>
         </div>
 
         {/* Body */}
@@ -165,20 +364,17 @@ function ProductEditDrawer({
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
           )}
 
-          {/* Read-only catalog info */}
           {catalog && (
-            <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">基本資料（唯讀）</p>
-              {[
-                ['品牌', catalog.brand],
-                ['分類', catalog.category],
-                ['商品類型', catalog.productType],
-              ].map(([label, val]) => val && (
-                <div key={label} className="flex gap-3 text-sm">
-                  <span className="text-slate-400 w-20 shrink-0">{label}</span>
-                  <span className="text-slate-700 font-medium">{val}</span>
-                </div>
-              ))}
+            <div className="bg-gray-50 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">基本資料</p>
+              {[['品牌', catalog.brand], ['分類', catalog.category], ['商品類型', catalog.productType]].map(
+                ([label, val]) => val ? (
+                  <div key={label} className="flex gap-3 text-sm py-1">
+                    <span className="text-slate-400 w-20 shrink-0">{label}</span>
+                    <span className="text-slate-700 font-medium">{val}</span>
+                  </div>
+                ) : null
+              )}
             </div>
           )}
 
@@ -190,9 +386,7 @@ function ProductEditDrawer({
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">NT$</span>
               <input
-                type="number"
-                min={0}
-                value={price}
+                type="number" min={0} value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="尚未設定"
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
@@ -203,36 +397,12 @@ function ProductEditDrawer({
 
           {/* 商品圖片 */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">商品圖片</label>
-
-            {/* Preview */}
-            <div className="mb-3 w-full h-44 rounded-2xl overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center">
-              {previewUrl && !imgError ? (
-                <img
-                  src={previewUrl}
-                  alt="商品圖片預覽"
-                  className="w-full h-full object-contain"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-gray-300">
-                  <span className="text-4xl">🖼</span>
-                  <span className="text-xs">{imgError ? '圖片無法載入' : '尚無圖片'}</span>
-                </div>
-              )}
-            </div>
-
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => { setImageUrl(e.target.value); setImgError(false) }}
-              placeholder="貼上圖片網址（https://…）"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+            <label className="block text-sm font-semibold text-slate-700 mb-2">商品圖片</label>
+            <ImageUploadZone
+              imageUrl={imageUrl}
+              onUrlChange={setImageUrl}
               disabled={loading}
             />
-            <p className="text-xs text-gray-400 mt-1.5">
-              建議尺寸 800×800px，可使用 Google Drive 公開連結或 Notion 附件連結。
-            </p>
           </div>
 
           {/* 商品介紹 */}
@@ -241,7 +411,7 @@ function ProductEditDrawer({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="填入產品特色、規格說明、注意事項…"
+              placeholder="填入產品特色、規格說明、使用注意事項…"
               rows={6}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent leading-relaxed"
               disabled={loading}
@@ -251,18 +421,12 @@ function ProductEditDrawer({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-5 py-2 rounded-full text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
-          >
+          <button onClick={onClose} disabled={saving}
+            className="px-5 py-2 rounded-full text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
             取消
           </button>
-          <button
-            onClick={handleSave}
-            disabled={loading || saving}
-            className="px-6 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50 flex items-center gap-2"
-          >
+          <button onClick={handleSave} disabled={loading || saving}
+            className="px-6 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50 flex items-center gap-2">
             {saving && (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
