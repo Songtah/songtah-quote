@@ -2,289 +2,345 @@
 
 /**
  * BurProfileDiagram
- * Side-view SVG silhouette illustrations for dental milling bur geometries.
- * Used in the OrderForm spec panel when the user selects a 型號 in a bur family.
+ * Clean technical-illustration style SVG profiles for dental milling burs.
+ * Side-view silhouette, similar to catalog line-art.
  */
 
 export type BurProfileType =
-  | 'ball'        // B  — ball-end (hemisphere tip)
-  | 'ball_long'   // BL — ball-end with long cutting neck
-  | 'flat'        // F  — flat-end (squared-off tip)
-  | 'flat_long'   // FL — flat-end with long cutting neck
-  | 'radius'      // R  — corner-radius (flat with rounded edges)
-  | 'radius_long' // RL — corner-radius with long cutting neck
-  | 'tcutter'     // T  — T-cutter (side-cutting wings)
-  | 'thread'      // TH — thread mill (screw profile on tip)
-  | 'diamond'     // G  — diamond-coated (glass / hybrid ceramic)
-  | 'generic'     // fallback — plain cylindrical profile
+  | 'ball'        // B  — ball end (hemisphere)
+  | 'ball_long'   // BL — ball end, long cutting neck
+  | 'flat'        // F  — flat end
+  | 'flat_long'   // FL — flat end, long cutting neck
+  | 'radius'      // R  — torus / corner-radius
+  | 'radius_long' // RL — torus, long neck
+  | 'tcutter'     // T  — T-cutter (side wings)
+  | 'thread'      // TH — thread mill
+  | 'diamond'     // G  — diamond-coated (glass ceramic)
+  | 'generic'     //    — plain cylinder / unknown
 
-const LABEL: Record<BurProfileType, string> = {
-  ball:        '球形 Ball',
-  ball_long:   '長球形 Ball Long',
-  flat:        '平頭 Flat',
-  flat_long:   '長平頭 Flat Long',
-  radius:      '圓角 Radius',
-  radius_long: '長圓角 Radius Long',
-  tcutter:     'T型刀 T-Cutter',
-  thread:      '螺牙刀 Thread',
-  diamond:     '鑽石砂輪',
-  generic:     '圓柱形',
+export const BUR_LABEL: Record<BurProfileType, string> = {
+  ball:        'Ball',
+  ball_long:   'Ball Long',
+  flat:        'Flat',
+  flat_long:   'Flat Long',
+  radius:      'Radius',
+  radius_long: 'Radius Long',
+  tcutter:     'T-Cutter',
+  thread:      'Thread',
+  diamond:     'Diamond',
+  generic:     '—',
 }
 
-// ── Profile SVG paths ──────────────────────────────────────────
-// viewBox = "0 0 60 106"
-// Shaft collet: x=23–37, y=4–18 (narrower collar)
-// Main shank:   x=22–38, y=18–(cutStart)
-// Cutting zone: x=22–38, y=(cutStart)–tipEnd  (highlighted)
-// Tip geometry: varies by type
-//
-// Color palette
-const C_SHAFT   = '#f5ede3'   // shaft fill (warm light)
-const C_SHAFT_S = '#c9a882'   // shaft stroke
-const C_CUT     = '#f0dcc4'   // cutting zone fill
-const C_CUT_S   = '#b8956a'   // cutting zone stroke (brand)
-const C_TIP_S   = '#9e7652'   // tip edge highlight
+// ── Palette ───────────────────────────────────────────────────
+const S = '#5c6b82'    // main stroke
+const SD = '#2e3d52'   // dark stroke (tip edge / detail)
+const SL = '#8fa0b8'   // light stroke (secondary)
 
-interface ProfileProps { cutStart?: number }
+// ── Shared SVG defs (gradient + clip) ────────────────────────
+// One gradient for shank, one for cutting zone.
+// Safe to reuse same ID since only one diagram visible at a time.
+function Defs() {
+  return (
+    <defs>
+      {/* Horizontal gradient: left highlight → right shadow (metallic cylinder) */}
+      <linearGradient id="bp-shank" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#f5f7fa" />
+        <stop offset="18%"  stopColor="#e2e8f0" />
+        <stop offset="72%"  stopColor="#b8c6d6" />
+        <stop offset="100%" stopColor="#8fa0b8" />
+      </linearGradient>
+      {/* Cutting zone: cooler / slightly deeper */}
+      <linearGradient id="bp-cut" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#eaf0f8" />
+        <stop offset="20%"  stopColor="#d0dced" />
+        <stop offset="75%"  stopColor="#9ab0cc" />
+        <stop offset="100%" stopColor="#6880a0" />
+      </linearGradient>
+    </defs>
+  )
+}
 
-// ── Ball end ──────────────────────────────────────────────────
-function BallProfile({ cutStart = 68 }: ProfileProps) {
-  // cx=30, shaft x=22–38, ball radius=8 below cutStart
-  const r = 8
-  const ballCy = cutStart + r
+// ── Shank (upper part, goes off-screen at top) ─────────────
+// x1/x2 define the left/right edges of the cylinder
+function Shank({ x1, x2, y1, y2 }: { x1: number; x2: number; y1: number; y2: number }) {
   return (
     <>
-      {/* Shaft body */}
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      {/* Collet */}
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Cutting zone fill */}
-      <rect x="22" y={cutStart} width="16" height={r + 2}
-        fill={C_CUT} stroke="none" />
-      {/* Ball tip */}
-      <path
-        d={`M 22 ${cutStart} L 22 ${ballCy} A ${r} ${r} 0 0 1 38 ${ballCy} L 38 ${cutStart} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5"
-      />
-      {/* Ball sheen */}
-      <ellipse cx="27" cy={ballCy - 1} rx="3" ry="2"
-        fill="white" opacity="0.35" />
+      {/* Main body */}
+      <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1}
+        fill="url(#bp-shank)" stroke={S} strokeWidth="1.2" />
+      {/* Left highlight line */}
+      <line x1={x1 + 2} y1={y1} x2={x1 + 2} y2={y2}
+        stroke="white" strokeWidth="1.2" opacity="0.55" />
+      {/* Break marks at top (indicates bur continues upward) */}
+      <path d={`M ${x1} ${y1 + 3} Q ${(x1 + x2) / 2} ${y1 - 2} ${x2} ${y1 + 3}`}
+        fill="none" stroke={SL} strokeWidth="0.8" />
     </>
   )
 }
 
-// ── Ball-Long end ────────────────────────────────────────────
-function BallLongProfile() {
-  const cutStart = 46
-  const r = 8
-  const ballCy = cutStart + r
+// ── Cutting zone body (without tip) ──────────────────────────
+function CutZone({ x1, x2, y1, y2, flutes = 4 }: {
+  x1: number; x2: number; y1: number; y2: number; flutes?: number
+}) {
+  const w = x2 - x1
+  const h = y2 - y1
+  const step = h / (flutes + 1)
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Long cutting zone */}
-      <rect x="22" y={cutStart} width="16" height={r + 2}
-        fill={C_CUT} stroke="none" />
-      <path
-        d={`M 22 ${cutStart} L 22 ${ballCy} A ${r} ${r} 0 0 1 38 ${ballCy} L 38 ${cutStart} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5"
-      />
-      {/* Cutting-zone side marks */}
-      <line x1="22" y1={cutStart} x2="22" y2={ballCy}
-        stroke={C_CUT_S} strokeWidth="1.5" />
-      <line x1="38" y1={cutStart} x2="38" y2={ballCy}
-        stroke={C_CUT_S} strokeWidth="1.5" />
-      <ellipse cx="27" cy={ballCy - 1} rx="3" ry="2"
-        fill="white" opacity="0.35" />
+      {/* Body */}
+      <rect x={x1} y={y1} width={w} height={h}
+        fill="url(#bp-cut)" stroke={S} strokeWidth="1.2" />
+      {/* Left highlight */}
+      <line x1={x1 + 2} y1={y1} x2={x1 + 2} y2={y2}
+        stroke="white" strokeWidth="1.2" opacity="0.5" />
+      {/* Flute tick marks — subtle diagonal lines on right side */}
+      {Array.from({ length: flutes }).map((_, i) => {
+        const y = y1 + step * (i + 1)
+        return (
+          <line key={i}
+            x1={x2 - 5} y1={y - 2} x2={x2 - 1} y2={y + 2}
+            stroke={SD} strokeWidth="0.9" opacity="0.5"
+          />
+        )
+      })}
+    </>
+  )
+}
+
+// ── Individual tip geometries ────────────────────────────────
+
+/** Ball end: hemisphere at bottom */
+function TipBall({ cx, y, r }: { cx: number; y: number; r: number }) {
+  return (
+    <path
+      d={`M ${cx - r} ${y} A ${r} ${r} 0 0 1 ${cx + r} ${y}`}
+      fill="url(#bp-cut)" stroke={SD} strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  )
+}
+
+/** Flat end: straight horizontal bottom */
+function TipFlat({ x1, x2, y }: { x1: number; x2: number; y: number }) {
+  return (
+    <line x1={x1} y1={y} x2={x2} y2={y}
+      stroke={SD} strokeWidth="2.2" strokeLinecap="round" />
+  )
+}
+
+/** Radius / torus end: flat with radiused corners */
+function TipRadius({ x1, x2, y, r = 3 }: { x1: number; x2: number; y: number; r?: number }) {
+  return (
+    <path
+      d={`M ${x1} ${y - r} Q ${x1} ${y} ${x1 + r} ${y} L ${x2 - r} ${y} Q ${x2} ${y} ${x2} ${y - r}`}
+      fill="none" stroke={SD} strokeWidth="2" strokeLinecap="round"
+    />
+  )
+}
+
+// ── Ball end ─────────────────────────────────────────────────
+function BallProfile() {
+  const cx = 27, r = 7
+  const shankBot = 64, cutBot = 82
+  return (
+    <>
+      <Defs />
+      <Shank x1={cx - r} x2={cx + r} y1={4} y2={shankBot} />
+      <CutZone x1={cx - r} x2={cx + r} y1={shankBot} y2={cutBot} flutes={3} />
+      <TipBall cx={cx} y={cutBot} r={r} />
+    </>
+  )
+}
+
+// ── Ball Long ─────────────────────────────────────────────────
+function BallLongProfile() {
+  const cx = 27, r = 7
+  const shankBot = 44, cutBot = 82
+  return (
+    <>
+      <Defs />
+      <Shank x1={cx - r} x2={cx + r} y1={4} y2={shankBot} />
+      <CutZone x1={cx - r} x2={cx + r} y1={shankBot} y2={cutBot} flutes={5} />
+      <TipBall cx={cx} y={cutBot} r={r} />
     </>
   )
 }
 
 // ── Flat end ─────────────────────────────────────────────────
-function FlatProfile({ cutStart = 68 }: ProfileProps) {
-  const tipBot = cutStart + 14
+function FlatProfile() {
+  const cx = 27, hw = 7
+  const shankBot = 64, cutBot = 86
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Flat cutting head — same width */}
-      <rect x="22" y={cutStart} width="16" height={tipBot - cutStart}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" />
-      {/* Bottom flat edge highlight */}
-      <line x1="22" y1={tipBot} x2="38" y2={tipBot}
-        stroke={C_TIP_S} strokeWidth="2" strokeLinecap="round" />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={shankBot} />
+      <CutZone x1={cx - hw} x2={cx + hw} y1={shankBot} y2={cutBot} flutes={3} />
+      <TipFlat x1={cx - hw} x2={cx + hw} y={cutBot} />
     </>
   )
 }
 
-// ── Flat-Long end ─────────────────────────────────────────────
+// ── Flat Long ─────────────────────────────────────────────────
 function FlatLongProfile() {
-  const cutStart = 46
-  const tipBot = cutStart + 28
+  const cx = 27, hw = 7
+  const shankBot = 44, cutBot = 86
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      <rect x="22" y={cutStart} width="16" height={tipBot - cutStart}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" />
-      <line x1="22" y1={tipBot} x2="38" y2={tipBot}
-        stroke={C_TIP_S} strokeWidth="2" strokeLinecap="round" />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={shankBot} />
+      <CutZone x1={cx - hw} x2={cx + hw} y1={shankBot} y2={cutBot} flutes={5} />
+      <TipFlat x1={cx - hw} x2={cx + hw} y={cutBot} />
     </>
   )
 }
 
-// ── Radius (corner-radius) end ───────────────────────────────
-function RadiusProfile({ cutStart = 68 }: ProfileProps) {
-  const tipBot = cutStart + 14
-  const cr = 4 // corner radius
+// ── Radius / Torus ────────────────────────────────────────────
+function RadiusProfile() {
+  const cx = 27, hw = 7
+  const shankBot = 64, cutBot = 86
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Rounded-corner tip */}
-      <path
-        d={`M 22 ${cutStart} L 22 ${tipBot - cr} Q 22 ${tipBot} ${22 + cr} ${tipBot} L ${38 - cr} ${tipBot} Q 38 ${tipBot} 38 ${tipBot - cr} L 38 ${cutStart} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5"
-      />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={shankBot} />
+      <CutZone x1={cx - hw} x2={cx + hw} y1={shankBot} y2={cutBot} flutes={3} />
+      <TipRadius x1={cx - hw} x2={cx + hw} y={cutBot} r={4} />
     </>
   )
 }
 
-// ── Radius-Long end ──────────────────────────────────────────
+// ── Radius Long ───────────────────────────────────────────────
 function RadiusLongProfile() {
-  const cutStart = 46
-  const tipBot = cutStart + 28
-  const cr = 4
+  const cx = 27, hw = 7
+  const shankBot = 44, cutBot = 86
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      <path
-        d={`M 22 ${cutStart} L 22 ${tipBot - cr} Q 22 ${tipBot} ${22 + cr} ${tipBot} L ${38 - cr} ${tipBot} Q 38 ${tipBot} 38 ${tipBot - cr} L 38 ${cutStart} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5"
-      />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={shankBot} />
+      <CutZone x1={cx - hw} x2={cx + hw} y1={shankBot} y2={cutBot} flutes={5} />
+      <TipRadius x1={cx - hw} x2={cx + hw} y={cutBot} r={4} />
     </>
   )
 }
 
 // ── T-Cutter ─────────────────────────────────────────────────
+// Narrow neck → wide horizontal wing at bottom (side-cutting)
 function TCutterProfile() {
-  // Wide horizontal wing at the bottom
-  const neckStart = 55
-  const wingY = 68
-  const tipBot = 82
-  const wingW = 20  // wing extends to x=10 and x=50 (half-width=20 from center)
-  const cx = 30
+  const cx = 27
+  const neckW = 5   // half-width of neck
+  const wingW = 14  // half-width of wing
+  const neckTop = 4
+  const neckBot = 58
+  const wingTop = 68
+  const wingBot = 82
   return (
     <>
-      <rect x="22" y="18" width="16" height={neckStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Neck */}
-      <rect x="25" y={neckStart} width="10" height={wingY - neckStart}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" />
-      {/* Horizontal wing */}
-      <rect x={cx - wingW} y={wingY} width={wingW * 2} height={tipBot - wingY}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" rx="2" />
-      {/* Wing tip highlights */}
-      <line x1={cx - wingW} y1={tipBot} x2={cx + wingW} y2={tipBot}
-        stroke={C_TIP_S} strokeWidth="2" strokeLinecap="round" />
+      <Defs />
+      {/* Shank above neck */}
+      <Shank x1={cx - neckW} x2={cx + neckW} y1={neckTop} y2={neckBot} />
+      {/* Transition taper */}
+      <path d={`M ${cx - neckW} ${neckBot} L ${cx - wingW} ${wingTop} L ${cx + wingW} ${wingTop} L ${cx + neckW} ${neckBot} Z`}
+        fill="url(#bp-cut)" stroke={S} strokeWidth="1.2" />
+      {/* Wing body */}
+      <rect x={cx - wingW} y={wingTop} width={wingW * 2} height={wingBot - wingTop}
+        fill="url(#bp-cut)" stroke={S} strokeWidth="1.2" />
+      {/* Left highlight on wing */}
+      <line x1={cx - wingW + 2} y1={wingTop} x2={cx - wingW + 2} y2={wingBot}
+        stroke="white" strokeWidth="1" opacity="0.45" />
+      {/* Bottom flat edge */}
+      <TipFlat x1={cx - wingW} x2={cx + wingW} y={wingBot} />
     </>
   )
 }
 
-// ── Thread Mill ───────────────────────────────────────────────
+// ── Thread mill ───────────────────────────────────────────────
+// Straight body with V-profile thread grooves + pointed tip
 function ThreadProfile() {
-  const cutStart = 52
+  const cx = 27, hw = 7
+  const shankBot = 50
   const tipBot = 88
+  const pointed = 95
   const threadCount = 5
-  const threadH = (tipBot - cutStart) / threadCount
+  const step = (tipBot - shankBot) / threadCount
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={shankBot} />
       {/* Thread body */}
-      <rect x="22" y={cutStart} width="16" height={tipBot - cutStart}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" />
-      {/* Thread grooves */}
+      <rect x={cx - hw} y={shankBot} width={hw * 2} height={tipBot - shankBot}
+        fill="url(#bp-cut)" stroke={S} strokeWidth="1.2" />
+      <line x1={cx - hw + 2} y1={shankBot} x2={cx - hw + 2} y2={tipBot}
+        stroke="white" strokeWidth="1.2" opacity="0.45" />
+      {/* Thread groove marks (V-shaped notches on sides) */}
       {Array.from({ length: threadCount }).map((_, i) => {
-        const y = cutStart + i * threadH + threadH / 2
+        const y = shankBot + step * (i + 0.5)
         return (
-          <line key={i}
-            x1="22" y1={y} x2="38" y2={y}
-            stroke={C_TIP_S} strokeWidth="1" strokeDasharray="2,1"
-          />
+          <g key={i}>
+            <path d={`M ${cx - hw} ${y - 1.5} L ${cx - hw + 3} ${y} L ${cx - hw} ${y + 1.5}`}
+              fill="none" stroke={SD} strokeWidth="1" />
+            <path d={`M ${cx + hw} ${y - 1.5} L ${cx + hw - 3} ${y} L ${cx + hw} ${y + 1.5}`}
+              fill="none" stroke={SD} strokeWidth="1" />
+          </g>
         )
       })}
       {/* Pointed tip */}
-      <path
-        d={`M 22 ${tipBot} L 30 ${tipBot + 5} L 38 ${tipBot} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.2"
+      <path d={`M ${cx - hw} ${tipBot} L ${cx} ${pointed} L ${cx + hw} ${tipBot}`}
+        fill="url(#bp-cut)" stroke={SD} strokeWidth="1.5" strokeLinejoin="round"
       />
     </>
   )
 }
 
-// ── Diamond-coated (glass ceramic) ───────────────────────────
+// ── Diamond coated (glass ceramic) ───────────────────────────
+// Ball-end with stippled texture to indicate diamond grit
 function DiamondProfile() {
-  // Looks like a ball-end but with diamond-grit texture marks
-  const cutStart = 62
-  const r = 10
-  const ballCy = cutStart + r
+  const cx = 27, r = 8
+  const shankBot = 58, cutBot = 80
+  // Grit dot positions (relative to cutting zone)
+  const dots: [number, number][] = [
+    [cx - 4, shankBot + 5], [cx, shankBot + 4], [cx + 4, shankBot + 6],
+    [cx - 5, shankBot + 12], [cx - 1, shankBot + 11], [cx + 3, shankBot + 13],
+    [cx + 5, shankBot + 8],
+    [cx - 3, shankBot + 18], [cx + 2, shankBot + 18],
+  ]
   return (
     <>
-      <rect x="22" y="18" width="16" height={cutStart - 18}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      {/* Ball */}
+      <Defs />
+      <Shank x1={cx - r} x2={cx + r} y1={4} y2={shankBot} />
+      {/* Cutting body */}
+      <rect x={cx - r} y={shankBot} width={r * 2} height={cutBot - shankBot}
+        fill="url(#bp-cut)" stroke={S} strokeWidth="1.2" />
+      <line x1={cx - r + 2} y1={shankBot} x2={cx - r + 2} y2={cutBot}
+        stroke="white" strokeWidth="1.2" opacity="0.45" />
+      {/* Grit dots */}
+      {dots.map(([dx, dy], i) => (
+        <circle key={i} cx={dx} cy={dy} r="1.1" fill={SD} opacity="0.6" />
+      ))}
+      {/* Ball tip */}
       <path
-        d={`M 22 ${cutStart} L 22 ${ballCy} A ${r} ${r} 0 0 1 38 ${ballCy} L 38 ${cutStart} Z`}
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5"
+        d={`M ${cx - r} ${cutBot} A ${r} ${r} 0 0 1 ${cx + r} ${cutBot}`}
+        fill="url(#bp-cut)" stroke={SD} strokeWidth="1.6" strokeLinecap="round"
       />
-      {/* Diamond grit dots */}
-      {[
-        [25, cutStart + 4], [30, cutStart + 3], [35, cutStart + 5],
-        [23, cutStart + 9], [28, cutStart + 9], [33, cutStart + 8], [37, cutStart + 10],
-        [25, cutStart + 14], [30, cutStart + 14], [35, cutStart + 14],
-      ].map(([dx, dy], i) => (
-        <circle key={i} cx={dx} cy={dy} r="1.2"
-          fill={C_TIP_S} opacity="0.7" />
+      {/* Grit on ball */}
+      {[[cx - 5, cutBot + 3], [cx, cutBot + 2], [cx + 4, cutBot + 4], [cx - 2, cutBot + 6]].map(([dx, dy], i) => (
+        <circle key={i} cx={dx} cy={dy} r="1.1" fill={SD} opacity="0.55" />
       ))}
     </>
   )
 }
 
-// ── Generic cylindrical ───────────────────────────────────────
+// ── Generic (plain cylinder / unknown) ───────────────────────
 function GenericProfile() {
+  const cx = 27, hw = 7
   return (
     <>
-      <rect x="22" y="18" width="16" height={52}
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="1" />
-      <rect x="23" y="4" width="14" height="16"
-        fill={C_SHAFT} stroke={C_SHAFT_S} strokeWidth="1.2" rx="2" />
-      <rect x="22" y="70" width="16" height="14"
-        fill={C_CUT} stroke={C_CUT_S} strokeWidth="1.5" rx="1" />
+      <Defs />
+      <Shank x1={cx - hw} x2={cx + hw} y1={4} y2={80} />
+      <TipFlat x1={cx - hw} x2={cx + hw} y={80} />
     </>
   )
 }
 
-// ── Profile renderer ─────────────────────────────────────────
+// ── Router ────────────────────────────────────────────────────
 function ProfileShape({ type }: { type: BurProfileType }) {
   switch (type) {
     case 'ball':        return <BallProfile />
@@ -300,47 +356,42 @@ function ProfileShape({ type }: { type: BurProfileType }) {
   }
 }
 
-// ── Detection logic ─────────────────────────────────────────
+// ── Detection from option string ─────────────────────────────
 /**
- * Parse the bur geometry type from an option string.
- * Examples:
- *   "T9 · 3.0B"   → 'ball'
- *   "T14 · 2.0BL" → 'ball_long'
- *   "T16 · 1.5FL" → 'flat_long'
- *   "T23 · 1.5T"  → 'tcutter'
- *   "T5 · G2.5R"  → 'diamond'
- *   "平 1.0"       → 'flat'
- *   "刃 1.0"       → 'ball'
- *   "2.0"          → 'ball'  (ZR bur default)
+ * Detect bur geometry from an option label string.
+ * Examples: "T9 · 3.0B" → 'ball',  "T16 · 1.5FL" → 'flat_long',
+ *           "T5 · G2.5R" → 'diamond',  "平 1.0" → 'flat'
  */
 export function detectBurProfile(option: string): BurProfileType {
-  // Strip leading tool number "T9 · " or "T23 · " etc.
-  const core = option.replace(/^T\d+\s*[·•]\s*/, '').trim()
+  if (!option) return 'generic'
 
-  // G-prefix → diamond-coated (glass ceramic burs)
-  if (/^G/.test(core)) return 'diamond'
+  // Strip "T9 · " prefix
+  const core = option.replace(/^T\d+\s*[·•·]\s*/, '').trim()
 
-  // Suffix detection (order matters: check longer suffixes first)
-  if (/TH$/i.test(core)) return 'thread'
-  if (/BL$/i.test(core)) return 'ball_long'
-  if (/FL$/i.test(core)) return 'flat_long'
-  if (/RL$/i.test(core)) return 'radius_long'
-  if (/\bT$/.test(core)) return 'tcutter'
-  if (/B$/i.test(core))  return 'ball'
-  if (/F$/i.test(core))  return 'flat'
-  if (/R$/i.test(core))  return 'radius'
+  // G-prefix → diamond coated (glass ceramic burs)
+  if (/^G/i.test(core)) return 'diamond'
+
+  // Match suffix (longest first to avoid partial matches)
+  if (/TH$/i.test(core))                  return 'thread'
+  if (/BL$/i.test(core))                  return 'ball_long'
+  if (/FL$/i.test(core))                  return 'flat_long'
+  if (/RL$/i.test(core))                  return 'radius_long'
+  if (/\bT$/i.test(core))                 return 'tcutter'
+  if (/B$/i.test(core))                   return 'ball'
+  if (/F$/i.test(core))                   return 'flat'
+  if (/R$/i.test(core))                   return 'radius'
 
   // Chinese labels
   if (option.includes('平') || option.includes('平頭')) return 'flat'
-  if (option.includes('刃')) return 'ball'
+  if (option.includes('刃'))                            return 'ball'
 
-  // Pure number/size → generic ball (ZR/PMMA cylinders are usually ball-end)
+  // Pure diameter (e.g. "2.0") → most CAD/CAM ZR burs are ball-end
   if (/^\d/.test(core)) return 'ball'
 
   return 'generic'
 }
 
-// ── Main component ───────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────
 export function BurProfileDiagram({
   option,
   profileType,
@@ -348,40 +399,25 @@ export function BurProfileDiagram({
   option?: string
   profileType?: BurProfileType
 }) {
-  const type = profileType ?? (option ? detectBurProfile(option) : 'generic')
-  const label = LABEL[type]
+  const type: BurProfileType =
+    profileType ?? (option ? detectBurProfile(option) : 'generic')
+
+  if (type === 'generic') return null   // nothing to show for unknown
 
   return (
-    <div className="flex flex-col items-center gap-1.5 select-none">
+    <div className="flex flex-col items-center gap-1 select-none">
       <svg
-        viewBox="0 0 60 106"
-        style={{ width: 52, height: 92 }}
-        aria-label={label}
+        viewBox="0 0 54 102"
+        width={44}
+        height={84}
+        aria-label={BUR_LABEL[type]}
+        style={{ display: 'block' }}
       >
-        {/* Background collet ring at top */}
-        <rect x="19" y="2" width="22" height="6" rx="3"
-          fill="#e8ddd4" stroke="#c9a882" strokeWidth="0.8" />
         <ProfileShape type={type} />
       </svg>
-      <span className="text-[10px] text-gray-400 text-center leading-tight whitespace-nowrap">
-        {label}
+      <span className="text-[9px] text-slate-400 tracking-wide font-medium">
+        {BUR_LABEL[type]}
       </span>
-    </div>
-  )
-}
-
-// ── Multi-type gallery (for reference/debug) ─────────────────
-export function BurProfileGallery() {
-  const types: BurProfileType[] = [
-    'ball', 'flat', 'radius',
-    'ball_long', 'flat_long', 'radius_long',
-    'tcutter', 'thread', 'diamond', 'generic',
-  ]
-  return (
-    <div className="flex flex-wrap gap-6 p-6 bg-white rounded-xl border border-gray-100">
-      {types.map((t) => (
-        <BurProfileDiagram key={t} profileType={t} />
-      ))}
     </div>
   )
 }
