@@ -486,6 +486,8 @@ function SkuRow({
 
 // ── Family Card ───────────────────────────────────────────────
 
+const PAGE_SIZE = 100
+
 function FamilyCard({
   family,
   allItems,
@@ -499,7 +501,16 @@ function FamilyCard({
   imageFlagCache: Set<string>
   onEdit: (item: CatalogItem) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open,         setOpen]         = useState(false)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  // Reset pagination when collapsed
+  const handleToggle = () => {
+    setOpen((v) => {
+      if (v) setVisibleCount(PAGE_SIZE) // reset on collapse
+      return !v
+    })
+  }
 
   // Get SKU codes for this family
   const skuCodes: string[] = family.skuMap
@@ -516,11 +527,14 @@ function FamilyCard({
   const priceSetCount = items.filter((it) => priceCache.has(it.code) && priceCache.get(it.code) != null).length
   const imageSetCount = items.filter((it) => imageFlagCache.has(it.code)).length
 
+  const visibleItems  = items.slice(0, visibleCount)
+  const remaining     = items.length - visibleCount
+
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden">
       {/* Family header */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition"
       >
         <span className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
@@ -553,7 +567,7 @@ function FamilyCard({
             className="overflow-hidden"
           >
             <div className="border-t border-gray-100 px-5 py-2">
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SkuRow
                   key={item.code}
                   item={item}
@@ -562,6 +576,18 @@ function FamilyCard({
                   onEdit={onEdit}
                 />
               ))}
+
+              {/* "Show more" button */}
+              {remaining > 0 && (
+                <div className="py-3 text-center border-t border-gray-100 mt-1">
+                  <button
+                    onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                    className="text-xs font-medium text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-4 py-1.5 rounded-full transition"
+                  >
+                    顯示更多 {Math.min(remaining, PAGE_SIZE)} 筆（還剩 {remaining} 筆）
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -594,22 +620,13 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
   useEffect(() => {
     Promise.all([
       fetch('/api/products/families').then((r) => r.json()),
-      fetch('/api/products/search?limit=9999').then((r) => r.json()),
+      // Dedicated endpoint: returns raw { code, name, brand, … } format,
+      // no 200-item cap, 5-min browser cache.
+      fetch('/api/products/catalog-raw').then((r) => r.json()),
     ])
       .then(([fams, raw]) => {
         setFamilies(Array.isArray(fams) ? fams : [])
-        // Search API returns { id, name, manufacturer, skuCode, … }
-        // Normalise to CatalogItem { code, name, brand, … }
-        const items: CatalogItem[] = Array.isArray(raw)
-          ? raw.map((it: any) => ({
-              code:        it.skuCode || it.id || '',
-              name:        it.name    || '',
-              brand:       it.manufacturer || '',
-              productType: it.productType  || '',
-              category:    it.category     || '',
-            }))
-          : []
-        setAllItems(items)
+        setAllItems(Array.isArray(raw) ? raw : [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))

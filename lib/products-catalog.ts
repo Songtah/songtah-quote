@@ -52,7 +52,7 @@ function loadJson<T>(filename: string): T {
 let _catalog: CatalogProduct[] | null = null
 let _families: ProductFamily[] | null = null
 
-function getCatalog(): CatalogProduct[] {
+export function getCatalog(): CatalogProduct[] {
   if (!_catalog) _catalog = loadJson<CatalogProduct[]>('products_catalog.json')
   return _catalog
 }
