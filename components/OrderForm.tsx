@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OrderItem } from '@/lib/orders-notion'
-import { BurProfileDiagram, detectBurProfile } from '@/components/BurProfileDiagram'
+
 
 // Inline to avoid importing server-side Notion client in the browser bundle
 const calcTotal = (items: OrderItem[]): number =>
@@ -625,49 +625,34 @@ function FamilySpecPanel({
     : ''
   const isValid = allSelected && skuCode !== ''
 
-  // Bur profile diagram: show when 型號 is selected in a bur family
-  const isBurFamily = ['GEN-BUR', 'BS-BUR', 'ZZ-BUR'].includes(family.id)
-  const selectedModelOpt = selected['型號'] ?? ''
-
   return (
     <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
       {visibleRows.map(({ spec, options, specIdx }, idx) => {
         const prevSelected = idx === 0 || !!selected[visibleRows[idx - 1].spec.key]
-        const isModelRow = isBurFamily && spec.key === '型號'
-        const showDiagram = isModelRow && !!selectedModelOpt
-
         return (
           <div key={spec.key}>
             <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>
-            <div className="flex items-start gap-4">
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {options.map((opt) => {
-                  const isSelected = selected[spec.key] === opt
-                  return (
-                    <button
-                      key={opt}
-                      disabled={!prevSelected}
-                      onClick={() => handleChip(spec.key, specIdx, opt)}
-                      className={[
-                        'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-                        isSelected
-                          ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-                          : prevSelected
-                            ? 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600'
-                            : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed',
-                      ].join(' ')}
-                    >
-                      {opt}
-                    </button>
-                  )
-                })}
-              </div>
-              {/* Bur profile diagram — appears when 型號 is selected */}
-              {showDiagram && (
-                <div className="shrink-0 bg-white border border-brand-100 rounded-xl px-3 py-2 shadow-sm">
-                  <BurProfileDiagram option={selectedModelOpt} />
-                </div>
-              )}
+            <div className="flex flex-wrap gap-1.5">
+              {options.map((opt) => {
+                const isSelected = selected[spec.key] === opt
+                return (
+                  <button
+                    key={opt}
+                    disabled={!prevSelected}
+                    onClick={() => handleChip(spec.key, specIdx, opt)}
+                    className={[
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+                      isSelected
+                        ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
+                        : prevSelected
+                          ? 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600'
+                          : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed',
+                    ].join(' ')}
+                  >
+                    {opt}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )
