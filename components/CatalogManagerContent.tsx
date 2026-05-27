@@ -565,6 +565,289 @@ function MultiImageUploadZone({
   )
 }
 
+// ── Document Upload Zone ──────────────────────────────────────
+
+export interface DocFile {
+  name: string
+  url:  string
+  size: number   // bytes
+}
+
+type DocTask = {
+  id:      string
+  name:    string
+  size:    number
+  status:  'uploading' | 'done' | 'error'
+  errMsg?: string
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024)             return `${bytes} B`
+  if (bytes < 1024 * 1024)     return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function docIcon(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'pdf')                       return '📕'
+  if (['doc', 'docx'].includes(ext))       return '📝'
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return '📊'
+  if (['ppt', 'pptx'].includes(ext))       return '📋'
+  if (['zip', 'rar', '7z'].includes(ext))  return '🗜'
+  if (ext === 'txt')                       return '📄'
+  return '📎'
+}
+
+function DocUploadZone({
+  docs,
+  onAddDoc,
+  onRemoveDoc,
+  disabled,
+}: {
+  docs:        DocFile[]
+  onAddDoc:    (doc: DocFile) => void
+  onRemoveDoc: (index: number) => void
+  disabled:    boolean
+}) {
+  const [dragging,  setDragging]  = useState(false)
+  const [tasks,     setTasks]     = useState<DocTask[]>([])
+  const fileRef     = useRef<HTMLInputElement>(null)
+  const counterRef  = useRef(0)
+
+  function updateTask(id: string, patch: Partial<DocTask>) {
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t))
+  }
+  function removeTask(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  const processFiles = useCallback(async (fileList: File[]) => {
+    // Basic client-side validation
+    const ALLOWED_EXT = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip', 'rar', '7z'])
+    const valid = fileList.filter((f) => {
+      const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+      return ALLOWED_EXT.has(ext) && f.size <= 4 * 1024 * 1024
+    })
+    const tooLarge = fileList.filter((f) => f.size > 4 * 1024 * 1024)
+
+    // Show size-limit errors immediately as failed tasks
+    if (tooLarge.length) {
+      const errTasks: DocTask[] = tooLarge.map((f) => ({
+        id:     String(++counterRef.current),
+        name:   f.name,
+        size:   f.size,
+        status: 'error',
+        errMsg: `超過 4 MB 限制（${formatFileSize(f.size)}）`,
+      }))
+      setTasks((prev) => [...prev, ...errTasks])
+    }
+    if (!valid.length) return
+
+    const newTasks: DocTask[] = valid.map((f) => ({
+      id:     String(++counterRef.current),
+      name:   f.name,
+      size:   f.size,
+      status: 'uploading',
+    }))
+    setTasks((prev) => [...prev, ...newTasks])
+
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i]
+      const task = newTasks[i]
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const { ok, data, errMsg } = await postForm('/api/products/upload-doc', fd)
+        if (!ok) {
+          updateTask(task.id, { status: 'error', errMsg })
+        } else {
+          updateTask(task.id, { status: 'done' })
+          onAddDoc({ name: file.name, url: data.url, size: file.size })
+          setTimeout(() => removeTask(task.id), 1000)
+        }
+      } catch (err: any) {
+        updateTask(task.id, { status: 'error', errMsg: err.message ?? '上傳失敗' })
+      }
+    }
+  }, [onAddDoc])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    processFiles(Array.from(e.dataTransfer.files))
+  }, [processFiles])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) processFiles(Array.from(e.target.files))
+    e.target.value = ''
+  }
+
+  const isUploading = tasks.some((t) => t.status === 'uploading')
+  const isEmpty     = docs.length === 0 && tasks.length === 0
+
+  return (
+    <div>
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !disabled && !isUploading && fileRef.current?.click()}
+        className={[
+          'relative w-full rounded-2xl border-2 border-dashed transition',
+          disabled || isUploading ? 'cursor-default' : 'cursor-pointer',
+          dragging    ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
+          isUploading ? 'border-blue-300 bg-blue-50' :
+                        'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+          disabled    ? 'opacity-50 pointer-events-none' : '',
+        ].join(' ')}
+        style={{ minHeight: isEmpty ? 120 : 56 }}
+      >
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center gap-2.5 py-7 px-4">
+            {dragging ? (
+              <>
+                <span className="text-4xl">📥</span>
+                <span className="text-sm font-semibold text-brand-600">放開以上傳</span>
+              </>
+            ) : (
+              <>
+                <span className="text-3xl text-gray-300">📁</span>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-600">拖曳文件到這裡</p>
+                  <p className="text-xs text-gray-400 mt-0.5">或點擊選擇檔案</p>
+                </div>
+                <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                  PDF · Word · Excel · PPT · ZIP · 最大 4 MB
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 py-3.5 px-4">
+            {isUploading ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                <span className="text-sm text-brand-500 font-medium">上傳中，請稍候…</span>
+              </>
+            ) : dragging ? (
+              <>
+                <span>📥</span>
+                <span className="text-sm font-semibold text-brand-600">放開以繼續上傳</span>
+              </>
+            ) : (
+              <>
+                <span className="text-gray-400">＋</span>
+                <span className="text-sm font-medium text-gray-500">繼續上傳文件</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* File list */}
+      {(docs.length > 0 || tasks.length > 0) && (
+        <div className="mt-2 rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+          {/* Saved docs */}
+          {docs.map((doc, i) => (
+            <div key={`${doc.url}-${i}`}
+              className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 group transition">
+              <span className="text-xl shrink-0">{docIcon(doc.name)}</span>
+              <div className="flex-1 min-w-0">
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-gray-800 hover:text-brand-600 hover:underline truncate block"
+                  title={doc.name}
+                >
+                  {doc.name}
+                </a>
+                <p className="text-[11px] text-gray-400 mt-0.5">{formatFileSize(doc.size)}</p>
+              </div>
+              {/* Download */}
+              <a
+                href={doc.url}
+                download={doc.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500
+                           hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition"
+                title="下載"
+              >
+                ↓
+              </a>
+              {/* Delete */}
+              <button
+                type="button"
+                onClick={() => onRemoveDoc(i)}
+                disabled={disabled}
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-[11px]
+                           text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100
+                           transition disabled:hidden"
+                title="移除"
+              >✕</button>
+            </div>
+          ))}
+
+          {/* Uploading tasks */}
+          {tasks.map((task) => (
+            <div key={task.id} className={[
+              'flex items-center gap-3 px-3 py-2.5',
+              task.status === 'error' ? 'bg-red-50' : 'bg-blue-50/40',
+            ].join(' ')}>
+              <span className="text-xl shrink-0">
+                {task.status === 'uploading' ? (
+                  <svg className="animate-spin h-5 w-5 text-brand-400 mt-0.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : task.status === 'done' ? '✅' : '❌'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 truncate">{task.name}</p>
+                <p className="text-[11px] mt-0.5">
+                  {task.status === 'uploading' ? (
+                    <span className="text-brand-500">上傳中…</span>
+                  ) : task.status === 'done' ? (
+                    <span className="text-emerald-600">完成</span>
+                  ) : (
+                    <span className="text-red-500">{task.errMsg ?? '上傳失敗'}</span>
+                  )}
+                </p>
+              </div>
+              {task.status === 'error' && (
+                <button type="button" onClick={() => removeTask(task.id)}
+                  className="shrink-0 text-xs text-gray-400 hover:text-red-500 transition">
+                  移除
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {docs.length > 0 && (
+        <p className="mt-1.5 text-[11px] text-gray-400">
+          {docs.length} 份文件・點擊檔名或 ↓ 下載
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── Specs Editor ──────────────────────────────────────────────
 
 function SpecsEditor({
@@ -778,6 +1061,7 @@ function ProductEditDrawer({
   const [description,   setDescription]   = useState('')
   const [specs,         setSpecs]         = useState<SpecTable>(defaultSpecs())
   const [galleryImages, setGalleryImages] = useState<string[]>([])
+  const [docs,          setDocs]          = useState<DocFile[]>([])
 
   useEffect(() => {
     setLoading(true)
@@ -797,6 +1081,12 @@ function ProductEditDrawer({
         } catch {
           setGalleryImages([])
         }
+        try {
+          const parsed = JSON.parse(data.rich.docsJson ?? '[]')
+          setDocs(Array.isArray(parsed) ? parsed : [])
+        } catch {
+          setDocs([])
+        }
       })
       .catch(() => setError('無法載入商品資料'))
       .finally(() => setLoading(false))
@@ -815,12 +1105,13 @@ function ProductEditDrawer({
     const hasSpecs = specs.rows.some(r => r.some(c => c.trim()))
     const specsJson = hasSpecs ? JSON.stringify(specs) : ''
     const galleryJson = galleryImages.length > 0 ? JSON.stringify(galleryImages) : ''
+    const docsJson    = docs.length > 0 ? JSON.stringify(docs) : ''
     let res: Response | null = null
     try {
       res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson, galleryJson }),
+        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson }),
       })
     } catch (err: any) {
       setError(err.message ?? '網路中斷，請稍後再試')
@@ -937,6 +1228,20 @@ function ProductEditDrawer({
               images={galleryImages}
               onAddImage={(url) => setGalleryImages((prev) => [...prev, url])}
               onRemoveImage={(i) => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
+              disabled={loading}
+            />
+          </div>
+
+          {/* 文件資料 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-slate-700">文件資料</label>
+              <span className="text-[10px] text-gray-400">PDF / Word / Excel / PPT・最大 4 MB</span>
+            </div>
+            <DocUploadZone
+              docs={docs}
+              onAddDoc={(doc) => setDocs((prev) => [...prev, doc])}
+              onRemoveDoc={(i) => setDocs((prev) => prev.filter((_, idx) => idx !== i))}
               disabled={loading}
             />
           </div>

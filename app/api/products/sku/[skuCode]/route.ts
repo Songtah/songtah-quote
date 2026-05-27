@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       productType: catalog.productType,
       category:    catalog.category,
     },
-    rich: rich ?? { notionId: null, price: null, imageUrl: '', description: '', specsJson: '', galleryJson: '' },
+    rich: rich ?? { notionId: null, price: null, imageUrl: '', description: '', specsJson: '', galleryJson: '', docsJson: '' },
   })
 }
 
@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
 
-  let body: { price?: number | null; imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string }
+  let body: { price?: number | null; imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string; docsJson?: string }
   try {
     body = await req.json()
   } catch {
@@ -71,6 +71,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
         description: body.description,
         specsJson:   body.specsJson,
         galleryJson: body.galleryJson,
+        docsJson:    body.docsJson,
       }
     )
     return NextResponse.json({ ok: true, notionId })
