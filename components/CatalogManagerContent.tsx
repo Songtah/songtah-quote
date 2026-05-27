@@ -5,6 +5,33 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 // ── Types ─────────────────────────────────────────────────────
 
+/** Each image in the form gallery, with an adjustable focal-point position */
+export interface GalleryImage {
+  url: string
+  pos: string   // CSS object-position, e.g. "50% 30%"
+}
+
+/** Parse raw galleryJson — handles old string[] and new GalleryImage[] formats */
+function parseGallery(raw: string): GalleryImage[] {
+  try {
+    const p = JSON.parse(raw)
+    if (!Array.isArray(p)) return []
+    return p.map((item) =>
+      typeof item === 'string'
+        ? { url: item, pos: '50% 50%' }
+        : { url: item.url ?? '', pos: item.pos ?? '50% 50%' },
+    )
+  } catch {
+    return []
+  }
+}
+
+/** Parse "X% Y%" → [x, y] numbers */
+function parsePos(pos: string): [number, number] {
+  const parts = (pos || '50% 50%').split(' ')
+  return [parseFloat(parts[0]) || 50, parseFloat(parts[1]) || 50]
+}
+
 export interface SpecTable {
   columns: string[]
   rows:    string[][]
@@ -347,16 +374,17 @@ function MultiImageUploadZone({
   onReorder,
   disabled,
 }: {
-  images:        string[]
-  onAddImage:    (url: string) => void
+  images:        GalleryImage[]
+  onAddImage:    (img: GalleryImage) => void
   onRemoveImage: (index: number) => void
-  onReorder:     (newImages: string[]) => void
+  onReorder:     (newImages: GalleryImage[]) => void
   disabled:      boolean
 }) {
-  const [dragging,  setDragging]  = useState(false)  // file drag from outside
-  const [tasks,     setTasks]     = useState<UploadTask[]>([])
-  const [dragSrc,   setDragSrc]   = useState<number | null>(null)   // index being dragged
-  const [dragOver,  setDragOver]  = useState<number | null>(null)   // index being hovered
+  const [dragging,   setDragging]   = useState(false)
+  const [tasks,      setTasks]      = useState<UploadTask[]>([])
+  const [dragSrc,    setDragSrc]    = useState<number | null>(null)
+  const [dragOver,   setDragOver]   = useState<number | null>(null)
+  const [posEditIdx, setPosEditIdx] = useState<number | null>(null)  // which thumb is in position-edit mode
   const fileRef    = useRef<HTMLInputElement>(null)
   const counterRef = useRef(0)
 
@@ -399,7 +427,7 @@ function MultiImageUploadZone({
           updateTask(task.id, { status: 'error', errMsg })
         } else {
           updateTask(task.id, { status: 'done' })
-          onAddImage(data.url)
+          onAddImage({ url: data.url, pos: '50% 50%' })
           // Fade out the task card after brief success pause
           setTimeout(() => removeTask(task.id), 900)
         }
@@ -429,6 +457,34 @@ function MultiImageUploadZone({
     const [removed] = next.splice(srcIdx, 1)
     next.splice(destIdx, 0, removed)
     onReorder(next)
+  }
+
+  // Position-edit drag: mouse down on a thumbnail in posEditMode
+  function handlePosMouseDown(e: React.MouseEvent<HTMLDivElement>, idx: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const [origX, origY] = parsePos(images[idx].pos)
+    const startX = e.clientX
+    const startY = e.clientY
+
+    function onMove(me: MouseEvent) {
+      const dx = me.clientX - startX
+      const dy = me.clientY - startY
+      // Drag the full container width/height = 100% change in position
+      const sensX = 100 / rect.width
+      const sensY = 100 / rect.height
+      const newX = Math.max(0, Math.min(100, origX - dx * sensX))
+      const newY = Math.max(0, Math.min(100, origY - dy * sensY))
+      const newPos = `${newX.toFixed(1)}% ${newY.toFixed(1)}%`
+      onReorder(images.map((img, i) => i === idx ? { ...img, pos: newPos } : img))
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
   }
 
   const isEmpty      = images.length === 0 && tasks.length === 0
@@ -513,70 +569,108 @@ function MultiImageUploadZone({
       {/* Thumbnail grid */}
       {(images.length > 0 || tasks.length > 0) && (
         <div className="mt-3 grid grid-cols-3 gap-2">
-          {/* Saved images — draggable to reorder */}
-          {images.map((url, i) => (
-            <div
-              key={`${url}-${i}`}
-              draggable={!disabled}
-              onDragStart={(e) => {
-                setDragSrc(i)
-                e.dataTransfer.effectAllowed = 'move'
-                // Do NOT set 'Files' type — distinguishes from file drops
-                e.dataTransfer.setData('application/x-gallery-reorder', String(i))
-              }}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.stopPropagation()  // prevent outer zone from lighting up
-                if (dragSrc === null || dragSrc === i) return
-                setDragOver(i)
-              }}
-              onDragLeave={(e) => {
-                e.stopPropagation()
-                setDragOver(null)
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                if (dragSrc !== null) doReorder(dragSrc, i)
-                setDragSrc(null)
-                setDragOver(null)
-              }}
-              onDragEnd={() => { setDragSrc(null); setDragOver(null) }}
-              className={[
-                'group relative aspect-square rounded-xl overflow-hidden bg-white border transition-all select-none',
-                disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-                dragSrc === i
-                  ? 'opacity-40 scale-95 border-brand-300 border-dashed'
-                  : dragOver === i
-                  ? 'ring-2 ring-brand-400 ring-offset-1 scale-[1.04] border-brand-300'
-                  : 'border-gray-200',
-              ].join(' ')}
-            >
-              <img src={url} alt={`形象素材 ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+          {/* Saved images — draggable to reorder, click ⊕ to adjust position */}
+          {images.map((img, i) => {
+            const isPosEdit = posEditIdx === i
+            return (
+              <div
+                key={`${img.url}-${i}`}
+                draggable={!disabled && !isPosEdit}
+                onDragStart={(e) => {
+                  if (isPosEdit) { e.preventDefault(); return }
+                  setDragSrc(i)
+                  e.dataTransfer.effectAllowed = 'move'
+                  e.dataTransfer.setData('application/x-gallery-reorder', String(i))
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault(); e.stopPropagation()
+                  if (dragSrc === null || dragSrc === i) return
+                  setDragOver(i)
+                }}
+                onDragLeave={(e) => { e.stopPropagation(); setDragOver(null) }}
+                onDrop={(e) => {
+                  e.preventDefault(); e.stopPropagation()
+                  if (dragSrc !== null) doReorder(dragSrc, i)
+                  setDragSrc(null); setDragOver(null)
+                }}
+                onDragEnd={() => { setDragSrc(null); setDragOver(null) }}
+                // Position-edit: mouse down anywhere in the thumb drags the focal point
+                onMouseDown={isPosEdit ? (e) => handlePosMouseDown(e, i) : undefined}
+                className={[
+                  'group relative aspect-square rounded-xl overflow-hidden bg-white border transition-all select-none',
+                  isPosEdit
+                    ? 'ring-2 ring-brand-500 border-brand-400 cursor-move'
+                    : disabled
+                    ? 'cursor-default border-gray-200'
+                    : dragSrc === i
+                    ? 'opacity-40 scale-95 border-brand-300 border-dashed cursor-grabbing'
+                    : dragOver === i
+                    ? 'ring-2 ring-brand-400 ring-offset-1 scale-[1.04] border-brand-300 cursor-grab'
+                    : 'border-gray-200 cursor-grab active:cursor-grabbing',
+                ].join(' ')}
+              >
+                <img
+                  src={img.url}
+                  alt={`形象素材 ${i + 1}`}
+                  className="w-full h-full object-cover pointer-events-none"
+                  style={{ objectPosition: img.pos }}
+                />
 
-              {/* Drag handle icon (top-left, hover) */}
-              <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                <div className="bg-black/40 rounded px-1 py-0.5 text-white text-[10px] leading-none select-none">
-                  ⠿
-                </div>
+                {/* ── Hover controls (hidden in pos-edit mode) ── */}
+                {!isPosEdit && (
+                  <>
+                    {/* Drag handle (top-left) */}
+                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                      <div className="bg-black/40 rounded px-1 py-0.5 text-white text-[10px] leading-none">⠿</div>
+                    </div>
+                    {/* Delete (top-right) */}
+                    <button
+                      type="button"
+                      onClick={() => onRemoveImage(i)}
+                      disabled={disabled}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px]
+                                 flex items-center justify-center opacity-0 group-hover:opacity-100 transition
+                                 hover:bg-red-500 disabled:hidden"
+                    >✕</button>
+                    {/* Position-edit button (bottom-right) */}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setPosEditIdx(i) }}
+                      disabled={disabled}
+                      title="調整圖片顯示位置"
+                      className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-[11px]
+                                 flex items-center justify-center opacity-0 group-hover:opacity-100 transition
+                                 hover:bg-brand-500 disabled:hidden"
+                    >⊕</button>
+                    {/* Order badge (bottom-left) */}
+                    <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded pointer-events-none">
+                      {i + 1}
+                    </div>
+                  </>
+                )}
+
+                {/* ── Position-edit mode overlay ── */}
+                {isPosEdit && (
+                  <>
+                    <div className="absolute inset-0 bg-brand-900/10 pointer-events-none" />
+                    <div className="absolute top-1 left-1 right-1 flex items-center justify-between pointer-events-none">
+                      <span className="bg-brand-600/90 text-white text-[9px] px-1.5 py-0.5 rounded font-medium">
+                        拖曳調整位置
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setPosEditIdx(null) }}
+                      className="absolute bottom-1 right-1 bg-brand-600 text-white text-[9px] px-2 py-0.5
+                                 rounded-full font-medium hover:bg-brand-700 transition"
+                    >
+                      完成
+                    </button>
+                  </>
+                )}
               </div>
-
-              {/* Delete button (top-right, hover) */}
-              <button
-                type="button"
-                onClick={() => onRemoveImage(i)}
-                disabled={disabled}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[10px]
-                           flex items-center justify-center opacity-0 group-hover:opacity-100 transition
-                           hover:bg-red-500 disabled:hidden"
-              >✕</button>
-
-              {/* Order badge (bottom-left) */}
-              <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded pointer-events-none">
-                {i + 1}
-              </div>
-            </div>
-          ))}
+            )
+          })}
 
           {/* Uploading tasks */}
           {tasks.map((task) => (
@@ -626,8 +720,8 @@ function MultiImageUploadZone({
       {images.length > 0 && (
         <p className="mt-1.5 text-[11px] text-gray-400">
           已上傳 {images.length} 張
-          {images.length > 1 && '・拖曳縮圖可調整排列順序'}
-          ・PNG 自動轉白底
+          {images.length > 1 && '・拖曳排列順序'}
+          ・點 ⊕ 調整顯示位置・PNG 自動轉白底
         </p>
       )}
     </div>
@@ -1129,7 +1223,7 @@ function ProductEditDrawer({
   const [imageUrl,      setImageUrl]      = useState('')
   const [description,   setDescription]   = useState('')
   const [specs,         setSpecs]         = useState<SpecTable>(defaultSpecs())
-  const [galleryImages, setGalleryImages] = useState<string[]>([])
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [docs,          setDocs]          = useState<DocFile[]>([])
 
   useEffect(() => {
@@ -1144,12 +1238,7 @@ function ProductEditDrawer({
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
-        try {
-          const parsed = JSON.parse(data.rich.galleryJson ?? '[]')
-          setGalleryImages(Array.isArray(parsed) ? parsed : [])
-        } catch {
-          setGalleryImages([])
-        }
+        setGalleryImages(parseGallery(data.rich.galleryJson ?? '[]'))
         try {
           const parsed = JSON.parse(data.rich.docsJson ?? '[]')
           setDocs(Array.isArray(parsed) ? parsed : [])
@@ -1295,7 +1384,7 @@ function ProductEditDrawer({
             </div>
             <MultiImageUploadZone
               images={galleryImages}
-              onAddImage={(url) => setGalleryImages((prev) => [...prev, url])}
+              onAddImage={(img) => setGalleryImages((prev) => [...prev, img])}
               onRemoveImage={(i) => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
               onReorder={setGalleryImages}
               disabled={loading}
@@ -1413,9 +1502,7 @@ function ProductDetailCard({
   }, [])
 
   const specs: SpecTable = rich ? parseSpecs(rich.specsJson) : defaultSpecs()
-  const galleryImages: string[] = (() => {
-    try { const p = JSON.parse(rich?.galleryJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
-  })()
+  const galleryImages: GalleryImage[] = parseGallery(rich?.galleryJson ?? '[]')
   const docs: DocFile[] = (() => {
     try { const p = JSON.parse(rich?.docsJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
   })()
@@ -1598,11 +1685,12 @@ function ProductDetailCard({
                     形象素材 <span className="text-gray-300 font-normal normal-case tracking-normal">（點擊放大）</span>
                   </p>
                   <div className="flex gap-2 overflow-x-auto pb-1">
-                    {galleryImages.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    {galleryImages.map((img, i) => (
+                      <a key={i} href={img.url} target="_blank" rel="noopener noreferrer"
                         className="shrink-0 w-28 h-28 rounded-xl overflow-hidden bg-white border border-gray-200
                                    hover:border-brand-300 hover:shadow-md transition-all">
-                        <img src={url} alt={`素材 ${i + 1}`} className="w-full h-full object-cover"/>
+                        <img src={img.url} alt={`素材 ${i + 1}`} className="w-full h-full object-cover"
+                          style={{ objectPosition: img.pos }} />
                       </a>
                     ))}
                   </div>
