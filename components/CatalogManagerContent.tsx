@@ -344,15 +344,19 @@ function MultiImageUploadZone({
   images,
   onAddImage,
   onRemoveImage,
+  onReorder,
   disabled,
 }: {
   images:        string[]
   onAddImage:    (url: string) => void
   onRemoveImage: (index: number) => void
+  onReorder:     (newImages: string[]) => void
   disabled:      boolean
 }) {
-  const [dragging, setDragging] = useState(false)
-  const [tasks,    setTasks]    = useState<UploadTask[]>([])
+  const [dragging,  setDragging]  = useState(false)  // file drag from outside
+  const [tasks,     setTasks]     = useState<UploadTask[]>([])
+  const [dragSrc,   setDragSrc]   = useState<number | null>(null)   // index being dragged
+  const [dragOver,  setDragOver]  = useState<number | null>(null)   // index being hovered
   const fileRef    = useRef<HTMLInputElement>(null)
   const counterRef = useRef(0)
 
@@ -405,9 +409,11 @@ function MultiImageUploadZone({
     }
   }, [onAddImage])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
+    // Only handle external file drops; internal reorder is handled by thumbnails
+    if (!e.dataTransfer.types.includes('Files')) return
     processFiles(Array.from(e.dataTransfer.files))
   }, [processFiles])
 
@@ -416,16 +422,29 @@ function MultiImageUploadZone({
     e.target.value = ''
   }
 
+  // Reorder helpers
+  function doReorder(srcIdx: number, destIdx: number) {
+    if (srcIdx === destIdx) return
+    const next = [...images]
+    const [removed] = next.splice(srcIdx, 1)
+    next.splice(destIdx, 0, removed)
+    onReorder(next)
+  }
+
   const isEmpty      = images.length === 0 && tasks.length === 0
   const isUploading  = tasks.some((t) => t.status === 'compressing' || t.status === 'uploading')
 
   return (
     <div>
-      {/* Drop zone */}
+      {/* Drop zone — only for external file drags */}
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+        onDragOver={(e) => {
+          e.preventDefault()
+          // Only light up for external file drags, not internal reorder drags
+          if (e.dataTransfer.types.includes('Files')) setDragging(true)
+        }}
         onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
+        onDrop={handleFileDrop}
         onClick={() => !disabled && !isUploading && fileRef.current?.click()}
         className={[
           'relative w-full rounded-2xl border-2 border-dashed transition',
@@ -494,11 +513,55 @@ function MultiImageUploadZone({
       {/* Thumbnail grid */}
       {(images.length > 0 || tasks.length > 0) && (
         <div className="mt-3 grid grid-cols-3 gap-2">
-          {/* Saved images */}
+          {/* Saved images — draggable to reorder */}
           {images.map((url, i) => (
-            <div key={`${url}-${i}`}
-              className="group relative aspect-square rounded-xl overflow-hidden bg-white border border-gray-200">
-              <img src={url} alt={`形象素材 ${i + 1}`} className="w-full h-full object-cover" />
+            <div
+              key={`${url}-${i}`}
+              draggable={!disabled}
+              onDragStart={(e) => {
+                setDragSrc(i)
+                e.dataTransfer.effectAllowed = 'move'
+                // Do NOT set 'Files' type — distinguishes from file drops
+                e.dataTransfer.setData('application/x-gallery-reorder', String(i))
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.stopPropagation()  // prevent outer zone from lighting up
+                if (dragSrc === null || dragSrc === i) return
+                setDragOver(i)
+              }}
+              onDragLeave={(e) => {
+                e.stopPropagation()
+                setDragOver(null)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (dragSrc !== null) doReorder(dragSrc, i)
+                setDragSrc(null)
+                setDragOver(null)
+              }}
+              onDragEnd={() => { setDragSrc(null); setDragOver(null) }}
+              className={[
+                'group relative aspect-square rounded-xl overflow-hidden bg-white border transition-all select-none',
+                disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
+                dragSrc === i
+                  ? 'opacity-40 scale-95 border-brand-300 border-dashed'
+                  : dragOver === i
+                  ? 'ring-2 ring-brand-400 ring-offset-1 scale-[1.04] border-brand-300'
+                  : 'border-gray-200',
+              ].join(' ')}
+            >
+              <img src={url} alt={`形象素材 ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+
+              {/* Drag handle icon (top-left, hover) */}
+              <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                <div className="bg-black/40 rounded px-1 py-0.5 text-white text-[10px] leading-none select-none">
+                  ⠿
+                </div>
+              </div>
+
+              {/* Delete button (top-right, hover) */}
               <button
                 type="button"
                 onClick={() => onRemoveImage(i)}
@@ -507,7 +570,9 @@ function MultiImageUploadZone({
                            flex items-center justify-center opacity-0 group-hover:opacity-100 transition
                            hover:bg-red-500 disabled:hidden"
               >✕</button>
-              <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded">
+
+              {/* Order badge (bottom-left) */}
+              <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded pointer-events-none">
                 {i + 1}
               </div>
             </div>
@@ -559,7 +624,11 @@ function MultiImageUploadZone({
       )}
 
       {images.length > 0 && (
-        <p className="mt-1.5 text-[11px] text-gray-400">已上傳 {images.length} 張・PNG 自動轉白底</p>
+        <p className="mt-1.5 text-[11px] text-gray-400">
+          已上傳 {images.length} 張
+          {images.length > 1 && '・拖曳縮圖可調整排列順序'}
+          ・PNG 自動轉白底
+        </p>
       )}
     </div>
   )
@@ -1228,6 +1297,7 @@ function ProductEditDrawer({
               images={galleryImages}
               onAddImage={(url) => setGalleryImages((prev) => [...prev, url])}
               onRemoveImage={(i) => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
+              onReorder={setGalleryImages}
               disabled={loading}
             />
           </div>
