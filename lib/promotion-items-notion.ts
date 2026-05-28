@@ -98,9 +98,11 @@ export interface PromotionItem {
   id:              string
   promotionId:     string
   promotionName:   string
-  skuCode:         string
+  skuCode:         string   // 空字串時表示這是系列層級品項
   skuName:         string
   brand:           string
+  seriesId:        string   // ProductFamily.id；非空時為系列層級
+  seriesName:      string
   condition:       string           // human-readable summary (free text)
   conditionType:   ConditionType | null
   conditionParams: ConditionParams | null
@@ -137,6 +139,12 @@ export function ensurePromotionItemFields(): Promise<void> {
       if (!props['usedQuota'])
         updates['usedQuota'] = { number: { format: 'number' } }
 
+      if (!props['seriesId'])
+        updates['seriesId'] = { rich_text: {} }
+
+      if (!props['seriesName'])
+        updates['seriesName'] = { rich_text: {} }
+
       if (Object.keys(updates).length > 0)
         await notion.databases.update({ database_id: DB, properties: updates })
     } catch {
@@ -166,6 +174,8 @@ function parsePage(page: any): PromotionItem {
     skuCode:         getText(page, '貨號'),
     skuName:         getText(page, '品名'),
     brand:           getText(page, '品牌'),
+    seriesId:        getText(page, 'seriesId'),
+    seriesName:      getText(page, 'seriesName'),
     condition:       getText(page, '促銷條件'),
     conditionType:   conditionType as ConditionType | null,
     conditionParams,
@@ -200,16 +210,18 @@ export async function listItemsByPromotion(promotionId: string): Promise<Promoti
 // ── Write ─────────────────────────────────────────────────────
 
 export async function createPromotionItem(data: {
-  promotionId:     string
-  promotionName:   string
-  skuCode:         string
-  skuName:         string
-  brand:           string
-  condition?:      string
-  conditionType?:  ConditionType
+  promotionId:      string
+  promotionName:    string
+  skuCode:          string
+  skuName:          string
+  brand:            string
+  seriesId?:        string
+  seriesName?:      string
+  condition?:       string
+  conditionType?:   ConditionType
   conditionParams?: ConditionParams
-  price?:          number | null
-  adminNote?:      string
+  price?:           number | null
+  adminNote?:       string
 }): Promise<PromotionItem> {
   await ensurePromotionItemFields()
   const page: any = await notion.pages.create({
@@ -220,6 +232,8 @@ export async function createPromotionItem(data: {
       '活動名稱':      { rich_text: richText(data.promotionName) },
       '貨號':          { rich_text: richText(data.skuCode) },
       '品牌':          { rich_text: richText(data.brand) },
+      'seriesId':      { rich_text: richText(data.seriesId   ?? '') },
+      'seriesName':    { rich_text: richText(data.seriesName ?? '') },
       '促銷條件':      { rich_text: richText(data.condition ?? '') },
       'conditionType': data.conditionType ? { select: { name: data.conditionType } } : { select: null },
       'conditionParams': data.conditionParams

@@ -27,8 +27,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  if (!body?.skuCode || !body?.skuName)
-    return NextResponse.json({ error: '缺少商品資訊' }, { status: 400 })
+  // 系列層級品項：skuCode 可為空，但 skuName（或 seriesName）必填
+  if (!body?.skuName && !body?.seriesName)
+    return NextResponse.json({ error: '缺少商品或系列名稱' }, { status: 400 })
 
   // Fetch promotion name for denormalization
   const promo = await getPromotionById(params.id)
@@ -38,9 +39,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const item = await createPromotionItem({
       promotionId:     params.id,
       promotionName:   promo.name,
-      skuCode:         body.skuCode,
+      skuCode:         body.skuCode   ?? '',
       skuName:         body.skuName,
-      brand:           body.brand ?? '',
+      brand:           body.brand     ?? '',
+      seriesId:        body.seriesId  ?? '',
+      seriesName:      body.seriesName ?? '',
       condition:       body.condition,
       conditionType:   body.conditionType,
       conditionParams: body.conditionParams,

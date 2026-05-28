@@ -473,6 +473,71 @@ function ConditionEditor({ conditionType, conditionParams, onChange }: {
   )
 }
 
+// ── Series picker (for series-level promotion items) ──────────
+
+interface SeriesResult {
+  id:          string
+  seriesCode:  string
+  seriesName:  string
+  brand:       string
+  productType: string
+  category:    string
+}
+
+function SeriesPicker({ onSelect }: { onSelect: (s: SeriesResult) => void }) {
+  const [families, setFamilies] = useState<SeriesResult[]>([])
+  const [q,        setQ]        = useState('')
+  const [loading,  setLoading]  = useState(true)
+
+  useEffect(() => {
+    fetch('/api/products/families')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setFamilies(data) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtered = q.trim()
+    ? families.filter((f) =>
+        f.seriesName.toLowerCase().includes(q.toLowerCase()) ||
+        f.brand.toLowerCase().includes(q.toLowerCase()) ||
+        f.seriesCode.toLowerCase().includes(q.toLowerCase())
+      )
+    : families
+
+  return (
+    <div>
+      <input
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="搜尋系列名稱或品牌…"
+        autoFocus
+        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+      />
+      {loading && <p className="text-xs text-gray-400 mt-2 text-center">載入中…</p>}
+      {!loading && filtered.length === 0 && (
+        <p className="text-xs text-gray-400 mt-2 text-center">找不到符合的系列</p>
+      )}
+      {filtered.length > 0 && (
+        <div className="mt-2 border rounded-lg divide-y overflow-hidden max-h-64 overflow-y-auto">
+          {filtered.slice(0, 40).map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => onSelect(f)}
+              className="w-full text-left px-3 py-2.5 hover:bg-brand-50 transition"
+            >
+              <p className="text-sm font-medium text-gray-800">{f.seriesName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{f.brand} · {f.productType}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Product search for adding items ──────────────────────────
 
 interface SearchResult { skuCode: string; name: string; manufacturer: string; productType: string; category: string }
@@ -598,7 +663,10 @@ function ItemRow({ item, onUpdate, onDelete }: {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{item.skuName}</span>
-            <span className="text-xs text-gray-400 font-mono">{item.skuCode}</span>
+            {item.seriesId
+              ? <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 border border-violet-200">系列</span>
+              : item.skuCode && <span className="text-xs text-gray-400 font-mono">{item.skuCode}</span>
+            }
             {item.brand && <span className="text-xs text-gray-400">{item.brand}</span>}
           </div>
 
@@ -747,6 +815,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
   const [items,        setItems]        = useState<PromotionItem[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [showSearch,   setShowSearch]   = useState(false)
+  const [addMode,      setAddMode]      = useState<'sku' | 'series'>('sku')
   const [addingItem,   setAddingItem]   = useState(false)
 
   useEffect(() => {
@@ -774,6 +843,29 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
       const res = await fetch(`/api/promotions/${promo.id}/items`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skuCode: r.skuCode, skuName: r.name, brand: r.manufacturer }),
+      })
+      const item = await res.json()
+      if (res.ok) setItems((prev) => [...prev, item])
+    } catch {}
+    finally { setAddingItem(false); setShowSearch(false) }
+  }
+
+  const handleAddSeries = async (s: SeriesResult) => {
+    if (items.find((it) => it.seriesId === s.id)) {
+      alert(`「${s.seriesName}」系列已在此活動中`)
+      return
+    }
+    setAddingItem(true)
+    try {
+      const res = await fetch(`/api/promotions/${promo.id}/items`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          skuCode:    '',
+          skuName:    s.seriesName,
+          brand:      s.brand,
+          seriesId:   s.id,
+          seriesName: s.seriesName,
+        }),
       })
       const item = await res.json()
       if (res.ok) setItems((prev) => [...prev, item])
@@ -870,7 +962,28 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
                   className="overflow-hidden"
                 >
                   <div className="pt-1">
-                    <ProductSearchPicker onSelect={handleAddProduct} />
+                    {/* 模式切換 */}
+                    <div className="flex gap-1 mb-2">
+                      {(['sku', 'series'] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setAddMode(m)}
+                          className={[
+                            'px-3 py-1 rounded-full text-xs font-medium border transition',
+                            addMode === m
+                              ? 'bg-brand-500 border-brand-500 text-white'
+                              : 'border-gray-300 text-gray-500 hover:border-brand-400 hover:text-brand-600',
+                          ].join(' ')}
+                        >
+                          {m === 'sku' ? '單一商品' : '商品系列'}
+                        </button>
+                      ))}
+                    </div>
+                    {addMode === 'sku'
+                      ? <ProductSearchPicker onSelect={handleAddProduct} />
+                      : <SeriesPicker onSelect={handleAddSeries} />
+                    }
                   </div>
                 </motion.div>
               )}

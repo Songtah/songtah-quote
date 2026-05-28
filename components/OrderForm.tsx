@@ -1491,7 +1491,12 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       }
 
       // 找對應的已確認促銷品項
-      const promoItem = promoItems.find((p) => p.skuCode === partial.skuCode)
+      // 優先精確 SKU 比對；找不到時以系列 ID 比對（系列層級品項）
+      const promoItem =
+        promoItems.find((p) => p.skuCode && p.skuCode === partial.skuCode) ??
+        (partial.seriesId
+          ? promoItems.find((p) => p.seriesId && p.seriesId === partial.seriesId)
+          : undefined)
 
       if (!promoItem?.conditionType) {
         setItems((prev) => [...prev, newItem])
@@ -1558,7 +1563,9 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
     (item: OrderItem, newQty: number) => {
       updateItem(item.id, { quantity: newQty })
 
-      const promoItem = promoItems.find((p) => p.skuCode === item.skuCode)
+      const promoItem =
+        promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
+        (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
       if (!promoItem?.conditionType || !promoItem.conditionParams) return
 
       const p = promoItem.conditionParams as any
