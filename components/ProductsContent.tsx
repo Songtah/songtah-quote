@@ -294,6 +294,111 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
   )
 }
 
+// ── Family browse types ────────────────────────────────────────────────────────
+
+type FamilyInfo = {
+  id: string
+  seriesName: string
+  brand: string
+  productType: string
+  category: string
+}
+
+type FamilyMember = {
+  code: string
+  name: string
+  brand: string
+  category: string
+  productType: string
+}
+
+// ── Family Card (browse mode) ─────────────────────────────────────────────────
+
+function FamilyBrowseCard({
+  family,
+  isExpanded,
+  members,
+  membersLoading,
+  onToggle,
+  onSelectMember,
+}: {
+  family: FamilyInfo
+  isExpanded: boolean
+  members: FamilyMember[] | undefined
+  membersLoading: boolean
+  onToggle: () => void
+  onSelectMember: (m: FamilyMember) => void
+}) {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Card header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors"
+      >
+        <span className={`text-gray-400 text-xs transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{family.seriesName}</p>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {family.brand && (
+              <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-500 font-medium">
+                {family.brand}
+              </span>
+            )}
+            {family.productType && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium">
+                {family.productType}
+              </span>
+            )}
+          </div>
+        </div>
+        <span className="text-xs text-gray-400 shrink-0">
+          {isExpanded ? '收起' : '展開查看'}
+        </span>
+      </button>
+
+      {/* Expanded member list */}
+      {isExpanded && (
+        <div className="border-t border-gray-100">
+          {membersLoading ? (
+            <div className="px-4 py-3 space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-3.5 w-1/2 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-3 w-1/4 bg-gray-50 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : members && members.length > 0 ? (
+            members.map((m) => (
+              <button
+                key={m.code}
+                onClick={() => onSelectMember(m)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
+                  <p className="font-mono text-[10px] text-gray-400 mt-0.5">{m.code}</p>
+                </div>
+                {m.category && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block shrink-0">
+                    {m.category}
+                  </span>
+                )}
+                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ))
+          ) : (
+            <p className="px-4 py-4 text-sm text-gray-400 text-center">此系列暫無商品</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export function ProductsContent({
   total,
@@ -317,6 +422,12 @@ export function ProductsContent({
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null)
 
+  // Family browse state
+  const [families, setFamilies] = useState<FamilyInfo[]>([])
+  const [expandedFamily, setExpandedFamily] = useState<string | null>(null)
+  const [familyMembers, setFamilyMembers] = useState<Map<string, FamilyMember[]>>(new Map())
+  const [familyMembersLoading, setFamilyMembersLoading] = useState<Set<string>>(new Set())
+
   // Bug report modal
   const [bugOpen, setBugOpen] = useState(false)
   const [bugPage, setBugPage] = useState('')
@@ -327,6 +438,41 @@ export function ProductsContent({
 
   const advancedFilterCount = [activeBrand, activeCategory].filter(Boolean).length
   const hasAnyFilter = activeType !== '' || activeBrand !== '' || activeCategory !== ''
+  const isSearchMode = query.trim() !== '' || hasAnyFilter
+
+  // Fetch families on mount (for browse mode)
+  useEffect(() => {
+    fetch('/api/products/families')
+      .then((r) => r.json())
+      .then((data) => setFamilies(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
+  // Toggle family expansion (accordion: only one open at a time)
+  const handleFamilyToggle = async (familyId: string) => {
+    if (expandedFamily === familyId) {
+      setExpandedFamily(null)
+      return
+    }
+    setExpandedFamily(familyId)
+    // If not yet cached, fetch members
+    if (!familyMembers.has(familyId)) {
+      setFamilyMembersLoading((prev) => new Set(prev).add(familyId))
+      try {
+        const res = await fetch(`/api/products/families/${encodeURIComponent(familyId)}`)
+        const data = await res.json()
+        setFamilyMembers((prev) => new Map(prev).set(familyId, data.members ?? []))
+      } catch {
+        setFamilyMembers((prev) => new Map(prev).set(familyId, []))
+      } finally {
+        setFamilyMembersLoading((prev) => {
+          const next = new Set(prev)
+          next.delete(familyId)
+          return next
+        })
+      }
+    }
+  }
 
   useEffect(() => {
     clearTimeout(debounceRef.current)
@@ -502,81 +648,128 @@ export function ProductsContent({
       </div>
 
       {/* 產品列表 */}
-      {!initialized ? (
-        <div className="panel divide-y divide-gray-50">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 animate-pulse shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3.5 w-2/3 bg-gray-100 rounded animate-pulse" />
-                <div className="h-3 w-1/3 bg-gray-50 rounded animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : results.length === 0 ? (
-        <div className="panel px-5 py-16 text-center text-sm text-gray-400">
-          {query.trim() || activeBrand || activeType ? '找不到符合的產品，請嘗試其他關鍵字或貨品碼' : '請輸入搜尋關鍵字或選擇篩選條件'}
-        </div>
-      ) : (
-        <motion.div
-          key={results.map(p => p.id).join(',')}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
-          className="panel divide-y divide-gray-50 overflow-hidden"
-        >
-          {results.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedProduct(p)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-            >
-              {/* Code badge — desktop left column, hidden on mobile */}
-              <div className="shrink-0 w-28 text-right hidden sm:block">
-                <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded truncate inline-block max-w-full">
-                  {p.skuCode || p.id}
-                </span>
-              </div>
-              {/* Name + meta (+ code on mobile) */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {p.manufacturer && (
-                    <p className="text-xs text-gray-400 truncate">{p.manufacturer}</p>
-                  )}
-                  {/* Code shown inline on mobile only */}
-                  {(p.skuCode || p.id) && (
-                    <span className="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded sm:hidden">
-                      {p.skuCode || p.id}
-                    </span>
-                  )}
+      {isSearchMode ? (
+        /* ── Search mode: flat list ─────────────────────── */
+        !initialized ? (
+          <div className="panel divide-y divide-gray-50">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-2/3 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-3 w-1/3 bg-gray-50 rounded animate-pulse" />
                 </div>
               </div>
-              {/* Category badge + arrow */}
-              <div className="shrink-0 flex gap-1.5 items-center">
-                {p.category && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block">
-                    {p.category}
+            ))}
+          </div>
+        ) : results.length === 0 ? (
+          <div className="panel px-5 py-16 text-center text-sm text-gray-400">
+            找不到符合的產品，請嘗試其他關鍵字或貨品碼
+          </div>
+        ) : (
+          <motion.div
+            key={results.map(p => p.id).join(',')}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="panel divide-y divide-gray-50 overflow-hidden"
+          >
+            {results.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedProduct(p)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+              >
+                {/* Code badge — desktop left column, hidden on mobile */}
+                <div className="shrink-0 w-28 text-right hidden sm:block">
+                  <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded truncate inline-block max-w-full">
+                    {p.skuCode || p.id}
                   </span>
-                )}
-                {p.productType && (
-                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-500 whitespace-nowrap hidden md:inline-block">
-                    {p.productType}
-                  </span>
-                )}
-                <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </button>
-          ))}
-          {results.length === 50 && (
-            <p className="text-xs text-center text-gray-400 py-3">
-              顯示前 50 筆，請輸入更精確的關鍵字縮小範圍
-            </p>
+                </div>
+                {/* Name + meta (+ code on mobile) */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {p.manufacturer && (
+                      <p className="text-xs text-gray-400 truncate">{p.manufacturer}</p>
+                    )}
+                    {/* Code shown inline on mobile only */}
+                    {(p.skuCode || p.id) && (
+                      <span className="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded sm:hidden">
+                        {p.skuCode || p.id}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Category badge + arrow */}
+                <div className="shrink-0 flex gap-1.5 items-center">
+                  {p.category && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block">
+                      {p.category}
+                    </span>
+                  )}
+                  {p.productType && (
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-500 whitespace-nowrap hidden md:inline-block">
+                      {p.productType}
+                    </span>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
+            {results.length === 50 && (
+              <p className="text-xs text-center text-gray-400 py-3">
+                顯示前 50 筆，請輸入更精確的關鍵字縮小範圍
+              </p>
+            )}
+          </motion.div>
+        )
+      ) : (
+        /* ── Browse mode: family cards ──────────────────── */
+        <div className="space-y-2">
+          {families.length === 0 ? (
+            <div className="panel divide-y divide-gray-50">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-2/3 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-3 w-1/3 bg-gray-50 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {families.map((family) => (
+                <FamilyBrowseCard
+                  key={family.id}
+                  family={family}
+                  isExpanded={expandedFamily === family.id}
+                  members={familyMembers.get(family.id)}
+                  membersLoading={familyMembersLoading.has(family.id)}
+                  onToggle={() => handleFamilyToggle(family.id)}
+                  onSelectMember={(m) => {
+                    setSelectedProduct({
+                      id: m.code,
+                      name: m.name,
+                      manufacturer: m.brand,
+                      productType: m.productType,
+                      category: m.category,
+                      price: null,
+                      salePrice: null,
+                      notes: '',
+                      skuCode: m.code,
+                    })
+                  }}
+                />
+              ))}
+              <p className="text-center text-xs text-gray-400 pt-2">找不到？請使用搜尋框</p>
+            </>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* 產品詳細側板 */}

@@ -33,6 +33,7 @@ function ensureFields(): Promise<void> {
             '技術規格': { rich_text: {} },  // JSON: { columns, rows }
             '形象素材': { rich_text: {} },  // JSON: string[] of image URLs
             '文件資料': { rich_text: {} },  // JSON: { name, url, size }[]
+            '系列群組': { rich_text: {} },  // manually assigned family ID
           } as any,
         })
         _specsFieldReady = true
@@ -79,6 +80,7 @@ export interface ProductRichData {
   specsJson:   string          // 技術規格 — raw JSON stored in Notion; parse on client
   galleryJson: string          // 形象素材 — JSON: string[] of image URLs
   docsJson:    string          // 文件資料 — JSON: { name, url, size }[]
+  familyId:    string          // 系列群組 — manually assigned family ID
 }
 
 export interface CatalogSnapshot {
@@ -113,6 +115,7 @@ export async function getProductRichData(skuCode: string): Promise<ProductRichDa
     specsJson:   readRichText(page, '技術規格'),
     galleryJson: readRichText(page, '形象素材'),
     docsJson:    readRichText(page, '文件資料'),
+    familyId:    readRichText(page, '系列群組'),
   }
 }
 
@@ -132,6 +135,7 @@ export async function upsertProductRichData(
     specsJson?:   string
     galleryJson?: string
     docsJson?:    string
+    familyId?:    string
   }
 ): Promise<string> {
   await ensureFields()
@@ -151,6 +155,8 @@ export async function upsertProductRichData(
     props['形象素材'] = { rich_text: richText(data.galleryJson) }
   if (data.docsJson !== undefined && _specsFieldReady)
     props['文件資料'] = { rich_text: richText(data.docsJson) }
+  if (data.familyId !== undefined && _specsFieldReady)
+    props['系列群組'] = { rich_text: richText(data.familyId) }
 
   // Check if a page already exists for this SKU
   const existing = await getProductRichData(skuCode)
@@ -181,4 +187,26 @@ export async function upsertProductRichData(
   } as any) as any
 
   return page.id
+}
+
+// ── Query by family ID ────────────────────────────────────────
+
+/**
+ * Returns all SKU codes (貨號) in Notion Products DB that have 系列群組 === familyId.
+ */
+export async function listSkusByFamilyId(familyId: string): Promise<string[]> {
+  await ensureFields()
+  const results: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: DB_PRODUCTS,
+      filter: { property: '系列群組', rich_text: { equals: familyId } },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    results.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return results.map((p: any) => readRichText(p, '貨號')).filter(Boolean)
 }

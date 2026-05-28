@@ -1208,10 +1208,12 @@ function ProductEditDrawer({
   skuCode,
   onClose,
   onSaved,
+  allFamilies,
 }: {
   skuCode: string
   onClose: () => void
   onSaved: (skuCode: string, price: number | null, imageUrl: string) => void
+  allFamilies: ProductFamily[]
 }) {
   const [catalog, setCatalog] = useState<CatalogItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -1226,6 +1228,12 @@ function ProductEditDrawer({
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [docs,          setDocs]          = useState<DocFile[]>([])
 
+  // Family assignment state
+  const [selectedFamilyId, setSelectedFamilyId] = useState('')
+  const [familySaving,     setFamilySaving]      = useState(false)
+  const [familySaved,      setFamilySaved]        = useState(false)
+  const [familyError,      setFamilyError]        = useState('')
+
   useEffect(() => {
     setLoading(true)
     setError('')
@@ -1239,6 +1247,7 @@ function ProductEditDrawer({
         setDescription(data.rich.description ?? '')
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
         setGalleryImages(parseGallery(data.rich.galleryJson ?? '[]'))
+        setSelectedFamilyId(data.rich.familyId ?? '')
         try {
           const parsed = JSON.parse(data.rich.docsJson ?? '[]')
           setDocs(Array.isArray(parsed) ? parsed : [])
@@ -1249,6 +1258,33 @@ function ProductEditDrawer({
       .catch(() => setError('無法載入商品資料'))
       .finally(() => setLoading(false))
   }, [skuCode])
+
+  const handleSaveFamily = async (familyIdToSave: string) => {
+    setFamilySaving(true)
+    setFamilyError('')
+    setFamilySaved(false)
+    try {
+      const res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ familyId: familyIdToSave }),
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        let msg = `儲存失敗（HTTP ${res.status}）`
+        try { msg = JSON.parse(text)?.error ?? msg } catch {}
+        setFamilyError(msg)
+      } else {
+        setSelectedFamilyId(familyIdToSave)
+        setFamilySaved(true)
+        setTimeout(() => setFamilySaved(false), 2000)
+      }
+    } catch (err: any) {
+      setFamilyError(err.message ?? '網路中斷，請稍後再試')
+    } finally {
+      setFamilySaving(false)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -1348,6 +1384,58 @@ function ProductEditDrawer({
               )}
             </div>
           )}
+
+          {/* 系列群組 — family assignment */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-0">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">系列群組</p>
+            <div className="space-y-3">
+              <select
+                value={selectedFamilyId}
+                onChange={(e) => setSelectedFamilyId(e.target.value)}
+                disabled={loading || familySaving}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent bg-white disabled:opacity-50"
+              >
+                <option value="">— 未指定（依貨號自動歸類）—</option>
+                {[...allFamilies].sort((a, b) => a.seriesName.localeCompare(b.seriesName, 'zh-TW')).map((f) => (
+                  <option key={f.id} value={f.id}>{f.seriesName} ({f.brand})</option>
+                ))}
+              </select>
+
+              {familyError && (
+                <p className="text-xs text-red-500">{familyError}</p>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSaveFamily(selectedFamilyId)}
+                  disabled={loading || familySaving}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {familySaving ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      儲存中…
+                    </>
+                  ) : familySaved ? '✓ 已儲存' : '儲存群組設定'}
+                </button>
+
+                {selectedFamilyId && (
+                  <button
+                    type="button"
+                    onClick={() => handleSaveFamily('')}
+                    disabled={loading || familySaving}
+                    className="px-4 py-2 rounded-lg text-xs font-medium border border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                  >
+                    清除手動指定
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* 售價 */}
           <div>
@@ -2251,6 +2339,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
             skuCode={editingItem.code}
             onClose={() => setEditingItem(null)}
             onSaved={handleSaved}
+            allFamilies={families}
           />
         )}
       </AnimatePresence>
