@@ -3,12 +3,23 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { OrderItem } from '@/lib/orders-notion'
+import type { OrderItem, ItemType } from '@/lib/orders-notion'
 
+interface ActivePromotion { id: string; name: string; type: string; startDate: string; endDate: string }
 
 // Inline to avoid importing server-side Notion client in the browser bundle
 const calcTotal = (items: OrderItem[]): number =>
-  items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
+  items.reduce((sum, it) => {
+    if (it.itemType === 'gift' || it.itemType === 'sample') return sum
+    return sum + it.quantity * (it.unitPrice || 0)
+  }, 0)
+
+const ITEM_TYPE_LABEL: Record<ItemType, string>  = { normal: '一般', gift: '贈品', sample: '樣品' }
+const ITEM_TYPE_COLOR: Record<ItemType, string>  = {
+  normal: 'bg-gray-100 text-gray-600',
+  gift:   'bg-green-100 text-green-700',
+  sample: 'bg-blue-100 text-blue-700',
+}
 
 // ── 產品目錄型別 (對應 /api/products/search + /api/products/families) ──
 
@@ -1256,6 +1267,8 @@ interface OrderFormProps {
     customerPhone?: string
     contactPerson?: string
     customerTaxId?: string
+    promotionId?:   string
+    promotionName?: string
   }
   canEdit?: boolean
 }
@@ -1282,6 +1295,11 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Promotion
+  const [promotionId,   setPromotionId]   = useState(initialOrder?.promotionId   ?? '')
+  const [promotionName, setPromotionName] = useState(initialOrder?.promotionName ?? '')
+  const [activePromos,  setActivePromos]  = useState<ActivePromotion[]>([])
+
   // 客戶資訊
   const [customer, setCustomer] = useState<SelectedCustomer>({
     id: initialOrder?.customerId ?? '',
@@ -1298,6 +1316,14 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
     fetch('/api/visits/options')
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data?.salespersons)) setSalespersonOptions(data.salespersons) })
+      .catch(() => {})
+  }, [])
+
+  // Load active promotions for the dropdown
+  useEffect(() => {
+    fetch('/api/promotions?active=1')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setActivePromos(data) })
       .catch(() => {})
   }, [])
 
@@ -1365,7 +1391,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
         contactPerson: customer.contactPerson,
         customerTaxId: customer.taxId,
       }
-      const body = JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload })
+      const body = JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload, promotionId, promotionName })
       const res = isEdit && initialOrder
         ? await fetch(`/api/orders/${initialOrder.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body,
@@ -1472,6 +1498,31 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               placeholder="訂單備註（選填）"
               className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
+          </div>
+
+          {/* Promotion selector */}
+          <div className="w-full sm:w-auto">
+            <label className="block text-xs text-gray-500 mb-1">關聯促銷活動</label>
+            <select
+              value={promotionId}
+              onChange={(e) => {
+                const id = e.target.value
+                const promo = activePromos.find((p) => p.id === id)
+                setPromotionId(id)
+                setPromotionName(promo?.name ?? '')
+              }}
+              disabled={!canEdit}
+              className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 max-w-[220px]"
+            >
+              <option value="">— 無關聯活動 —</option>
+              {activePromos.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+              {/* If the order already has a promotion that's now ended, still show it */}
+              {promotionId && !activePromos.find((p) => p.id === promotionId) && (
+                <option value={promotionId}>{promotionName}</option>
+              )}
+            </select>
           </div>
         </div>
       </div>
@@ -1580,6 +1631,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
                   <th className="px-3 py-2.5 text-left">貨品碼</th>
                   <th className="px-3 py-2.5 text-left">品牌</th>
                   <th className="px-3 py-2.5 text-left">品名</th>
+                  <th className="px-3 py-2.5 text-center w-20">類型</th>
                   <th className="px-3 py-2.5 text-center w-24">數量</th>
                   <th className="px-3 py-2.5 text-right w-28">單價</th>
                   <th className="px-3 py-2.5 text-right w-28">金額</th>
@@ -1589,15 +1641,38 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               </thead>
               <tbody className="divide-y">
                 {items.map((item, idx) => {
-                  const qty = Math.max(1, item.quantity || 1)
-                  const price = item.unitPrice || 0
-                  const lineAmt = qty * price
+                  const type     = (item.itemType ?? 'normal') as ItemType
+                  const isGift   = type === 'gift' || type === 'sample'
+                  const qty      = Math.max(1, item.quantity || 1)
+                  const price    = isGift ? 0 : (item.unitPrice || 0)
+                  const lineAmt  = qty * price
                   return (
-                    <tr key={item.id} className="hover:bg-gray-50">
+                    <tr key={item.id} className={isGift ? 'bg-green-50/40 hover:bg-green-50' : 'hover:bg-gray-50'}>
                       <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
                       <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
                       <td className="px-3 py-2.5 text-gray-800 font-medium">{item.skuName}</td>
+
+                      {/* 類型 */}
+                      <td className="px-3 py-2.5 text-center">
+                        <select
+                          value={type}
+                          onChange={(e) => {
+                            const next = e.target.value as ItemType
+                            updateItem(item.id, {
+                              itemType:  next,
+                              unitPrice: next === 'gift' || next === 'sample' ? 0 : item.unitPrice,
+                            })
+                          }}
+                          disabled={!canEdit}
+                          className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300 ${ITEM_TYPE_COLOR[type]}`}
+                        >
+                          <option value="normal">一般</option>
+                          <option value="gift">贈品</option>
+                          <option value="sample">樣品</option>
+                        </select>
+                      </td>
+
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1">
                           <button
@@ -1618,22 +1693,28 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
                         </div>
                       </td>
                       <td className="px-3 py-2.5">
-                        <input
-                          type="number"
-                          min={0}
-                          value={price > 0 ? price : ''}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value)
-                            updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
-                          }}
-                          placeholder="—"
-                          className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
-                        />
+                        {isGift ? (
+                          <span className="block text-right text-sm text-green-600 font-medium">$0</span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={0}
+                            value={price > 0 ? price : ''}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value)
+                              updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
+                            }}
+                            placeholder="—"
+                            className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
-                        {price > 0
-                          ? lineAmt.toLocaleString()
-                          : <span className="text-gray-300">—</span>}
+                        {isGift
+                          ? <span className="text-green-500 text-xs">贈送</span>
+                          : price > 0
+                            ? lineAmt.toLocaleString()
+                            : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-3 py-2.5">
                         <input
@@ -1656,7 +1737,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
               </tbody>
               <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
                 <tr className="border-t-2 bg-gray-50">
-                  <td colSpan={6} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計</td>
+                  <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計（不含贈品）</td>
                   <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
                     {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
                   </td>

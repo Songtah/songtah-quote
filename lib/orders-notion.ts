@@ -4,6 +4,46 @@ const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const ORDERS_DB      = process.env.NOTION_ORDERS_DB!
 const ORDER_ITEMS_DB = process.env.NOTION_ORDER_ITEMS_DB!
 
+// ── Ensure new fields exist in Notion DBs ─────────────────────
+
+let _ensurePromise: Promise<void> | null = null
+
+function ensureOrderFields(): Promise<void> {
+  if (!_ensurePromise) {
+    _ensurePromise = (async () => {
+      try {
+        await Promise.all([
+          notion.databases.update({
+            database_id: ORDERS_DB,
+            properties: {
+              '促銷活動ID':   { rich_text: {} },
+              '促銷活動名稱': { rich_text: {} },
+            } as any,
+          }),
+          ORDER_ITEMS_DB ? notion.databases.update({
+            database_id: ORDER_ITEMS_DB,
+            properties: {
+              '品項類型': {
+                select: {
+                  options: [
+                    { name: '一般', color: 'default' },
+                    { name: '贈品', color: 'green' },
+                    { name: '樣品', color: 'blue' },
+                  ],
+                },
+              },
+            } as any,
+          }) : Promise.resolve(),
+        ])
+      } catch (e: any) {
+        console.warn('[orders-notion] ensureOrderFields warning:', e?.message ?? e)
+        setTimeout(() => { _ensurePromise = null }, 60_000)
+      }
+    })()
+  }
+  return _ensurePromise
+}
+
 function richText(content: string) {
   return [{ text: { content: content.slice(0, 2000) } }]
 }
@@ -73,6 +113,8 @@ async function generateOrderNumber(): Promise<string> {
 
 // ── Types ─────────────────────────────────────────────────────
 
+export type ItemType = 'normal' | 'gift' | 'sample'
+
 export interface OrderItem {
   id: string          // local UUID, not stored in Notion
   skuCode: string
@@ -83,6 +125,7 @@ export interface OrderItem {
   quantity: number
   unitPrice: number
   note: string
+  itemType?: ItemType  // 一般 / 贈品 / 樣品 (default: normal)
 }
 
 export interface Order {
@@ -102,10 +145,30 @@ export interface Order {
   customerPhone: string
   contactPerson: string
   customerTaxId: string
+  promotionId?:   string
+  promotionName?: string
 }
 
+/** Sum only 一般 items; gifts/samples are excluded from the financial total */
 export function calcTotal(items: OrderItem[]): number {
-  return items.reduce((sum, it) => sum + it.quantity * (it.unitPrice || 0), 0)
+  return items.reduce((sum, it) => {
+    if (it.itemType === 'gift' || it.itemType === 'sample') return sum
+    return sum + it.quantity * (it.unitPrice || 0)
+  }, 0)
+}
+
+/** Map internal itemType key → Notion select name */
+function itemTypeToLabel(t?: ItemType): string {
+  if (t === 'gift')   return '贈品'
+  if (t === 'sample') return '樣品'
+  return '一般'
+}
+
+/** Map Notion select name → internal itemType key */
+function labelToItemType(label: string): ItemType {
+  if (label === '贈品') return 'gift'
+  if (label === '樣品') return 'sample'
+  return 'normal'
 }
 
 // ── Item helpers ───────────────────────────────────────────────
@@ -123,6 +186,7 @@ function parseItemPage(page: any): OrderItem & { orderId: string } {
     quantity:   page.properties?.['數量']?.number ?? 1,
     unitPrice:  page.properties?.['單價']?.number ?? 0,
     note:       getText(page, '備註'),
+    itemType:   labelToItemType(getSelect(page, '品項類型')),
     orderId,
   }
 }
@@ -167,14 +231,15 @@ async function createOrderItems(orderId: string, items: OrderItem[]): Promise<vo
       notion.pages.create({
         parent: { database_id: ORDER_ITEMS_DB },
         properties: {
-          品名:   { title: richText(item.skuName) },
-          貨品碼: { rich_text: richText(item.skuCode) },
-          品牌:   { rich_text: richText(item.brand) },
-          系列:   { rich_text: richText(item.seriesName) },
-          數量:   { number: item.quantity },
-          單價:   { number: item.unitPrice },
-          備註:   { rich_text: richText(item.note ?? '') },
-          訂購單: { relation: [{ id: orderId }] },
+          品名:     { title: richText(item.skuName) },
+          貨品碼:   { rich_text: richText(item.skuCode) },
+          品牌:     { rich_text: richText(item.brand) },
+          系列:     { rich_text: richText(item.seriesName) },
+          數量:     { number: item.quantity },
+          單價:     { number: item.itemType === 'gift' || item.itemType === 'sample' ? 0 : item.unitPrice },
+          備註:     { rich_text: richText(item.note ?? '') },
+          品項類型: { select: { name: itemTypeToLabel(item.itemType) } },
+          訂購單:   { relation: [{ id: orderId }] },
         },
       })
     )
@@ -216,6 +281,8 @@ function parseOrderPage(page: any, items: OrderItem[] = []): Order {
     customerPhone:   getText(page, '電話'),
     contactPerson:   getText(page, '聯絡人'),
     customerTaxId:   getText(page, '統一編號'),
+    promotionId:     getText(page, '促銷活動ID')   || undefined,
+    promotionName:   getText(page, '促銷活動名稱') || undefined,
   }
 }
 
@@ -280,26 +347,31 @@ export async function createOrder(data: {
   customerPhone?: string
   contactPerson?: string
   customerTaxId?: string
+  promotionId?:   string
+  promotionName?: string
 }): Promise<Order> {
+  await ensureOrderFields()
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
 
   const page: any = await notion.pages.create({
     parent: { database_id: ORDERS_DB },
     properties: {
-      訂單編號: { title: richText(orderNumber) },
-      日期:     { date: { start: data.date } },
-      業務:     { rich_text: richText(data.salesperson) },
-      狀態:     { select: { name: data.status ?? '草稿' } },
-      備註:     { rich_text: richText(data.note) },
-      總金額:   { number: total },
-      客戶ID:   { rich_text: richText(data.customerId ?? '') },
-      客戶名稱: { rich_text: richText(data.customerName ?? '') },
-      公司抬頭: { rich_text: richText(data.companyTitle ?? '') },
-      地址:     { rich_text: richText(data.customerAddress ?? '') },
-      電話:     { rich_text: richText(data.customerPhone ?? '') },
-      聯絡人:   { rich_text: richText(data.contactPerson ?? '') },
-      統一編號: { rich_text: richText(data.customerTaxId ?? '') },
+      訂單編號:     { title: richText(orderNumber) },
+      日期:         { date: { start: data.date } },
+      業務:         { rich_text: richText(data.salesperson) },
+      狀態:         { select: { name: data.status ?? '草稿' } },
+      備註:         { rich_text: richText(data.note) },
+      總金額:       { number: total },
+      客戶ID:       { rich_text: richText(data.customerId ?? '') },
+      客戶名稱:     { rich_text: richText(data.customerName ?? '') },
+      公司抬頭:     { rich_text: richText(data.companyTitle ?? '') },
+      地址:         { rich_text: richText(data.customerAddress ?? '') },
+      電話:         { rich_text: richText(data.customerPhone ?? '') },
+      聯絡人:       { rich_text: richText(data.contactPerson ?? '') },
+      統一編號:     { rich_text: richText(data.customerTaxId ?? '') },
+      促銷活動ID:   { rich_text: richText(data.promotionId   ?? '') },
+      促銷活動名稱: { rich_text: richText(data.promotionName ?? '') },
     },
   })
 
@@ -336,21 +408,25 @@ export async function updateOrder(id: string, data: {
   customerPhone?: string
   contactPerson?: string
   customerTaxId?: string
+  promotionId?:   string
+  promotionName?: string
 }): Promise<void> {
   const formatted = formatId(id)
   const props: any = {}
 
-  if (data.date)                           props['日期']     = { date: { start: data.date } }
-  if (data.salesperson !== undefined)      props['業務']     = { rich_text: richText(data.salesperson) }
-  if (data.note !== undefined)             props['備註']     = { rich_text: richText(data.note) }
-  if (data.status)                         props['狀態']     = { select: { name: data.status } }
-  if (data.customerId   !== undefined)     props['客戶ID']   = { rich_text: richText(data.customerId) }
-  if (data.customerName !== undefined)     props['客戶名稱'] = { rich_text: richText(data.customerName) }
-  if (data.companyTitle !== undefined)     props['公司抬頭'] = { rich_text: richText(data.companyTitle) }
-  if (data.customerAddress !== undefined)  props['地址']     = { rich_text: richText(data.customerAddress) }
-  if (data.customerPhone !== undefined)    props['電話']     = { rich_text: richText(data.customerPhone) }
-  if (data.contactPerson !== undefined)    props['聯絡人']   = { rich_text: richText(data.contactPerson) }
-  if (data.customerTaxId !== undefined)    props['統一編號'] = { rich_text: richText(data.customerTaxId) }
+  if (data.date)                           props['日期']         = { date: { start: data.date } }
+  if (data.salesperson !== undefined)      props['業務']         = { rich_text: richText(data.salesperson) }
+  if (data.note !== undefined)             props['備註']         = { rich_text: richText(data.note) }
+  if (data.status)                         props['狀態']         = { select: { name: data.status } }
+  if (data.customerId   !== undefined)     props['客戶ID']       = { rich_text: richText(data.customerId) }
+  if (data.customerName !== undefined)     props['客戶名稱']     = { rich_text: richText(data.customerName) }
+  if (data.companyTitle !== undefined)     props['公司抬頭']     = { rich_text: richText(data.companyTitle) }
+  if (data.customerAddress !== undefined)  props['地址']         = { rich_text: richText(data.customerAddress) }
+  if (data.customerPhone !== undefined)    props['電話']         = { rich_text: richText(data.customerPhone) }
+  if (data.contactPerson !== undefined)    props['聯絡人']       = { rich_text: richText(data.contactPerson) }
+  if (data.customerTaxId !== undefined)    props['統一編號']     = { rich_text: richText(data.customerTaxId) }
+  if (data.promotionId   !== undefined)    props['促銷活動ID']   = { rich_text: richText(data.promotionId ?? '') }
+  if (data.promotionName !== undefined)    props['促銷活動名稱'] = { rich_text: richText(data.promotionName ?? '') }
 
   if (data.items) {
     // Replace all item pages

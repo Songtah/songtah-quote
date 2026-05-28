@@ -32,6 +32,7 @@ function getPageTitle(pathname: string): string {
     '/admin':             '行政管理',
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
+    '/promotions':        '促銷活動',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
@@ -59,6 +60,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/products/catalog',  label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },
   { href: '/orders',            label: '訂貨',     module: 'orders' },
+  { href: '/promotions',        label: '促銷活動', module: null },
   { href: '/assets',            label: '素材庫',   module: null },
   { href: '/admin',             label: '行政管理', module: null, adminOrStaff: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
