@@ -68,8 +68,8 @@ function SpecRow({ label, value }: { label: string; value: string | number | nul
   if (!value && value !== 0) return null
   return (
     <div className="flex gap-2 py-2 border-b border-gray-50 last:border-0">
-      <span className="text-xs text-slate-400 w-36 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm text-slate-700 font-medium">{value}</span>
+      <span className="text-xs text-slate-400 w-24 sm:w-36 shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm text-slate-700 font-medium flex-1 min-w-0 break-words">{value}</span>
     </div>
   )
 }
@@ -111,10 +111,10 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
         transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-gray-100">
-          <ProductThumb id={p.id} name={p.name} size={72} />
+        <div className="flex items-start gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
+          <ProductThumb id={p.id} name={p.name} size={64} />
           <div className="flex-1 min-w-0">
-            <p className="eyebrow mb-1">
+            <p className="eyebrow mb-1 text-[10px] sm:text-xs">
               {p.productType || '產品'}
               {displayCode && (
                 <span className="ml-2 font-mono text-gray-400 normal-case tracking-normal font-normal">
@@ -122,8 +122,8 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
                 </span>
               )}
             </p>
-            <h2 className="text-xl font-bold text-slate-900 leading-snug">{p.name || '（未命名）'}</h2>
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <h2 className="text-base sm:text-xl font-bold text-slate-900 leading-snug">{p.name || '（未命名）'}</h2>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
               {p.manufacturer && (
                 <span className="px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-600 font-medium">
                   {p.manufacturer}
@@ -145,7 +145,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-6">
 
           {/* Pricing */}
           {(p.price != null || p.salePrice != null) && (
@@ -532,18 +532,28 @@ export function ProductsContent({
               onClick={() => setSelectedProduct(p)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
             >
-              {/* Code badge */}
-              <div className="shrink-0 w-28 text-right">
+              {/* Code badge — desktop left column, hidden on mobile */}
+              <div className="shrink-0 w-28 text-right hidden sm:block">
                 <span className="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded truncate inline-block max-w-full">
                   {p.skuCode || p.id}
                 </span>
               </div>
-              {/* Name + meta */}
+              {/* Name + meta (+ code on mobile) */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{p.manufacturer}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {p.manufacturer && (
+                    <p className="text-xs text-gray-400 truncate">{p.manufacturer}</p>
+                  )}
+                  {/* Code shown inline on mobile only */}
+                  {(p.skuCode || p.id) && (
+                    <span className="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded sm:hidden">
+                      {p.skuCode || p.id}
+                    </span>
+                  )}
+                </div>
               </div>
-              {/* Category badge */}
+              {/* Category badge + arrow */}
               <div className="shrink-0 flex gap-1.5 items-center">
                 {p.category && (
                   <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block">
