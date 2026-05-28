@@ -1861,7 +1861,7 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-3 py-2.5 text-left w-8">#</th>

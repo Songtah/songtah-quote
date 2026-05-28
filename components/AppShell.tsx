@@ -122,7 +122,7 @@ export function AppShell({
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden">
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 py-3">
           <div className="flex min-w-0 items-center gap-3">

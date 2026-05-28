@@ -670,7 +670,7 @@ function ItemRow({ item, onUpdate, onDelete }: {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-gray-400 mb-1">促銷價格（參考，選填）</label>
               <input
@@ -798,14 +798,14 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
 
       {/* Card */}
       <motion.div
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl mx-2 sm:mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b shrink-0">
+        <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -854,7 +854,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
         {/* Items — scrollable */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {/* Add item toolbar */}
-          <div className="px-5 py-3 border-b bg-gray-50/80 sticky top-0 z-10">
+          <div className="px-4 sm:px-5 py-3 border-b bg-gray-50/80 sticky top-0 z-10">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">促銷品項</p>
               <button
@@ -977,17 +977,17 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-lg mx-2 sm:mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
-        <div className="px-6 py-5 border-b flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-5 border-b flex items-center justify-between shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{isEdit ? '編輯促銷活動' : '新增促銷活動'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
         </div>
-        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-5 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">活動名稱 *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)}
@@ -1007,7 +1007,7 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">開始日期</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
