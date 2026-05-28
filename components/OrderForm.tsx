@@ -1347,18 +1347,6 @@ function applyPromoCondition(newItem: OrderItem, promoItem: PromotionItem): {
       hintLabel = p?.partnerSkuName ? `搭配 ${p.partnerSkuName} 可享組合優惠` : '商品組合優惠'
       break
 
-    // ── 純資訊：不自動帶價 ────────────────────────────────────
-    case 'limited_quota':
-      hintLabel = `限額 ${p?.quota ?? '?'} 名`
-      break
-
-    case 'contact_sales':
-      hintLabel = p?.note ? `請洽業務：${p.note}` : '請洽業務'
-      break
-
-    case 'service_plan':
-      hintLabel = p?.planName ? `服務方案：${p.planName}（額度 ${p.totalQuota ?? '?'}）` : '服務額度型方案'
-      break
   }
 
   return { patches, giftRows, hintLabel }

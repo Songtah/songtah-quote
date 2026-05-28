@@ -52,9 +52,6 @@ export type ConditionType =
   | 'buy_a_get_b'      // 買A送B（主商品觸發贈品）
   | 'add_on'           // 加價購（需綁定主商品）
   | 'bundle'           // 商品組合優惠
-  | 'limited_quota'    // 限定名額 / 限定數量
-  | 'contact_sales'    // 請洽業務 / 新品報價
-  | 'service_plan'     // 服務額度型組合方案
   | (string & {})      // extensible — future types won't break the union
 
 export const CONDITION_TYPE_LABEL: Record<string, string> = {
@@ -66,9 +63,6 @@ export const CONDITION_TYPE_LABEL: Record<string, string> = {
   buy_a_get_b:     '買A送B',
   add_on:          '加價購',
   bundle:          '商品組合優惠',
-  limited_quota:   '限定名額',
-  contact_sales:   '請洽業務',
-  service_plan:    '服務額度型',
 }
 
 // Tier used by qty_discount and fixed_set_price
@@ -85,9 +79,6 @@ export type ConditionParams =
   | { type: 'buy_a_get_b';     giftSkuCode: string; giftSkuName: string; giftQty: number }
   | { type: 'add_on';          addOnPrice: number; mainSkuCode?: string; mainSkuName?: string }
   | { type: 'bundle';          partnerSkuCode: string; partnerSkuName?: string; bundlePrice?: number; rate?: number }
-  | { type: 'limited_quota';   quota: number; note?: string }
-  | { type: 'contact_sales';   note?: string }
-  | { type: 'service_plan';    planName: string; totalQuota: number; validUntil?: string; note?: string }
   | { type: string; [key: string]: unknown }  // catch-all for forward-compat
 
 // ── Types ─────────────────────────────────────────────────────

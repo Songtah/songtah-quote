@@ -84,12 +84,6 @@ function conditionSummary(params: ConditionParams | null): string | null {
       return `加購價 NT$${Number(p.addOnPrice).toLocaleString()}`
     case 'bundle':
       return `組合 ${p.bundlePrice != null ? `NT$${Number(p.bundlePrice).toLocaleString()}` : p.rate != null ? `${Math.round(p.rate * 10)}折` : ''}`
-    case 'limited_quota':
-      return `限額 ${p.quota} 名`
-    case 'contact_sales':
-      return '請洽業務'
-    case 'service_plan':
-      return `${p.planName}｜額度 ${p.totalQuota}`
     default:
       return null
   }
@@ -104,9 +98,6 @@ const CONDITION_TYPE_COLOR: Record<string, string> = {
   buy_a_get_b:     'bg-emerald-50 text-emerald-700 border-emerald-200',
   add_on:          'bg-orange-50 text-orange-700 border-orange-200',
   bundle:          'bg-amber-50 text-amber-700 border-amber-200',
-  limited_quota:   'bg-red-50 text-red-700 border-red-200',
-  contact_sales:   'bg-gray-50 text-gray-600 border-gray-200',
-  service_plan:    'bg-violet-50 text-violet-700 border-violet-200',
 }
 
 function ConditionChip({ conditionType, conditionParams }: {
@@ -204,9 +195,6 @@ function defaultParams(type: ConditionType): ConditionParams {
     case 'buy_a_get_b':     return { type, giftSkuCode: '', giftSkuName: '', giftQty: 1 }
     case 'add_on':          return { type, addOnPrice: 0 }
     case 'bundle':          return { type, partnerSkuCode: '', partnerSkuName: '' }
-    case 'limited_quota':   return { type, quota: 10 }
-    case 'contact_sales':   return { type }
-    case 'service_plan':    return { type, planName: '', totalQuota: 0 }
     default:                return { type }
   }
 }
@@ -416,59 +404,6 @@ function ConditionEditor({ conditionType, conditionParams, onChange }: {
         </>
       )}
 
-      {conditionType === 'limited_quota' && (
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">名額上限</label>
-            <input type="number" min={1} value={p?.quota ?? ''} onChange={(e) => patch({ quota: parseInt(e.target.value) || 0 })}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-          </div>
-          <div className="flex-1">
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">備注（選填）</label>
-            <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
-              placeholder="說明限制條件"
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-          </div>
-        </div>
-      )}
-
-      {conditionType === 'contact_sales' && (
-        <div>
-          <label className="block text-[11px] font-semibold text-gray-400 mb-1">備注（選填）</label>
-          <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
-            placeholder="說明為何需洽業務"
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-        </div>
-      )}
-
-      {conditionType === 'service_plan' && (
-        <>
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">方案名稱</label>
-            <input type="text" value={p?.planName ?? ''} onChange={(e) => patch({ planName: e.target.value })}
-              placeholder="例：年度保固方案 / 季度耗材服務包"
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">總額度（次 / 件）</label>
-              <input type="number" min={0} value={p?.totalQuota ?? ''} onChange={(e) => patch({ totalQuota: parseInt(e.target.value) || 0 })}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-            </div>
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">有效期限（選填）</label>
-              <input type="date" value={p?.validUntil ?? ''} onChange={(e) => patch({ validUntil: e.target.value || undefined })}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">方案說明（選填）</label>
-            <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
-              placeholder="額度使用規則說明…"
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -608,7 +543,6 @@ function ItemRow({ item, onUpdate, onDelete }: {
   const [conditionParams, setConditionParams] = useState<ConditionParams | null>(item.conditionParams)
   const [price,           setPrice]           = useState<string>(item.price != null ? String(item.price) : '')
   const [adminNote,       setAdminNote]       = useState(item.adminNote)
-  const [usedQuota,       setUsedQuota]       = useState<string>(String(item.usedQuota ?? 0))
   const [saving,          setSaving]          = useState(false)
   const [deleting,        setDeleting]        = useState(false)
 
@@ -628,16 +562,14 @@ function ItemRow({ item, onUpdate, onDelete }: {
   const handleSave = async () => {
     setSaving(true)
     const priceNum = price !== '' ? parseFloat(price) : null
-    const usedQ    = parseInt(usedQuota) || 0
     const patch = {
       condition,
       conditionType:   conditionType ?? undefined,
       conditionParams: conditionParams ?? undefined,
-      usedQuota:       usedQ,
       price:           isFinite(priceNum!) ? priceNum : null,
       adminNote,
     }
-    onUpdate(item.id, { ...patch, conditionType, conditionParams, usedQuota: usedQ })
+    onUpdate(item.id, { ...patch, conditionType, conditionParams })
     await fetch(`/api/promotion-items/${item.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -653,8 +585,6 @@ function ItemRow({ item, onUpdate, onDelete }: {
     onDelete(item.id)
   }
 
-  const isServicePlan = conditionType === 'service_plan'
-  const totalQuota    = (conditionParams as any)?.totalQuota ?? 0
 
   return (
     <div className={`border-b last:border-0 px-4 py-3 transition-colors ${item.status === '不採用' ? 'opacity-50' : ''}`}>
@@ -684,12 +614,6 @@ function ItemRow({ item, onUpdate, onDelete }: {
               )}
               {item.price != null && (
                 <span className="text-xs font-semibold text-brand-700">NT${item.price.toLocaleString()}</span>
-              )}
-              {/* Service plan quota tracker */}
-              {item.conditionType === 'service_plan' && (
-                <span className="text-xs text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full font-medium">
-                  已用 {item.usedQuota} / {(item.conditionParams as any)?.totalQuota ?? '?'}
-                </span>
               )}
               {item.adminNote && (
                 <span className="text-xs text-gray-400 italic">備注：{item.adminNote}</span>
@@ -756,38 +680,16 @@ function ItemRow({ item, onUpdate, onDelete }: {
                 className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
-            {isServicePlan ? (
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-400 mb-1">
-                  已使用額度（上限：{totalQuota}）
-                </label>
-                <input
-                  type="number" min={0} max={totalQuota} value={usedQuota}
-                  onChange={(e) => setUsedQuota(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
-                <input
-                  type="text" value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                  placeholder="定價說明…"
-                  className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
-              </div>
-            )}
-          </div>
-
-          {isServicePlan && (
             <div>
               <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
-              <input type="text" value={adminNote} onChange={(e) => setAdminNote(e.target.value)}
+              <input
+                type="text" value={adminNote}
+                onChange={(e) => setAdminNote(e.target.value)}
                 placeholder="定價說明…"
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
             </div>
-          )}
+          </div>
 
           <div className="flex gap-2">
             <button onClick={() => setEditing(false)}
