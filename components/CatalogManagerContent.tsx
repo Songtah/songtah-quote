@@ -1834,8 +1834,8 @@ function SkuRow({
       <div className={`w-2 h-2 rounded-full shrink-0 ${hasImage ? 'bg-blue-400' : 'bg-gray-200'}`} />
 
       <div className="flex-1 min-w-0">
-        <span className="font-mono text-[11px] text-gray-400 mr-2">{item.code}</span>
-        <span className="text-sm text-gray-800">{item.name}</span>
+        <p className="text-sm text-gray-800 truncate">{item.name}</p>
+        <p className="font-mono text-[11px] text-gray-400 mt-0.5">{item.code}</p>
       </div>
 
       {hasPrice && price != null && (
