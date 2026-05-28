@@ -36,14 +36,16 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   try {
     const item = await createPromotionItem({
-      promotionId:   params.id,
-      promotionName: promo.name,
-      skuCode:       body.skuCode,
-      skuName:       body.skuName,
-      brand:         body.brand ?? '',
-      condition:     body.condition,
-      price:         body.price ?? null,
-      adminNote:     body.adminNote,
+      promotionId:     params.id,
+      promotionName:   promo.name,
+      skuCode:         body.skuCode,
+      skuName:         body.skuName,
+      brand:           body.brand ?? '',
+      condition:       body.condition,
+      conditionType:   body.conditionType,
+      conditionParams: body.conditionParams,
+      price:           body.price ?? null,
+      adminNote:       body.adminNote,
     })
     return NextResponse.json(item)
   } catch (err: any) {

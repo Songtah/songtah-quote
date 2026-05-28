@@ -20,10 +20,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   try {
     await updatePromotionItem(params.id, {
-      condition:  body.condition,
-      price:      body.price,
-      status:     body.status as ItemStatus | undefined,
-      adminNote:  body.adminNote,
+      condition:       body.condition,
+      conditionType:   body.conditionType,
+      conditionParams: body.conditionParams,
+      usedQuota:       body.usedQuota,
+      price:           body.price,
+      status:          body.status as ItemStatus | undefined,
+      adminNote:       body.adminNote,
     })
     return NextResponse.json({ ok: true })
   } catch (err: any) {

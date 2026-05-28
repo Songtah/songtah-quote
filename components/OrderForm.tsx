@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OrderItem, ItemType } from '@/lib/orders-notion'
+import type { PromotionItem } from '@/lib/promotion-items-notion'
 
 interface ActivePromotion { id: string; name: string; type: string; startDate: string; endDate: string }
 
@@ -1249,6 +1250,119 @@ function CustomerNameInput({
   )
 }
 
+// ── Promotion condition helpers ───────────────────────────────
+
+/**
+ * 計算買N送M的贈品數量（可重複觸發）
+ * 買10送2（買5送1）→ floor(10/5)*1 = 2
+ */
+function calcBuyNGetMGiftQty(orderQty: number, n: number, m: number): number {
+  return Math.floor(orderQty / n) * m
+}
+
+/**
+ * 對新加入的品項套用促銷條件，回傳：
+ * - patches:   直接修改 newItem 的欄位（自動）
+ * - giftRows:  需要額外插入的贈品列（buy_a_get_b）
+ * - hintLabel: 顯示在品項列上的提示文字（半自動 / 資訊型）
+ */
+function applyPromoCondition(newItem: OrderItem, promoItem: PromotionItem): {
+  patches:   Partial<OrderItem>
+  giftRows:  OrderItem[]
+  hintLabel: string | null
+} {
+  const p = promoItem.conditionParams as any
+  const patches:  Partial<OrderItem> = {}
+  const giftRows: OrderItem[]        = []
+  let   hintLabel: string | null     = null
+
+  switch (promoItem.conditionType) {
+
+    // ── 全自動：直接帶價 ──────────────────────────────────────
+    case 'single_price':
+      if (p?.price != null) {
+        patches.unitPrice = p.price
+        hintLabel = `促銷價 NT$${Number(p.price).toLocaleString()}`
+      }
+      break
+
+    case 'add_on':
+      if (p?.addOnPrice != null) {
+        patches.unitPrice = p.addOnPrice
+        hintLabel = `加購價 NT$${Number(p.addOnPrice).toLocaleString()}`
+      }
+      break
+
+    case 'fixed_set_price': {
+      // 初次加入（qty=1）先找是否剛好有 1件 tier；之後靠 handleQtyChange 更新
+      const tier = (p?.tiers ?? []).find((t: any) => t.qty === 1)
+      if (tier) patches.unitPrice = Math.round(tier.totalPrice / tier.qty)
+      // 顯示全部方案供業務參考
+      if ((p?.tiers ?? []).length > 0) {
+        hintLabel = (p.tiers as { qty: number; totalPrice: number }[])
+          .map((t) => `${t.qty}件 NT$${t.totalPrice.toLocaleString()}`)
+          .join(' / ')
+      }
+      break
+    }
+
+    // ── 自動插入贈品列 ────────────────────────────────────────
+    case 'buy_a_get_b':
+      if (p?.giftSkuCode) {
+        giftRows.push({
+          id:         `gift-${Date.now()}-${Math.random()}`,
+          skuCode:    p.giftSkuCode,
+          skuName:    p.giftSkuName ?? p.giftSkuCode,
+          brand:      '',
+          seriesName: '',
+          seriesId:   '',
+          quantity:   p.giftQty ?? 1,
+          unitPrice:  0,
+          itemType:   'gift',
+          note:       '[促銷贈品]',
+        } as OrderItem)
+        hintLabel = `買→贈 ${p.giftSkuName ?? p.giftSkuCode}`
+      }
+      break
+
+    // ── 半自動：顯示提示，數量聯動由 handleQtyChange 接手 ───
+    case 'buy_n_get_m':
+      if (p?.n && p?.m) hintLabel = `買${p.n}送${p.m}（數量足時自動補贈品）`
+      break
+
+    case 'series_discount':
+      if (p?.rate != null) hintLabel = `全系列 ${Math.round(p.rate * 10)}折`
+      break
+
+    case 'qty_discount':
+      if ((p?.tiers ?? []).length > 0) {
+        hintLabel = (p.tiers as { minQty: number; rate?: number; price?: number }[])
+          .map((t) => `滿${t.minQty}件 ${t.rate != null ? Math.round(t.rate * 10) + '折' : 'NT$' + t.price}`)
+          .join(' / ')
+      }
+      break
+
+    case 'bundle':
+      hintLabel = p?.partnerSkuName ? `搭配 ${p.partnerSkuName} 可享組合優惠` : '商品組合優惠'
+      break
+
+    // ── 純資訊：不自動帶價 ────────────────────────────────────
+    case 'limited_quota':
+      hintLabel = `限額 ${p?.quota ?? '?'} 名`
+      break
+
+    case 'contact_sales':
+      hintLabel = p?.note ? `請洽業務：${p.note}` : '請洽業務'
+      break
+
+    case 'service_plan':
+      hintLabel = p?.planName ? `服務方案：${p.planName}（額度 ${p.totalQuota ?? '?'}）` : '服務額度型方案'
+      break
+  }
+
+  return { patches, giftRows, hintLabel }
+}
+
 // ── OrderForm (主元件) ────────────────────────────────────────
 
 interface OrderFormProps {
@@ -1299,6 +1413,12 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
   const [promotionId,   setPromotionId]   = useState(initialOrder?.promotionId   ?? '')
   const [promotionName, setPromotionName] = useState(initialOrder?.promotionName ?? '')
   const [activePromos,  setActivePromos]  = useState<ActivePromotion[]>([])
+  // 已確認的促銷品項（促銷選定後載入）
+  const [promoItems,    setPromoItems]    = useState<PromotionItem[]>([])
+  // 追蹤 buy_n_get_m 的贈品列：mainItemId → giftItemId
+  const [giftLinkMap,   setGiftLinkMap]   = useState<Record<string, string>>({})
+  // 促銷提示文字：itemId → label
+  const [promoHints,    setPromoHints]    = useState<Record<string, string>>({})
 
   // 客戶資訊
   const [customer, setCustomer] = useState<SelectedCustomer>({
@@ -1327,32 +1447,87 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       .catch(() => {})
   }, [])
 
-  // Add item from picker
+  // 促銷選定後，載入該活動已確認的品項條件
+  useEffect(() => {
+    if (!promotionId) {
+      setPromoItems([])
+      setGiftLinkMap({})
+      setPromoHints({})
+      return
+    }
+    fetch(`/api/promotions/${promotionId}/items`)
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setPromoItems((data as PromotionItem[]).filter((i) => i.status === '已確認'))
+        }
+      })
+      .catch(() => {})
+  }, [promotionId])
+
+  // Add item from picker — with promotion logic
   const handleAddItem = useCallback(
     (partial: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => {
-      setItems((prev) => {
-        // Check if already in list
-        const existing = prev.find((it) => it.skuCode === partial.skuCode)
-        if (existing) {
-          return prev.map((it) =>
-            it.skuCode === partial.skuCode
-              ? { ...it, quantity: it.quantity + 1 }
-              : it
+      // 已存在：只加數量（buy_n_get_m 的贈品更新由 handleQtyChange 接手）
+      const existingItem = items.find((it) => it.skuCode === partial.skuCode)
+      if (existingItem) {
+        setItems((prev) =>
+          prev.map((it) =>
+            it.skuCode === partial.skuCode ? { ...it, quantity: it.quantity + 1 } : it
           )
+        )
+        return
+      }
+
+      // 新品項
+      const newItem: OrderItem = {
+        ...partial,
+        id:        `item-${Date.now()}-${Math.random()}`,
+        quantity:  1,
+        unitPrice: 0,
+        note:      '',
+      }
+
+      // 找對應的已確認促銷品項
+      const promoItem = promoItems.find((p) => p.skuCode === partial.skuCode)
+
+      if (!promoItem?.conditionType) {
+        setItems((prev) => [...prev, newItem])
+        return
+      }
+
+      const { patches, giftRows, hintLabel } = applyPromoCondition(newItem, promoItem)
+      const finalItem = { ...newItem, ...patches }
+
+      // buy_n_get_m：qty=1 時通常不夠 n，但若剛好夠就先插贈品
+      const extraGiftRows: OrderItem[] = [...giftRows]
+      const newGiftLinks: Record<string, string> = {}
+
+      if (promoItem.conditionType === 'buy_n_get_m') {
+        const p = promoItem.conditionParams as any
+        if (p?.n && p?.m) {
+          const giftQty = calcBuyNGetMGiftQty(1, p.n, p.m)
+          if (giftQty > 0) {
+            const giftId = `gift-${Date.now()}-${Math.random()}`
+            extraGiftRows.push({
+              id: giftId, skuCode: finalItem.skuCode, skuName: finalItem.skuName,
+              brand: finalItem.brand, seriesName: finalItem.seriesName ?? '',
+              seriesId: finalItem.seriesId ?? '',
+              quantity: giftQty, unitPrice: 0, itemType: 'gift',
+              note: `[促銷贈品] 買${p.n}送${p.m}`,
+            } as OrderItem)
+            newGiftLinks[finalItem.id] = giftId
+          }
         }
-        return [
-          ...prev,
-          {
-            ...partial,
-            id: `item-${Date.now()}-${Math.random()}`,
-            quantity: 1,
-            unitPrice: 0,
-            note: '',
-          },
-        ]
-      })
+      }
+
+      setItems((prev) => [...prev, finalItem, ...extraGiftRows])
+      if (Object.keys(newGiftLinks).length > 0)
+        setGiftLinkMap((lm) => ({ ...lm, ...newGiftLinks }))
+      if (hintLabel)
+        setPromoHints((h) => ({ ...h, [finalItem.id]: hintLabel }))
     },
-    []
+    [items, promoItems]
   )
 
   const updateItem = useCallback(
@@ -1366,7 +1541,72 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
 
   const removeItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id))
+    // 若刪除的是主商品，也刪除對應贈品列
+    setGiftLinkMap((lm) => {
+      const giftId = lm[id]
+      if (!giftId) return lm
+      setItems((prev) => prev.filter((it) => it.id !== giftId))
+      const next = { ...lm }; delete next[id]; return next
+    })
+    setPromoHints((h) => { const next = { ...h }; delete next[id]; return next })
   }, [])
+
+  // 數量變更：聯動 buy_n_get_m 贈品 & fixed_set_price 帶價
+  const handleQtyChange = useCallback(
+    (item: OrderItem, newQty: number) => {
+      updateItem(item.id, { quantity: newQty })
+
+      const promoItem = promoItems.find((p) => p.skuCode === item.skuCode)
+      if (!promoItem?.conditionType || !promoItem.conditionParams) return
+
+      const p = promoItem.conditionParams as any
+
+      if (promoItem.conditionType === 'buy_n_get_m' && p?.n && p?.m) {
+        const giftQty      = calcBuyNGetMGiftQty(newQty, p.n, p.m)
+        const existGiftId  = giftLinkMap[item.id]
+
+        if (giftQty <= 0 && existGiftId) {
+          // 不夠 n 件：移除贈品列
+          setItems((prev) => prev.filter((it) => it.id !== existGiftId))
+          setGiftLinkMap((lm) => { const next = { ...lm }; delete next[item.id]; return next })
+        } else if (giftQty > 0 && existGiftId) {
+          // 更新贈品數量
+          updateItem(existGiftId, { quantity: giftQty })
+        } else if (giftQty > 0 && !existGiftId) {
+          // 新增贈品列
+          const giftId = `gift-${Date.now()}-${Math.random()}`
+          const giftRow = {
+            id: giftId, skuCode: item.skuCode, skuName: item.skuName,
+            brand: item.brand, seriesName: item.seriesName ?? '', seriesId: item.seriesId ?? '',
+            quantity: giftQty, unitPrice: 0, itemType: 'gift' as ItemType,
+            note: `[促銷贈品] 買${p.n}送${p.m}`,
+          } as OrderItem
+          setItems((prev) => [...prev, giftRow])
+          setGiftLinkMap((lm) => ({ ...lm, [item.id]: giftId }))
+        }
+      }
+
+      if (promoItem.conditionType === 'fixed_set_price' && (p?.tiers ?? []).length > 0) {
+        // 找最接近且 >= newQty 的 tier（或精確匹配）
+        const exact = (p.tiers as { qty: number; totalPrice: number }[]).find((t) => t.qty === newQty)
+        if (exact) {
+          updateItem(item.id, { unitPrice: Math.round(exact.totalPrice / exact.qty) })
+        }
+      }
+
+      if (promoItem.conditionType === 'qty_discount' && (p?.tiers ?? []).length > 0) {
+        // 找最高滿足的 tier
+        const applicable = (p.tiers as { minQty: number; rate?: number; price?: number }[])
+          .filter((t) => newQty >= t.minQty)
+          .sort((a, b) => b.minQty - a.minQty)[0]
+        if (applicable?.price != null) {
+          updateItem(item.id, { unitPrice: applicable.price })
+        }
+        // rate 型（series_discount）需要原價，暫不自動帶；提示已顯示
+      }
+    },
+    [promoItems, giftLinkMap, updateItem]
+  )
 
   // Save
   const handleSave = async (targetStatus: string) => {
@@ -1651,7 +1891,16 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
                       <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
                       <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
-                      <td className="px-3 py-2.5 text-gray-800 font-medium">{item.skuName}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="font-medium text-gray-800">{item.skuName}</div>
+                        {/* 促銷提示 badge */}
+                        {promoHints[item.id] && (
+                          <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                            <span>⚡</span>
+                            <span>{promoHints[item.id]}</span>
+                          </div>
+                        )}
+                      </td>
 
                       {/* 類型 */}
                       <td className="px-3 py-2.5 text-center">
@@ -1676,18 +1925,28 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => updateItem(item.id, { quantity: Math.max(1, qty - 1) })}
+                            onClick={() => {
+                              if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
+                              else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
+                            }}
                             className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
                           >−</button>
                           <input
                             type="number"
                             min={1}
                             value={qty}
-                            onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                            onChange={(e) => {
+                              const v = Math.max(1, parseInt(e.target.value) || 1)
+                              if (!isGift) handleQtyChange(item, v)
+                              else updateItem(item.id, { quantity: v })
+                            }}
                             className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
                           <button
-                            onClick={() => updateItem(item.id, { quantity: qty + 1 })}
+                            onClick={() => {
+                              if (!isGift) handleQtyChange(item, qty + 1)
+                              else updateItem(item.id, { quantity: qty + 1 })
+                            }}
                             className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
                           >+</button>
                         </div>

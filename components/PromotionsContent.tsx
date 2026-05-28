@@ -11,8 +11,13 @@ import {
 } from '@/lib/promotions-notion'
 import {
   ITEM_STATUS_COLOR,
+  CONDITION_TYPE_LABEL,
   type PromotionItem,
   type ItemStatus,
+  type ConditionType,
+  type ConditionParams,
+  type QtyDiscountTier,
+  type FixedSetPriceTier,
 } from '@/lib/promotion-items-notion'
 
 // ── Badges ────────────────────────────────────────────────────
@@ -53,6 +58,419 @@ function fmtDate(d: string) {
   if (!d) return '—'
   const [y, m, day] = d.split('-')
   return `${y}/${m}/${day}`
+}
+
+// ── Condition summary (view mode) ─────────────────────────────
+
+function conditionSummary(params: ConditionParams | null): string | null {
+  if (!params) return null
+  const p = params as any
+  switch (p.type) {
+    case 'single_price':
+      return `特價 NT$${Number(p.price).toLocaleString()}`
+    case 'series_discount':
+      return `全系列 ${Math.round(p.rate * 10)}折`
+    case 'buy_n_get_m':
+      return `買${p.n}送${p.m}`
+    case 'fixed_set_price':
+      return (p.tiers as FixedSetPriceTier[]).map((t) => `${t.qty}件 NT$${t.totalPrice.toLocaleString()}`).join(' / ')
+    case 'qty_discount':
+      return (p.tiers as QtyDiscountTier[]).map((t) =>
+        `滿${t.minQty}件 ${t.rate != null ? Math.round(t.rate * 10) + '折' : `NT$${t.price}`}`
+      ).join(' / ')
+    case 'buy_a_get_b':
+      return `買→贈 ${p.giftSkuName}×${p.giftQty}`
+    case 'add_on':
+      return `加購價 NT$${Number(p.addOnPrice).toLocaleString()}`
+    case 'bundle':
+      return `組合 ${p.bundlePrice != null ? `NT$${Number(p.bundlePrice).toLocaleString()}` : p.rate != null ? `${Math.round(p.rate * 10)}折` : ''}`
+    case 'limited_quota':
+      return `限額 ${p.quota} 名`
+    case 'contact_sales':
+      return '請洽業務'
+    case 'service_plan':
+      return `${p.planName}｜額度 ${p.totalQuota}`
+    default:
+      return null
+  }
+}
+
+const CONDITION_TYPE_COLOR: Record<string, string> = {
+  single_price:    'bg-blue-50 text-blue-700 border-blue-200',
+  series_discount: 'bg-purple-50 text-purple-700 border-purple-200',
+  qty_discount:    'bg-indigo-50 text-indigo-700 border-indigo-200',
+  buy_n_get_m:     'bg-green-50 text-green-700 border-green-200',
+  fixed_set_price: 'bg-teal-50 text-teal-700 border-teal-200',
+  buy_a_get_b:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+  add_on:          'bg-orange-50 text-orange-700 border-orange-200',
+  bundle:          'bg-amber-50 text-amber-700 border-amber-200',
+  limited_quota:   'bg-red-50 text-red-700 border-red-200',
+  contact_sales:   'bg-gray-50 text-gray-600 border-gray-200',
+  service_plan:    'bg-violet-50 text-violet-700 border-violet-200',
+}
+
+function ConditionChip({ conditionType, conditionParams }: {
+  conditionType:   ConditionType | null
+  conditionParams: ConditionParams | null
+}) {
+  if (!conditionType) return null
+  const label   = CONDITION_TYPE_LABEL[conditionType] ?? conditionType
+  const summary = conditionSummary(conditionParams)
+  const color   = CONDITION_TYPE_COLOR[conditionType] ?? 'bg-gray-50 text-gray-600 border-gray-200'
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
+      <span className="opacity-60">{label}</span>
+      {summary && <span>· {summary}</span>}
+    </span>
+  )
+}
+
+// ── Mini SKU search field (for condition params) ───────────────
+
+interface SkuResult { skuCode: string; name: string; manufacturer: string }
+
+function SkuSearchField({ label, value, onChange }: {
+  label:    string
+  value:    { skuCode: string; name: string } | null
+  onChange: (r: SkuResult | null) => void
+}) {
+  const [q,       setQ]       = useState('')
+  const [results, setResults] = useState<SkuResult[]>([])
+  const [open,    setOpen]    = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!q.trim()) { setResults([]); return }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/products/search?q=${encodeURIComponent(q.trim())}&limit=10`)
+        const data = await res.json()
+        setResults(Array.isArray(data) ? data : [])
+      } catch { setResults([]) }
+    }, 250)
+  }, [q])
+
+  if (value && !open) return (
+    <div>
+      <label className="block text-[11px] font-semibold text-gray-400 mb-1">{label}</label>
+      <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-gray-50">
+        <span className="text-xs font-medium text-gray-800 flex-1">{value.name}</span>
+        <span className="text-xs text-gray-400 font-mono">{value.skuCode}</span>
+        <button type="button" onClick={() => { onChange(null); setQ('') }}
+          className="text-gray-300 hover:text-red-400 text-xs transition">✕</button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="relative">
+      <label className="block text-[11px] font-semibold text-gray-400 mb-1">{label}</label>
+      <input
+        type="search"
+        value={q}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="搜尋貨號或品名…"
+        className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+      />
+      {results.length > 0 && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-10 border rounded-lg bg-white shadow-lg divide-y max-h-48 overflow-y-auto">
+          {results.map((r) => (
+            <button key={r.skuCode} type="button"
+              onClick={() => { onChange(r); setQ(''); setOpen(false); setResults([]) }}
+              className="w-full text-left px-3 py-2 hover:bg-brand-50 transition">
+              <p className="text-sm font-medium text-gray-800">{r.name}</p>
+              <p className="text-xs text-gray-400 font-mono mt-0.5">{r.skuCode} · {r.manufacturer}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Condition Editor ──────────────────────────────────────────
+
+const ALL_CONDITION_TYPES = Object.keys(CONDITION_TYPE_LABEL) as ConditionType[]
+
+function defaultParams(type: ConditionType): ConditionParams {
+  switch (type) {
+    case 'single_price':    return { type, price: 0 }
+    case 'series_discount': return { type, rate: 0.7 }
+    case 'qty_discount':    return { type, tiers: [{ minQty: 5, rate: 0.9 }] }
+    case 'buy_n_get_m':     return { type, n: 5, m: 1 }
+    case 'fixed_set_price': return { type, tiers: [{ qty: 2, totalPrice: 0 }] }
+    case 'buy_a_get_b':     return { type, giftSkuCode: '', giftSkuName: '', giftQty: 1 }
+    case 'add_on':          return { type, addOnPrice: 0 }
+    case 'bundle':          return { type, partnerSkuCode: '', partnerSkuName: '' }
+    case 'limited_quota':   return { type, quota: 10 }
+    case 'contact_sales':   return { type }
+    case 'service_plan':    return { type, planName: '', totalQuota: 0 }
+    default:                return { type }
+  }
+}
+
+function ConditionEditor({ conditionType, conditionParams, onChange }: {
+  conditionType:    ConditionType | null
+  conditionParams:  ConditionParams | null
+  onChange: (type: ConditionType | null, params: ConditionParams | null) => void
+}) {
+  const p = conditionParams as any
+
+  const setType = (t: ConditionType | '') => {
+    if (!t) { onChange(null, null); return }
+    onChange(t, defaultParams(t))
+  }
+
+  const patch = (fields: Record<string, unknown>) => {
+    if (!conditionType || !conditionParams) return
+    onChange(conditionType, { ...conditionParams, ...fields } as ConditionParams)
+  }
+
+  // Tier helpers for qty_discount
+  const updateQtyTier = (idx: number, field: keyof QtyDiscountTier, val: string) => {
+    const tiers: QtyDiscountTier[] = [...(p?.tiers ?? [])]
+    tiers[idx] = { ...tiers[idx], [field]: field === 'minQty' ? parseInt(val) || 0 : parseFloat(val) || undefined } as QtyDiscountTier
+    patch({ tiers })
+  }
+  const addQtyTier    = () => patch({ tiers: [...(p?.tiers ?? []), { minQty: 0 }] })
+  const removeQtyTier = (idx: number) => patch({ tiers: (p?.tiers ?? []).filter((_: any, i: number) => i !== idx) })
+
+  // Tier helpers for fixed_set_price
+  const updateFixedTier = (idx: number, field: keyof FixedSetPriceTier, val: string) => {
+    const tiers: FixedSetPriceTier[] = [...(p?.tiers ?? [])]
+    tiers[idx] = { ...tiers[idx], [field]: parseInt(val) || 0 }
+    patch({ tiers })
+  }
+  const addFixedTier    = () => patch({ tiers: [...(p?.tiers ?? []), { qty: 0, totalPrice: 0 }] })
+  const removeFixedTier = (idx: number) => patch({ tiers: (p?.tiers ?? []).filter((_: any, i: number) => i !== idx) })
+
+  return (
+    <div className="space-y-3">
+      {/* Type selector */}
+      <div>
+        <label className="block text-[11px] font-semibold text-gray-400 mb-1">條件類型</label>
+        <select
+          value={conditionType ?? ''}
+          onChange={(e) => setType(e.target.value as ConditionType | '')}
+          className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-700"
+        >
+          <option value="">— 不設定結構化條件 —</option>
+          {ALL_CONDITION_TYPES.map((t) => (
+            <option key={t} value={t}>{CONDITION_TYPE_LABEL[t]}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Type-specific inputs */}
+      {conditionType === 'single_price' && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-400 mb-1">特價金額</label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">NT$</span>
+            <input type="number" min={0} value={p?.price ?? ''} onChange={(e) => patch({ price: parseFloat(e.target.value) || 0 })}
+              className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'series_discount' && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-400 mb-1">折扣率</label>
+          <div className="flex items-center gap-2">
+            <input type="number" min={0} max={100} step={5} value={Math.round((p?.rate ?? 0.7) * 100)}
+              onChange={(e) => patch({ rate: (parseInt(e.target.value) || 0) / 100 })}
+              className="w-24 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            <span className="text-xs text-gray-500">%（例：70 = 七折）</span>
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'buy_n_get_m' && (
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">買 N 件</label>
+            <input type="number" min={1} value={p?.n ?? ''} onChange={(e) => patch({ n: parseInt(e.target.value) || 1 })}
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">送 M 件</label>
+            <input type="number" min={1} value={p?.m ?? ''} onChange={(e) => patch({ m: parseInt(e.target.value) || 1 })}
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'fixed_set_price' && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-400 mb-1">固定價格方案（可多個）</label>
+          <div className="space-y-2">
+            {(p?.tiers as FixedSetPriceTier[] ?? []).map((tier, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input type="number" min={1} placeholder="件數" value={tier.qty || ''}
+                  onChange={(e) => updateFixedTier(idx, 'qty', e.target.value)}
+                  className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <span className="text-xs text-gray-400">件</span>
+                <span className="text-xs text-gray-400">NT$</span>
+                <input type="number" min={0} placeholder="總價" value={tier.totalPrice || ''}
+                  onChange={(e) => updateFixedTier(idx, 'totalPrice', e.target.value)}
+                  className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <button type="button" onClick={() => removeFixedTier(idx)}
+                  className="text-gray-300 hover:text-red-400 text-sm transition">✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={addFixedTier}
+              className="text-xs text-brand-600 hover:underline font-medium">+ 新增方案</button>
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'qty_discount' && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-400 mb-1">數量折扣門檻（可多階）</label>
+          <div className="space-y-2">
+            {(p?.tiers as QtyDiscountTier[] ?? []).map((tier, idx) => (
+              <div key={idx} className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-400">滿</span>
+                <input type="number" min={1} placeholder="件數" value={tier.minQty || ''}
+                  onChange={(e) => updateQtyTier(idx, 'minQty', e.target.value)}
+                  className="w-16 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <span className="text-xs text-gray-400">件</span>
+                <input type="number" min={0} max={100} step={5} placeholder="折扣%" value={tier.rate != null ? Math.round(tier.rate * 100) : ''}
+                  onChange={(e) => updateQtyTier(idx, 'rate', String((parseInt(e.target.value) || 0) / 100))}
+                  className="w-16 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <span className="text-xs text-gray-400">% 或單價 NT$</span>
+                <input type="number" min={0} placeholder="單價" value={tier.price ?? ''}
+                  onChange={(e) => updateQtyTier(idx, 'price', e.target.value)}
+                  className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <button type="button" onClick={() => removeQtyTier(idx)}
+                  className="text-gray-300 hover:text-red-400 text-sm transition">✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={addQtyTier}
+              className="text-xs text-brand-600 hover:underline font-medium">+ 新增門檻</button>
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'buy_a_get_b' && (
+        <>
+          <SkuSearchField
+            label="贈品商品"
+            value={p?.giftSkuCode ? { skuCode: p.giftSkuCode, name: p.giftSkuName } : null}
+            onChange={(r) => patch({ giftSkuCode: r?.skuCode ?? '', giftSkuName: r?.name ?? '' })}
+          />
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">贈品數量</label>
+            <input type="number" min={1} value={p?.giftQty ?? 1} onChange={(e) => patch({ giftQty: parseInt(e.target.value) || 1 })}
+              className="w-24 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+        </>
+      )}
+
+      {conditionType === 'add_on' && (
+        <>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">加購價格</label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">NT$</span>
+              <input type="number" min={0} value={p?.addOnPrice ?? ''} onChange={(e) => patch({ addOnPrice: parseFloat(e.target.value) || 0 })}
+                className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+          </div>
+          <SkuSearchField
+            label="需搭配的主商品（選填）"
+            value={p?.mainSkuCode ? { skuCode: p.mainSkuCode, name: p.mainSkuName ?? p.mainSkuCode } : null}
+            onChange={(r) => patch({ mainSkuCode: r?.skuCode ?? undefined, mainSkuName: r?.name ?? undefined })}
+          />
+        </>
+      )}
+
+      {conditionType === 'bundle' && (
+        <>
+          <SkuSearchField
+            label="搭配商品"
+            value={p?.partnerSkuCode ? { skuCode: p.partnerSkuCode, name: p.partnerSkuName ?? p.partnerSkuCode } : null}
+            onChange={(r) => patch({ partnerSkuCode: r?.skuCode ?? '', partnerSkuName: r?.name ?? '' })}
+          />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">組合優惠總價（擇一）</label>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">NT$</span>
+                <input type="number" min={0} value={p?.bundlePrice ?? ''} onChange={(e) => patch({ bundlePrice: parseFloat(e.target.value) || undefined })}
+                  className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">或折扣率</label>
+              <div className="flex items-center gap-1">
+                <input type="number" min={0} max={100} step={5} value={p?.rate != null ? Math.round(p.rate * 100) : ''}
+                  onChange={(e) => patch({ rate: (parseInt(e.target.value) || 0) / 100 || undefined })}
+                  className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                <span className="text-xs text-gray-400">%</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {conditionType === 'limited_quota' && (
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">名額上限</label>
+            <input type="number" min={1} value={p?.quota ?? ''} onChange={(e) => patch({ quota: parseInt(e.target.value) || 0 })}
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+          <div className="flex-1">
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">備注（選填）</label>
+            <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
+              placeholder="說明限制條件"
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+        </div>
+      )}
+
+      {conditionType === 'contact_sales' && (
+        <div>
+          <label className="block text-[11px] font-semibold text-gray-400 mb-1">備注（選填）</label>
+          <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
+            placeholder="說明為何需洽業務"
+            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+        </div>
+      )}
+
+      {conditionType === 'service_plan' && (
+        <>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">方案名稱</label>
+            <input type="text" value={p?.planName ?? ''} onChange={(e) => patch({ planName: e.target.value })}
+              placeholder="例：年度保固方案 / 季度耗材服務包"
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">總額度（次 / 件）</label>
+              <input type="number" min={0} value={p?.totalQuota ?? ''} onChange={(e) => patch({ totalQuota: parseInt(e.target.value) || 0 })}
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">有效期限（選填）</label>
+              <input type="date" value={p?.validUntil ?? ''} onChange={(e) => patch({ validUntil: e.target.value || undefined })}
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">方案說明（選填）</label>
+            <input type="text" value={p?.note ?? ''} onChange={(e) => patch({ note: e.target.value || undefined })}
+              placeholder="額度使用規則說明…"
+              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 // ── Product search for adding items ──────────────────────────
@@ -119,12 +537,20 @@ function ItemRow({ item, onUpdate, onDelete }: {
   onUpdate: (id: string, patch: Partial<PromotionItem>) => void
   onDelete: (id: string) => void
 }) {
-  const [editing,   setEditing]   = useState(false)
-  const [condition, setCondition] = useState(item.condition)
-  const [price,     setPrice]     = useState<string>(item.price != null ? String(item.price) : '')
-  const [adminNote, setAdminNote] = useState(item.adminNote)
-  const [saving,    setSaving]    = useState(false)
-  const [deleting,  setDeleting]  = useState(false)
+  const [editing,         setEditing]         = useState(false)
+  const [condition,       setCondition]       = useState(item.condition)
+  const [conditionType,   setConditionType]   = useState<ConditionType | null>(item.conditionType)
+  const [conditionParams, setConditionParams] = useState<ConditionParams | null>(item.conditionParams)
+  const [price,           setPrice]           = useState<string>(item.price != null ? String(item.price) : '')
+  const [adminNote,       setAdminNote]       = useState(item.adminNote)
+  const [usedQuota,       setUsedQuota]       = useState<string>(String(item.usedQuota ?? 0))
+  const [saving,          setSaving]          = useState(false)
+  const [deleting,        setDeleting]        = useState(false)
+
+  const handleConditionChange = (type: ConditionType | null, params: ConditionParams | null) => {
+    setConditionType(type)
+    setConditionParams(params)
+  }
 
   const handleStatusChange = async (status: ItemStatus) => {
     onUpdate(item.id, { status })
@@ -137,8 +563,16 @@ function ItemRow({ item, onUpdate, onDelete }: {
   const handleSave = async () => {
     setSaving(true)
     const priceNum = price !== '' ? parseFloat(price) : null
-    const patch = { condition, price: isFinite(priceNum!) ? priceNum : null, adminNote }
-    onUpdate(item.id, patch)
+    const usedQ    = parseInt(usedQuota) || 0
+    const patch = {
+      condition,
+      conditionType:   conditionType ?? undefined,
+      conditionParams: conditionParams ?? undefined,
+      usedQuota:       usedQ,
+      price:           isFinite(priceNum!) ? priceNum : null,
+      adminNote,
+    }
+    onUpdate(item.id, { ...patch, conditionType, conditionParams, usedQuota: usedQ })
     await fetch(`/api/promotion-items/${item.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -154,6 +588,9 @@ function ItemRow({ item, onUpdate, onDelete }: {
     onDelete(item.id)
   }
 
+  const isServicePlan = conditionType === 'service_plan'
+  const totalQuota    = (conditionParams as any)?.totalQuota ?? 0
+
   return (
     <div className={`border-b last:border-0 px-4 py-3 transition-colors ${item.status === '不採用' ? 'opacity-50' : ''}`}>
       {/* Top row */}
@@ -167,13 +604,24 @@ function ItemRow({ item, onUpdate, onDelete }: {
 
           {/* Condition + price (view) */}
           {!editing && (
-            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
               <ItemStatusBadge status={item.status} />
-              {item.condition && (
+              {/* Structured condition chip */}
+              {item.conditionType && (
+                <ConditionChip conditionType={item.conditionType} conditionParams={item.conditionParams} />
+              )}
+              {/* Legacy free-text condition */}
+              {!item.conditionType && item.condition && (
                 <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{item.condition}</span>
               )}
               {item.price != null && (
                 <span className="text-xs font-semibold text-brand-700">NT${item.price.toLocaleString()}</span>
+              )}
+              {/* Service plan quota tracker */}
+              {item.conditionType === 'service_plan' && (
+                <span className="text-xs text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full font-medium">
+                  已用 {item.usedQuota} / {(item.conditionParams as any)?.totalQuota ?? '?'}
+                </span>
               )}
               {item.adminNote && (
                 <span className="text-xs text-gray-400 italic">備注：{item.adminNote}</span>
@@ -184,7 +632,6 @@ function ItemRow({ item, onUpdate, onDelete }: {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          {/* Status quick-switch */}
           {!editing && (
             <select
               value={item.status}
@@ -207,11 +654,21 @@ function ItemRow({ item, onUpdate, onDelete }: {
         </div>
       </div>
 
-      {/* Edit fields */}
+      {/* Edit panel */}
       {editing && (
-        <div className="mt-3 space-y-2.5 pl-0">
+        <div className="mt-3 space-y-4 border-t pt-3">
+          {/* Structured condition editor */}
+          <ConditionEditor
+            conditionType={conditionType}
+            conditionParams={conditionParams}
+            onChange={handleConditionChange}
+          />
+
+          {/* Free-text condition label */}
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">促銷條件</label>
+            <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+              促銷條件說明（自由文字，業務可見）
+            </label>
             <input
               type="text"
               value={condition}
@@ -220,29 +677,50 @@ function ItemRow({ item, onUpdate, onDelete }: {
               className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">促銷價格（選填）</label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">促銷價格（參考，選填）</label>
               <input
-                type="number"
-                min={0}
-                value={price}
+                type="number" min={0} value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="優惠後單價"
                 className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
-              <input
-                type="text"
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-                placeholder="定價說明…"
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-              />
-            </div>
+            {isServicePlan ? (
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+                  已使用額度（上限：{totalQuota}）
+                </label>
+                <input
+                  type="number" min={0} max={totalQuota} value={usedQuota}
+                  onChange={(e) => setUsedQuota(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
+                <input
+                  type="text" value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                  placeholder="定價說明…"
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
+            )}
           </div>
+
+          {isServicePlan && (
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
+              <input type="text" value={adminNote} onChange={(e) => setAdminNote(e.target.value)}
+                placeholder="定價說明…"
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={() => setEditing(false)}
               className="px-3 py-1.5 rounded-lg border text-xs text-gray-500 hover:bg-gray-50 transition">
@@ -266,10 +744,10 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
   onClose: () => void
   onEdit:  () => void
 }) {
-  const [items,       setItems]       = useState<PromotionItem[]>([])
+  const [items,        setItems]        = useState<PromotionItem[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
-  const [showSearch,  setShowSearch]  = useState(false)
-  const [addingItem,  setAddingItem]  = useState(false)
+  const [showSearch,   setShowSearch]   = useState(false)
+  const [addingItem,   setAddingItem]   = useState(false)
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -287,7 +765,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
   }, [promo.id])
 
   const handleAddProduct = async (r: SearchResult) => {
-    // Check if already added
     if (items.find((it) => it.skuCode === r.skuCode)) {
       alert(`「${r.name}」已在此活動中`)
       return
@@ -312,7 +789,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
     setItems((prev) => prev.filter((it) => it.id !== id))
   }
 
-  // Stats
   const confirmed = items.filter((i) => i.status === '已確認').length
   const pending   = items.filter((i) => i.status === '待定價').length
   const dropped   = items.filter((i) => i.status === '不採用').length
@@ -352,7 +828,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
             </div>
           </div>
 
-          {/* Description */}
           {promo.description && (
             <p className="text-xs text-gray-500 mt-3 leading-relaxed whitespace-pre-wrap">{promo.description}</p>
           )}
@@ -363,7 +838,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
             </a>
           )}
 
-          {/* Stats */}
           {items.length > 0 && (
             <div className="flex gap-4 mt-3 text-xs">
               <span className="text-green-600 font-semibold">✅ 已確認 {confirmed}</span>
@@ -376,7 +850,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto">
-          {/* Add item toolbar */}
           <div className="px-4 py-3 border-b bg-gray-50">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">促銷品項</p>
@@ -404,7 +877,6 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
             </AnimatePresence>
           </div>
 
-          {/* Items list */}
           {loadingItems && (
             <div className="space-y-0 divide-y">
               {[1,2,3].map((i) => <div key={i} className="h-14 px-4 py-3 animate-pulse"><div className="h-3 bg-gray-100 rounded w-3/4" /></div>)}
@@ -613,8 +1085,8 @@ const STATUS_LABEL: Record<PromotionStatus, string> = {
 export function PromotionsContent() {
   const [promos,  setPromos]  = useState<Promotion[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState<Promotion | null>(null)      // detail panel
-  const [editing, setEditing] = useState<Promotion | null | 'new'>(null) // edit drawer
+  const [viewing, setViewing] = useState<Promotion | null>(null)
+  const [editing, setEditing] = useState<Promotion | null | 'new'>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -633,7 +1105,6 @@ export function PromotionsContent() {
       if (idx >= 0) { const next = [...prev]; next[idx] = p; return next }
       return [p, ...prev]
     })
-    // If we just edited the currently-viewed promo, update the panel too
     if (viewing && viewing.id === p.id) setViewing(p)
     setEditing(null)
   }
@@ -650,7 +1121,6 @@ export function PromotionsContent() {
 
   return (
     <>
-      {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-gray-500">
           共 {promos.length} 個活動
@@ -706,7 +1176,6 @@ export function PromotionsContent() {
         </div>
       )}
 
-      {/* Detail panel */}
       <AnimatePresence>
         {viewing && (
           <PromotionDetailPanel
@@ -717,7 +1186,6 @@ export function PromotionsContent() {
         )}
       </AnimatePresence>
 
-      {/* Edit drawer (z-60, above detail panel z-50) */}
       <AnimatePresence>
         {editing !== null && (
           <PromotionDrawer
