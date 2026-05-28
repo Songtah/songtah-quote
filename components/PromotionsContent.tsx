@@ -886,50 +886,59 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
   const dropped   = items.filter((i) => i.status === '不採用').length
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <motion.div
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
       />
+
+      {/* Card */}
       <motion.div
-        className="relative w-full max-w-lg bg-white shadow-2xl flex flex-col h-full"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1,    y: 0 }}
+        exit={{    opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b shrink-0">
+        <div className="px-6 pt-6 pb-4 border-b shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
                 <StatusBadge status={promo.status} />
                 {promo.type && <TypeBadge type={promo.type} />}
               </div>
-              <h2 className="text-base font-bold text-gray-900 leading-snug">{promo.name}</h2>
+              <h2 className="text-lg font-bold text-gray-900 leading-snug">{promo.name}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 {fmtDate(promo.startDate)} – {fmtDate(promo.endDate)}
               </p>
             </div>
-            <div className="flex gap-1.5 shrink-0 mt-0.5">
+            <div className="flex gap-1.5 shrink-0">
               <button onClick={onEdit}
-                className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
                 編輯活動
               </button>
               <button onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">✕</button>
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
             </div>
           </div>
 
-          {promo.description && (
-            <p className="text-xs text-gray-500 mt-3 leading-relaxed whitespace-pre-wrap">{promo.description}</p>
-          )}
-          {promo.dmUrl && (
-            <a href={promo.dmUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-brand-600 hover:underline">
-              📄 查閱 DM
-            </a>
-          )}
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-4 mt-3">
+            {promo.description && (
+              <p className="text-xs text-gray-500 leading-relaxed flex-1">{promo.description}</p>
+            )}
+            {promo.dmUrl && (
+              <a href={promo.dmUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline shrink-0">
+                📄 查閱 DM
+              </a>
+            )}
+          </div>
 
+          {/* Stats */}
           {items.length > 0 && (
             <div className="flex gap-4 mt-3 text-xs">
               <span className="text-green-600 font-semibold">✅ 已確認 {confirmed}</span>
@@ -940,9 +949,10 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
           )}
         </div>
 
-        {/* Items */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-3 border-b bg-gray-50">
+        {/* Items — scrollable */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {/* Add item toolbar */}
+          <div className="px-5 py-3 border-b bg-gray-50/80 sticky top-0 z-10">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">促銷品項</p>
               <button
@@ -950,7 +960,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
                 disabled={addingItem}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:opacity-50 transition"
               >
-                {addingItem ? '新增中…' : '+ 新增品項'}
+                {addingItem ? '新增中…' : showSearch ? '收起' : '+ 新增品項'}
               </button>
             </div>
             <AnimatePresence>
@@ -961,21 +971,16 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="pt-1">
-                    {/* 模式切換 */}
-                    <div className="flex gap-1 mb-2">
+                  <div className="pt-1 space-y-2">
+                    <div className="flex gap-1">
                       {(['sku', 'series'] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setAddMode(m)}
+                        <button key={m} type="button" onClick={() => setAddMode(m)}
                           className={[
                             'px-3 py-1 rounded-full text-xs font-medium border transition',
                             addMode === m
                               ? 'bg-brand-500 border-brand-500 text-white'
                               : 'border-gray-300 text-gray-500 hover:border-brand-400 hover:text-brand-600',
-                          ].join(' ')}
-                        >
+                          ].join(' ')}>
                           {m === 'sku' ? '單一商品' : '商品系列'}
                         </button>
                       ))}
@@ -990,9 +995,14 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
             </AnimatePresence>
           </div>
 
+          {/* Items list */}
           {loadingItems && (
-            <div className="space-y-0 divide-y">
-              {[1,2,3].map((i) => <div key={i} className="h-14 px-4 py-3 animate-pulse"><div className="h-3 bg-gray-100 rounded w-3/4" /></div>)}
+            <div className="divide-y">
+              {[1,2,3].map((i) => (
+                <div key={i} className="h-14 px-5 py-3 animate-pulse">
+                  <div className="h-3 bg-gray-100 rounded w-3/4" />
+                </div>
+              ))}
             </div>
           )}
           {!loadingItems && items.length === 0 && (
@@ -1008,12 +1018,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
           {!loadingItems && items.length > 0 && (
             <div className="divide-y">
               {items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onUpdate={handleUpdateItem}
-                  onDelete={handleDeleteItem}
-                />
+                <ItemRow key={item.id} item={item} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} />
               ))}
             </div>
           )}
@@ -1065,18 +1070,22 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
-      <motion.div className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <motion.div className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} />
-      <motion.div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
+      <motion.div
+        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1,    y: 0 }}
+        exit={{    opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+      >
+        <div className="px-6 py-5 border-b flex items-center justify-between shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{isEdit ? '編輯促銷活動' : '新增促銷活動'}</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">✕</button>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">活動名稱 *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)}
@@ -1122,7 +1131,7 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
             <p className="text-[11px] text-gray-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
           </div>
         </div>
-        <div className="px-6 py-4 border-t shrink-0">
+        <div className="px-6 py-4 border-t shrink-0 rounded-b-2xl bg-gray-50/60">
           {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition">取消</button>
