@@ -1545,7 +1545,7 @@ function ProductDetailCard({
         transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* ── Header ───────────────────────────────────────── */}
-        <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               {/* Tags */}
@@ -1626,14 +1626,14 @@ function ProductDetailCard({
           {!loading && !error && hasAnyRich && (
             <>
               {/* ── Top: image + price + description ────────── */}
-              <div className="p-6 flex gap-5">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-5">
                 {/* Main image */}
                 {rich!.imageUrl ? (
-                  <div className="w-44 h-44 shrink-0 rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm">
+                  <div className="w-full sm:w-44 sm:h-44 aspect-square sm:aspect-auto shrink-0 rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm">
                     <img src={rich!.imageUrl} alt={catalog?.name} className="w-full h-full object-contain"/>
                   </div>
                 ) : (
-                  <div className="w-44 h-44 shrink-0 rounded-xl bg-gray-50 border border-dashed border-gray-200
+                  <div className="w-full sm:w-44 sm:h-44 aspect-square sm:aspect-auto shrink-0 rounded-xl bg-gray-50 border border-dashed border-gray-200
                                   flex items-center justify-center">
                     <span className="text-5xl text-gray-200">🖼</span>
                   </div>
@@ -1664,7 +1664,7 @@ function ProductDetailCard({
 
               {/* ── Technical specs ──────────────────────────── */}
               {specs.rows.length > 0 && (
-                <div className="px-6 pb-6">
+                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">技術規格</p>
                   <div className="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
                     {/* Header */}
