@@ -57,7 +57,7 @@ function fmtDate(d: string) {
 
 // ── Product search for adding items ──────────────────────────
 
-interface SearchResult { code: string; name: string; brand: string; productType: string; category: string }
+interface SearchResult { skuCode: string; name: string; manufacturer: string; productType: string; category: string }
 
 function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void }) {
   const [q, setQ] = useState('')
@@ -73,7 +73,7 @@ function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void
       try {
         const res = await fetch(`/api/products/search?q=${encodeURIComponent(q.trim())}&limit=20`)
         const data = await res.json()
-        setResults(Array.isArray(data.items) ? data.items : [])
+        setResults(Array.isArray(data) ? data : [])
       } catch { setResults([]) }
       finally { setLoading(false) }
     }, 300)
@@ -97,13 +97,13 @@ function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void
         <div className="mt-2 border rounded-lg divide-y overflow-hidden max-h-64 overflow-y-auto">
           {results.map((r) => (
             <button
-              key={r.code}
+              key={r.skuCode}
               type="button"
               onClick={() => { onSelect(r); setQ(''); setResults([]) }}
               className="w-full text-left px-3 py-2.5 hover:bg-brand-50 transition"
             >
               <p className="text-sm font-medium text-gray-800">{r.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{r.code} · {r.brand}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{r.skuCode} · {r.manufacturer}</p>
             </button>
           ))}
         </div>
@@ -288,7 +288,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
 
   const handleAddProduct = async (r: SearchResult) => {
     // Check if already added
-    if (items.find((it) => it.skuCode === r.code)) {
+    if (items.find((it) => it.skuCode === r.skuCode)) {
       alert(`「${r.name}」已在此活動中`)
       return
     }
@@ -296,7 +296,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
     try {
       const res = await fetch(`/api/promotions/${promo.id}/items`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skuCode: r.code, skuName: r.name, brand: r.brand }),
+        body: JSON.stringify({ skuCode: r.skuCode, skuName: r.name, brand: r.manufacturer }),
       })
       const item = await res.json()
       if (res.ok) setItems((prev) => [...prev, item])
