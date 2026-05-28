@@ -1315,7 +1315,7 @@ function ProductEditDrawer({
         transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between gap-4">
+        <div className="px-4 sm:px-6 pt-6 pb-4 sm:py-5 border-b border-gray-100 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-500 mb-1">編輯商品</p>
             <h2 className="text-lg font-bold text-slate-900 leading-snug">
@@ -1527,7 +1527,7 @@ function ProductDetailCard({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center px-3 pb-3 pt-14 sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <motion.div
@@ -1538,7 +1538,7 @@ function ProductDetailCard({
       />
 
       <motion.div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 10 }}

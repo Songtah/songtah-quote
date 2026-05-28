@@ -111,7 +111,7 @@ function ProductDetail({ p, onClose }: { p: ProductItem; onClose: () => void }) 
         transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="flex items-start gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
+        <div className="flex items-start gap-3 px-4 sm:px-6 pt-6 pb-4 sm:py-5 border-b border-gray-100">
           <ProductThumb id={p.id} name={p.name} size={64} />
           <div className="flex-1 min-w-0">
             <p className="eyebrow mb-1 text-[10px] sm:text-xs">
