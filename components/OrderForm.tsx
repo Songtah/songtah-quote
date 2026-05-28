@@ -838,12 +838,13 @@ function ProductPicker({
   const handleAddCatalogItem = useCallback(
     (item: CatalogItem) => {
       onAdd({
-        skuCode: item.skuCode,
-        skuName: item.name,
-        brand: item.manufacturer,
+        skuCode:    item.skuCode,
+        skuName:    item.name,
+        brand:      item.manufacturer,
         seriesName: item.category,
-        seriesId: '',
-        unitPrice: 0,
+        seriesId:   '',
+        // 優先用促銷特價，fallback 到資料庫售價 → 定價 → 0
+        unitPrice: item.salePrice ?? item.price ?? 0,
       })
     },
     [onAdd]
@@ -1479,13 +1480,14 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
         return
       }
 
-      // 新品項
+      // 新品項（unitPrice 來自 partial：salePrice → price → 0；促銷條件之後再覆蓋）
       const newItem: OrderItem = {
         ...partial,
-        id:        `item-${Date.now()}-${Math.random()}`,
-        quantity:  1,
-        unitPrice: 0,
-        note:      '',
+        id:       `item-${Date.now()}-${Math.random()}`,
+        quantity: 1,
+        note:     '',
+        // 保留 partial.unitPrice（資料庫定價），不強制蓋 0
+        unitPrice: partial.unitPrice ?? 0,
       }
 
       // 找對應的已確認促銷品項
