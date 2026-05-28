@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeUp, stagger } from '@/lib/motion'
+import { ProductFamily, YMHToothGridPanel, FamilySpecPanel } from '@/components/FamilySpecPicker'
 
 type ProductItem = {
   id: string
@@ -296,14 +297,6 @@ function ProductCard({ p, onClick }: { p: ProductItem; onClick: () => void }) {
 
 // ── Family browse types ────────────────────────────────────────────────────────
 
-type FamilyInfo = {
-  id: string
-  seriesName: string
-  brand: string
-  productType: string
-  category: string
-}
-
 type FamilyMember = {
   code: string
   name: string
@@ -322,13 +315,15 @@ function FamilyBrowseCard({
   onToggle,
   onSelectMember,
 }: {
-  family: FamilyInfo
+  family: ProductFamily
   isExpanded: boolean
   members: FamilyMember[] | undefined
   membersLoading: boolean
   onToggle: () => void
   onSelectMember: (m: FamilyMember) => void
 }) {
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* Card header */}
@@ -357,41 +352,66 @@ function FamilyBrowseCard({
         </span>
       </button>
 
-      {/* Expanded member list */}
+      {/* Expanded body */}
       {isExpanded && (
         <div className="border-t border-gray-100">
-          {membersLoading ? (
-            <div className="px-4 py-3 space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="h-3.5 w-1/2 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-3 w-1/4 bg-gray-50 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : members && members.length > 0 ? (
-            members.map((m) => (
-              <button
-                key={m.code}
-                onClick={() => onSelectMember(m)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
-                  <p className="font-mono text-[10px] text-gray-400 mt-0.5">{m.code}</p>
-                </div>
-                {m.category && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block shrink-0">
-                    {m.category}
-                  </span>
-                )}
-                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ))
+          {family.uiVariant === 'ymh-tooth-grid' ? (
+            <>
+              <YMHToothGridPanel
+                family={family}
+                onAdd={(code) => { navigator.clipboard.writeText(code).catch(() => {}); setCopiedCode(code); setTimeout(() => setCopiedCode(null), 2500) }}
+                actionLabel="複製貨號"
+              />
+              {copiedCode && (
+                <div className="px-5 pb-3 text-xs text-green-600 font-medium">✓ 已複製 {copiedCode}</div>
+              )}
+            </>
+          ) : family.skuMap ? (
+            <>
+              <FamilySpecPanel
+                family={family}
+                onAdd={(code) => { navigator.clipboard.writeText(code).catch(() => {}); setCopiedCode(code); setTimeout(() => setCopiedCode(null), 2500) }}
+                actionLabel="複製貨號"
+              />
+              {copiedCode && (
+                <div className="px-5 pb-3 text-xs text-green-600 font-medium">✓ 已複製 {copiedCode}</div>
+              )}
+            </>
           ) : (
-            <p className="px-4 py-4 text-sm text-gray-400 text-center">此系列暫無商品</p>
+            /* existing flat member list */
+            membersLoading ? (
+              <div className="px-4 py-3 space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-3.5 w-1/2 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-3 w-1/4 bg-gray-50 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : members && members.length > 0 ? (
+              members.map((m) => (
+                <button
+                  key={m.code}
+                  onClick={() => onSelectMember(m)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
+                    <p className="font-mono text-[10px] text-gray-400 mt-0.5">{m.code}</p>
+                  </div>
+                  {m.category && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-xs text-blue-600 font-medium whitespace-nowrap hidden sm:inline-block shrink-0">
+                      {m.category}
+                    </span>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))
+            ) : (
+              <p className="px-4 py-4 text-sm text-gray-400 text-center">此系列暫無商品</p>
+            )
           )}
         </div>
       )}
@@ -423,7 +443,7 @@ export function ProductsContent({
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null)
 
   // Family browse state
-  const [families, setFamilies] = useState<FamilyInfo[]>([])
+  const [families, setFamilies] = useState<ProductFamily[]>([])
   const [expandedFamily, setExpandedFamily] = useState<string | null>(null)
   const [familyMembers, setFamilyMembers] = useState<Map<string, FamilyMember[]>>(new Map())
   const [familyMembersLoading, setFamilyMembersLoading] = useState<Set<string>>(new Set())
@@ -455,22 +475,23 @@ export function ProductsContent({
       return
     }
     setExpandedFamily(familyId)
-    // If not yet cached, fetch members
-    if (!familyMembers.has(familyId)) {
-      setFamilyMembersLoading((prev) => new Set(prev).add(familyId))
-      try {
-        const res = await fetch(`/api/products/families/${encodeURIComponent(familyId)}`)
-        const data = await res.json()
-        setFamilyMembers((prev) => new Map(prev).set(familyId, data.members ?? []))
-      } catch {
-        setFamilyMembers((prev) => new Map(prev).set(familyId, []))
-      } finally {
-        setFamilyMembersLoading((prev) => {
-          const next = new Set(prev)
-          next.delete(familyId)
-          return next
-        })
-      }
+
+    const family = families.find((f) => f.id === familyId)
+    // Only lazy-fetch member list for prefix-only families (no skuMap, no uiVariant)
+    if (family?.skuMap || family?.uiVariant) return
+    if (familyMembers.has(familyId)) return
+
+    setFamilyMembersLoading((prev) => new Set(prev).add(familyId))
+    try {
+      const res = await fetch(`/api/products/families/${encodeURIComponent(familyId)}`)
+      const data = await res.json()
+      setFamilyMembers((prev) => new Map(prev).set(familyId, data.members ?? []))
+    } catch {
+      setFamilyMembers((prev) => new Map(prev).set(familyId, []))
+    } finally {
+      setFamilyMembersLoading((prev) => {
+        const next = new Set(prev); next.delete(familyId); return next
+      })
     }
   }
 

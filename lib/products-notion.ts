@@ -210,3 +210,24 @@ export async function listSkusByFamilyId(familyId: string): Promise<string[]> {
   } while (cursor)
   return results.map((p: any) => readRichText(p, '貨號')).filter(Boolean)
 }
+
+/**
+ * Returns all SKU codes that have any manual family assignment in Notion.
+ * Used by OrderForm to exclude these from flat search results (dedup).
+ */
+export async function listAllFamilyAssignments(): Promise<string[]> {
+  await ensureFields()
+  const results: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: DB_PRODUCTS,
+      filter: { property: '系列群組', rich_text: { is_not_empty: true } },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    results.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return results.map((p: any) => readRichText(p, '貨號')).filter(Boolean)
+}
