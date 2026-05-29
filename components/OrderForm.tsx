@@ -831,6 +831,78 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       .catch(() => {})
   }, [promotionId])
 
+  // ── refs ──────────────────────────────────────────────────────
+  // itemsRef：讓 re-apply effect 讀到最新的 items，不需要把 items 加入 deps（避免無限 loop）
+  const itemsRef       = useRef<OrderItem[]>(initialOrder?.items ?? [])
+  // appliedPromoRef：記錄已 re-apply 過的 promotionId，避免重複執行
+  const appliedPromoRef = useRef('')
+  useEffect(() => { itemsRef.current = items }, [items])
+
+  // 促銷品項載入後，重新對現有品項套用折扣（處理兩種 race condition）
+  // ① 先選促銷再加品項 → promoItems 還未回來時品項已入列 → 這裡補套
+  // ② 先加品項再選促銷 → 同上
+  useEffect(() => {
+    if (!promotionId || promoItems.length === 0) return
+    if (appliedPromoRef.current === promotionId) return   // 同一個活動不重複套
+    appliedPromoRef.current = promotionId
+
+    const currentItems = itemsRef.current
+    if (currentItems.length === 0) return
+
+    const newHints: Record<string, string> = {}
+    const updatedItems = currentItems.map((item) => {
+      if (item.itemType === 'gift' || item.itemType === 'sample') return item
+
+      const promoItem =
+        promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
+        (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
+
+      if (!promoItem?.conditionType) return item
+
+      // 用 baseUnitPrice 快照作為折扣基礎（避免複利），沒有快照就用當前 unitPrice
+      const baseItem = { ...item, unitPrice: item.baseUnitPrice ?? item.unitPrice }
+      const { patches, hintLabel } = applyPromoCondition(baseItem, promoItem)
+      if (hintLabel) newHints[item.id] = hintLabel
+      return { ...item, ...patches }
+    })
+
+    setItems(updatedItems)
+    if (Object.keys(newHints).length > 0)
+      setPromoHints((h) => ({ ...h, ...newHints }))
+
+    // unitPrice=0 的品項（FamilySpecPanel 選品）→ 補查定價後再重新套折
+    updatedItems.forEach((item) => {
+      if (item.unitPrice > 0 || item.itemType === 'gift' || item.itemType === 'sample') return
+      if (!item.skuCode) return
+      fetch(`/api/products/search?q=${encodeURIComponent(item.skuCode)}&limit=5`)
+        .then((r) => r.json())
+        .then((results: CatalogItem[]) => {
+          if (!Array.isArray(results)) return
+          const match = results.find((r) => r.skuCode === item.skuCode)
+          const actualPrice = match?.salePrice ?? match?.price ?? 0
+          if (!actualPrice) return
+
+          const promoItem =
+            promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
+            (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
+
+          if (promoItem?.conditionType) {
+            const baseItem2 = { ...item, unitPrice: actualPrice }
+            const { patches: rp, hintLabel: rh } = applyPromoCondition(baseItem2, promoItem)
+            setItems((prev) => prev.map((it) =>
+              it.id === item.id ? { ...it, unitPrice: actualPrice, ...rp } : it
+            ))
+            if (rh) setPromoHints((h) => ({ ...h, [item.id]: rh }))
+          } else {
+            setItems((prev) => prev.map((it) =>
+              it.id === item.id ? { ...it, unitPrice: actualPrice } : it
+            ))
+          }
+        })
+        .catch(() => {})
+    })
+  }, [promotionId, promoItems])
+
   // Add item from picker — with promotion logic
   const handleAddItem = useCallback(
     (partial: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => {
@@ -845,37 +917,33 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
         return
       }
 
-      // 新品項（unitPrice 來自 partial：salePrice → price → 0；促銷條件之後再覆蓋）
+      const itemId = `item-${Date.now()}-${Math.random()}`
       const newItem: OrderItem = {
         ...partial,
-        id:       `item-${Date.now()}-${Math.random()}`,
-        quantity: 1,
-        note:     '',
-        // 保留 partial.unitPrice（資料庫定價），不強制蓋 0
+        id:        itemId,
+        quantity:  1,
+        note:      '',
         unitPrice: partial.unitPrice ?? 0,
       }
 
-      // 找對應的已確認促銷品項
-      // 優先精確 SKU 比對；找不到時以系列 ID 比對（系列層級品項）
+      // 找對應的已確認促銷品項（SKU 精確比對 → 系列 ID 比對）
       const promoItem =
         promoItems.find((p) => p.skuCode && p.skuCode === partial.skuCode) ??
         (partial.seriesId
           ? promoItems.find((p) => p.seriesId && p.seriesId === partial.seriesId)
           : undefined)
 
-      if (!promoItem?.conditionType) {
-        setItems((prev) => [...prev, newItem])
-        return
-      }
+      // 套用促銷條件（無條件時 patches 為空）
+      const { patches, giftRows, hintLabel } = promoItem?.conditionType
+        ? applyPromoCondition(newItem, promoItem)
+        : { patches: {} as Partial<OrderItem>, giftRows: [] as OrderItem[], hintLabel: null as string | null }
 
-      const { patches, giftRows, hintLabel } = applyPromoCondition(newItem, promoItem)
       const finalItem = { ...newItem, ...patches }
 
-      // buy_n_get_m：qty=1 時通常不夠 n，但若剛好夠就先插贈品
+      // buy_n_get_m：qty=1 時先計算是否夠 n，夠就插贈品
       const extraGiftRows: OrderItem[] = [...giftRows]
       const newGiftLinks: Record<string, string> = {}
-
-      if (promoItem.conditionType === 'buy_n_get_m') {
+      if (promoItem?.conditionType === 'buy_n_get_m') {
         const p = promoItem.conditionParams as any
         if (p?.n && p?.m) {
           const giftQty = calcBuyNGetMGiftQty(1, p.n, p.m)
@@ -897,7 +965,36 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
       if (Object.keys(newGiftLinks).length > 0)
         setGiftLinkMap((lm) => ({ ...lm, ...newGiftLinks }))
       if (hintLabel)
-        setPromoHints((h) => ({ ...h, [finalItem.id]: hintLabel }))
+        setPromoHints((h) => ({ ...h, [itemId]: hintLabel }))
+
+      // ── 非同步補查定價 ────────────────────────────────────────
+      // FamilySpecPanel 選品時 unitPrice=0（沒有價格來源），需要去 catalog API 補查。
+      // 查到後：若有促銷條件 → 以實際定價重新套折扣；否則直接更新單價。
+      if ((partial.unitPrice ?? 0) === 0 && partial.skuCode) {
+        fetch(`/api/products/search?q=${encodeURIComponent(partial.skuCode)}&limit=5`)
+          .then((r) => r.json())
+          .then((results: CatalogItem[]) => {
+            if (!Array.isArray(results)) return
+            const match = results.find((r) => r.skuCode === partial.skuCode)
+            const actualPrice = match?.salePrice ?? match?.price ?? 0
+            if (!actualPrice) return
+
+            if (promoItem?.conditionType) {
+              // 以實際定價重新套促銷
+              const baseItem = { ...newItem, unitPrice: actualPrice }
+              const { patches: rp, hintLabel: rh } = applyPromoCondition(baseItem, promoItem)
+              setItems((prev) => prev.map((it) =>
+                it.id === itemId ? { ...it, unitPrice: actualPrice, ...rp } : it
+              ))
+              if (rh) setPromoHints((h) => ({ ...h, [itemId]: rh }))
+            } else {
+              setItems((prev) => prev.map((it) =>
+                it.id === itemId ? { ...it, unitPrice: actualPrice } : it
+              ))
+            }
+          })
+          .catch(() => {})
+      }
     },
     [items, promoItems]
   )
