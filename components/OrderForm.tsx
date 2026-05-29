@@ -1150,30 +1150,30 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header info */}
-      <div className="bg-white border rounded-lg p-5 space-y-4">
-        <div className="flex flex-wrap items-start gap-3">
+      <div className="bg-white border rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-start gap-3">
           {isEdit && (
-            <div>
+            <div className="col-span-1">
               <label className="block text-xs text-gray-500 mb-1">訂單編號</label>
               <span className="font-mono text-sm font-semibold text-gray-700">{initialOrder?.orderNumber}</span>
             </div>
           )}
-          <div>
+          <div className="col-span-1">
             <label className="block text-xs text-gray-500 mb-1">訂貨日期</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border rounded px-3 py-1.5 text-sm w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border rounded px-3 py-2 sm:py-1.5 text-sm w-full sm:w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
-          <div>
+          <div className="col-span-1">
             <label className="block text-xs text-gray-500 mb-1">業務姓名 *</label>
             {salespersonOptions.length > 0 ? (
               <select
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
-                className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-32"
+                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
               >
                 <option value="">請選擇</option>
                 {salespersonOptions.map((s) => (
@@ -1186,17 +1186,17 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
                 placeholder="輸入姓名"
-                className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-32"
+                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
               />
             )}
           </div>
           {isEdit && (
-            <div>
+            <div className="col-span-1">
               <label className="block text-xs text-gray-500 mb-1">狀態</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-auto"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -1204,19 +1204,19 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
               </select>
             </div>
           )}
-          <div className="flex-1 min-w-0 w-full sm:w-auto">
+          <div className="col-span-2 sm:flex-1 sm:min-w-0">
             <label className="block text-xs text-gray-500 mb-1">備註</label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="訂單備註（選填）"
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
 
           {/* Promotion selector */}
-          <div className="w-full sm:w-auto">
+          <div className="col-span-2">
             <label className="block text-xs text-gray-500 mb-1">關聯促銷活動</label>
             <select
               value={promotionId}
@@ -1233,7 +1233,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                 })
               }}
               disabled={!canEdit}
-              className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 max-w-[220px]"
+              className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 w-full sm:max-w-[280px]"
             >
               <option value="">— 無關聯活動 —</option>
               {activePromos.map((p) => (
@@ -1339,52 +1339,55 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
         </div>
 
         {items.length === 0 ? (
-          <div className="text-center text-gray-400 py-16">
+          <div className="text-center text-gray-400 py-12 sm:py-16">
             <div className="text-3xl mb-2">📦</div>
             <div className="text-sm">尚未新增品項，點擊「新增品項」開始選擇</div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="px-3 py-2.5 text-left w-8">#</th>
-                  <th className="px-3 py-2.5 text-left">貨品碼</th>
-                  <th className="px-3 py-2.5 text-left">品牌</th>
-                  <th className="px-3 py-2.5 text-left">品名</th>
-                  <th className="px-3 py-2.5 text-center w-20">類型</th>
-                  <th className="px-3 py-2.5 text-center w-24">數量</th>
-                  <th className="px-3 py-2.5 text-right w-28">單價</th>
-                  <th className="px-3 py-2.5 text-right w-28">金額</th>
-                  <th className="px-3 py-2.5 text-left">備註</th>
-                  <th className="px-3 py-2.5 w-8"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {items.map((item, idx) => {
-                  const type     = (item.itemType ?? 'normal') as ItemType
-                  const isGift   = type === 'gift' || type === 'sample'
-                  const qty      = Math.max(1, item.quantity || 1)
-                  const price    = isGift ? 0 : (item.unitPrice || 0)
-                  const lineAmt  = qty * price
-                  return (
-                    <tr key={item.id} className={isGift ? 'bg-green-50/40 hover:bg-green-50' : 'hover:bg-gray-50'}>
-                      <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
-                      <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
-                      <td className="px-3 py-2.5">
-                        <div className="font-medium text-gray-800">{item.skuName}</div>
-                        {/* 促銷提示 badge */}
-                        {promoHints[item.id] && (
-                          <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                            <span>⚡</span>
-                            <span>{promoHints[item.id]}</span>
-                          </div>
-                        )}
-                      </td>
+          <>
+            {/* ── 手機 / 平板卡片版（< md）── */}
+            <div className="md:hidden divide-y">
+              {items.map((item, idx) => {
+                const type    = (item.itemType ?? 'normal') as ItemType
+                const isGift  = type === 'gift' || type === 'sample'
+                const qty     = Math.max(1, item.quantity || 1)
+                const price   = isGift ? 0 : (item.unitPrice || 0)
+                const lineAmt = qty * price
+                const hint    = promoHints[item.id]
+                return (
+                  <div key={item.id} className={`p-4 space-y-3 ${isGift ? 'bg-green-50/40' : ''}`}>
 
-                      {/* 類型 */}
-                      <td className="px-3 py-2.5 text-center">
+                    {/* 品名 row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-[10px] text-gray-400 shrink-0">{idx + 1}.</span>
+                          <span className="font-semibold text-gray-800 text-sm leading-snug">{item.skuName}</span>
+                        </div>
+                        {(item.skuCode || item.brand) && (
+                          <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                            {[item.skuCode, item.brand].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <button onClick={() => removeItem(item.id)}
+                          className="text-gray-300 hover:text-red-400 text-2xl leading-none shrink-0 -mt-0.5 px-1">×</button>
+                      )}
+                    </div>
+
+                    {/* 促銷 hint — 明顯色塊 */}
+                    {hint && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span className="text-base leading-none">⚡</span>
+                        <span>{hint}</span>
+                      </div>
+                    )}
+
+                    {/* 類型 + 數量 */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 mb-1">類型</label>
                         <select
                           value={type}
                           onChange={(e) => {
@@ -1395,47 +1398,56 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                             })
                           }}
                           disabled={!canEdit}
-                          className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300 ${ITEM_TYPE_COLOR[type]}`}
+                          className={`text-xs font-medium rounded-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-300 disabled:opacity-80 ${ITEM_TYPE_COLOR[type]}`}
                         >
                           <option value="normal">一般</option>
                           <option value="gift">贈品</option>
                           <option value="sample">樣品</option>
                         </select>
-                      </td>
-
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => {
-                              if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
-                              else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
-                            }}
-                            className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                          >−</button>
-                          <input
-                            type="number"
-                            min={1}
-                            value={qty}
-                            onChange={(e) => {
-                              const v = Math.max(1, parseInt(e.target.value) || 1)
-                              if (!isGift) handleQtyChange(item, v)
-                              else updateItem(item.id, { quantity: v })
-                            }}
-                            className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-                          />
-                          <button
-                            onClick={() => {
-                              if (!isGift) handleQtyChange(item, qty + 1)
-                              else updateItem(item.id, { quantity: qty + 1 })
-                            }}
-                            className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
-                          >+</button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {isGift ? (
-                          <span className="block text-right text-sm text-green-600 font-medium">$0</span>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 mb-1">數量</label>
+                        {canEdit ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
+                                else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
+                              }}
+                              className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 flex items-center justify-center text-base leading-none"
+                            >−</button>
+                            <input
+                              type="number"
+                              min={1}
+                              value={qty}
+                              onChange={(e) => {
+                                const v = Math.max(1, parseInt(e.target.value) || 1)
+                                if (!isGift) handleQtyChange(item, v)
+                                else updateItem(item.id, { quantity: v })
+                              }}
+                              className="w-12 text-center border rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            />
+                            <button
+                              onClick={() => {
+                                if (!isGift) handleQtyChange(item, qty + 1)
+                                else updateItem(item.id, { quantity: qty + 1 })
+                              }}
+                              className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 flex items-center justify-center text-base leading-none"
+                            >+</button>
+                          </div>
                         ) : (
+                          <span className="text-sm font-semibold text-gray-700">{qty} 件</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 單價 + 小計 */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 mb-1">單價</label>
+                        {isGift ? (
+                          <span className="text-sm text-green-600 font-medium">$0</span>
+                        ) : canEdit ? (
                           <input
                             type="number"
                             min={0}
@@ -1445,47 +1457,188 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                               updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
                             }}
                             placeholder="—"
-                            className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                            className="w-full border-b border-dashed border-gray-300 text-sm py-0.5 focus:outline-none focus:border-blue-400 bg-transparent"
                           />
+                        ) : (
+                          <span className="text-sm text-gray-700">{price > 0 ? price.toLocaleString() : '—'}</span>
                         )}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-400 mb-1">小計</label>
                         {isGift
-                          ? <span className="text-green-500 text-xs">贈送</span>
+                          ? <span className="text-sm text-green-500 font-medium">贈送</span>
                           : price > 0
-                            ? lineAmt.toLocaleString()
-                            : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <input
-                          type="text"
-                          value={item.note ?? ''}
-                          onChange={(e) => updateItem(item.id, { note: e.target.value })}
-                          placeholder="備註"
-                          className="w-full border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
-                        />
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="text-gray-300 hover:text-red-400 text-lg leading-none"
-                        >×</button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
-                <tr className="border-t-2 bg-gray-50">
-                  <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計（不含贈品）</td>
-                  <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
-                    {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                            ? <span className="text-sm font-bold tabular-nums text-gray-800">{lineAmt.toLocaleString()}</span>
+                            : <span className="text-sm text-gray-300">—</span>
+                        }
+                      </div>
+                    </div>
+
+                    {/* 備註 */}
+                    {canEdit ? (
+                      <input
+                        type="text"
+                        value={item.note ?? ''}
+                        onChange={(e) => updateItem(item.id, { note: e.target.value })}
+                        placeholder="品項備註（選填）"
+                        className="w-full border-b border-dashed border-gray-200 text-sm py-1 focus:outline-none focus:border-blue-400 bg-transparent text-gray-600 placeholder:text-gray-300"
+                      />
+                    ) : item.note ? (
+                      <p className="text-xs text-gray-400">{item.note}</p>
+                    ) : null}
+                  </div>
+                )
+              })}
+
+              {/* 手機合計 */}
+              {totalAmount > 0 && (
+                <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t-2">
+                  <span className="text-sm text-gray-600 font-medium">合計（不含贈品）</span>
+                  <span className="text-sm font-bold tabular-nums text-gray-800">{totalAmount.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* ── 桌機表格版（md+）── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                    <th className="px-3 py-2.5 text-left w-8">#</th>
+                    <th className="px-3 py-2.5 text-left">貨品碼</th>
+                    <th className="px-3 py-2.5 text-left">品牌</th>
+                    <th className="px-3 py-2.5 text-left">品名</th>
+                    <th className="px-3 py-2.5 text-center w-20">類型</th>
+                    <th className="px-3 py-2.5 text-center w-24">數量</th>
+                    <th className="px-3 py-2.5 text-right w-28">單價</th>
+                    <th className="px-3 py-2.5 text-right w-28">金額</th>
+                    <th className="px-3 py-2.5 text-left">備註</th>
+                    <th className="px-3 py-2.5 w-8"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {items.map((item, idx) => {
+                    const type    = (item.itemType ?? 'normal') as ItemType
+                    const isGift  = type === 'gift' || type === 'sample'
+                    const qty     = Math.max(1, item.quantity || 1)
+                    const price   = isGift ? 0 : (item.unitPrice || 0)
+                    const lineAmt = qty * price
+                    return (
+                      <tr key={item.id} className={isGift ? 'bg-green-50/40 hover:bg-green-50' : 'hover:bg-gray-50'}>
+                        <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
+                        <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
+                        <td className="px-3 py-2.5">
+                          <div className="font-medium text-gray-800">{item.skuName}</div>
+                          {promoHints[item.id] && (
+                            <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                              <span>⚡</span>
+                              <span>{promoHints[item.id]}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <select
+                            value={type}
+                            onChange={(e) => {
+                              const next = e.target.value as ItemType
+                              updateItem(item.id, {
+                                itemType:  next,
+                                unitPrice: next === 'gift' || next === 'sample' ? 0 : item.unitPrice,
+                              })
+                            }}
+                            disabled={!canEdit}
+                            className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300 ${ITEM_TYPE_COLOR[type]}`}
+                          >
+                            <option value="normal">一般</option>
+                            <option value="gift">贈品</option>
+                            <option value="sample">樣品</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => {
+                                if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
+                                else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
+                              }}
+                              className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                            >−</button>
+                            <input
+                              type="number"
+                              min={1}
+                              value={qty}
+                              onChange={(e) => {
+                                const v = Math.max(1, parseInt(e.target.value) || 1)
+                                if (!isGift) handleQtyChange(item, v)
+                                else updateItem(item.id, { quantity: v })
+                              }}
+                              className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            />
+                            <button
+                              onClick={() => {
+                                if (!isGift) handleQtyChange(item, qty + 1)
+                                else updateItem(item.id, { quantity: qty + 1 })
+                              }}
+                              className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                            >+</button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {isGift ? (
+                            <span className="block text-right text-sm text-green-600 font-medium">$0</span>
+                          ) : (
+                            <input
+                              type="number"
+                              min={0}
+                              value={price > 0 ? price : ''}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value)
+                                updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
+                              }}
+                              placeholder="—"
+                              className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
+                          {isGift
+                            ? <span className="text-green-500 text-xs">贈送</span>
+                            : price > 0
+                              ? lineAmt.toLocaleString()
+                              : <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <input
+                            type="text"
+                            value={item.note ?? ''}
+                            onChange={(e) => updateItem(item.id, { note: e.target.value })}
+                            placeholder="備註"
+                            className="w-full border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="text-gray-300 hover:text-red-400 text-lg leading-none"
+                          >×</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
+                  <tr className="border-t-2 bg-gray-50">
+                    <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計（不含贈品）</td>
+                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
+                      {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
