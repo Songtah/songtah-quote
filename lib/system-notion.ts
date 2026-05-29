@@ -1279,7 +1279,7 @@ async function ensureVisitDbFields() {
   // intentionally empty — do NOT call databases.update here
 }
 
-const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v2'
+const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v3'
 const VISIT_FORM_OPTIONS_TTL = 10 * 60 * 1000 // 10 min
 
 export async function getVisitFormOptions(): Promise<VisitFormOptions> {
@@ -1319,6 +1319,8 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
 
     const allTagsSet = new Set<string>(schemaTagOptions)
     const allCompetitorSet = new Set<string>(schemaCompetitorOptions)
+    // Collect salesperson names from actual records (schema options may be empty)
+    const allSalespersonSet = new Set<string>(salespersonOptions)
 
     // Paginate through all records to also collect values from actual data
     let cursor: string | undefined
@@ -1337,12 +1339,15 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
         for (const item of getProp(page, '競品')?.multi_select ?? []) {
           if (item?.name) allCompetitorSet.add(item.name)
         }
+        // Collect salesperson names from each record (covers dynamic select values)
+        const sp = getSelect(page, '業務人員') || getText(page, '業務人員')
+        if (sp) allSalespersonSet.add(sp)
       }
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
     } while (cursor)
 
     const result: VisitFormOptions = {
-      salespersons: salespersonOptions,
+      salespersons: Array.from(allSalespersonSet).sort(),
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
       competitorOptions: Array.from(allCompetitorSet).sort(),
