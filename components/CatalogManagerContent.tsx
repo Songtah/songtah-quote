@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
+import { SeriesModal } from '@/components/SeriesModal'
+import { useSession } from 'next-auth/react'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -1961,6 +1963,7 @@ function FamilyCard({
   imageFlagCache,
   onView,
   onEdit,
+  onOpenModal,
 }: {
   family: ProductFamily
   allItems: CatalogItem[]
@@ -1968,6 +1971,7 @@ function FamilyCard({
   imageFlagCache: Set<string>
   onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
+  onOpenModal?: () => void
 }) {
   const [open,         setOpen]         = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -2030,12 +2034,18 @@ function FamilyCard({
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden">
       {/* Family header */}
-      <button
-        onClick={handleToggle}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition"
-      >
-        <span className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
-        <div className="flex-1 min-w-0">
+      <div className="w-full flex items-center gap-3 px-5 py-4">
+        <button
+          onClick={handleToggle}
+          className={`text-gray-400 hover:text-gray-600 transition-transform shrink-0 ${open ? 'rotate-90' : ''}`}
+          aria-label="展開"
+        >
+          ▶
+        </button>
+        <button
+          onClick={onOpenModal}
+          className="flex-1 min-w-0 text-left hover:bg-gray-50 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
+        >
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900">{family.seriesName}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{family.brand}</span>
@@ -2048,9 +2058,9 @@ function FamilyCard({
             {priceSetCount > 0 && <span className="text-xs text-emerald-600">✓ {priceSetCount} 已設售價</span>}
             {imageSetCount > 0 && <span className="text-xs text-blue-600">✓ {imageSetCount} 已設圖片</span>}
           </div>
-        </div>
+        </button>
         <span className="text-xs text-gray-400 shrink-0">{family.category}</span>
-      </button>
+      </div>
 
       {/* Expanded: series overview card */}
       <AnimatePresence initial={false}>
@@ -2168,9 +2178,171 @@ function FamilyCard({
   )
 }
 
+// ── Featured Strip ────────────────────────────────────────────
+
+function FeaturedStrip({
+  featuredIds,
+  families,
+  onSelectFamily,
+}: {
+  featuredIds: string[]
+  families: ProductFamily[]
+  onSelectFamily: (f: ProductFamily) => void
+}) {
+  const featuredFamilies = featuredIds
+    .map((id) => families.find((f) => f.id === id))
+    .filter(Boolean) as ProductFamily[]
+
+  if (featuredFamilies.length === 0) return null
+
+  return (
+    <div className="mb-6">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">常用系列</p>
+      <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {featuredFamilies.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => onSelectFamily(f)}
+            className="shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-2xl border border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50 transition-colors text-left min-w-[140px] max-w-[180px]"
+          >
+            <span className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{f.seriesName}</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {f.brand && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{f.brand}</span>}
+              {f.productType && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{f.productType}</span>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Featured Manager (admin only) ────────────────────────────
+
+function FeaturedManager({
+  families,
+  initialIds,
+  onSaved,
+}: {
+  families: ProductFamily[]
+  initialIds: string[]
+  onSaved: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set(initialIds))
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Sync initialIds when they change externally
+  useEffect(() => { setSelected(new Set(initialIds)) }, [initialIds])
+
+  const filtered = families.filter(
+    (f) =>
+      !search ||
+      f.seriesName.toLowerCase().includes(search.toLowerCase()) ||
+      f.brand.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setSaved(false)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const ids = Array.from(selected)
+      await fetch('/api/products/featured-families', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ familyIds: ids }),
+      })
+      setSaved(true)
+      onSaved(ids)
+      setTimeout(() => setSaved(false), 2000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        管理常用系列
+        {open ? ' ▴' : ' ▾'}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 border border-gray-200 rounded-2xl p-4 bg-white space-y-3">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜尋系列名稱…"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
+              <div className="max-h-60 overflow-y-auto space-y-1">
+                {filtered.map((f) => (
+                  <label key={f.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(f.id)}
+                      onChange={() => toggle(f.id)}
+                      className="rounded border-gray-300 text-brand-500 focus:ring-brand-400"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-gray-800">{f.seriesName}</span>
+                      <span className="text-xs text-gray-400 ml-2">{f.brand}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-gray-400">已選 {selected.size} 個系列</span>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                >
+                  {saving ? '儲存中…' : saved ? '✓ 已儲存' : '儲存設定'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── Main Component ────────────────────────────────────────────
 
 export function CatalogManagerContent({ brands, categories, productTypes }: Props) {
+  const { data: session } = useSession()
+  const sessionUser = session?.user as any
+  const isAdmin = sessionUser?.role === 'admin' || sessionUser?.accountType === '行政'
+
   const [families,     setFamilies]     = useState<ProductFamily[]>([])
   const [allItems,     setAllItems]     = useState<CatalogItem[]>([])
   const [loading,      setLoading]      = useState(true)
@@ -2180,8 +2352,10 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
   const [filterCategory, setFilterCategory] = useState('')
   const [filtersOpen,    setFiltersOpen]    = useState(false)
 
-  const [viewingItem, setViewingItem] = useState<CatalogItem | null>(null)
-  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null)
+  const [viewingItem,  setViewingItem]  = useState<CatalogItem | null>(null)
+  const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
+  const [featuredIds,  setFeaturedIds]  = useState<string[]>([])
+  const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
 
   // Cache: skuCode → price (and whether image is set)
   // Populated lazily as users save products.
@@ -2204,6 +2378,11 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+
+    fetch('/api/products/featured-families')
+      .then((r) => r.json())
+      .then((data) => { if (data.familyIds) setFeaturedIds(data.familyIds) })
+      .catch(() => {})
   }, [])
 
   // Debounced search results
@@ -2271,6 +2450,24 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
 
   return (
     <>
+      {/* Featured strip */}
+      {featuredIds.length > 0 && !isSearching && (
+        <FeaturedStrip
+          featuredIds={featuredIds}
+          families={families}
+          onSelectFamily={setModalFamily}
+        />
+      )}
+
+      {/* Admin: manage featured series */}
+      {isAdmin && !isSearching && (
+        <FeaturedManager
+          families={families}
+          initialIds={featuredIds}
+          onSaved={setFeaturedIds}
+        />
+      )}
+
       {/* Search + Filters */}
       <div className="mb-6">
         {/* Row: search + filter toggle */}
@@ -2419,6 +2616,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
               imageFlagCache={imageFlagCache}
               onView={setViewingItem}
               onEdit={setEditingItem}
+              onOpenModal={() => setModalFamily(family)}
             />
           ))}
         </div>
@@ -2449,6 +2647,19 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
             onClose={() => setEditingItem(null)}
             onSaved={handleSaved}
             allFamilies={families}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Series Modal */}
+      <AnimatePresence>
+        {modalFamily && (
+          <SeriesModal
+            family={modalFamily}
+            allItems={allItems}
+            onView={(item) => { setModalFamily(null); setViewingItem(item) }}
+            onEdit={(item) => { setModalFamily(null); setEditingItem(item) }}
+            onClose={() => setModalFamily(null)}
           />
         )}
       </AnimatePresence>
