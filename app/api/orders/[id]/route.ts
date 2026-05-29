@@ -38,8 +38,25 @@ export async function PATCH(
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+
   try {
     const body = await req.json()
+
+    // 非行政帳號：確認訂單仍在草稿狀態才允許修改
+    if (!isAdmin) {
+      const existing = await getOrderById(params.id)
+      if (!existing) return NextResponse.json({ error: '找不到訂單' }, { status: 404 })
+      if (existing.status !== '草稿') {
+        return NextResponse.json(
+          { error: `訂單已${existing.status}，僅行政帳號可修改` },
+          { status: 403 }
+        )
+      }
+    }
 
     // If only status is provided, use quick status update
     if (body.status && Object.keys(body).length === 1) {

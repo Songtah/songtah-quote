@@ -751,9 +751,11 @@ interface OrderFormProps {
     promotionName?: string
   }
   canEdit?: boolean
+  /** 鎖定原因說明（傳入時覆蓋預設的「僅限閱覽」文字） */
+  lockedNote?: string
 }
 
-export default function OrderForm({ initialOrder, canEdit = true }: OrderFormProps) {
+export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: OrderFormProps) {
   const router = useRouter()
   const isEdit = !!initialOrder
 
@@ -1582,7 +1584,9 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
           </div>
         )}
         {!canEdit && (
-          <span className="text-sm text-gray-400">（僅限閱覽，無編輯權限）</span>
+          <span className="text-sm text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+            🔒 {lockedNote ?? '僅限閱覽，無編輯權限'}
+          </span>
         )}
       </div>
 

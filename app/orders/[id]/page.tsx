@@ -16,13 +16,23 @@ export default async function OrderDetailPage({
   await requireSession()
   const session = await getServerSession(authOptions)
   const user = session?.user as any
-  const role = user?.role as string | undefined
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
   const permissions = user?.permissions as Record<string, { view: boolean; edit: boolean }> | undefined
-  // admin 和 env 帳號（permissions 為 undefined）預設可編輯；否則看 orders.edit
-  const canEdit = role === 'admin' || !permissions || (permissions?.orders?.edit ?? false)
+
+  // 行政帳號（中央管理 / 行政 / admin）不受訂單狀態限制，業務帳號只能編輯草稿
+  const isAdmin    = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  const hasEditPerm = role === 'admin' || !permissions || (permissions?.orders?.edit ?? false)
 
   const order = await getOrderById(params.id)
   if (!order) notFound()
+
+  const canEdit = hasEditPerm && (isAdmin || order.status === '草稿')
+
+  // 只在「有權限但被狀態鎖住」時才顯示鎖定原因；純無權限帳號走原本訊息
+  const lockedNote = (hasEditPerm && !isAdmin && order.status !== '草稿')
+    ? `訂單已${order.status}，僅行政帳號可修改`
+    : undefined
 
   return (
     <AppShell
@@ -30,7 +40,7 @@ export default async function OrderDetailPage({
       description={`業務：${order.salesperson} · 日期：${order.date}`}
       hidePhaseNote
     >
-      <OrderForm initialOrder={order} canEdit={canEdit} />
+      <OrderForm initialOrder={order} canEdit={canEdit} lockedNote={lockedNote} />
     </AppShell>
   )
 }
