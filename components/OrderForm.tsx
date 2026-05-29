@@ -821,6 +821,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       setPromoItems([])
       setGiftLinkMap({})
       setPromoHints({})
+      appliedPromoRef.current = ''   // 清空促銷時重置，讓重新選回同一活動也能套用
       return
     }
     fetch(`/api/promotions/${promotionId}/items`)
@@ -837,7 +838,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   // itemsRef：讓 re-apply effect 讀到最新的 items，不需要把 items 加入 deps（避免無限 loop）
   const itemsRef       = useRef<OrderItem[]>(initialOrder?.items ?? [])
   // appliedPromoRef：記錄已 re-apply 過的 promotionId，避免重複執行
-  const appliedPromoRef = useRef('')
+  // 初始值設為既有訂單的 promotionId，使 re-apply effect 在載入時不重複套用
+  const appliedPromoRef = useRef(initialOrder?.promotionId ?? '')
   useEffect(() => { itemsRef.current = items }, [items])
 
   // 促銷品項載入後，重新對現有品項套用折扣（處理兩種 race condition）
