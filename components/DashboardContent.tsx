@@ -91,7 +91,7 @@ export function DashboardContent({
   return (
     <>
       <motion.section
-        className="grid gap-5 md:grid-cols-2 xl:grid-cols-5"
+        className="grid gap-4 sm:gap-5 grid-cols-2 md:grid-cols-2 xl:grid-cols-5"
         variants={stagger}
         initial="hidden"
         animate="show"
@@ -127,7 +127,7 @@ export function DashboardContent({
         </div>
       )}
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
+      <section className="mt-6 sm:mt-8 grid gap-4 sm:gap-6 lg:grid-cols-2">
         {loading ? (
           <>
             <SkeletonList />
@@ -141,7 +141,7 @@ export function DashboardContent({
         )}
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="mt-6 sm:mt-8 grid gap-4 sm:gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         {loading ? (
           <>
             <SkeletonList />

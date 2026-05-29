@@ -201,7 +201,7 @@ function ProductPicker({
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <motion.div
         className="absolute inset-0 bg-black/40"
@@ -214,8 +214,8 @@ function ProductPicker({
 
       {/* Modal */}
       <motion.div
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col"
-        style={{ maxHeight: '85vh' }}
+        className="relative w-full max-w-2xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+        style={{ maxHeight: '92vh' }}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -1548,36 +1548,37 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       )}
 
       {/* Footer actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Action bar — sticky on mobile */}
+      <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 sm:py-0 bg-white sm:bg-transparent border-t sm:border-none shadow-[0_-2px_8px_rgba(0,0,0,0.06)] sm:shadow-none flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <button
             onClick={() => router.back()}
-            className="button-secondary px-4 py-2 text-sm rounded"
+            className="button-secondary px-4 py-2.5 sm:py-2 text-sm rounded"
           >
             取消
           </button>
           {items.length > 0 && (
             <button
               onClick={handlePrint}
-              className="button-secondary px-4 py-2 text-sm rounded"
+              className="button-secondary px-4 py-2.5 sm:py-2 text-sm rounded"
             >
               🖨️ 列印
             </button>
           )}
         </div>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-1 sm:flex-none justify-end">
             <button
               onClick={() => handleSave('草稿')}
               disabled={saving}
-              className="button-secondary px-5 py-2 text-sm rounded disabled:opacity-50"
+              className="button-secondary px-4 sm:px-5 py-2.5 sm:py-2 text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
             >
               {saving ? '儲存中...' : '儲存草稿'}
             </button>
             <button
               onClick={() => handleSave('已送出')}
               disabled={saving}
-              className="button-primary px-5 py-2 text-sm rounded disabled:opacity-50"
+              className="button-primary px-4 sm:px-5 py-2.5 sm:py-2 text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
             >
               {saving ? '送出中...' : '✓ 送出訂單'}
             </button>

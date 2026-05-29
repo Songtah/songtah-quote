@@ -815,7 +815,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
   const displayedItems = statusFilter === 'all' ? items : items.filter((i) => i.status === statusFilter)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <motion.div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -825,7 +825,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
 
       {/* Card */}
       <motion.div
-        className="relative w-full max-w-2xl mx-2 sm:mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl mx-0 sm:mx-2 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}
@@ -1044,12 +1044,12 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
       <motion.div className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-lg mx-2 sm:mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-lg mx-0 sm:mx-2 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}

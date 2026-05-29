@@ -393,8 +393,52 @@ export default function AccountsContent() {
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
+      {/* ── Mobile cards (< md) ── */}
+      {!loading && users.length > 0 && (
+        <div className="md:hidden space-y-3">
+          {users.map((u) => {
+            const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
+            const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
+            return (
+              <div key={u.id} className="bg-white rounded-2xl border border-brand-200/40 shadow-sm p-4 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-stone-800">{u.name}</span>
+                  <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
+                </div>
+                {u.username && (
+                  <p className="font-mono text-xs text-stone-400">{u.username}</p>
+                )}
+                {viewableModules.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {viewableModules.map((m) => (
+                      <span key={m} className={`text-xs px-1.5 py-0.5 rounded font-medium ${editableModules.includes(m) ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'}`}>
+                        {MODULE_LABELS[m]}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-3 pt-2 border-t border-brand-100/40">
+                  {deleteConfirmId === u.id ? (
+                    <>
+                      <span className="text-xs text-stone-500 flex-1">確認刪除？</span>
+                      <button onClick={() => handleDelete(u.id)} disabled={deleting} className="text-xs text-red-600 font-medium disabled:opacity-50">{deleting ? '…' : '確認'}</button>
+                      <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-stone-400">取消</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }} className="text-xs text-brand-600 font-medium">編輯</button>
+                      <button onClick={() => setDeleteConfirmId(u.id)} className="text-xs text-stone-300 hover:text-red-500 ml-auto">刪除</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Desktop table (md+) ── */}
+      <div className="hidden md:block bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-sm text-stone-400">載入中…</div>
         ) : users.length === 0 ? (
@@ -417,7 +461,6 @@ export default function AccountsContent() {
                 {users.map((u) => {
                   const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
                   const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
-
                   return (
                     <tr key={u.id} className="hover:bg-cream-50/60 transition-colors">
                       <td className="px-4 py-3 font-medium text-stone-800">{u.name}</td>
@@ -431,15 +474,8 @@ export default function AccountsContent() {
                             <span className="text-xs text-stone-400">無</span>
                           ) : (
                             viewableModules.map((m) => (
-                              <span
-                                key={m}
-                                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                                  editableModules.includes(m)
-                                    ? 'bg-brand-100 text-brand-800'
-                                    : 'bg-stone-100 text-stone-600'
-                                }`}
-                                title={editableModules.includes(m) ? '可檢視＋編輯' : '僅檢視'}
-                              >
+                              <span key={m} className={`text-xs px-1.5 py-0.5 rounded font-medium ${editableModules.includes(m) ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'}`}
+                                title={editableModules.includes(m) ? '可檢視＋編輯' : '僅檢視'}>
                                 {MODULE_LABELS[m]}
                               </span>
                             ))
@@ -450,34 +486,13 @@ export default function AccountsContent() {
                         {deleteConfirmId === u.id ? (
                           <div className="flex items-center gap-2 justify-end">
                             <span className="text-xs text-stone-500">確認刪除？</span>
-                            <button
-                              onClick={() => handleDelete(u.id)}
-                              disabled={deleting}
-                              className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                            >
-                              {deleting ? '…' : '確認'}
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="text-xs text-stone-400 hover:text-stone-600"
-                            >
-                              取消
-                            </button>
+                            <button onClick={() => handleDelete(u.id)} disabled={deleting} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">{deleting ? '…' : '確認'}</button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-stone-400 hover:text-stone-600">取消</button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 justify-end">
-                            <button
-                              onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }}
-                              className="text-xs text-stone-400 hover:text-brand-600 transition-colors"
-                            >
-                              編輯
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(u.id)}
-                              className="text-xs text-stone-300 hover:text-red-500 transition-colors"
-                            >
-                              刪除
-                            </button>
+                            <button onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }} className="text-xs text-stone-400 hover:text-brand-600 transition-colors">編輯</button>
+                            <button onClick={() => setDeleteConfirmId(u.id)} className="text-xs text-stone-300 hover:text-red-500 transition-colors">刪除</button>
                           </div>
                         )}
                       </td>
@@ -489,6 +504,9 @@ export default function AccountsContent() {
           </div>
         )}
       </div>
+      {/* Mobile loading/empty state */}
+      {loading && <div className="md:hidden p-8 text-center text-sm text-stone-400 bg-white rounded-2xl border border-brand-200/40">載入中…</div>}
+      {!loading && users.length === 0 && <div className="md:hidden p-10 text-center text-sm text-stone-400 border-2 border-dashed border-brand-200/40 rounded-2xl">尚無帳號資料。</div>}
 
       {showCreate && (
         <AccountModal

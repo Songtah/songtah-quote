@@ -421,8 +421,8 @@ export default function QuoteListContent() {
                         {meta.label}
                       </span>
 
-                      {/* Action buttons — visible on hover */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Action buttons — always visible on touch, hover-only on pointer devices */}
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <Link
                           href={`/share/${quote.id}`}
                           target="_blank" rel="noreferrer"

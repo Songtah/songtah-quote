@@ -99,7 +99,7 @@ export default function OrdersContent() {
         </Link>
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {loading ? (
         <div className="text-center text-gray-400 py-16">載入中...</div>
       ) : filtered.length === 0 ? (
@@ -108,96 +108,172 @@ export default function OrdersContent() {
           <div className="text-sm">尚無訂貨單，點擊右上角新增</div>
         </div>
       ) : (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
-                  <th className="px-4 py-3 text-left">訂單編號</th>
-                  <th className="px-4 py-3 text-left">日期</th>
-                  <th className="px-4 py-3 text-left">業務</th>
-                  <th className="px-4 py-3 text-left">品項</th>
-                  <th className="px-4 py-3 text-left">備註</th>
-                  <th className="px-4 py-3 text-center">狀態</th>
-                  <th className="px-4 py-3 text-center">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="font-mono text-blue-600 hover:underline font-medium"
+        <>
+          {/* ── Mobile cards (< md) ── */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((order) => (
+              <div key={order.id} className="bg-white border rounded-lg p-4 space-y-3">
+                {/* Top row: order number + status */}
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    href={`/orders/${order.id}`}
+                    className="font-mono text-blue-600 font-semibold text-sm"
+                  >
+                    {order.orderNumber || '—'}
+                  </Link>
+                  <select
+                    value={order.status}
+                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                    disabled={updatingId === order.id}
+                    className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Meta info */}
+                <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                  <span>📅 {order.date}</span>
+                  <span>👤 {order.salesperson}</span>
+                  {order.items.length > 0 && (
+                    <span>📦 {order.items.length} 種 · {order.items.reduce((a, it) => a + it.quantity, 0)} 件</span>
+                  )}
+                </div>
+                {order.note && (
+                  <p className="text-xs text-gray-400 truncate">備註：{order.note}</p>
+                )}
+                {/* Actions */}
+                <div className="flex items-center gap-3 pt-1 border-t">
+                  <Link
+                    href={`/orders/${order.id}`}
+                    className="text-sm text-blue-500 font-medium"
+                  >
+                    查看 ›
+                  </Link>
+                  {confirmDeleteId === order.id ? (
+                    <span className="flex items-center gap-2 ml-auto">
+                      <span className="text-xs text-gray-500">確定刪除？</span>
+                      <button
+                        onClick={() => handleDelete(order.id)}
+                        disabled={deletingId === order.id}
+                        className="text-xs text-red-600 font-semibold disabled:opacity-50"
                       >
-                        {order.orderNumber || '—'}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{order.date}</td>
-                    <td className="px-4 py-3 text-gray-700">{order.salesperson}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {order.items.length > 0 ? (
-                        <span>
-                          {order.items.length} 種・
-                          {order.items.reduce((acc, it) => acc + it.quantity, 0)} 件
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{order.note || '—'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                        disabled={updatingId === order.id}
-                        className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                        {deletingId === order.id ? '刪除中…' : '確定'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs text-gray-400"
                       >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-3">
+                        取消
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(order.id)}
+                      disabled={deletingId === order.id}
+                      className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50 ml-auto"
+                    >
+                      刪除
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Desktop table (md+) ── */}
+          <div className="hidden md:block bg-white border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+                    <th className="px-4 py-3 text-left">訂單編號</th>
+                    <th className="px-4 py-3 text-left">日期</th>
+                    <th className="px-4 py-3 text-left">業務</th>
+                    <th className="px-4 py-3 text-left">品項</th>
+                    <th className="px-4 py-3 text-left">備註</th>
+                    <th className="px-4 py-3 text-center">狀態</th>
+                    <th className="px-4 py-3 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filtered.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
                         <Link
                           href={`/orders/${order.id}`}
-                          className="text-blue-500 hover:text-blue-700 text-xs"
+                          className="font-mono text-blue-600 hover:underline font-medium"
                         >
-                          查看 ›
+                          {order.orderNumber || '—'}
                         </Link>
-                        {confirmDeleteId === order.id ? (
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-500">確定刪除？</span>
-                            <button
-                              onClick={() => handleDelete(order.id)}
-                              disabled={deletingId === order.id}
-                              className="text-xs text-red-600 font-semibold hover:text-red-800 disabled:opacity-50"
-                            >
-                              {deletingId === order.id ? '刪除中…' : '確定'}
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs text-gray-400 hover:text-gray-600"
-                            >
-                              取消
-                            </button>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{order.date}</td>
+                      <td className="px-4 py-3 text-gray-700">{order.salesperson}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {order.items.length > 0 ? (
+                          <span>
+                            {order.items.length} 種・
+                            {order.items.reduce((acc, it) => acc + it.quantity, 0)} 件
                           </span>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmDeleteId(order.id)}
-                            disabled={deletingId === order.id}
-                            className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50"
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{order.note || '—'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          disabled={updatingId === order.id}
+                          className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                        >
+                          {STATUS_OPTIONS.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="text-blue-500 hover:text-blue-700 text-xs"
                           >
-                            刪除
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            查看 ›
+                          </Link>
+                          {confirmDeleteId === order.id ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-xs text-gray-500">確定刪除？</span>
+                              <button
+                                onClick={() => handleDelete(order.id)}
+                                disabled={deletingId === order.id}
+                                className="text-xs text-red-600 font-semibold hover:text-red-800 disabled:opacity-50"
+                              >
+                                {deletingId === order.id ? '刪除中…' : '確定'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="text-xs text-gray-400 hover:text-gray-600"
+                              >
+                                取消
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteId(order.id)}
+                              disabled={deletingId === order.id}
+                              className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50"
+                            >
+                              刪除
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
