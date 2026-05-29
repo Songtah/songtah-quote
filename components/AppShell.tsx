@@ -126,13 +126,15 @@ export function AppShell({
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 py-2.5 sm:py-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <Image
-              src="/Logo.svg"
-              alt="崧達企業"
-              width={520}
-              height={78}
-              className="h-auto w-20 shrink-0 object-contain sm:w-28 md:w-36"
-            />
+            <Link href="/dashboard" className="shrink-0">
+              <Image
+                src="/Logo.svg"
+                alt="崧達企業 — 回首頁"
+                width={520}
+                height={78}
+                className="h-auto w-20 shrink-0 object-contain sm:w-28 md:w-36"
+              />
+            </Link>
             <div className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" />
             <div className="hidden sm:block min-w-0">
               <p className="eyebrow text-[10px]">SONGTAH TRADING CO.,LTD.</p>
