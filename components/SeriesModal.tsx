@@ -206,6 +206,16 @@ function SeriesInfoSection({
             )}
           </div>
         </div>
+      ) : isAdmin ? (
+        <div className="flex items-start gap-3 px-1 py-2">
+          <span className="text-2xl shrink-0 opacity-40">📝</span>
+          <div>
+            <p className="text-sm font-medium text-gray-500">尚無系列介紹</p>
+            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+              新增介紹說明、封面圖及技術參數，讓業務同仁快速掌握產品特色
+            </p>
+          </div>
+        </div>
       ) : (
         <p className="text-sm text-gray-400 italic">暫無系列介紹</p>
       )}
@@ -213,9 +223,10 @@ function SeriesInfoSection({
       {isAdmin && (
         <button
           onClick={() => setEditing(true)}
-          className="mt-3 text-xs text-brand-500 hover:text-brand-700 transition font-medium"
+          className="mt-3 text-xs font-medium px-3 py-1.5 rounded-lg border transition
+            bg-brand-50 border-brand-200 text-brand-600 hover:bg-brand-100 hover:border-brand-400"
         >
-          {hasContent ? '✏ 編輯系列介紹' : '+ 新增系列介紹'}
+          {hasContent ? '✏ 編輯系列介紹' : '＋ 新增系列介紹'}
         </button>
       )}
     </div>

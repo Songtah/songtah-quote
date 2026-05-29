@@ -2095,7 +2095,21 @@ function FamilyCard({
                     />
                   )}
                   {introData.description && (
-                    <p className="text-sm text-gray-600 leading-relaxed">{introData.description}</p>
+                    introData.description.includes('|') ? (
+                      <ul className="space-y-1">
+                        {introData.description.split('|').map((part, i) => {
+                          const t = part.trim()
+                          return t ? (
+                            <li key={i} className="flex gap-2 text-sm text-gray-600 leading-relaxed">
+                              <span className="text-brand-400 shrink-0 mt-0.5 select-none">·</span>
+                              <span>{t}</span>
+                            </li>
+                          ) : null
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-600 leading-relaxed">{introData.description}</p>
+                    )
                   )}
                 </div>
               ) : null}
@@ -2450,13 +2464,21 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
 
   return (
     <>
-      {/* Featured strip */}
-      {featuredIds.length > 0 && !isSearching && (
-        <FeaturedStrip
-          featuredIds={featuredIds}
-          families={families}
-          onSelectFamily={setModalFamily}
-        />
+      {/* Featured strip (or admin onboarding card when empty) */}
+      {!isSearching && (
+        featuredIds.length > 0
+          ? <FeaturedStrip featuredIds={featuredIds} families={families} onSelectFamily={setModalFamily} />
+          : isAdmin && !loading && (
+            <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 text-left">
+              <span className="text-2xl shrink-0">⭐</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-600">尚未設定常用系列</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  點擊下方「管理常用系列」，將常用產品系列釘選在頂部快速存取
+                </p>
+              </div>
+            </div>
+          )
       )}
 
       {/* Admin: manage featured series */}

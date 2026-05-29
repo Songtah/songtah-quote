@@ -549,9 +549,8 @@ export function FamilySpecPanel({
       const prevVisibleAllSelected = rows.every((r) => !r.visible || !!selected[r.spec.key])
 
       if (!prevVisibleAllSelected) {
-        // Not done yet → show with every option that appears at this depth anywhere
-        const valid = new Set(keys.map((k) => k.split('|')[i]).filter(Boolean))
-        rows.push({ spec, options: spec.options.filter((o) => valid.has(o)), visible: true, specIdx: i })
+        // Previous spec not yet chosen → hide this row (progressive disclosure)
+        rows.push({ spec, options: [], visible: false, specIdx: i })
         continue
       }
 
@@ -602,32 +601,37 @@ export function FamilySpecPanel({
 
   return (
     <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
-      {visibleRows.map(({ spec, options, specIdx }, idx) => {
-        const prevSelected = idx === 0 || !!selected[visibleRows[idx - 1].spec.key]
+      {visibleRows.map(({ spec, options, specIdx }) => {
+        const isConfirmed = !!selected[spec.key]
+        // "confirmed" row: show only the selected chip + an "×" to clear
+        if (isConfirmed) {
+          return (
+            <div key={spec.key} className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 shrink-0 w-10 text-right">{spec.label}</span>
+              <button
+                onClick={() => handleChip(spec.key, specIdx, selected[spec.key])}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border bg-brand-500 border-brand-500 text-white shadow-sm"
+              >
+                {selected[spec.key]}
+                <span className="opacity-70 text-[10px]">✕</span>
+              </button>
+            </div>
+          )
+        }
+        // "active" row: show all available options
         return (
           <div key={spec.key}>
             <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>
             <div className="flex flex-wrap gap-1.5">
-              {options.map((opt) => {
-                const isSelected = selected[spec.key] === opt
-                return (
-                  <button
-                    key={opt}
-                    disabled={!prevSelected}
-                    onClick={() => handleChip(spec.key, specIdx, opt)}
-                    className={[
-                      'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-                      isSelected
-                        ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-                        : prevSelected
-                          ? 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600'
-                          : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed',
-                    ].join(' ')}
-                  >
-                    {opt}
-                  </button>
-                )
-              })}
+              {options.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleChip(spec.key, specIdx, opt)}
+                  className="px-3 py-1 rounded-full text-xs font-medium border transition-all bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600"
+                >
+                  {opt}
+                </button>
+              ))}
             </div>
           </div>
         )
