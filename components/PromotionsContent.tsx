@@ -714,11 +714,13 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
   onClose: () => void
   onEdit:  () => void
 }) {
-  const [items,        setItems]        = useState<PromotionItem[]>([])
-  const [loadingItems, setLoadingItems] = useState(true)
-  const [showSearch,   setShowSearch]   = useState(false)
-  const [addMode,      setAddMode]      = useState<'sku' | 'series'>('sku')
-  const [addingItem,   setAddingItem]   = useState(false)
+  const [items,          setItems]          = useState<PromotionItem[]>([])
+  const [loadingItems,   setLoadingItems]   = useState(true)
+  const [showSearch,     setShowSearch]     = useState(false)
+  const [addMode,        setAddMode]        = useState<'sku' | 'series'>('sku')
+  const [addingItem,     setAddingItem]     = useState(false)
+  const [confirmingAll,  setConfirmingAll]  = useState(false)
+  const [statusFilter,   setStatusFilter]   = useState<ItemStatus | 'all'>('all')
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -783,9 +785,28 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
     setItems((prev) => prev.filter((it) => it.id !== id))
   }
 
+  const handleConfirmAll = async () => {
+    const targets = items.filter((i) => i.status === '待定價')
+    if (targets.length === 0) return
+    setConfirmingAll(true)
+    // 樂觀更新 UI
+    setItems((prev) => prev.map((it) => it.status === '待定價' ? { ...it, status: '已確認' } : it))
+    // 批次 PATCH（平行發送）
+    await Promise.allSettled(
+      targets.map((it) =>
+        fetch(`/api/promotion-items/${it.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: '已確認' }),
+        })
+      )
+    )
+    setConfirmingAll(false)
+  }
+
   const confirmed = items.filter((i) => i.status === '已確認').length
   const pending   = items.filter((i) => i.status === '待定價').length
   const dropped   = items.filter((i) => i.status === '不採用').length
+  const displayedItems = statusFilter === 'all' ? items : items.filter((i) => i.status === statusFilter)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -840,13 +861,22 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
             )}
           </div>
 
-          {/* Stats */}
+          {/* Stats + batch confirm */}
           {items.length > 0 && (
-            <div className="flex gap-4 mt-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
               <span className="text-green-600 font-semibold">✅ 已確認 {confirmed}</span>
               <span className="text-yellow-600 font-semibold">⏳ 待定價 {pending}</span>
               {dropped > 0 && <span className="text-red-500">❌ 不採用 {dropped}</span>}
               <span className="text-gray-400">共 {items.length} 項</span>
+              {pending > 0 && (
+                <button
+                  onClick={handleConfirmAll}
+                  disabled={confirmingAll}
+                  className="ml-auto px-2.5 py-1 rounded-lg bg-green-500 text-white font-semibold text-[11px] hover:bg-green-600 disabled:opacity-50 transition"
+                >
+                  {confirmingAll ? '確認中…' : `⚡ 全部確認 (${pending})`}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -856,7 +886,25 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
           {/* Add item toolbar */}
           <div className="px-4 sm:px-5 py-3 border-b bg-gray-50/80 sticky top-0 z-10">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">促銷品項</p>
+              {/* Status filter tabs */}
+              <div className="flex gap-1 flex-wrap">
+                {([['all', '全部'], ['待定價', '待定價'], ['已確認', '已確認'], ['不採用', '不採用']] as [string, string][]).map(([val, label]) => {
+                  const count = val === 'all' ? items.length
+                    : items.filter((i) => i.status === val).length
+                  return (
+                    <button key={val} type="button"
+                      onClick={() => setStatusFilter(val as ItemStatus | 'all')}
+                      className={[
+                        'px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition',
+                        statusFilter === val
+                          ? 'bg-brand-500 border-brand-500 text-white'
+                          : 'border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 bg-white',
+                      ].join(' ')}>
+                      {label} {count > 0 && <span className="opacity-70">({count})</span>}
+                    </button>
+                  )
+                })}
+              </div>
               <button
                 onClick={() => setShowSearch((s) => !s)}
                 disabled={addingItem}
@@ -917,9 +965,16 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
               </button>
             </div>
           )}
-          {!loadingItems && items.length > 0 && (
+          {!loadingItems && items.length > 0 && displayedItems.length === 0 && (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-sm">此篩選條件下無品項</p>
+              <button onClick={() => setStatusFilter('all')}
+                className="mt-1 text-xs text-brand-600 hover:underline">顯示全部</button>
+            </div>
+          )}
+          {!loadingItems && displayedItems.length > 0 && (
             <div className="divide-y">
-              {items.map((item) => (
+              {displayedItems.map((item) => (
                 <ItemRow key={item.id} item={item} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} />
               ))}
             </div>
@@ -934,18 +989,24 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
 
 interface DrawerProps {
   initial?: Promotion | null
+  /** 若帶入此值，表示「複製模式」：drawer 預填欄位但儲存後另建新活動 */
+  copyOf?:  Promotion | null
   onClose:  () => void
-  onSaved:  (p: Promotion) => void
+  onSaved:  (p: Promotion, copySourceId?: string) => void
 }
 
-function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
-  const isEdit = !!initial
-  const [name,        setName]        = useState(initial?.name        ?? '')
-  const [type,        setType]        = useState<PromotionType | ''>(initial?.type ?? '')
-  const [startDate,   setStartDate]   = useState(initial?.startDate   ?? '')
-  const [endDate,     setEndDate]     = useState(initial?.endDate     ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [dmUrl,       setDmUrl]       = useState(initial?.dmUrl       ?? '')
+function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
+  const isCopy = !!copyOf
+  const isEdit = !!initial && !isCopy
+  const src    = copyOf ?? initial    // 用來預填的資料來源
+
+  const [name,        setName]        = useState(isCopy ? `複製－${src?.name ?? ''}` : (src?.name        ?? ''))
+  const [type,        setType]        = useState<PromotionType | ''>(src?.type ?? '')
+  // 複製模式：日期清空，讓行政重新填
+  const [startDate,   setStartDate]   = useState(isCopy ? '' : (src?.startDate   ?? ''))
+  const [endDate,     setEndDate]     = useState(isCopy ? '' : (src?.endDate     ?? ''))
+  const [description, setDescription] = useState(src?.description ?? '')
+  const [dmUrl,       setDmUrl]       = useState(isCopy ? '' : (src?.dmUrl ?? ''))
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState('')
 
@@ -965,7 +1026,8 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
         : await fetch('/api/promotions',                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '儲存失敗')
-      onSaved(data)
+      // 複製模式：把來源 ID 回傳給 parent，讓它詢問是否複製品項
+      onSaved(data, isCopy ? (copyOf?.id ?? undefined) : undefined)
     } catch (err: any) {
       setError(err.message ?? '儲存失敗，請重試')
     } finally { setSaving(false) }
@@ -984,7 +1046,9 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
         <div className="px-4 sm:px-6 py-5 border-b flex items-center justify-between shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">{isEdit ? '編輯促銷活動' : '新增促銷活動'}</h2>
+          <h2 className="text-base font-semibold text-gray-900">
+            {isCopy ? '複製促銷活動' : isEdit ? '編輯促銷活動' : '新增促銷活動'}
+          </h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-5 space-y-5">
@@ -1039,7 +1103,7 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
             <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition">取消</button>
             <button onClick={handleSave} disabled={saving}
               className="flex-1 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 transition">
-              {saving ? '儲存中…' : isEdit ? '儲存變更' : '建立活動'}
+              {saving ? '儲存中…' : isCopy ? '建立複製版' : isEdit ? '儲存變更' : '建立活動'}
             </button>
           </div>
         </div>
@@ -1050,10 +1114,11 @@ function PromotionDrawer({ initial, onClose, onSaved }: DrawerProps) {
 
 // ── Promotion Card ────────────────────────────────────────────
 
-function PromotionCard({ promo, onView, onEdit, onDelete }: {
+function PromotionCard({ promo, onView, onEdit, onCopy, onDelete }: {
   promo:    Promotion
   onView:   () => void
   onEdit:   () => void
+  onCopy:   () => void
   onDelete: () => void
 }) {
   const [deleting, setDeleting] = useState(false)
@@ -1086,6 +1151,11 @@ function PromotionCard({ promo, onView, onEdit, onDelete }: {
             className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
             編輯
           </button>
+          <button onClick={(e) => { e.stopPropagation(); onCopy() }}
+            className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition"
+            title="複製此活動（建立新活動並預填欄位）">
+            複製
+          </button>
           <button onClick={handleDelete} disabled={deleting}
             className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
             {deleting ? '…' : '刪除'}
@@ -1111,6 +1181,8 @@ export function PromotionsContent() {
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState<Promotion | null>(null)
   const [editing, setEditing] = useState<Promotion | null | 'new'>(null)
+  // 複製模式：copyOf 是來源活動，drawer 以複製模式開啟
+  const [copyOf,  setCopyOf]  = useState<Promotion | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1123,7 +1195,7 @@ export function PromotionsContent() {
 
   useEffect(() => { load() }, [load])
 
-  const handleSaved = (p: Promotion) => {
+  const handleSaved = async (p: Promotion, copySourceId?: string) => {
     setPromos((prev) => {
       const idx = prev.findIndex((x) => x.id === p.id)
       if (idx >= 0) { const next = [...prev]; next[idx] = p; return next }
@@ -1131,6 +1203,43 @@ export function PromotionsContent() {
     })
     if (viewing && viewing.id === p.id) setViewing(p)
     setEditing(null)
+    setCopyOf(null)
+
+    // 複製模式：詢問是否同步複製品項
+    if (copySourceId) {
+      const doCopy = confirm(`活動「${p.name}」已建立。\n\n是否將原活動的促銷品項一併複製過來？`)
+      if (doCopy) {
+        try {
+          // 取得來源品項
+          const srcItems: PromotionItem[] = await fetch(`/api/promotions/${copySourceId}/items`)
+            .then((r) => r.json())
+          // 批次 POST 到新活動（並行）
+          await Promise.allSettled(
+            srcItems.map((it) =>
+              fetch(`/api/promotions/${p.id}/items`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  skuCode:         it.skuCode,
+                  skuName:         it.skuName,
+                  brand:           it.brand,
+                  seriesId:        it.seriesId,
+                  seriesName:      it.seriesName,
+                  condition:       it.condition,
+                  conditionType:   it.conditionType,
+                  conditionParams: it.conditionParams,
+                  price:           it.price,
+                  adminNote:       it.adminNote,
+                  // status 重置為待定價，讓行政重新確認
+                }),
+              })
+            )
+          )
+          alert(`已複製 ${srcItems.length} 個品項，請進入活動確認定價。`)
+        } catch {
+          alert('品項複製時發生錯誤，請手動新增。')
+        }
+      }
+    }
   }
 
   const handleDelete = (id: string) => {
@@ -1190,6 +1299,7 @@ export function PromotionsContent() {
                       promo={promo}
                       onView={() => setViewing(promo)}
                       onEdit={() => { setViewing(null); setEditing(promo) }}
+                      onCopy={() => { setViewing(null); setEditing(null); setCopyOf(promo) }}
                       onDelete={() => handleDelete(promo.id)}
                     />
                   ))}
@@ -1215,6 +1325,16 @@ export function PromotionsContent() {
           <PromotionDrawer
             initial={editing === 'new' ? null : editing}
             onClose={() => setEditing(null)}
+            onSaved={handleSaved}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {copyOf !== null && (
+          <PromotionDrawer
+            copyOf={copyOf}
+            onClose={() => setCopyOf(null)}
             onSaved={handleSaved}
           />
         )}
