@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -73,6 +74,9 @@ interface ProductFamily {
   category: string
   specs: FamilySpec[]
   skuMap?: Record<string, string>
+  skuPattern?: string
+  namePattern?: string
+  uiVariant?: string
   coveredSkuCodes?: string[]
 }
 
@@ -2086,25 +2090,29 @@ function FamilyCard({
                 </div>
               ) : null}
 
-              {/* ── 規格 ── */}
-              {family.specs && family.specs.length > 0 && (
-                <div className="space-y-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">規格</p>
-                  {family.specs.map((spec) => (
-                    <div key={spec.key} className="flex items-start gap-3">
-                      <span className="text-xs text-gray-500 shrink-0 w-16 pt-0.5">{spec.label}</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {spec.options.map((opt) => (
-                          <span
-                            key={opt}
-                            className="px-2.5 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-xs text-gray-700 font-medium"
-                          >
-                            {opt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              {/* ── 規格選擇器（點選縮小範圍，確認此組合是否有貨） ── */}
+              {(family.skuMap || family.skuPattern) && family.specs.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">規格查詢</p>
+                  {family.uiVariant === 'ymh-tooth-grid' ? (
+                    <YMHToothGridPanel
+                      family={family}
+                      onAdd={(skuCode) => {
+                        const item = allItems.find((it) => it.code === skuCode)
+                        if (item) onView(item)
+                      }}
+                      actionLabel="查看詳情"
+                    />
+                  ) : (
+                    <FamilySpecPanel
+                      family={family}
+                      onAdd={(skuCode) => {
+                        const item = allItems.find((it) => it.code === skuCode)
+                        if (item) onView(item)
+                      }}
+                      actionLabel="查看詳情"
+                    />
+                  )}
                 </div>
               )}
 
