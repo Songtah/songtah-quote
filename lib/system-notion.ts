@@ -1279,7 +1279,7 @@ async function ensureVisitDbFields() {
   // intentionally empty — do NOT call databases.update here
 }
 
-const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v3'
+const VISIT_FORM_OPTIONS_CACHE_KEY = 'visit-form-options:v4'
 const VISIT_FORM_OPTIONS_TTL = 10 * 60 * 1000 // 10 min
 
 export async function getVisitFormOptions(): Promise<VisitFormOptions> {
@@ -1339,8 +1339,14 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
         for (const item of getProp(page, '競品')?.multi_select ?? []) {
           if (item?.name) allCompetitorSet.add(item.name)
         }
-        // Collect salesperson names from each record (covers dynamic select values)
-        const sp = getSelect(page, '業務人員') || getText(page, '業務人員')
+        // Collect salesperson names from each record (covers select / rich_text / people fields)
+        const spProp = getProp(page, '業務人員')
+        let sp = ''
+        if (spProp?.type === 'select') sp = spProp.select?.name ?? ''
+        else if (spProp?.type === 'status') sp = spProp.status?.name ?? ''
+        else if (spProp?.type === 'rich_text') sp = spProp.rich_text?.map((t: any) => t.plain_text).join('') ?? ''
+        else if (spProp?.type === 'people') sp = spProp.people?.[0]?.name ?? ''
+        else if (spProp?.type === 'formula') sp = spProp.formula?.string ?? ''
         if (sp) allSalespersonSet.add(sp)
       }
       cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
@@ -1356,8 +1362,11 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
       customerReactions: customerReactionOptions,
       products: [],  // products are searched on-demand via /api/products/search
     }
-    // Cache result (L1 + L2) — this function scans all visit records so caching is important
-    await setRedisValue(VISIT_FORM_OPTIONS_CACHE_KEY, result, VISIT_FORM_OPTIONS_TTL)
+    // Cache result (L1 + L2) — only cache if we got actual salesperson data;
+    // if salespersons is empty something went wrong and we want to retry on next request.
+    if (result.salespersons.length > 0) {
+      await setRedisValue(VISIT_FORM_OPTIONS_CACHE_KEY, result, VISIT_FORM_OPTIONS_TTL)
+    }
     return result
   } catch (error) {
     console.warn('getVisitFormOptions warning:', error)
