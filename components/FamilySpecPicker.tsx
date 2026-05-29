@@ -607,7 +607,7 @@ export function FamilySpecPanel({
         if (isConfirmed) {
           return (
             <div key={spec.key} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 shrink-0 w-10 text-right">{spec.label}</span>
+              <span className="text-xs text-gray-400 shrink-0 min-w-[2rem] max-w-[5rem] text-right leading-tight">{spec.label}</span>
               <button
                 onClick={() => handleChip(spec.key, specIdx, selected[spec.key])}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border bg-brand-500 border-brand-500 text-white shadow-sm"
