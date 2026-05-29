@@ -870,16 +870,14 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
     if (Object.keys(newHints).length > 0)
       setPromoHints((h) => ({ ...h, ...newHints }))
 
-    // unitPrice=0 的品項（FamilySpecPanel 選品）→ 補查定價後再重新套折
+    // unitPrice=0 的品項（FamilySpecPanel 選品）→ 補查 Notion 售價後重新套折
     updatedItems.forEach((item) => {
       if (item.unitPrice > 0 || item.itemType === 'gift' || item.itemType === 'sample') return
       if (!item.skuCode) return
-      fetch(`/api/products/search?q=${encodeURIComponent(item.skuCode)}&limit=5`)
-        .then((r) => r.json())
-        .then((results: CatalogItem[]) => {
-          if (!Array.isArray(results)) return
-          const match = results.find((r) => r.skuCode === item.skuCode)
-          const actualPrice = match?.salePrice ?? match?.price ?? 0
+      fetch(`/api/products/sku/${encodeURIComponent(item.skuCode)}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data: { rich?: { price?: number | null } } | null) => {
+          const actualPrice = data?.rich?.price ?? 0
           if (!actualPrice) return
 
           const promoItem =
@@ -968,15 +966,14 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
         setPromoHints((h) => ({ ...h, [itemId]: hintLabel }))
 
       // ── 非同步補查定價 ────────────────────────────────────────
-      // FamilySpecPanel 選品時 unitPrice=0（沒有價格來源），需要去 catalog API 補查。
+      // FamilySpecPanel 選品時 unitPrice=0（靜態 catalog 無價格）。
+      // 使用 /api/products/sku/[skuCode] 查 Notion 中的實際售價（rich.price）。
       // 查到後：若有促銷條件 → 以實際定價重新套折扣；否則直接更新單價。
       if ((partial.unitPrice ?? 0) === 0 && partial.skuCode) {
-        fetch(`/api/products/search?q=${encodeURIComponent(partial.skuCode)}&limit=5`)
-          .then((r) => r.json())
-          .then((results: CatalogItem[]) => {
-            if (!Array.isArray(results)) return
-            const match = results.find((r) => r.skuCode === partial.skuCode)
-            const actualPrice = match?.salePrice ?? match?.price ?? 0
+        fetch(`/api/products/sku/${encodeURIComponent(partial.skuCode)}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data: { rich?: { price?: number | null } } | null) => {
+            const actualPrice = data?.rich?.price ?? 0
             if (!actualPrice) return
 
             if (promoItem?.conditionType) {
