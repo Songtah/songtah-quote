@@ -690,16 +690,35 @@ function applyPromoCondition(newItem: OrderItem, promoItem: PromotionItem): {
       break
 
     case 'series_discount':
-      if (p?.rate != null) hintLabel = `全系列 ${Math.round(p.rate * 10)}折`
+      if (p?.rate != null) {
+        if (newItem.unitPrice > 0) {
+          // 有原價 → 直接算折後價
+          patches.baseUnitPrice = newItem.unitPrice
+          patches.unitPrice     = Math.round(newItem.unitPrice * p.rate)
+          hintLabel = `全系列${Math.round(p.rate * 10)}折 → NT$${patches.unitPrice.toLocaleString()}`
+        } else {
+          hintLabel = `全系列 ${Math.round(p.rate * 10)}折（請確認定價）`
+        }
+      }
       break
 
-    case 'qty_discount':
-      if ((p?.tiers ?? []).length > 0) {
-        hintLabel = (p.tiers as { minQty: number; rate?: number; price?: number }[])
+    case 'qty_discount': {
+      const tiers = (p?.tiers ?? []) as { minQty: number; rate?: number; price?: number }[]
+      if (tiers.length > 0) {
+        // 加入時 qty=1，找最高滿足的 tier 先帶入
+        const firstTier = tiers.filter((t) => 1 >= t.minQty).sort((a, b) => b.minQty - a.minQty)[0]
+        if (firstTier?.price != null) {
+          patches.unitPrice = firstTier.price
+        } else if (firstTier?.rate != null && newItem.unitPrice > 0) {
+          patches.baseUnitPrice = newItem.unitPrice
+          patches.unitPrice     = Math.round(newItem.unitPrice * firstTier.rate)
+        }
+        hintLabel = tiers
           .map((t) => `滿${t.minQty}件 ${t.rate != null ? Math.round(t.rate * 10) + '折' : 'NT$' + t.price}`)
           .join(' / ')
       }
       break
+    }
 
     case 'bundle':
       hintLabel = p?.partnerSkuName ? `搭配 ${p.partnerSkuName} 可享組合優惠` : '商品組合優惠'
@@ -956,8 +975,11 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
           .sort((a, b) => b.minQty - a.minQty)[0]
         if (applicable?.price != null) {
           updateItem(item.id, { unitPrice: applicable.price })
+        } else if (applicable?.rate != null) {
+          // rate 型：用 baseUnitPrice 快照計算，避免複利折扣
+          const base = item.baseUnitPrice ?? item.unitPrice
+          if (base > 0) updateItem(item.id, { unitPrice: Math.round(base * applicable.rate) })
         }
-        // rate 型（series_discount）需要原價，暫不自動帶；提示已顯示
       }
     },
     [promoItems, giftLinkMap, updateItem]
@@ -1105,6 +1127,12 @@ export default function OrderForm({ initialOrder, canEdit = true }: OrderFormPro
                 const promo = activePromos.find((p) => p.id === id)
                 setPromotionId(id)
                 setPromotionName(promo?.name ?? '')
+                // 自動帶入備註：若備註空白或是上次自動帶入的促銷備註，覆蓋之
+                setNote((prev) => {
+                  if (!promo) return prev.startsWith('促銷活動：') ? '' : prev
+                  if (!prev.trim() || prev.startsWith('促銷活動：')) return `促銷活動：${promo.name}`
+                  return prev
+                })
               }}
               disabled={!canEdit}
               className="border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 max-w-[220px]"

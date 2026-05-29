@@ -124,6 +124,8 @@ export interface OrderItem {
   seriesId: string
   quantity: number
   unitPrice: number
+  /** 促銷折扣前的原始定價快照（rate 型促銷使用，如 series_discount / qty_discount rate-type） */
+  baseUnitPrice?: number
   note: string
   itemType?: ItemType  // 一般 / 贈品 / 樣品 (default: normal)
 }
