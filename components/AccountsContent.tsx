@@ -409,7 +409,6 @@ export default function AccountsContent() {
                   <th className="px-4 py-3 text-left">帳號名稱</th>
                   <th className="px-4 py-3 text-left">帳號代碼</th>
                   <th className="px-4 py-3 text-left">帳號類型</th>
-                  <th className="px-4 py-3 text-left">狀態</th>
                   <th className="px-4 py-3 text-left">可檢視頁面</th>
                   <th className="px-4 py-3 text-right">操作</th>
                 </tr>
@@ -425,11 +424,6 @@ export default function AccountsContent() {
                       <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.username || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium ${statusTextClass(u.status)}`}>
-                          {u.status || '—'}
-                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
