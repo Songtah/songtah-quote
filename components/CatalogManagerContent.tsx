@@ -1948,6 +1948,8 @@ function SkuRow({
 
 const PAGE_SIZE = 100
 
+type IntroData = { notionId: string | null; imageUrl: string; description: string }
+
 function FamilyCard({
   family,
   allItems,
@@ -1965,14 +1967,9 @@ function FamilyCard({
 }) {
   const [open,         setOpen]         = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-
-  // Reset pagination when collapsed
-  const handleToggle = () => {
-    setOpen((v) => {
-      if (v) setVisibleCount(PAGE_SIZE) // reset on collapse
-      return !v
-    })
-  }
+  const [introLoading, setIntroLoading] = useState(false)
+  const [introData,    setIntroData]    = useState<IntroData | null>(null)
+  const introFetched = useRef(false)
 
   // Get SKU codes for this family
   const skuCodes: string[] = family.skuMap
@@ -1988,9 +1985,43 @@ function FamilyCard({
 
   const priceSetCount = items.filter((it) => priceCache.has(it.code) && priceCache.get(it.code) != null).length
   const imageSetCount = items.filter((it) => imageFlagCache.has(it.code)).length
-
   const visibleItems  = items.slice(0, visibleCount)
   const remaining     = items.length - visibleCount
+
+  const handleToggle = () => {
+    setOpen((v) => {
+      const next = !v
+      // Lazy-fetch intro the first time we open
+      if (next && !introFetched.current && items.length > 0) {
+        introFetched.current = true
+        setIntroLoading(true)
+        ;(async () => {
+          // Try up to 5 members to find one with an image or description
+          const candidates = items.slice(0, 5)
+          let found: IntroData | null = null
+          for (const item of candidates) {
+            try {
+              const res = await fetch(`/api/products/sku/${encodeURIComponent(item.code)}`)
+              if (!res.ok) continue
+              const data = await res.json()
+              if (data.rich?.imageUrl || data.rich?.description) {
+                found = {
+                  notionId:    data.rich.notionId    ?? null,
+                  imageUrl:    data.rich.imageUrl    ?? '',
+                  description: data.rich.description ?? '',
+                }
+                break
+              }
+            } catch { /* skip */ }
+          }
+          setIntroData(found)
+          setIntroLoading(false)
+        })()
+      }
+      if (!next) setVisibleCount(PAGE_SIZE)
+      return next
+    })
+  }
 
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden">
@@ -2004,21 +2035,20 @@ function FamilyCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900">{family.seriesName}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{family.brand}</span>
+            {family.productType && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600">{family.productType}</span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-xs text-gray-400">{items.length} 個 SKU</span>
-            {priceSetCount > 0 && (
-              <span className="text-xs text-emerald-600">✓ {priceSetCount} 已設售價</span>
-            )}
-            {imageSetCount > 0 && (
-              <span className="text-xs text-blue-600">✓ {imageSetCount} 已設圖片</span>
-            )}
+            {priceSetCount > 0 && <span className="text-xs text-emerald-600">✓ {priceSetCount} 已設售價</span>}
+            {imageSetCount > 0 && <span className="text-xs text-blue-600">✓ {imageSetCount} 已設圖片</span>}
           </div>
         </div>
         <span className="text-xs text-gray-400 shrink-0">{family.category}</span>
       </button>
 
-      {/* SKU list */}
+      {/* Expanded: series overview card */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -2028,29 +2058,100 @@ function FamilyCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-gray-100 px-5 py-2">
-              {visibleItems.map((item) => (
-                <SkuRow
-                  key={item.code}
-                  item={item}
-                  priceCache={priceCache}
-                  imageFlagCache={imageFlagCache}
-                  onView={onView}
-                  onEdit={onEdit}
-                />
-              ))}
+            <div className="border-t border-gray-100 px-5 py-4 space-y-5">
 
-              {/* "Show more" button */}
-              {remaining > 0 && (
-                <div className="py-3 text-center border-t border-gray-100 mt-1">
-                  <button
-                    onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                    className="text-xs font-medium text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-4 py-1.5 rounded-full transition"
-                  >
-                    顯示更多 {Math.min(remaining, PAGE_SIZE)} 筆（還剩 {remaining} 筆）
-                  </button>
+              {/* ── 介紹 ── */}
+              {introLoading ? (
+                <div className="flex gap-4">
+                  <div className="w-24 h-24 rounded-xl bg-gray-100 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
+                    <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                  </div>
+                </div>
+              ) : introData?.imageUrl || introData?.description ? (
+                <div className="flex gap-4">
+                  {introData.imageUrl && introData.notionId && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/api/notion-image?pageId=${introData.notionId}`}
+                      alt={family.seriesName}
+                      className="w-24 h-24 rounded-xl object-cover shrink-0 border border-gray-100 bg-gray-50"
+                    />
+                  )}
+                  {introData.description && (
+                    <p className="text-sm text-gray-600 leading-relaxed">{introData.description}</p>
+                  )}
+                </div>
+              ) : null}
+
+              {/* ── 規格 ── */}
+              {family.specs && family.specs.length > 0 && (
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">規格</p>
+                  {family.specs.map((spec) => (
+                    <div key={spec.key} className="flex items-start gap-3">
+                      <span className="text-xs text-gray-500 shrink-0 w-16 pt-0.5">{spec.label}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {spec.options.map((opt) => (
+                          <span
+                            key={opt}
+                            className="px-2.5 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-xs text-gray-700 font-medium"
+                          >
+                            {opt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
+
+              {/* ── 品項清單 ── */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
+                  品項（{items.length}）
+                </p>
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <div
+                      key={item.code}
+                      className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-gray-50 group cursor-pointer"
+                      onClick={() => onView(item)}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${imageFlagCache.has(item.code) ? 'bg-blue-400' : 'bg-gray-200'}`} />
+                      <span className="font-mono text-[11px] text-gray-400 w-28 shrink-0">{item.code}</span>
+                      <span className="text-sm text-gray-700 flex-1 truncate">{item.name}</span>
+                      {priceCache.has(item.code) && priceCache.get(item.code) != null && (
+                        <span className="text-xs text-emerald-600 shrink-0">
+                          NT${(priceCache.get(item.code) as number).toLocaleString('zh-TW')}
+                        </span>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(item) }}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-400
+                                   hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50
+                                   opacity-0 group-hover:opacity-100 transition shrink-0"
+                      >
+                        編輯
+                      </button>
+                    </div>
+                  ))}
+
+                  {remaining > 0 && (
+                    <div className="pt-2 text-center">
+                      <button
+                        onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-4 py-1.5 rounded-full transition"
+                      >
+                        顯示更多 {Math.min(remaining, PAGE_SIZE)} 筆（還剩 {remaining} 筆）
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </div>
           </motion.div>
         )}
