@@ -22,6 +22,13 @@ export async function DELETE(
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const perms       = user?.permissions as Record<string, { view: boolean; edit: boolean }> | undefined
+  const hasEdit     = role === 'admin' || accountType === '行政' || accountType === '中央管理' || !perms || (perms?.orders?.edit ?? false)
+  if (!hasEdit) return NextResponse.json({ error: '無刪除訂單權限' }, { status: 403 })
+
   try {
     await archiveOrder(params.id)
     return NextResponse.json({ ok: true })

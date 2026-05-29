@@ -532,10 +532,11 @@ function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void
 
 // ── Promotion Item Row ────────────────────────────────────────
 
-function ItemRow({ item, onUpdate, onDelete }: {
+function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
   item:     PromotionItem
   onUpdate: (id: string, patch: Partial<PromotionItem>) => void
   onDelete: (id: string) => void
+  isAdmin:  boolean
 }) {
   const [editing,         setEditing]         = useState(false)
   const [condition,       setCondition]       = useState(item.condition)
@@ -624,7 +625,7 @@ function ItemRow({ item, onUpdate, onDelete }: {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          {!editing && (
+          {isAdmin && !editing && (
             <select
               value={item.status}
               onChange={(e) => handleStatusChange(e.target.value as ItemStatus)}
@@ -635,14 +636,18 @@ function ItemRow({ item, onUpdate, onDelete }: {
               <option value="不採用">不採用</option>
             </select>
           )}
-          <button onClick={() => setEditing((e) => !e)}
-            className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
-            {editing ? '收起' : '編輯'}
-          </button>
-          <button onClick={handleDelete} disabled={deleting}
-            className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition disabled:opacity-40">
-            {deleting ? '…' : '移除'}
-          </button>
+          {isAdmin && (
+            <button onClick={() => setEditing((e) => !e)}
+              className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
+              {editing ? '收起' : '編輯'}
+            </button>
+          )}
+          {isAdmin && (
+            <button onClick={handleDelete} disabled={deleting}
+              className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition disabled:opacity-40">
+              {deleting ? '…' : '移除'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -709,10 +714,11 @@ function ItemRow({ item, onUpdate, onDelete }: {
 
 // ── Promotion Detail Panel ────────────────────────────────────
 
-function PromotionDetailPanel({ promo, onClose, onEdit }: {
-  promo:   Promotion
-  onClose: () => void
-  onEdit:  () => void
+function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
+  promo:    Promotion
+  onClose:  () => void
+  onEdit:   () => void
+  isAdmin:  boolean
 }) {
   const [items,          setItems]          = useState<PromotionItem[]>([])
   const [loadingItems,   setLoadingItems]   = useState(true)
@@ -839,10 +845,12 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
               </p>
             </div>
             <div className="flex gap-1.5 shrink-0">
-              <button onClick={onEdit}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
-                編輯活動
-              </button>
+              {isAdmin && (
+                <button onClick={onEdit}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
+                  編輯活動
+                </button>
+              )}
               <button onClick={onClose}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
             </div>
@@ -868,7 +876,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
               <span className="text-yellow-600 font-semibold">⏳ 待定價 {pending}</span>
               {dropped > 0 && <span className="text-red-500">❌ 不採用 {dropped}</span>}
               <span className="text-gray-400">共 {items.length} 項</span>
-              {pending > 0 && (
+              {isAdmin && pending > 0 && (
                 <button
                   onClick={handleConfirmAll}
                   disabled={confirmingAll}
@@ -905,13 +913,15 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
                   )
                 })}
               </div>
-              <button
-                onClick={() => setShowSearch((s) => !s)}
-                disabled={addingItem}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:opacity-50 transition"
-              >
-                {addingItem ? '新增中…' : showSearch ? '收起' : '+ 新增品項'}
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowSearch((s) => !s)}
+                  disabled={addingItem}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:opacity-50 transition"
+                >
+                  {addingItem ? '新增中…' : showSearch ? '收起' : '+ 新增品項'}
+                </button>
+              )}
             </div>
             <AnimatePresence>
               {showSearch && (
@@ -975,7 +985,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit }: {
           {!loadingItems && displayedItems.length > 0 && (
             <div className="divide-y">
               {displayedItems.map((item) => (
-                <ItemRow key={item.id} item={item} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} />
+                <ItemRow key={item.id} item={item} isAdmin={isAdmin} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} />
               ))}
             </div>
           )}
@@ -1114,12 +1124,13 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
 
 // ── Promotion Card ────────────────────────────────────────────
 
-function PromotionCard({ promo, onView, onEdit, onCopy, onDelete }: {
+function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin }: {
   promo:    Promotion
   onView:   () => void
   onEdit:   () => void
   onCopy:   () => void
   onDelete: () => void
+  isAdmin:  boolean
 }) {
   const [deleting, setDeleting] = useState(false)
 
@@ -1146,21 +1157,23 @@ function PromotionCard({ promo, onView, onEdit, onCopy, onDelete }: {
             <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{promo.description}</p>
           )}
         </div>
-        <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={(e) => { e.stopPropagation(); onEdit() }}
-            className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
-            編輯
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onCopy() }}
-            className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition"
-            title="複製此活動（建立新活動並預填欄位）">
-            複製
-          </button>
-          <button onClick={handleDelete} disabled={deleting}
-            className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
-            {deleting ? '…' : '刪除'}
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={(e) => { e.stopPropagation(); onEdit() }}
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
+              編輯
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onCopy() }}
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition"
+              title="複製此活動（建立新活動並預填欄位）">
+              複製
+            </button>
+            <button onClick={handleDelete} disabled={deleting}
+              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
+              {deleting ? '…' : '刪除'}
+            </button>
+          </div>
+        )}
         <div className="text-gray-300 group-hover:text-brand-400 transition-colors text-sm shrink-0 mt-0.5">›</div>
       </div>
     </div>
@@ -1176,7 +1189,7 @@ const STATUS_LABEL: Record<PromotionStatus, string> = {
   '已結束': '⚪ 已結束',
 }
 
-export function PromotionsContent() {
+export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
   const [promos,  setPromos]  = useState<Promotion[]>([])
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState<Promotion | null>(null)
@@ -1263,9 +1276,11 @@ export function PromotionsContent() {
             </span>
           )}
         </p>
-        <button onClick={() => setEditing('new')} className="button-primary px-4 py-2 text-sm">
-          + 新增活動
-        </button>
+        {isAdmin && (
+          <button onClick={() => setEditing('new')} className="button-primary px-4 py-2 text-sm">
+            + 新增活動
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -1278,7 +1293,9 @@ export function PromotionsContent() {
         <div className="text-center py-24 text-gray-400">
           <div className="text-5xl mb-3">🎪</div>
           <p className="text-sm">尚未建立任何促銷活動</p>
-          <button onClick={() => setEditing('new')} className="mt-3 text-xs text-brand-600 hover:underline font-medium">立即新增</button>
+          {isAdmin && (
+            <button onClick={() => setEditing('new')} className="mt-3 text-xs text-brand-600 hover:underline font-medium">立即新增</button>
+          )}
         </div>
       )}
 
@@ -1297,6 +1314,7 @@ export function PromotionsContent() {
                     <PromotionCard
                       key={promo.id}
                       promo={promo}
+                      isAdmin={isAdmin}
                       onView={() => setViewing(promo)}
                       onEdit={() => { setViewing(null); setEditing(promo) }}
                       onCopy={() => { setViewing(null); setEditing(null); setCopyOf(promo) }}
@@ -1314,6 +1332,7 @@ export function PromotionsContent() {
         {viewing && (
           <PromotionDetailPanel
             promo={viewing}
+            isAdmin={isAdmin}
             onClose={() => setViewing(null)}
             onEdit={() => { setEditing(viewing); setViewing(null) }}
           />
@@ -1321,7 +1340,7 @@ export function PromotionsContent() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {editing !== null && (
+        {isAdmin && editing !== null && (
           <PromotionDrawer
             initial={editing === 'new' ? null : editing}
             onClose={() => setEditing(null)}
@@ -1331,7 +1350,7 @@ export function PromotionsContent() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {copyOf !== null && (
+        {isAdmin && copyOf !== null && (
           <PromotionDrawer
             copyOf={copyOf}
             onClose={() => setCopyOf(null)}

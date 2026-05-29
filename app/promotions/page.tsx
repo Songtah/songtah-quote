@@ -8,7 +8,10 @@ export default async function PromotionsPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
 
-  const user = session.user as any
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
 
   return (
     <AppShell
@@ -20,7 +23,7 @@ export default async function PromotionsPage() {
         permissions: user?.permissions,
       }}
     >
-      <PromotionsContent />
+      <PromotionsContent isAdmin={isAdmin} />
     </AppShell>
   )
 }

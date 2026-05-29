@@ -17,10 +17,16 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   return NextResponse.json(promotion)
 }
 
-// PUT /api/promotions/[id]
+// PUT /api/promotions/[id]  — 僅行政帳號可修改
 export async function PUT(req: NextRequest, { params }: Ctx) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  if (!isAdmin) return NextResponse.json({ error: '僅行政帳號可修改促銷活動' }, { status: 403 })
 
   let body: any
   try { body = await req.json() } catch {
@@ -43,10 +49,16 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   }
 }
 
-// DELETE /api/promotions/[id]
+// DELETE /api/promotions/[id]  — 僅行政帳號可刪除
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  if (!isAdmin) return NextResponse.json({ error: '僅行政帳號可刪除促銷活動' }, { status: 403 })
 
   try {
     await archivePromotion(params.id)

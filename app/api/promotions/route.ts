@@ -15,10 +15,16 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(list)
 }
 
-// POST /api/promotions
+// POST /api/promotions  — 僅行政帳號可建立
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const user        = session.user as any
+  const role        = user?.role        as string | undefined
+  const accountType = user?.accountType as string | undefined
+  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  if (!isAdmin) return NextResponse.json({ error: '僅行政帳號可建立促銷活動' }, { status: 403 })
 
   let body: any
   try { body = await req.json() } catch {
