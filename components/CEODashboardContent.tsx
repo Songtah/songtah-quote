@@ -528,8 +528,8 @@ export function CEODashboardContent({
               <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">本月業務排行</p>
               <h3 className="font-semibold text-gray-900">業績 & 拜訪量</h3>
             </div>
-            <Link href="/customers" className="text-xs text-blue-500 hover:text-blue-700">
-              查看客戶 →
+            <Link href="/bd" className="text-xs text-blue-500 hover:text-blue-700">
+              查看客情拜訪紀錄 →
             </Link>
           </div>
           <SalespersonTable stats={s?.salespersonStats ?? []} loading={loading} />
