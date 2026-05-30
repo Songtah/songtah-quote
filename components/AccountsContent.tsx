@@ -348,15 +348,23 @@ export default function AccountsContent() {
   useEffect(() => { loadUsers() }, [loadUsers])
 
   const handleToggleStatus = async (u: SystemUser) => {
-    const newStatus = u.status === '停用' ? '進行中' : '停用'
+    const newStatus = u.status === '停用' ? '未開始' : '停用'
     setTogglingId(u.id)
     try {
-      await fetch(`/api/accounts/${u.id}`, {
+      const res = await fetch(`/api/accounts/${u.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
-      loadUsers()
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        alert(d.error ?? '操作失敗，請重試')
+        return
+      }
+      // Optimistically update local state to avoid serverless cache race
+      setUsers((prev) => prev.map((user) => user.id === u.id ? { ...user, status: newStatus } : user))
+    } catch {
+      alert('網路錯誤，請重試')
     } finally {
       setTogglingId(null)
     }
