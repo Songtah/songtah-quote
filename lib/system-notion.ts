@@ -1750,31 +1750,35 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ── accounts & permissions ────────────────────────────────────
 
-export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'admin', 'accounts'] as const
+export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'assets', 'admin', 'accounts'] as const
 export type ModuleKey = typeof MODULE_KEYS[number]
 export type ModulePermission = { view: boolean; edit: boolean }
 export type UserPermissions = Record<ModuleKey, ModulePermission>
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
-  crm:      '客戶管理',
-  rma:      '技術支援',
-  bd:       '業務開發',
-  products: '產品',
-  quote:    '報價',
-  orders:   '訂貨',
-  admin:    '行政管理',
-  accounts: '帳號權限',
+  crm:        '客戶管理',
+  rma:        '技術支援',
+  bd:         '業務開發',
+  products:   '產品',
+  quote:      '報價',
+  orders:     '訂貨',
+  promotions: '促銷活動',
+  assets:     '素材庫',
+  admin:      '行政管理',
+  accounts:   '帳號權限',
 }
 
 const MODULE_NOTION_FIELDS: Record<ModuleKey, { view: string; edit: string }> = {
-  crm:      { view: 'CRM檢視',    edit: 'CRM編輯'    },
-  rma:      { view: 'RMA檢視',    edit: 'RMA編輯'    },
-  bd:       { view: 'BD檢視',     edit: 'BD編輯'     },
-  products: { view: '產品檢視',   edit: '產品編輯'   },
-  quote:    { view: '報價檢視',   edit: '報價編輯'   },
-  orders:   { view: '訂貨檢視',   edit: '訂貨編輯'   },
-  admin:    { view: '行政管理檢視', edit: '行政管理編輯' },
-  accounts: { view: '帳號檢視',   edit: '帳號編輯'   },
+  crm:        { view: 'CRM檢視',      edit: 'CRM編輯'      },
+  rma:        { view: 'RMA檢視',      edit: 'RMA編輯'      },
+  bd:         { view: 'BD檢視',       edit: 'BD編輯'       },
+  products:   { view: '產品檢視',     edit: '產品編輯'     },
+  quote:      { view: '報價檢視',     edit: '報價編輯'     },
+  orders:     { view: '訂貨檢視',     edit: '訂貨編輯'     },
+  promotions: { view: '促銷活動檢視', edit: '促銷活動編輯' },
+  assets:     { view: '素材庫檢視',   edit: '素材庫編輯'   },
+  admin:      { view: '行政管理檢視', edit: '行政管理編輯' },
+  accounts:   { view: '帳號檢視',     edit: '帳號編輯'     },
 }
 
 export function allPermissions(): UserPermissions {
@@ -1792,9 +1796,12 @@ function getCheckbox(page: any, field: string): boolean {
 function mapUserPermissions(page: any): UserPermissions {
   const result = {} as UserPermissions
   for (const [mod, fields] of Object.entries(MODULE_NOTION_FIELDS)) {
+    // 若 Notion 資料庫尚未建立該欄位，預設為 true（避免在新增模組初期意外封鎖所有人）
+    const viewProp = getProp(page, fields.view)
+    const editProp = getProp(page, fields.edit)
     result[mod as ModuleKey] = {
-      view: getCheckbox(page, fields.view),
-      edit: getCheckbox(page, fields.edit),
+      view: viewProp ? viewProp.checkbox === true : true,
+      edit: editProp ? editProp.checkbox === true : true,
     }
   }
   return result
