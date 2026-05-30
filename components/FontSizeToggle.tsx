@@ -31,15 +31,18 @@ export function FontSizeToggle() {
   const apply = (size: FontSize) => { setCurrent(size); applyFontSize(size) }
 
   return (
-    <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-1 py-0.5">
+    /* 用 px 固定尺寸，避免自己被 xlarge 字型影響而撐大 header */
+    <div className="flex items-center gap-[4px] rounded-full border border-gray-200 bg-gray-50 px-[4px] py-[2px]">
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
           onClick={() => apply(opt.value)}
           title={opt.title}
+          style={{
+            fontSize: opt.value === 'normal' ? '13px' : opt.value === 'large' ? '15px' : '18px',
+          }}
           className={[
-            'rounded-full px-2 py-0.5 font-semibold transition-all leading-none select-none',
-            opt.value === 'normal' ? 'text-sm' : opt.value === 'large' ? 'text-base' : 'text-lg',
+            'rounded-full px-[8px] py-[2px] font-semibold transition-all leading-none select-none',
             current === opt.value
               ? 'bg-white shadow-sm text-gray-900 ring-1 ring-gray-200'
               : 'text-gray-400 hover:text-gray-600',

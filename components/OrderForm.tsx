@@ -1319,11 +1319,11 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
 
       {/* Items table */}
       <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b">
-          <h2 className="font-semibold text-gray-800 min-w-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b gap-2">
+          <h2 className="font-semibold text-gray-800 min-w-0 truncate">
             訂貨品項
             {items.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-gray-400 whitespace-nowrap">
+              <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-gray-400 whitespace-nowrap">
                 {items.length} 種 · 共 {totalQty} 件
               </span>
             )}
@@ -1331,7 +1331,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
           {canEdit && (
           <button
             onClick={() => setShowPicker(true)}
-            className="button-primary px-4 py-1.5 text-sm rounded shrink-0 whitespace-nowrap"
+            className="button-primary px-3 sm:px-4 py-[7px] sm:py-1.5 text-[13px] sm:text-sm rounded shrink-0 whitespace-nowrap"
           >
             + 新增品項
           </button>
@@ -1704,46 +1704,50 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
 
       {/* Footer actions */}
       {/* Action bar — sticky on mobile */}
-      <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 sm:py-0 bg-white sm:bg-transparent border-t sm:border-none shadow-[0_-2px_8px_rgba(0,0,0,0.06)] sm:shadow-none flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
+      <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 sm:py-0 bg-white sm:bg-transparent border-t sm:border-none shadow-[0_-2px_8px_rgba(0,0,0,0.06)] sm:shadow-none flex flex-wrap items-center justify-between gap-[10px] sm:gap-3">
+        {/* 左：取消 ＋ 儲存草稿 */}
+        <div className="flex gap-[8px] sm:gap-2">
           <button
             onClick={() => router.back()}
-            className="button-secondary px-4 py-2.5 sm:py-2 text-sm rounded"
+            className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded"
           >
             取消
           </button>
+          {canEdit && (
+            <button
+              onClick={() => handleSave('草稿')}
+              disabled={saving}
+              className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded disabled:opacity-50"
+            >
+              {saving ? '儲存中...' : '儲存草稿'}
+            </button>
+          )}
+        </div>
+        {/* 右：列印 ＋ 送出訂單 */}
+        <div className="flex gap-[8px] sm:gap-2 flex-1 sm:flex-none justify-end">
           {items.length > 0 && (
             <button
               onClick={handlePrint}
-              className="button-secondary px-4 py-2.5 sm:py-2 text-sm rounded"
+              className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded"
             >
               🖨️ 列印
             </button>
           )}
-        </div>
-        {canEdit && (
-          <div className="flex gap-2 flex-1 sm:flex-none justify-end">
-            <button
-              onClick={() => handleSave('草稿')}
-              disabled={saving}
-              className="button-secondary px-4 sm:px-5 py-2.5 sm:py-2 text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
-            >
-              {saving ? '儲存中...' : '儲存草稿'}
-            </button>
+          {canEdit && (
             <button
               onClick={() => handleSave('已送出')}
               disabled={saving}
-              className="button-primary px-4 sm:px-5 py-2.5 sm:py-2 text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
+              className="button-primary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
             >
               {saving ? '送出中...' : '✓ 送出訂單'}
             </button>
-          </div>
-        )}
-        {!canEdit && (
-          <span className="text-sm text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
-            🔒 {lockedNote ?? '僅限閱覽，無編輯權限'}
-          </span>
-        )}
+          )}
+          {!canEdit && (
+            <span className="text-[13px] sm:text-sm text-amber-600 bg-amber-50 border border-amber-200 px-3 py-[10px] sm:py-1.5 rounded-lg">
+              🔒 {lockedNote ?? '僅限閱覽，無編輯權限'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Product picker panel */}

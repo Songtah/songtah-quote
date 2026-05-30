@@ -132,7 +132,7 @@ export function AppShell({
                 alt="崧達企業 — 回首頁"
                 width={520}
                 height={78}
-                className="h-auto w-20 shrink-0 object-contain sm:w-28 md:w-36"
+                className="h-auto w-[80px] shrink-0 object-contain sm:w-28 md:w-36"
               />
             </Link>
             <div className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" />
@@ -145,7 +145,7 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <FontSizeToggle />
-            <Link href="/api/auth/signout" className="button-secondary px-2.5 py-1.5 text-xs sm:text-sm sm:px-3">
+            <Link href="/api/auth/signout" className="button-secondary px-[10px] py-[6px] text-[12px] sm:text-sm sm:px-3 sm:py-1.5">
               登出
             </Link>
           </div>
