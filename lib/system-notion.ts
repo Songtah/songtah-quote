@@ -1879,12 +1879,14 @@ export async function getSystemUserByCredentials(
   for (const page of response.results ?? []) {
     const storedPw = getText(page, '密碼')
     if (storedPw === password) {
+      const status = getSelect(page, '狀態')
+      if (status === '停用') return null   // 已停用帳號，拒絕登入
       return {
         id: page.id,
         name: getTitle(page, '帳號名稱'),
         username: getText(page, '帳號代碼'),
         accountType: getSelect(page, '帳號類型'),
-        status: getSelect(page, '狀態'),
+        status,
         password: storedPw,
         permissions: mapUserPermissions(page),
       }

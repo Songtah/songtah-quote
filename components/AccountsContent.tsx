@@ -6,7 +6,7 @@ import type { SystemUser, UserPermissions, ModuleKey } from '@/lib/system-notion
 import { MODULE_KEYS, MODULE_LABELS } from '@/lib/system-notion'
 
 const ACCOUNT_TYPE_OPTIONS = ['中央管理', '業務', '行政', '技術']
-const STATUS_OPTIONS = ['未開始', '進行中', '完成']
+const STATUS_OPTIONS = ['未開始', '進行中', '完成', '停用']
 
 function defaultPermissions(all = false): UserPermissions {
   const result = {} as UserPermissions
@@ -334,6 +334,7 @@ export default function AccountsContent() {
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const loadUsers = useCallback(() => {
     setLoading(true)
@@ -345,6 +346,21 @@ export default function AccountsContent() {
   }, [])
 
   useEffect(() => { loadUsers() }, [loadUsers])
+
+  const handleToggleStatus = async (u: SystemUser) => {
+    const newStatus = u.status === '停用' ? '進行中' : '停用'
+    setTogglingId(u.id)
+    try {
+      await fetch(`/api/accounts/${u.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      loadUsers()
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   const handleDelete = async (id: string) => {
     setDeleting(true)
@@ -363,21 +379,23 @@ export default function AccountsContent() {
     sales: users.filter((u) => u.accountType === '業務').length,
     ops: users.filter((u) => u.accountType === '行政').length,
     tech: users.filter((u) => u.accountType === '技術').length,
+    disabled: users.filter((u) => u.status === '停用').length,
   }
 
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
         {[
           { label: '中央管理', count: counts.admin },
           { label: '業務帳號', count: counts.sales },
           { label: '行政帳號', count: counts.ops },
           { label: '技術帳號', count: counts.tech },
-        ].map(({ label, count }) => (
+          { label: '已停用', count: counts.disabled, warn: counts.disabled > 0 },
+        ].map(({ label, count, warn }) => (
           <div key={label} className="panel p-5">
             <div className="eyebrow mb-2">{label}</div>
-            <div className="text-3xl font-black text-slate-900">{count}</div>
+            <div className={`text-3xl font-black ${warn ? 'text-red-500' : 'text-slate-900'}`}>{count}</div>
           </div>
         ))}
       </div>
@@ -400,15 +418,20 @@ export default function AccountsContent() {
             const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
             const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
             return (
-              <div key={u.id} className="bg-white rounded-2xl border border-brand-200/40 shadow-sm p-4 space-y-2.5">
+              <div key={u.id} className={`bg-white rounded-2xl border shadow-sm p-4 space-y-2.5 ${u.status === '停用' ? 'border-red-200 opacity-60' : 'border-brand-200/40'}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-stone-800">{u.name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-semibold truncate ${u.status === '停用' ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{u.name}</span>
+                    {u.status === '停用' && (
+                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">停用</span>
+                    )}
+                  </div>
                   <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
                 </div>
                 {u.username && (
                   <p className="font-mono text-xs text-stone-400">{u.username}</p>
                 )}
-                {viewableModules.length > 0 && (
+                {viewableModules.length > 0 && u.status !== '停用' && (
                   <div className="flex flex-wrap gap-1">
                     {viewableModules.map((m) => (
                       <span key={m} className={`text-xs px-1.5 py-0.5 rounded font-medium ${editableModules.includes(m) ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'}`}>
@@ -427,6 +450,13 @@ export default function AccountsContent() {
                   ) : (
                     <>
                       <button onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }} className="text-xs text-brand-600 font-medium">編輯</button>
+                      <button
+                        onClick={() => handleToggleStatus(u)}
+                        disabled={togglingId === u.id}
+                        className={`text-xs font-medium disabled:opacity-50 ${u.status === '停用' ? 'text-green-600' : 'text-amber-600'}`}
+                      >
+                        {togglingId === u.id ? '…' : u.status === '停用' ? '啟用' : '停用'}
+                      </button>
                       <button onClick={() => setDeleteConfirmId(u.id)} className="text-xs text-stone-300 hover:text-red-500 ml-auto">刪除</button>
                     </>
                   )}
@@ -462,25 +492,36 @@ export default function AccountsContent() {
                   const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
                   const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
                   return (
-                    <tr key={u.id} className="hover:bg-cream-50/60 transition-colors">
-                      <td className="px-4 py-3 font-medium text-stone-800">{u.name}</td>
+                    <tr key={u.id} className={`hover:bg-cream-50/60 transition-colors ${u.status === '停用' ? 'opacity-50 bg-red-50/30' : ''}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${u.status === '停用' ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{u.name}</span>
+                          {u.status === '停用' && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">停用</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.username || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {viewableModules.length === 0 ? (
-                            <span className="text-xs text-stone-400">無</span>
-                          ) : (
-                            viewableModules.map((m) => (
-                              <span key={m} className={`text-xs px-1.5 py-0.5 rounded font-medium ${editableModules.includes(m) ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'}`}
-                                title={editableModules.includes(m) ? '可檢視＋編輯' : '僅檢視'}>
-                                {MODULE_LABELS[m]}
-                              </span>
-                            ))
-                          )}
-                        </div>
+                        {u.status === '停用' ? (
+                          <span className="text-xs text-stone-400">帳號已停用</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {viewableModules.length === 0 ? (
+                              <span className="text-xs text-stone-400">無</span>
+                            ) : (
+                              viewableModules.map((m) => (
+                                <span key={m} className={`text-xs px-1.5 py-0.5 rounded font-medium ${editableModules.includes(m) ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'}`}
+                                  title={editableModules.includes(m) ? '可檢視＋編輯' : '僅檢視'}>
+                                  {MODULE_LABELS[m]}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         {deleteConfirmId === u.id ? (
@@ -492,6 +533,13 @@ export default function AccountsContent() {
                         ) : (
                           <div className="flex items-center gap-3 justify-end">
                             <button onClick={() => { setEditingUser(u); setDeleteConfirmId(null) }} className="text-xs text-stone-400 hover:text-brand-600 transition-colors">編輯</button>
+                            <button
+                              onClick={() => handleToggleStatus(u)}
+                              disabled={togglingId === u.id}
+                              className={`text-xs font-medium transition-colors disabled:opacity-50 ${u.status === '停用' ? 'text-green-600 hover:text-green-800' : 'text-amber-500 hover:text-amber-700'}`}
+                            >
+                              {togglingId === u.id ? '處理中…' : u.status === '停用' ? '啟用' : '停用'}
+                            </button>
                             <button onClick={() => setDeleteConfirmId(u.id)} className="text-xs text-stone-300 hover:text-red-500 transition-colors">刪除</button>
                           </div>
                         )}
