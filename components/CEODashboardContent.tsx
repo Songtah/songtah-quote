@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import type { CEOStats, SalespersonStat, MonthlyTrend } from '@/lib/ceo-stats'
+import type { CEOStats, SalespersonStat, MonthlyTrend, VisitStat } from '@/lib/ceo-stats'
 import { stagger, listItem } from '@/lib/motion'
 
 // ── 工具函式 ───────────────────────────────────────────────────
@@ -41,6 +41,7 @@ function KPICard({
   accent,
   loading,
   href,
+  onClick,
 }: {
   label:    string
   value:    string
@@ -50,11 +51,17 @@ function KPICard({
   accent:   string
   loading?: boolean
   href?:    string
+  onClick?: () => void
 }) {
   if (loading) return <Skeleton className="h-[120px]" />
 
+  const interactive = !!(href || onClick)
+
   const inner = (
-    <div className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between gap-2 transition-shadow ${href ? 'hover:shadow-md hover:border-gray-200 cursor-pointer' : ''}`}>
+    <div
+      onClick={onClick}
+      className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between gap-2 transition-shadow ${interactive ? 'hover:shadow-md hover:border-gray-200 cursor-pointer' : ''}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider leading-snug">{label}</span>
         <span
@@ -88,6 +95,124 @@ function KPICard({
     )
   }
   return inner
+}
+
+// ── 待追蹤客情 Modal ───────────────────────────────────────────
+
+function FollowUpModal({
+  items,
+  onClose,
+}: {
+  items: VisitStat[]
+  onClose: () => void
+}) {
+  function formatDate(d: string) {
+    if (!d) return ''
+    return d.slice(0, 10).replace(/-/g, '/')
+  }
+
+  // 判斷追蹤日是否已逾期
+  function isOverdue(dateStr: string) {
+    if (!dateStr) return false
+    const today = new Date().toISOString().slice(0, 10)
+    return dateStr < today
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 overflow-y-auto">
+        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-red-100/60 bg-red-50/40 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-400">本月待追蹤</p>
+              <h3 className="text-base font-bold text-gray-900 mt-0.5">
+                ⚠️ 客情追蹤清單
+                <span className="ml-2 text-sm font-medium text-red-500">（{items.length} 筆）</span>
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition text-lg leading-none"
+            >✕</button>
+          </div>
+          {/* List */}
+          <div className="divide-y divide-gray-50 max-h-[65vh] overflow-y-auto">
+            {items.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-gray-400">本月無待追蹤客情</div>
+            ) : items.map((v, i) => {
+              const overdue = isOverdue(v.nextFollowUpDate)
+              return (
+                <div key={i} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {/* 客戶名 + 業務 */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 text-sm">{v.customerName}</span>
+                        {v.salesperson && (
+                          <span className="text-xs text-gray-400">{v.salesperson}</span>
+                        )}
+                        {v.city && (
+                          <span className="text-xs text-gray-400">{v.city}</span>
+                        )}
+                      </div>
+                      {/* 後續動作 */}
+                      {v.followUpAction && (
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-2">
+                          {v.followUpAction}
+                        </p>
+                      )}
+                      {/* 互動目的 / 客戶反應 */}
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {v.interactionPurpose && (
+                          <span className="text-xs bg-blue-50 text-blue-600 border border-blue-100 rounded-full px-2 py-0.5">{v.interactionPurpose}</span>
+                        )}
+                        {v.customerReaction && (
+                          <span className="text-xs bg-gray-100 text-gray-600 border border-gray-200 rounded-full px-2 py-0.5">{v.customerReaction}</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* 追蹤日 */}
+                    <div className="shrink-0 text-right">
+                      {v.nextFollowUpDate ? (
+                        <span className={`text-xs font-medium px-2 py-1 rounded-lg ${
+                          overdue
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-orange-50 text-orange-600'
+                        }`}>
+                          {overdue ? '⚠ 已逾期' : '📅'} {formatDate(v.nextFollowUpDate)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">未排期</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {/* Footer */}
+          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <Link href="/bd" className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
+              前往客情紀錄 →
+            </Link>
+            <button
+              onClick={onClose}
+              className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 transition"
+            >
+              關閉
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
 }
 
 // ── SVG Line Chart ─────────────────────────────────────────────
@@ -447,10 +572,11 @@ export function CEODashboardContent({
 }: {
   isAdmin?: boolean
 }) {
-  const [stats,     setStats]     = useState<CEOStats | null>(null)
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState('')
-  const [refreshed, setRefreshed] = useState<Date | null>(null)
+  const [stats,           setStats]           = useState<CEOStats | null>(null)
+  const [loading,         setLoading]         = useState(true)
+  const [error,           setError]           = useState('')
+  const [refreshed,       setRefreshed]       = useState<Date | null>(null)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -547,13 +673,21 @@ export function CEODashboardContent({
             loading={loading}
             label="待追蹤客情"
             value={tm ? `${tm.pendingFollowUps}` : '—'}
-            sub="需後續聯繫"
+            sub="點擊查看明細"
             icon="⚠️"
             accent="#dc2626"
-            href="/bd"
+            onClick={() => setShowFollowUpModal(true)}
           />
         </motion.div>
       </motion.section>
+
+      {/* 待追蹤客情 Modal */}
+      {showFollowUpModal && s?.pendingFollowUpItems && (
+        <FollowUpModal
+          items={s.pendingFollowUpItems}
+          onClose={() => setShowFollowUpModal(false)}
+        />
+      )}
 
       {/* ── Charts Row ── */}
       <div className="grid gap-4 lg:grid-cols-2">

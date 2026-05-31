@@ -283,11 +283,12 @@ export interface CEOStats {
     ordersAmount: number
     visitsCount:  number
   }
-  salespersonStats:    SalespersonStat[]
-  monthlyTrend:        MonthlyTrend[]
-  ordersByStatus:      Record<string, number>
-  quoteConversionRate: number
-  generatedAt:         string
+  salespersonStats:     SalespersonStat[]
+  monthlyTrend:         MonthlyTrend[]
+  ordersByStatus:       Record<string, number>
+  quoteConversionRate:  number
+  pendingFollowUpItems: VisitStat[]   // 本月待追蹤明細，直接帶入無需額外 API
+  generatedAt:          string
 }
 
 export async function getCEOStats(): Promise<CEOStats> {
@@ -392,8 +393,15 @@ export async function getCEOStats(): Promise<CEOStats> {
     : 0
 
   // ── 待追蹤（從本月資料計算，不另發 API）──────────────────────
-  const pendingFollowUps = (thisMonthVisits as VisitStat[])
-    .filter((v) => v.needsFollowUp).length
+  const pendingFollowUpItems = (thisMonthVisits as VisitStat[])
+    .filter((v) => v.needsFollowUp)
+    .sort((a, b) => {
+      // 有指定追蹤日的排前面，按日期升冪；無日期的排後面
+      if (a.nextFollowUpDate && !b.nextFollowUpDate) return -1
+      if (!a.nextFollowUpDate && b.nextFollowUpDate) return 1
+      return (a.nextFollowUpDate ?? '').localeCompare(b.nextFollowUpDate ?? '')
+    })
+  const pendingFollowUps = pendingFollowUpItems.length
 
   const stats: CEOStats = {
     thisMonth: {
@@ -411,6 +419,7 @@ export async function getCEOStats(): Promise<CEOStats> {
     monthlyTrend,
     ordersByStatus,
     quoteConversionRate,
+    pendingFollowUpItems,
     generatedAt: new Date().toISOString(),
   }
 
