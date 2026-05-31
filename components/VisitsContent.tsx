@@ -92,6 +92,180 @@ function ReactionBadge({ reaction }: { reaction: string }) {
   return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{reaction}</span>
 }
 
+// ── 客戶反應標準選項（業務經理視角設計）─────────────────────────
+// 涵蓋拜訪週期的四個階段：積極接觸 → 觀望評估 → 阻礙因素 → 後續行動
+export const DEFAULT_REACTION_OPTIONS = [
+  // 積極 / 高意願
+  '積極詢問',      // 主動問產品、規格、價格
+  '要求報價',      // 明確開口要報價單
+  '同意試用',      // 願意接受樣品或試用
+  '確認下單',      // 本次或近期確認採購
+  // 中性 / 觀望
+  '有興趣待確認',  // 表示有興趣，但需再確認
+  '持觀望態度',    // 尚未表態，需再追蹤
+  '需要考慮',      // 明確說需要時間評估
+  // 阻礙 / 困難
+  '價格有疑慮',    // 對價格有異議或比價
+  '使用競品',      // 目前已有其他品牌在用
+  '近期無需求',    // 明確表示短期不需要
+  // 後續行動導向
+  '安排再次拜訪',  // 雙方約定下次見面
+  '反應冷淡',      // 態度被動、不主動回應
+] as const
+
+// ── 客戶反應 Combobox（可選清單 + 可自由輸入新選項）─────────────
+
+function ReactionCombobox({
+  value,
+  options,
+  onChange,
+  inputCls,
+}: {
+  value:    string
+  options:  string[]
+  onChange: (v: string) => void
+  inputCls: string
+}) {
+  const [open,  setOpen]  = useState(false)
+  const [query, setQuery] = useState(value)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setQuery(value) }, [value])
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.includes(query.trim()))
+    : options
+
+  const commit = (v: string) => {
+    setQuery(v)
+    onChange(v)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={query}
+        placeholder="選擇或輸入客戶反應…"
+        className={inputCls}
+        onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+      />
+      {/* 清除按鈕 */}
+      {query && (
+        <button
+          type="button"
+          onClick={() => commit('')}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-base leading-none"
+        >×</button>
+      )}
+      {/* 下拉選單 */}
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+          {filtered.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onMouseDown={() => commit(o)}
+              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-blue-50 ${
+                value === o ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-gray-700'
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+          {/* 自訂選項提示 */}
+          {query.trim() && !options.includes(query.trim()) && (
+            <button
+              type="button"
+              onMouseDown={() => commit(query.trim())}
+              className="w-full text-left px-3 py-2 text-sm text-blue-500 border-t border-gray-100 hover:bg-blue-50 transition-colors"
+            >
+              ＋ 新增「{query.trim()}」
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── AI 客戶反應建議按鈕 ────────────────────────────────────────
+
+function AIReactionButton({
+  content,
+  options,
+  onSuggest,
+}: {
+  content:   string
+  options:   string[]
+  onSuggest: (value: string) => void
+}) {
+  const [loading,        setLoading]        = useState(false)
+  const [lastSuggestion, setLastSuggestion] = useState('')
+  // 記錄上次成功分析時的內容，用來判斷是否需鎖定
+  const contentAtAnalysis = useRef('')
+
+  // 分析成功後鎖定，直到內容被修改
+  const isLocked = lastSuggestion !== '' && content.trim() === contentAtAnalysis.current.trim()
+  const canRun   = content.trim().length > 0 && options.length > 0 && !isLocked
+
+  const handleClick = async () => {
+    if (!canRun) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/ai/suggest-reaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, options }),
+      })
+      const data = await res.json()
+      const suggestion: string = data.suggestion ?? ''
+      setLastSuggestion(suggestion)
+      if (suggestion) {
+        onSuggest(suggestion)
+        contentAtAnalysis.current = content  // 鎖定：記住此次分析的內容
+      }
+    } catch {
+      // 靜默失敗
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const title = isLocked
+    ? '已分析完成，修改拜訪內容後可重新分析'
+    : !content.trim()
+    ? '請先填寫拜訪內容'
+    : options.length === 0
+    ? '選項載入中，請稍候'
+    : 'AI 根據拜訪內容自動判斷'
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading || !canRun}
+      title={title}
+      className={`flex items-center gap-1 text-xs font-medium transition-colors disabled:cursor-not-allowed ${
+        isLocked
+          ? 'text-emerald-500 disabled:opacity-80'
+          : 'text-violet-500 hover:text-violet-700 disabled:opacity-40'
+      }`}
+    >
+      {loading ? (
+        <span className="animate-pulse">分析中…</span>
+      ) : isLocked ? (
+        <>✓ <span>已分析</span></>
+      ) : (
+        <>✨ <span>{lastSuggestion ? '重新判斷' : '自動判斷'}</span></>
+      )}
+    </button>
+  )
+}
+
 export default function VisitsContent() {
   const router = useRouter()
   const [visits, setVisits] = useState<Visit[]>([])
@@ -108,6 +282,11 @@ export default function VisitsContent() {
   const [viewingVisit, setViewingVisit] = useState<Visit | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // ── 一鍵批次 AI 分析 ─────────────────────────────────────────
+  const [batchReactionOptions, setBatchReactionOptions] = useState<string[]>([])
+  const [batchAnalyzing, setBatchAnalyzing] = useState(false)
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
 
   const CACHE_KEY = 'bd-visits-v2'   // v2 = new paginated format
   const CACHE_TTL = 2 * 60 * 1000
@@ -197,13 +376,19 @@ export default function VisitsContent() {
   useEffect(() => { loadVisits() }, [])  // mount only
 
   // Fetch salesperson options for filter dropdown (cached in Redis, fast)
+  // 同時取得客戶反應選項供一鍵批次分析使用
   useEffect(() => {
     fetch('/api/visits/options')
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data?.salespersons)) setSalespersonFilterOptions(data.salespersons)
+        if (Array.isArray(data?.customerReactions)) {
+          setBatchReactionOptions(Array.from(new Set([...DEFAULT_REACTION_OPTIONS, ...data.customerReactions])))
+        } else {
+          setBatchReactionOptions([...DEFAULT_REACTION_OPTIONS])
+        }
       })
-      .catch(() => {})
+      .catch(() => { setBatchReactionOptions([...DEFAULT_REACTION_OPTIONS]) })
   }, [])
 
   // When salesperson filter changes: reload from page 1 with new filter
@@ -394,6 +579,48 @@ export default function VisitsContent() {
     }, 500)
   }, [aiAnalysis, aiTimestamp, aiVisitCount, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
+  // 一鍵批次分析：對所有已載入、有拜訪內容但尚未填客戶反應的紀錄執行 AI 判斷並寫回 Notion
+  const handleBatchAnalyze = useCallback(async () => {
+    const toAnalyze = filteredVisits.filter((v) => !v.customerReaction && v.content?.trim())
+    if (toAnalyze.length === 0 || batchAnalyzing) return
+
+    setBatchAnalyzing(true)
+    setBatchProgress({ done: 0, total: toAnalyze.length })
+
+    for (let i = 0; i < toAnalyze.length; i++) {
+      const visit = toAnalyze[i]
+      try {
+        const suggestRes = await fetch('/api/ai/suggest-reaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: visit.content, options: batchReactionOptions }),
+        })
+        const { suggestion } = await suggestRes.json()
+        if (suggestion) {
+          // 寫回 Notion
+          await fetch(`/api/visits/${visit.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerReaction: suggestion }),
+          })
+          // 樂觀更新本地狀態
+          setVisits((prev) =>
+            prev.map((v) => v.id === visit.id ? { ...v, customerReaction: suggestion } : v)
+          )
+        }
+      } catch {
+        // 靜默失敗，繼續下一筆
+      }
+      setBatchProgress({ done: i + 1, total: toAnalyze.length })
+    }
+
+    setBatchAnalyzing(false)
+    setBatchProgress(null)
+  }, [filteredVisits, batchReactionOptions, batchAnalyzing])
+
+  // 計算目前有幾筆等待分析
+  const batchPendingCount = filteredVisits.filter((v) => !v.customerReaction && v.content?.trim()).length
+
   return (
     <div>
       {/* Header */}
@@ -402,7 +629,20 @@ export default function VisitsContent() {
           <h2 className="text-lg font-semibold text-stone-800">客情拜訪紀錄</h2>
           <p className="text-xs text-stone-400 mt-0.5">記錄每日客戶拜訪情況</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* 一鍵批次 AI 分析 */}
+          <button
+            onClick={handleBatchAnalyze}
+            disabled={batchAnalyzing || batchPendingCount === 0 || batchReactionOptions.length === 0}
+            title={batchPendingCount === 0 ? '所有已載入紀錄均已有客戶反應' : `分析 ${batchPendingCount} 筆尚未填寫客戶反應的紀錄`}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {batchAnalyzing && batchProgress ? (
+              <><span className="animate-pulse text-base leading-none">✨</span> 分析中 {batchProgress.done}/{batchProgress.total}</>
+            ) : (
+              <><span className="text-base leading-none">✨</span> 一鍵分析{batchPendingCount > 0 ? `（${batchPendingCount}）` : ''}</>
+            )}
+          </button>
           <button
             onClick={openAiModal}
             disabled={visits.length === 0}
@@ -933,7 +1173,7 @@ export function VisitModal({
 
   const [form, setForm] = useState<VisitForm>({
     customerName: initialData?.customerName ?? prefillCustomer?.name ?? '',
-    customerId: prefillCustomer?.id ?? '',
+    customerId: initialData?.customerId ?? prefillCustomer?.id ?? '',
     date: initialData?.date ? initialData.date.slice(0, 10) : today,
     salesperson: initialData?.salesperson ?? '',
     status: initialData?.status ?? '',
@@ -966,6 +1206,10 @@ export function VisitModal({
   const [interactionTypeOptions, setInteractionTypeOptions] = useState<string[]>([])
   const [interactionPurposeOptions, setInteractionPurposeOptions] = useState<string[]>([])
   const [customerReactionOptions, setCustomerReactionOptions] = useState<string[]>([])
+  // 合併預設選項 + Notion 已有選項（去重，預設排前）
+  const mergedReactionOptions = Array.from(
+    new Set([...DEFAULT_REACTION_OPTIONS, ...customerReactionOptions])
+  )
 
   const [productSuggestions, setProductSuggestions] = useState<Array<{ id: string; name: string }>>([])
   const [productInput, setProductInput] = useState('')
@@ -1227,6 +1471,33 @@ export function VisitModal({
                         )}
                       </div>
                     )}
+
+                    {/* 客戶連結狀態列 */}
+                    <div className="mt-1.5 flex items-center gap-2 min-h-[20px]">
+                      {form.customerId ? (
+                        <>
+                          <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                            <span>🔗</span>
+                            <span>已連結至客戶資料庫</span>
+                          </span>
+                          {!prefillCustomer && (
+                            <button
+                              type="button"
+                              onClick={() => setForm((f) => ({ ...f, customerId: '' }))}
+                              className="text-xs text-stone-400 hover:text-red-500 underline underline-offset-2 transition-colors"
+                            >
+                              解除連結
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        !prefillCustomer && (
+                          <span className="text-xs text-stone-400">
+                            未連結 — 輸入名稱從下拉選取可建立連結
+                          </span>
+                        )
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1302,15 +1573,20 @@ export function VisitModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶反應</label>
-                    <select
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-medium text-stone-500">客戶反應</label>
+                      <AIReactionButton
+                        content={form.content}
+                        options={mergedReactionOptions}
+                        onSuggest={(v) => setForm((f) => ({ ...f, customerReaction: v }))}
+                      />
+                    </div>
+                    <ReactionCombobox
                       value={form.customerReaction}
-                      onChange={(e) => setForm((f) => ({ ...f, customerReaction: e.target.value }))}
-                      className={inputCls}
-                    >
-                      <option value="">請選擇客戶反應</option>
-                      {customerReactionOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
+                      options={mergedReactionOptions}
+                      onChange={(v) => setForm((f) => ({ ...f, customerReaction: v }))}
+                      inputCls={inputCls}
+                    />
                   </div>
 
                   {/* 有興趣的產品 */}
