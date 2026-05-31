@@ -252,6 +252,72 @@ function todayLocal(): string {
   return tw.toISOString().slice(0, 10)
 }
 
+// ── 解析業務日報文字 ───────────────────────────────────────────
+
+interface ParsedVisit {
+  customerName: string
+  content: string
+}
+
+interface ParsedReport {
+  date: string      // YYYY-MM-DD（可能為空）
+  title: string     // 職稱（可能為空）
+  visits: ParsedVisit[]
+}
+
+function parseDailyReportText(raw: string): ParsedReport {
+  const lines  = raw.split('\n').map((l) => l.trim())
+  let date     = ''
+  let title    = ''
+  let inBody   = false
+  const visits: ParsedVisit[] = []
+  let cur: { customerName: string; contentLines: string[] } | null = null
+
+  const numRe = /^(\d+)[.、．]\s*(.+)/
+
+  for (const line of lines) {
+    if (!line) {
+      // 空行：若在 body 中視為內容空行（可省略）
+      if (inBody && cur) cur.contentLines.push('')
+      continue
+    }
+    if (line.startsWith('職稱：') || line.startsWith('職稱:')) {
+      title = line.replace(/^職稱[：:]/, '').trim()
+      continue
+    }
+    if (line.startsWith('日期：') || line.startsWith('日期:')) {
+      const m = line.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/)
+      if (m) date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
+      continue
+    }
+    // 分隔線 → 進入 body
+    if (/^[—\-─=]{3,}/.test(line)) { inBody = true; continue }
+    if (!inBody) continue
+
+    const nm = line.match(numRe)
+    if (nm) {
+      // 儲存上一筆
+      if (cur) {
+        // 去掉 content 尾端多餘空行
+        while (cur.contentLines.length && !cur.contentLines[cur.contentLines.length - 1]) {
+          cur.contentLines.pop()
+        }
+        visits.push({ customerName: cur.customerName, content: cur.contentLines.join('\n') })
+      }
+      cur = { customerName: nm[2].trim(), contentLines: [] }
+    } else if (cur) {
+      cur.contentLines.push(line)
+    }
+  }
+  // 最後一筆
+  if (cur) {
+    while (cur.contentLines.length && !cur.contentLines[cur.contentLines.length - 1]) cur.contentLines.pop()
+    visits.push({ customerName: cur.customerName, content: cur.contentLines.join('\n') })
+  }
+
+  return { date, title, visits }
+}
+
 // ── Daily Report Panel ─────────────────────────────────────────
 
 function DailyReportPanel({
@@ -261,17 +327,37 @@ function DailyReportPanel({
   isAdmin: boolean
   salespersonNames?: string[]
 }) {
+  // Tab: 推播 | 匯入
+  const [tab, setTab] = useState<'push' | 'import'>('push')
+
+  // ── 推播 tab state ──────────────────────────────────────────
   const [period,      setPeriod]      = useState<'AM' | 'PM' | 'FULL'>('FULL')
   const [date,        setDate]        = useState(todayLocal)
   const [salesperson, setSalesperson] = useState('')
-  const [text,        setText]        = useState('')      // 可編輯的日報文字
-  const [spNames,     setSpNames]     = useState<string[]>(propSalespersons)
-  const [loading,     setLoading]     = useState(false)
-  const [sending,     setSending]     = useState(false)
-  const [result,      setResult]      = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [title,       setTitle]       = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('dailyReportTitle') ?? '' : ''
+  )
+  const [text,    setText]    = useState('')
+  const [spNames, setSpNames] = useState<string[]>(propSalespersons)
+  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [result,  setResult]  = useState('')
 
-  // 每次 props 業務名單更新，補進去（不蓋掉從預覽抓到的）
+  // ── 匯入 tab state ──────────────────────────────────────────
+  const [rawText,    setRawText]    = useState('')
+  const [parsed,     setParsed]     = useState<ParsedReport | null>(null)
+  const [impSp,      setImpSp]      = useState('')   // 匯入用業務
+  const [impDate,    setImpDate]    = useState(todayLocal)
+  const [importing,  setImporting]  = useState(false)
+  const [impResult,  setImpResult]  = useState('')
+
+  // Persist title
+  const handleTitleChange = (v: string) => {
+    setTitle(v)
+    if (typeof window !== 'undefined') localStorage.setItem('dailyReportTitle', v)
+  }
+
+  // 每次 props 業務名單更新，補進去
   useEffect(() => {
     setSpNames((prev) => {
       const seen = new Set(prev)
@@ -282,160 +368,247 @@ function DailyReportPanel({
   }, [propSalespersons])
 
   const loadPreview = useCallback(async () => {
-    setLoading(true)
-    setResult('')
+    setLoading(true); setResult('')
     try {
       const params = new URLSearchParams({ period, date })
       if (salesperson) params.set('salesperson', salesperson)
+      if (title)       params.set('title', title)
       const res  = await fetch(`/api/daily-report?${params}`)
       const data = await res.json()
       if (data.error) { setText(data.error); return }
       setText(data.text ?? '')
-      // 補入該日有拜訪紀錄的業務
-      if (Array.isArray(data.salespersonNames) && data.salespersonNames.length > 0) {
+      if (Array.isArray(data.salespersonNames)) {
         setSpNames((prev) => {
-          const seen = new Set(prev)
-          const merged = [...prev]
+          const seen = new Set(prev); const merged = [...prev]
           for (const n of data.salespersonNames) { if (!seen.has(n)) { seen.add(n); merged.push(n) } }
           return merged
         })
       }
-    } catch {
-      setText('預覽失敗，請重試')
-    } finally {
-      setLoading(false)
-    }
-  }, [period, date, salesperson])
+    } catch { setText('預覽失敗，請重試') }
+    finally  { setLoading(false) }
+  }, [period, date, salesperson, title])
 
   const sendReport = async () => {
-    setSending(true)
-    setResult('')
+    setSending(true); setResult('')
     try {
       const res = await fetch('/api/daily-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          period,
-          date,
-          salesperson: salesperson || undefined,
-          text: text || undefined,   // 傳送使用者編輯後的版本
-        }),
+        body: JSON.stringify({ period, date, salesperson: salesperson || undefined, title: title || undefined, text: text || undefined }),
       })
       const data = await res.json()
       setResult(data.message ?? data.error ?? '完成')
-    } catch {
-      setResult('推播失敗，請確認 LINE 設定')
-    } finally {
-      setSending(false)
+    } catch { setResult('推播失敗，請確認 LINE 設定') }
+    finally  { setSending(false) }
+  }
+
+  // ── 匯入：解析並自動填入日期/業務 ─────────────────────────
+  const handleParse = () => {
+    if (!rawText.trim()) return
+    const p = parseDailyReportText(rawText)
+    setParsed(p)
+    setImpResult('')
+    if (p.date) setImpDate(p.date)
+    // 若解析到職稱，嘗試匹配業務名單
+    if (p.title) {
+      const match = spNames.find((n) => p.title.includes(n) || n.includes(p.title))
+      if (match) setImpSp(match)
     }
   }
 
-  const inputCls = 'rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition'
+  const handleImport = async () => {
+    if (!parsed || parsed.visits.length === 0) return
+    setImporting(true); setImpResult('')
+    try {
+      const res = await fetch('/api/visits/bulk-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visits: parsed.visits.map((v) => ({
+            customerName: v.customerName,
+            content:      v.content,
+            date:         impDate,
+            salesperson:  impSp,
+          })),
+        }),
+      })
+      const data = await res.json()
+      if (data.error) { setImpResult(`❌ ${data.error}`); return }
+      setImpResult(`✅ 已建立 ${data.created} 筆客情紀錄${data.errors?.length ? `，${data.errors.length} 筆失敗` : ''}`)
+      if (data.created > 0) { setRawText(''); setParsed(null) }
+    } catch { setImpResult('❌ 匯入失敗，請重試') }
+    finally  { setImporting(false) }
+  }
+
+  const ic = 'rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition'
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
 
-      {/* Header */}
+      {/* Header + tabs */}
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">📤 LINE 業務日報</h3>
-        {/* Period toggle */}
+        <h3 className="font-semibold text-gray-900">業務日報</h3>
         <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-          {(['AM', 'PM', 'FULL'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                period === p ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
-              }`}
-            >
-              {p === 'AM' ? '上午' : p === 'PM' ? '下午' : '全日'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters: date + salesperson */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">日期</label>
-          <input
-            type="date"
-            value={date}
-            max={todayLocal()}
-            onChange={(e) => setDate(e.target.value)}
-            className={inputCls}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">業務</label>
-          <select
-            value={salesperson}
-            onChange={(e) => setSalesperson(e.target.value)}
-            className={inputCls}
-          >
-            <option value="">全部業務</option>
-            {spNames.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Editable preview textarea */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
-            日報內容
-            {text && <span className="ml-1 text-blue-400">（可直接編輯）</span>}
-          </label>
-          {text && (
-            <button
-              onClick={() => setText('')}
-              className="text-[10px] text-gray-300 hover:text-gray-500"
-            >
-              清除
-            </button>
-          )}
-        </div>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={10}
-          placeholder="點擊「預覽」載入日報內容，可在此直接編輯後再推播…"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-gray-300 transition"
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={loadPreview}
-          disabled={loading}
-          className="button-secondary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50"
-        >
-          {loading ? '載入中…' : '🔍 預覽'}
-        </button>
-        {isAdmin && (
           <button
-            onClick={sendReport}
-            disabled={sending || !text}
-            className="button-primary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+            onClick={() => setTab('push')}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${tab === 'push' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
           >
-            {sending ? '傳送中…' : '📲 推播至 LINE'}
+            📤 LINE 推播
           </button>
-        )}
-        <span className="text-xs text-gray-400 ml-auto">
-          {text ? `${text.length} 字元` : '尚無內容'}
-        </span>
+          <button
+            onClick={() => setTab('import')}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${tab === 'import' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+          >
+            📥 匯入紀錄
+          </button>
+        </div>
       </div>
 
-      {result && (
-        <p className={`text-sm px-3 py-2 rounded-lg ${result.includes('失敗') || result.includes('尚未')
-          ? 'bg-red-50 text-red-700'
-          : 'bg-emerald-50 text-emerald-700'}`}>
-          {result}
-        </p>
+      {/* ── 推播 Tab ── */}
+      {tab === 'push' && (
+        <>
+          {/* Period */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5 w-fit">
+            {(['AM', 'PM', 'FULL'] as const).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${period === p ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+                {p === 'AM' ? '上午' : p === 'PM' ? '下午' : '全日'}
+              </button>
+            ))}
+          </div>
+
+          {/* 職稱 */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">職稱（出現在開頭）</label>
+            <input type="text" value={title} onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="e.g. 北區業務" className={ic} />
+          </div>
+
+          {/* Date + salesperson */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">日期</label>
+              <input type="date" value={date} max={todayLocal()} onChange={(e) => setDate(e.target.value)} className={ic} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">業務</label>
+              <select value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={ic}>
+                <option value="">全部業務</option>
+                {spNames.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Editable textarea */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
+                日報內容{text && <span className="ml-1 text-blue-400">（可編輯）</span>}
+              </label>
+              {text && <button onClick={() => setText('')} className="text-[10px] text-gray-300 hover:text-gray-500">清除</button>}
+            </div>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10}
+              placeholder="點擊「預覽」載入日報，可在此編輯後再推播…"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-gray-300 transition"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={loadPreview} disabled={loading} className="button-secondary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50">
+              {loading ? '載入中…' : '🔍 預覽'}
+            </button>
+            {isAdmin && (
+              <button onClick={sendReport} disabled={sending || !text}
+                className="button-primary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 flex items-center gap-1.5">
+                {sending ? '傳送中…' : '📲 推播至 LINE'}
+              </button>
+            )}
+            <span className="text-xs text-gray-400 ml-auto">{text ? `${text.length} 字元` : '尚無內容'}</span>
+          </div>
+
+          {result && (
+            <p className={`text-sm px-3 py-2 rounded-lg ${result.includes('失敗') || result.includes('尚未') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              {result}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* ── 匯入 Tab ── */}
+      {tab === 'import' && (
+        <>
+          <p className="text-xs text-gray-400">將業務手寫的日報文字貼入，系統自動拆解為獨立客情紀錄。</p>
+
+          {/* Paste area */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">貼入日報文字</label>
+            <textarea
+              value={rawText}
+              onChange={(e) => { setRawText(e.target.value); setParsed(null); setImpResult('') }}
+              rows={10}
+              placeholder={`每日報表\n職稱：北區業務\n日期：2026/05/29（五）\n——————————————\n1.長庚報價\n回覆王技師價格…\n2.冠橋牙技所\n例行關心…`}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-300 transition"
+            />
+          </div>
+
+          <button onClick={handleParse} disabled={!rawText.trim()}
+            className="button-secondary px-4 py-1.5 text-sm rounded-lg disabled:opacity-40 w-full">
+            🔍 解析日報
+          </button>
+
+          {/* 解析結果 */}
+          {parsed && (
+            <div className="space-y-3 border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold text-gray-600">
+                解析結果：{parsed.visits.length} 筆客情紀錄
+                {parsed.date && <span className="ml-2 text-gray-400">日期 {parsed.date}</span>}
+                {parsed.title && <span className="ml-2 text-gray-400">職稱 {parsed.title}</span>}
+              </p>
+
+              {/* 指定業務 + 日期 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">業務姓名</label>
+                  <select value={impSp} onChange={(e) => setImpSp(e.target.value)} className={ic}>
+                    <option value="">（未指定）</option>
+                    {spNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">記錄日期</label>
+                  <input type="date" value={impDate} max={todayLocal()} onChange={(e) => setImpDate(e.target.value)} className={ic} />
+                </div>
+              </div>
+
+              {/* 預覽清單 */}
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                {parsed.visits.map((v, i) => (
+                  <div key={i} className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2 text-xs">
+                    <p className="font-semibold text-gray-800">{i + 1}. {v.customerName}</p>
+                    {v.content && (
+                      <p className="text-gray-500 mt-0.5 whitespace-pre-wrap line-clamp-3">{v.content}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleImport}
+                disabled={importing || parsed.visits.length === 0}
+                className="button-primary w-full py-2 text-sm rounded-xl disabled:opacity-50"
+              >
+                {importing ? '建立中…' : `✅ 確認建立 ${parsed.visits.length} 筆客情紀錄`}
+              </button>
+
+              {impResult && (
+                <p className={`text-sm px-3 py-2 rounded-lg ${impResult.startsWith('❌') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {impResult}
+                </p>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

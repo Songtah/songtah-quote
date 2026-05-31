@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     const date        = (body.date        as string | undefined)                    ?? todayTW()
     const period      = (body.period      as 'AM' | 'PM' | 'FULL' | undefined)     ?? 'FULL'
     const salesperson = (body.salesperson as string | undefined)                    ?? ''
+    const title       = (body.title       as string | undefined)                    ?? ''
     const preview     = Boolean(body.preview)
     const customText  = body.text as string | undefined   // 使用者手動編輯的版本
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     if (!text) {
       const data = await buildDailyReportData(date, period, salesperson || undefined)
-      text       = formatDailyReport(data)
+      text       = formatDailyReport(data, title || undefined)
       visitCount = data.visits.length
     }
 
@@ -85,9 +86,10 @@ export async function GET(req: NextRequest) {
   const date        = p.get('date')        ?? todayTW()
   const period      = (p.get('period')     ?? 'FULL') as 'AM' | 'PM' | 'FULL'
   const salesperson = p.get('salesperson') ?? ''
+  const title       = p.get('title')       ?? ''
 
   const data = await buildDailyReportData(date, period, salesperson || undefined)
-  const text = formatDailyReport(data)
+  const text = formatDailyReport(data, title || undefined)
 
   return NextResponse.json({
     text,

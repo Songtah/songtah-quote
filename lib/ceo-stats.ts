@@ -471,41 +471,59 @@ export async function buildDailyReportData(
   }
 }
 
-/** 格式化日報文字 */
-export function formatDailyReport(data: DailyReportData): string {
+/** YYYY-MM-DD → 2026/05/29（五） */
+export function formatDateTW(dateStr: string): string {
+  const parts = dateStr.split('-').map(Number)
+  const d = new Date(parts[0], parts[1] - 1, parts[2])
+  const dow = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()]
+  return `${parts[0]}/${String(parts[1]).padStart(2, '0')}/${String(parts[2]).padStart(2, '0')}（${dow}）`
+}
+
+/** 格式化日報文字
+ * @param reportTitle 職稱（e.g. "北區業務"）—— 可選
+ */
+export function formatDailyReport(data: DailyReportData, reportTitle?: string): string {
   const { date, period, visits, todayOrders, pendingFollowUps } = data
 
-  const periodLabel =
-    period === 'AM' ? '上午場 ☀️' : period === 'PM' ? '下午場 🌆' : '全日彙整 📋'
-  const dateLabel = date.replace(/-/g, '/')
+  const periodSuffix =
+    period === 'AM' ? ' 上午場' : period === 'PM' ? ' 下午場' : ''
 
   const lines: string[] = []
-  lines.push(`📋 崧達業務日報 ${dateLabel} ${periodLabel}`)
-  lines.push('─'.repeat(28))
+  lines.push('每日報表')
+  if (reportTitle) lines.push(`職稱：${reportTitle}`)
+  lines.push(`日期：${formatDateTW(date)}${periodSuffix}`)
+  lines.push('——————————————')
 
   if (visits.length === 0) {
     lines.push('（今日尚無客情紀錄）')
   } else {
+    // 按業務分組；若只有一位業務不顯示業務標題
     const byPerson: Record<string, VisitStat[]> = {}
     for (const v of visits) {
       const name = v.salesperson || '（未填）'
       if (!byPerson[name]) byPerson[name] = []
       byPerson[name].push(v)
     }
-    for (const [person, pvs] of Object.entries(byPerson)) {
-      lines.push(`\n👤 ${person}（${pvs.length} 筆）`)
+    const persons = Object.keys(byPerson)
+    let counter = 1
+
+    for (const person of persons) {
+      const pvs = byPerson[person]
+      if (persons.length > 1) lines.push(`\n👤 ${person}`)
       for (const v of pvs) {
-        const reaction  = v.customerReaction   ? ` → ${v.customerReaction}`   : ''
-        const followUp  = v.needsFollowUp      ? ' ⚠️需追蹤'                  : ''
-        lines.push(`  • ${v.customerName}`)
-        if (v.interactionPurpose) lines.push(`    目的：${v.interactionPurpose}${reaction}${followUp}`)
-        if (v.content)            lines.push(`    內容：${v.content}`)
-        if (v.followUpAction)     lines.push(`    後續：${v.followUpAction}`)
+        const reaction = v.customerReaction ? ` → ${v.customerReaction}` : ''
+        const followUp = v.needsFollowUp    ? ' ⚠️需追蹤'               : ''
+        lines.push(`${counter}.${v.customerName}`)
+        if (v.interactionPurpose) lines.push(`${v.interactionPurpose}${reaction}${followUp}`)
+        if (v.content)            lines.push(v.content)
+        if (v.followUpAction)     lines.push(`後續：${v.followUpAction}`)
+        lines.push('')
+        counter++
       }
     }
   }
 
-  lines.push(`\n${'─'.repeat(28)}`)
+  lines.push('——————————————')
   const totalAmt = todayOrders.reduce((s, o) => s + o.totalAmount, 0)
   lines.push(`📦 今日訂單：${todayOrders.length} 筆${totalAmt > 0 ? ` / NT$${totalAmt.toLocaleString()}` : ''}`)
   lines.push(`⚠️  待追蹤客情：${pendingFollowUps} 件`)
