@@ -499,6 +499,7 @@ export function formatDailyReport(data: DailyReportData): string {
         const followUp  = v.needsFollowUp      ? ' ⚠️需追蹤'                  : ''
         lines.push(`  • ${v.customerName}`)
         if (v.interactionPurpose) lines.push(`    目的：${v.interactionPurpose}${reaction}${followUp}`)
+        if (v.content)            lines.push(`    內容：${v.content}`)
         if (v.followUpAction)     lines.push(`    後續：${v.followUpAction}`)
       }
     }
