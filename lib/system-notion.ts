@@ -1236,6 +1236,7 @@ export async function getSystemTicketById(id: string) {
 
 export type Visit = {
   id: string
+  customerId: string           // Notion page ID of linked customer (🏥 牙科單位資料 relation)
   customerName: string
   date: string
   salesperson: string
@@ -1434,30 +1435,40 @@ async function resolveProductNames(relIds: string[]): Promise<Record<string, str
   return nameMap
 }
 
-/** Batch-fetch customer names for a set of relation IDs (each result cached 5 min). */
-async function resolveCustomerNames(relIds: string[]): Promise<Record<string, string>> {
-  const nameMap: Record<string, string> = {}
+/** Batch-fetch customer info (name + city + district) for a set of relation IDs (cached 5 min). */
+async function resolveCustomerInfo(relIds: string[]): Promise<Record<string, { name: string; city: string; district: string }>> {
+  const infoMap: Record<string, { name: string; city: string; district: string }> = {}
   const unique = Array.from(new Set(relIds.filter(Boolean)))
-  if (!unique.length) return nameMap
+  if (!unique.length) return infoMap
 
   await Promise.all(
     unique.map(async (id) => {
-      const cacheKey = `customer-name:${id}`
-      const cached = getCachedValue<string>(cacheKey)
-      if (cached !== null) { nameMap[id] = cached; return }
+      const cacheKey = `customer-info:${id}`
+      const cached = getCachedValue<{ name: string; city: string; district: string }>(cacheKey)
+      if (cached !== null) { infoMap[id] = cached; return }
       try {
-        const page: any = await notionCallWithRetry('resolveCustomerName', () =>
+        const page: any = await notionCallWithRetry('resolveCustomerInfo', () =>
           notion.pages.retrieve({ page_id: id })
         )
-        const name = getTitle(page, '客戶名稱')
-        nameMap[id] = name
-        setCachedValue(cacheKey, name, 300_000)
+        const info = {
+          name:     getTitle(page, '客戶名稱'),
+          city:     getSelect(page, '縣市') || getText(page, '縣市') || '',
+          district: getSelect(page, '行政區') || getText(page, '行政區') || '',
+        }
+        infoMap[id] = info
+        setCachedValue(cacheKey, info, 300_000)
       } catch {
-        nameMap[id] = ''
+        infoMap[id] = { name: '', city: '', district: '' }
       }
     })
   )
-  return nameMap
+  return infoMap
+}
+
+/** @deprecated Use resolveCustomerInfo instead */
+async function resolveCustomerNames(relIds: string[]): Promise<Record<string, string>> {
+  const infoMap = await resolveCustomerInfo(relIds)
+  return Object.fromEntries(Object.entries(infoMap).map(([id, v]) => [id, v.name]))
 }
 
 // Cache for the first page of visits (no filters, no cursor)
@@ -1470,19 +1481,25 @@ function invalidateVisitsCache() {
 
 /** Resolve names and build final Visit[] from raw mapped items. */
 async function buildVisitItems(rawItems: ReturnType<typeof mapVisitPageRaw>[]): Promise<Visit[]> {
-  const missingNameIds = rawItems
-    .filter((v) => !v.customerName && v._relId)
-    .map((v) => v._relId)
-  const nameMap = missingNameIds.length ? await resolveCustomerNames(missingNameIds) : {}
+  // 解析所有有 relation 的記錄（不限於 customerName 為空者）
+  // 理由：匯入時可能同時存有手打名稱和 relation，應以 CRM 名稱和縣市為準
+  const allRelIds = rawItems.filter((v) => v._relId).map((v) => v._relId)
+  const infoMap = allRelIds.length ? await resolveCustomerInfo(allRelIds) : {}
 
   const allProductRelIds = rawItems.flatMap((v) => v._productRelIds)
   const productNameMap = allProductRelIds.length ? await resolveProductNames(allProductRelIds) : {}
 
   return rawItems.map((raw) => {
     const { _relId, _productRelIds, ...v } = raw
+    const crmInfo = _relId ? infoMap[_relId] : null
     return {
       ...v,
-      customerName: v.customerName || (_relId && nameMap[_relId]) || '',
+      customerId: _relId,
+      // 有 relation 時以 CRM 正式名稱為主，無 relation 才用手打名稱
+      customerName: crmInfo?.name || v.customerName || '',
+      // 有 relation 時以 CRM 縣市為主，無 relation 才用紀錄本身的縣市
+      city:     crmInfo?.city     || v.city     || '',
+      district: crmInfo?.district || v.district || '',
       interestedProducts: _productRelIds
         .map((pid: string) => ({ id: pid, name: productNameMap[pid] ?? '' }))
         .filter((p: { id: string; name: string }) => p.name),
@@ -1599,15 +1616,19 @@ export async function getVisitById(id: string): Promise<Visit> {
   )
 
   const raw = mapVisitPageRaw(page)
-  const [nameMap, productNameMap] = await Promise.all([
-    resolveCustomerNames(raw._relId ? [raw._relId] : []),
+  const [infoMap, productNameMap] = await Promise.all([
+    resolveCustomerInfo(raw._relId ? [raw._relId] : []),
     resolveProductNames(raw._productRelIds),
   ])
   const { _relId, _productRelIds, ...visit } = raw
+  const crmInfo = _relId ? infoMap[_relId] : null
 
   return {
     ...visit,
-    customerName: (_relId && nameMap[_relId]) || visit.customerName,
+    customerId:   _relId,
+    customerName: crmInfo?.name     || visit.customerName,
+    city:         crmInfo?.city     || visit.city     || '',
+    district:     crmInfo?.district || visit.district || '',
     interestedProducts: (_productRelIds as string[])
       .map((pid: string) => ({ id: pid, name: productNameMap[pid] ?? '' }))
       .filter((p: { id: string; name: string }) => p.name),
@@ -1672,6 +1693,7 @@ export async function createVisit(data: {
 
   return {
     id: response.id,
+    customerId: data.customerId ?? '',
     customerName: data.customerName,
     date: data.date,
     salesperson: data.salesperson,

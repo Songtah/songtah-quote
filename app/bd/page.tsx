@@ -1,18 +1,63 @@
+import { getServerSession } from 'next-auth'
+import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
 import VisitsContent from '@/components/VisitsContent'
+import DailyReportPanel from '@/components/DailyReportPanel'
 import { requireViewPermission } from '@/lib/permissions'
+import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export default async function BdPage() {
+export default async function BdPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string }
+}) {
   await requireViewPermission('bd')
+
+  const session = await getServerSession(authOptions)
+  const role        = (session?.user as any)?.role        as string | undefined
+  const accountType = (session?.user as any)?.accountType as string | undefined
+  const isAdmin = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+
+  const tab = searchParams.tab === 'report' ? 'report' : 'visits'
+
+  const TAB_ITEMS = [
+    { id: 'visits', href: '/bd',             label: '📋 客情紀錄' },
+    { id: 'report', href: '/bd?tab=report',  label: '📤 業務日報' },
+  ] as const
 
   return (
     <AppShell
-      title="業務開發・客情紀錄"
-      description="記錄每日客戶拜訪情況，掌握各地區業務動態。"
+      title={tab === 'report' ? '業務日報' : '業務開發・客情紀錄'}
+      description={
+        tab === 'report'
+          ? '日報產生、LINE 推播，以及將業務日報批次匯入客情紀錄。'
+          : '記錄每日客戶拜訪情況，掌握各地區業務動態。'
+      }
     >
-      <VisitsContent />
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 border-b border-gray-200 mb-6">
+        {TAB_ITEMS.map((t) => (
+          <Link
+            key={t.id}
+            href={t.href}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              tab === t.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
+      {tab === 'visits' ? (
+        <VisitsContent />
+      ) : (
+        <DailyReportPanel isAdmin={isAdmin} />
+      )}
     </AppShell>
   )
 }

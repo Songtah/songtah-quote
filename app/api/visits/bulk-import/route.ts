@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const visits: Array<{ customerName: string; content: string; date: string; salesperson: string }> =
+    const visits: Array<{ customerName: string; content: string; date: string; salesperson: string; customerId?: string; customerReaction?: string; city?: string; district?: string }> =
       Array.isArray(body.visits) ? body.visits : []
 
     if (visits.length === 0) {
@@ -41,20 +41,21 @@ export async function POST(req: NextRequest) {
       }
       try {
         const visit = await createVisit({
-          customerName: v.customerName.trim(),
-          date:         v.date,
-          salesperson:  v.salesperson ?? '',
-          content:      v.content ?? '',
-          address:      '',
-          city:         '',
-          district:     '',
-          tags:         [],
+          customerName:     v.customerName.trim(),
+          date:             v.date,
+          salesperson:      v.salesperson ?? '',
+          content:          v.content ?? '',
+          customerId:       v.customerId || undefined,
+          customerReaction: v.customerReaction || undefined,
+          address:          '',
+          city:             v.city ?? '',
+          district:         v.district ?? '',
+          tags:             [],
           competitorEquipment:  [],
           interestedProductIds: [],
-          interactionType:     '',
-          interactionPurpose:  '',
-          customerReaction:    '',
-          followUpAction:      '',
+          interactionType:      '',
+          interactionPurpose:   '',
+          followUpAction:       '',
           needsFollowUp:       false,
           nextFollowUpDate:    '',
         })
