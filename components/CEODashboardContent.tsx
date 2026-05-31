@@ -40,21 +40,23 @@ function KPICard({
   icon,
   accent,
   loading,
+  href,
 }: {
-  label:   string
-  value:   string
-  sub?:    string
-  trend?:  { pct: number; up: boolean; label: string }
-  icon:    string
-  accent:  string
+  label:    string
+  value:    string
+  sub?:     string
+  trend?:   { pct: number; up: boolean; label: string }
+  icon:     string
+  accent:   string
   loading?: boolean
+  href?:    string
 }) {
-  if (loading) return <Skeleton className="h-32" />
+  if (loading) return <Skeleton className="h-[120px]" />
 
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</span>
+  const inner = (
+    <div className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between gap-2 transition-shadow ${href ? 'hover:shadow-md hover:border-gray-200 cursor-pointer' : ''}`}>
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider leading-snug">{label}</span>
         <span
           className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
           style={{ background: `${accent}18`, color: accent }}
@@ -66,14 +68,26 @@ function KPICard({
         <div className="text-2xl sm:text-3xl font-bold text-gray-900 tabular-nums leading-none">{value}</div>
         {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
       </div>
-      {trend && (
-        <div className={`flex items-center gap-1 text-xs font-medium ${trend.up ? 'text-emerald-600' : 'text-red-500'}`}>
-          <span>{trend.up ? '▲' : '▼'}</span>
-          <span>{trend.pct}% {trend.label}</span>
-        </div>
-      )}
+      {/* trend 區域固定佔位，確保各卡片高度一致 */}
+      <div className="min-h-[18px]">
+        {trend && (
+          <div className={`flex items-center gap-1 text-xs font-medium ${trend.up ? 'text-emerald-600' : 'text-red-500'}`}>
+            <span>{trend.up ? '▲' : '▼'}</span>
+            <span>{trend.pct}% {trend.label}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full" prefetch>
+        {inner}
+      </Link>
+    )
+  }
+  return inner
 }
 
 // ── SVG Line Chart ─────────────────────────────────────────────
@@ -477,12 +491,12 @@ export function CEODashboardContent({
 
       {/* ── KPI Cards ── */}
       <motion.section
-        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 items-stretch"
         variants={stagger}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={listItem}>
+        <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}
             label="本月訂單金額"
@@ -491,9 +505,10 @@ export function CEODashboardContent({
             trend={amtDelta ? { ...amtDelta, label: '較上月' } : undefined}
             icon="💰"
             accent="#2563eb"
+            href="/orders"
           />
         </motion.div>
-        <motion.div variants={listItem}>
+        <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}
             label="本月拜訪數"
@@ -502,9 +517,10 @@ export function CEODashboardContent({
             trend={visitDelta ? { ...visitDelta, label: '較上月' } : undefined}
             icon="🚗"
             accent="#0f766e"
+            href="/bd"
           />
         </motion.div>
-        <motion.div variants={listItem}>
+        <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}
             label="本月報價數"
@@ -512,9 +528,10 @@ export function CEODashboardContent({
             sub="含草稿"
             icon="📋"
             accent="#7c3aed"
+            href="/quotes"
           />
         </motion.div>
-        <motion.div variants={listItem}>
+        <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}
             label="報價轉換率"
@@ -522,9 +539,10 @@ export function CEODashboardContent({
             sub="報價→訂單"
             icon="📈"
             accent="#b45309"
+            href="/quotes"
           />
         </motion.div>
-        <motion.div variants={listItem} className="col-span-2 sm:col-span-1">
+        <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}
             label="待追蹤客情"
@@ -532,6 +550,7 @@ export function CEODashboardContent({
             sub="需後續聯繫"
             icon="⚠️"
             accent="#dc2626"
+            href="/bd"
           />
         </motion.div>
       </motion.section>
