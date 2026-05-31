@@ -209,12 +209,12 @@ async function fetchVisitCount(from: string, to: string): Promise<number> {
 }
 
 /** 今日拜訪（日報用） */
-export async function fetchTodayVisits(): Promise<VisitStat[]> {
-  const today = todayTW()
+export async function fetchTodayVisits(date?: string): Promise<VisitStat[]> {
+  const d = date ?? todayTW()
   const pages = await queryPaged(VISITS_DB, {
     and: [
-      { property: '日期', date: { on_or_after: today } },
-      { property: '日期', date: { on_or_before: today } },
+      { property: '日期', date: { on_or_after: d } },
+      { property: '日期', date: { on_or_before: d } },
     ],
   })
   return pages.map(mapVisitPage)
@@ -428,23 +428,38 @@ export interface DailyReportData {
   visits: VisitStat[]
   todayOrders: OrderStat[]
   pendingFollowUps: number
+  salespersonNames: string[]   // 該日有記錄的業務姓名清單
 }
 
 export async function buildDailyReportData(
   date: string,
-  period: 'AM' | 'PM' | 'FULL' = 'FULL'
+  period: 'AM' | 'PM' | 'FULL' = 'FULL',
+  salesperson?: string
 ): Promise<DailyReportData> {
   const [visits, todayOrders] = await Promise.all([
-    fetchTodayVisits(),
+    fetchTodayVisits(date),
     safe(() => fetchOrderStats(date, date), []),
   ])
 
-  const filteredVisits =
-    period === 'AM'
-      ? (visits as VisitStat[]).slice(0, Math.ceil((visits as VisitStat[]).length / 2))
-      : visits as VisitStat[]
+  let filteredVisits = visits as VisitStat[]
 
-  const pendingFollowUps = (visits as VisitStat[]).filter((v) => v.needsFollowUp).length
+  // 依業務姓名篩選
+  if (salesperson) {
+    filteredVisits = filteredVisits.filter((v) => v.salesperson === salesperson)
+  }
+
+  // 依時段篩選
+  if (period === 'AM') {
+    filteredVisits = filteredVisits.slice(0, Math.ceil(filteredVisits.length / 2))
+  }
+
+  const pendingFollowUps = filteredVisits.filter((v) => v.needsFollowUp).length
+
+  // 回傳該日所有業務姓名（供前端下拉選單使用）
+  const allNames = (visits as VisitStat[]).map((v) => v.salesperson).filter(Boolean)
+  const seen = new Set<string>()
+  const salespersonNames: string[] = []
+  for (const n of allNames) { if (!seen.has(n)) { seen.add(n); salespersonNames.push(n) } }
 
   return {
     date,
@@ -452,6 +467,7 @@ export async function buildDailyReportData(
     visits: filteredVisits,
     todayOrders: (todayOrders as OrderStat[]).filter((o) => o.status !== '已取消'),
     pendingFollowUps,
+    salespersonNames,
   }
 }
 

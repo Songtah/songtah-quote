@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import type { CEOStats, SalespersonStat, MonthlyTrend } from '@/lib/ceo-stats'
@@ -245,28 +245,67 @@ const STATUS_COLOR: Record<string, string> = {
   已取消: 'bg-red-100 text-red-500',
 }
 
+// ── 台北時間今日 (yyyy-mm-dd) ──────────────────────────────────
+function todayLocal(): string {
+  const now = new Date()
+  const tw  = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+  return tw.toISOString().slice(0, 10)
+}
+
 // ── Daily Report Panel ─────────────────────────────────────────
 
-function DailyReportPanel({ isAdmin }: { isAdmin: boolean }) {
-  const [preview, setPreview] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [result,  setResult]  = useState('')
-  const [period,  setPeriod]  = useState<'AM' | 'PM' | 'FULL'>('FULL')
+function DailyReportPanel({
+  isAdmin,
+  salespersonNames: propSalespersons = [],
+}: {
+  isAdmin: boolean
+  salespersonNames?: string[]
+}) {
+  const [period,      setPeriod]      = useState<'AM' | 'PM' | 'FULL'>('FULL')
+  const [date,        setDate]        = useState(todayLocal)
+  const [salesperson, setSalesperson] = useState('')
+  const [text,        setText]        = useState('')      // 可編輯的日報文字
+  const [spNames,     setSpNames]     = useState<string[]>(propSalespersons)
+  const [loading,     setLoading]     = useState(false)
+  const [sending,     setSending]     = useState(false)
+  const [result,      setResult]      = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // 每次 props 業務名單更新，補進去（不蓋掉從預覽抓到的）
+  useEffect(() => {
+    setSpNames((prev) => {
+      const seen = new Set(prev)
+      const merged = [...prev]
+      for (const n of propSalespersons) { if (!seen.has(n)) { seen.add(n); merged.push(n) } }
+      return merged
+    })
+  }, [propSalespersons])
 
   const loadPreview = useCallback(async () => {
     setLoading(true)
-    setPreview('')
+    setResult('')
     try {
-      const res = await fetch(`/api/daily-report?period=${period}`)
+      const params = new URLSearchParams({ period, date })
+      if (salesperson) params.set('salesperson', salesperson)
+      const res  = await fetch(`/api/daily-report?${params}`)
       const data = await res.json()
-      setPreview(data.text ?? data.error ?? '無法取得預覽')
+      if (data.error) { setText(data.error); return }
+      setText(data.text ?? '')
+      // 補入該日有拜訪紀錄的業務
+      if (Array.isArray(data.salespersonNames) && data.salespersonNames.length > 0) {
+        setSpNames((prev) => {
+          const seen = new Set(prev)
+          const merged = [...prev]
+          for (const n of data.salespersonNames) { if (!seen.has(n)) { seen.add(n); merged.push(n) } }
+          return merged
+        })
+      }
     } catch {
-      setPreview('預覽失敗')
+      setText('預覽失敗，請重試')
     } finally {
       setLoading(false)
     }
-  }, [period])
+  }, [period, date, salesperson])
 
   const sendReport = async () => {
     setSending(true)
@@ -275,7 +314,12 @@ function DailyReportPanel({ isAdmin }: { isAdmin: boolean }) {
       const res = await fetch('/api/daily-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period }),
+        body: JSON.stringify({
+          period,
+          date,
+          salesperson: salesperson || undefined,
+          text: text || undefined,   // 傳送使用者編輯後的版本
+        }),
       })
       const data = await res.json()
       setResult(data.message ?? data.error ?? '完成')
@@ -286,10 +330,15 @@ function DailyReportPanel({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
+  const inputCls = 'rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition'
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-900">📤 LINE 業務日報</h3>
+        {/* Period toggle */}
         <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
           {(['AM', 'PM', 'FULL'] as const).map((p) => (
             <button
@@ -305,35 +354,80 @@ function DailyReportPanel({ isAdmin }: { isAdmin: boolean }) {
         </div>
       </div>
 
-      {/* Preview */}
-      <div
-        className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 whitespace-pre-wrap font-mono min-h-[120px] leading-relaxed cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={loadPreview}
-      >
-        {loading
-          ? <span className="text-gray-400 animate-pulse">載入預覽中...</span>
-          : preview || <span className="text-gray-400">點擊此處預覽今日日報內容</span>
-        }
+      {/* Filters: date + salesperson */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">日期</label>
+          <input
+            type="date"
+            value={date}
+            max={todayLocal()}
+            onChange={(e) => setDate(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">業務</label>
+          <select
+            value={salesperson}
+            onChange={(e) => setSalesperson(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">全部業務</option>
+            {spNames.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Editable preview textarea */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">
+            日報內容
+            {text && <span className="ml-1 text-blue-400">（可直接編輯）</span>}
+          </label>
+          {text && (
+            <button
+              onClick={() => setText('')}
+              className="text-[10px] text-gray-300 hover:text-gray-500"
+            >
+              清除
+            </button>
+          )}
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={10}
+          placeholder="點擊「預覽」載入日報內容，可在此直接編輯後再推播…"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-gray-300 transition"
+        />
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={loadPreview}
           disabled={loading}
           className="button-secondary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50"
         >
-          {loading ? '載入中...' : '🔍 預覽'}
+          {loading ? '載入中…' : '🔍 預覽'}
         </button>
         {isAdmin && (
           <button
             onClick={sendReport}
-            disabled={sending || !process.env.NEXT_PUBLIC_LINE_CONFIGURED}
+            disabled={sending || !text}
             className="button-primary px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 flex items-center gap-1.5"
           >
-            {sending ? '傳送中...' : '📲 推播至 LINE'}
+            {sending ? '傳送中…' : '📲 推播至 LINE'}
           </button>
         )}
+        <span className="text-xs text-gray-400 ml-auto">
+          {text ? `${text.length} 字元` : '尚無內容'}
+        </span>
       </div>
 
       {result && (
@@ -341,12 +435,6 @@ function DailyReportPanel({ isAdmin }: { isAdmin: boolean }) {
           ? 'bg-red-50 text-red-700'
           : 'bg-emerald-50 text-emerald-700'}`}>
           {result}
-        </p>
-      )}
-
-      {!process.env.NEXT_PUBLIC_LINE_CONFIGURED && isAdmin && (
-        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          尚未設定 LINE 推播。請在 .env.local 加入 LINE_CHANNEL_ACCESS_TOKEN 與 LINE_GROUP_ID。
         </p>
       )}
     </div>
@@ -574,7 +662,10 @@ export function CEODashboardContent({
           </div>
 
           {/* LINE Daily Report */}
-          <DailyReportPanel isAdmin={isAdmin} />
+          <DailyReportPanel
+            isAdmin={isAdmin}
+            salespersonNames={s?.salespersonStats.map((sp) => sp.name) ?? []}
+          />
         </div>
       </div>
 
