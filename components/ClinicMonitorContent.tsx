@@ -75,7 +75,8 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
   const summaries = useMemo(() => deriveMonthSummaries(records), [records])
 
   const filtered = useMemo(() => {
-    let res = records
+    // 月份摘要已由上方卡片呈現，清單不重複顯示
+    let res = records.filter(r => r.type !== '月份摘要')
     if (typeFilter)  res = res.filter(r => r.type === typeFilter)
     if (monthFilter) res = res.filter(r => r.month === monthFilter)
     if (query.trim()) {
@@ -265,7 +266,7 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
 
       {/* ── Status bar ───────────────────────────────────────────────────────── */}
       <div className="text-sm text-gray-400">
-        {hasFilter ? `找到 ${filtered.length} 筆` : `共 ${records.length} 筆監控紀錄`}
+        {hasFilter ? `找到 ${filtered.length} 筆` : `共 ${records.filter(r => r.type !== '月份摘要').length} 筆監控紀錄`}
         {records.length === 0 && (
           <span className="ml-2 text-amber-500">
             尚無資料 — 請先執行「立即執行」，或等待每月 1 日自動執行
@@ -295,37 +296,6 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
 // ─── Row component ────────────────────────────────────────────────────────────
 
 function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
-  if (r.type === '月份摘要') {
-    // Parse "牙醫診所：N｜牙體技術所：N｜客戶停業：N｜..." into chips
-    const stats = r.address
-      ? r.address.split('｜').map(s => s.trim()).filter(Boolean)
-      : []
-
-    return (
-      <div className="px-4 sm:px-5 py-3.5 bg-blue-50/50 border-b border-blue-100/60">
-        <div className="flex items-center gap-2.5 mb-2.5">
-          <TypeBadge type={r.type} />
-          <span className="text-sm font-semibold text-blue-900">{r.month}</span>
-        </div>
-        {stats.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-            {stats.map((stat, i) => {
-              const colonIdx = stat.indexOf('：')
-              const label = colonIdx >= 0 ? stat.slice(0, colonIdx) : stat
-              const val   = colonIdx >= 0 ? stat.slice(colonIdx + 1) : ''
-              return (
-                <div key={i} className="flex items-baseline gap-1 text-xs min-w-0">
-                  <span className="text-blue-500/70 truncate">{label}</span>
-                  <span className="font-semibold text-blue-800 shrink-0">{val}</span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-gray-50 transition-colors">
       {/* Mobile: badge on top row; Desktop: badge left-aligned inline */}
