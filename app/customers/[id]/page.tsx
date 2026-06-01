@@ -45,22 +45,42 @@ const EQUIPMENT_STATUS_STYLES: Record<string, string> = {
   '狀態不明': 'bg-orange-100 text-orange-700',
 }
 
+// ── avatar color ──────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  'from-blue-400 to-blue-600',
+  'from-green-400 to-green-600',
+  'from-purple-400 to-purple-600',
+  'from-orange-400 to-orange-500',
+  'from-teal-400 to-teal-600',
+  'from-rose-400 to-rose-600',
+]
+function avatarGradient(name: string) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
 export default function CustomerDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [data, setData] = useState<CustomerData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
   const [ticketsExpanded, setTicketsExpanded] = useState(false)
+  const [visitsExpanded, setVisitsExpanded] = useState(false)
+  const [eqExpanded, setEqExpanded] = useState(false)
+
   const [selectedEq, setSelectedEq] = useState<EquipmentDetail | null>(null)
   const [eqLoading, setEqLoading] = useState(false)
   const [eqEditing, setEqEditing] = useState(false)
   const [eqForm, setEqForm] = useState<Partial<EquipmentDetail>>({})
   const [eqSaving, setEqSaving] = useState(false)
+
   const [showVisitModal, setShowVisitModal] = useState(false)
+
   const [eqOrder, setEqOrder] = useState<string[]>([])
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
-  const [eqExpanded, setEqExpanded] = useState(false)
 
   const storageKey = `eq-order-${params.id}`
 
@@ -75,7 +95,6 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           const saved = localStorage.getItem(storageKey)
           if (saved) {
             const parsed: string[] = JSON.parse(saved)
-            // Keep saved order but include any new IDs not yet in storage
             const newIds = defaultOrder.filter((id) => !parsed.includes(id))
             setEqOrder([...parsed.filter((id: string) => defaultOrder.includes(id)), ...newIds])
             return
@@ -124,7 +143,6 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       const updated = await res.json()
       setSelectedEq(updated)
       setEqEditing(false)
-      // Refresh equipment list
       fetch(`/api/customers/${params.id}`)
         .then((r) => r.json())
         .then((d) => { if (!d.error) setData(d) })
@@ -133,17 +151,31 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
     }
   }
 
+  // ── derived ────────────────────────────────────────────────────────────────
+  const allTags = data
+    ? Array.from(new Set((data.visits ?? []).flatMap((v) => v.tags ?? [])))
+    : []
+
+  const lastVisit = data?.visits?.[0]
+  const openTickets = data?.tickets.filter((t) => t.status && !['已結案', '關閉', 'Closed'].includes(t.status)) ?? []
+
   return (
     <AppShell title="客戶管理" description="客戶主檔、設備清單與相關工單紀錄。">
-      <div className="mb-4">
+
+      {/* ── Back ──────────────────────────────────────────────────────────── */}
+      <div className="mb-5">
         <button
           onClick={() => router.back()}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
         >
-          ← 返回
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          返回客戶列表
         </button>
       </div>
 
+      {/* ── Loading skeleton ──────────────────────────────────────────────── */}
       {loading && (
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -157,73 +189,120 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       )}
 
       {data && (
-        <div className="space-y-6">
-          {/* 基本資訊 */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-800 mb-4">基本資訊</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <Info label="客戶名稱" value={data.customer.name} />
-              <Info label="縣市" value={data.customer.city} />
-              <Info label="客戶類型" value={data.customer.type} />
-              <Info label="機構代碼" value={data.customer.institutionCode} />
-              <Info label="狀態" value={data.customer.status} />
-              {data.customer.phone && <Info label="電話" value={data.customer.phone} />}
-              {data.customer.taxId && <Info label="統一編號" value={data.customer.taxId} />}
-              {data.customer.address && (
-                <div className="md:col-span-2">
-                  <Info label="地址" value={data.customer.address} />
+        <div className="space-y-5">
+
+          {/* ── Hero card ─────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Gradient header */}
+            <div className="px-6 pt-6 pb-5 flex items-start gap-4">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarGradient(data.customer.name)} flex items-center justify-center text-2xl font-bold text-white shrink-0 shadow-sm`}>
+                {data.customer.name.slice(0, 1)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <h1 className="text-xl font-bold text-gray-900 leading-snug">{data.customer.name}</h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {data.customer.type && (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {data.customer.type}
+                      </span>
+                    )}
+                    {data.customer.status && data.customer.status !== '正常' && data.customer.status !== '正常營業' && (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        {data.customer.status}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-              <Info label="牙醫師數" value={String(data.customer.dentistCount)} />
-              <Info label="牙體技術師數" value={String(data.customer.technicianCount)} />
-              <Info label="牙體技術生數量" value={String(data.customer.technicianTraineeCount)} />
+                <p className="text-sm text-gray-400 mt-1">
+                  {[data.customer.city, data.customer.district].filter(Boolean).join('・')}
+                  {data.customer.address && ` · ${data.customer.address}`}
+                </p>
+              </div>
             </div>
-            <div className="mt-4 flex gap-3 flex-wrap">
+
+            {/* Quick stats row */}
+            <div className="grid grid-cols-3 divide-x divide-gray-100 border-t border-gray-100">
+              <StatCell
+                label="設備"
+                value={`${data.equipment.length} 台`}
+                color={data.equipment.length > 0 ? 'text-blue-600' : 'text-gray-400'}
+              />
+              <StatCell
+                label="未結工單"
+                value={`${openTickets.length} 筆`}
+                color={openTickets.length > 0 ? 'text-amber-600' : 'text-gray-400'}
+              />
+              <StatCell
+                label="最後拜訪"
+                value={lastVisit?.date ? lastVisit.date.slice(0, 10).replace(/-/g, '/') : '—'}
+                color="text-gray-600"
+              />
+            </div>
+
+            {/* Quick actions */}
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-2 flex-wrap">
+              <button
+                onClick={() => setShowVisitModal(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                新增客情
+              </button>
               <Link
-                href={`/tickets/new`}
-                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
+                href="/tickets/new"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
               >
                 建立工單
               </Link>
               <Link
-                href={`/quote/new`}
-                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
+                href="/quote/new"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
               >
                 建立報價單
               </Link>
-              <button
-                onClick={() => setShowVisitModal(true)}
-                className="button-primary px-4 py-2 rounded-full text-sm font-medium"
-              >
-                新增客情紀錄
-              </button>
             </div>
           </div>
 
-          {/* 客戶標籤 */}
-          {(() => {
-            const allTags = Array.from(new Set(
-              (data.visits ?? []).flatMap((v) => v.tags ?? [])
-            ))
-            if (!allTags.length) return null
-            return (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                <h2 className="font-semibold text-gray-800 mb-3">客戶標籤</h2>
-                <div className="flex flex-wrap gap-2">
-                  {allTags.map((tag) => (
-                    <span key={tag} className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
+          {/* ── Info grid ──────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">基本資訊</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+              {data.customer.phone      && <InfoField label="電話" value={data.customer.phone} />}
+              {data.customer.taxId      && <InfoField label="統一編號" value={data.customer.taxId} />}
+              {data.customer.institutionCode && <InfoField label="機構代碼" value={data.customer.institutionCode} />}
+              {data.customer.dentistCount > 0 && (
+                <InfoField label="牙醫師數" value={`${data.customer.dentistCount} 人`} />
+              )}
+              {data.customer.technicianCount > 0 && (
+                <InfoField label="牙體技術師" value={`${data.customer.technicianCount} 人`} />
+              )}
+              {data.customer.technicianTraineeCount > 0 && (
+                <InfoField label="技術生" value={`${data.customer.technicianTraineeCount} 人`} />
+              )}
+            </div>
+          </div>
 
-          {/* 設備清單 */}
+          {/* ── Tags ─────────────────────────────────────────────────────────── */}
+          {allTags.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">客戶標籤</h2>
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag) => (
+                  <span key={tag} className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Equipment ────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">設備清單</h2>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">設備清單</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.equipment.length} 台
               </span>
@@ -234,81 +313,126 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
               </p>
             ) : (
               <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {(eqOrder.length > 0
-                  ? eqOrder.map((id) => data.equipment.find((e) => e.id === id)).filter(Boolean) as Equipment[]
-                  : data.equipment
-                ).slice(0, eqExpanded ? undefined : EQ_PREVIEW).map((eq) => (
-                  <div
-                    key={eq.id}
-                    draggable
-                    onDragStart={() => setDragId(eq.id)}
-                    onDragOver={(e) => { e.preventDefault(); setOverId(eq.id) }}
-                    onDrop={() => {
-                      if (!dragId || dragId === eq.id) { setDragId(null); setOverId(null); return }
-                      setEqOrder((prev) => {
-                        const next = [...prev]
-                        const from = next.indexOf(dragId)
-                        const to = next.indexOf(eq.id)
-                        next.splice(from, 1)
-                        next.splice(to, 0, dragId)
-                        try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch {}
-                        return next
-                      })
-                      setDragId(null)
-                      setOverId(null)
-                    }}
-                    onDragEnd={() => { setDragId(null); setOverId(null) }}
-                    onClick={() => openEquipment(eq.id)}
-                    className={`rounded-xl border p-3 text-sm flex flex-col gap-2 transition-all text-left cursor-grab active:cursor-grabbing select-none
-                      ${dragId === eq.id ? 'opacity-40 scale-95' : 'hover:border-slate-300 hover:shadow-sm'}
-                      ${overId === eq.id && dragId !== eq.id ? 'border-green-400 ring-1 ring-green-300' : 'border-slate-200'}
-                    `}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {(eqOrder.length > 0
+                    ? eqOrder.map((id) => data.equipment.find((e) => e.id === id)).filter(Boolean) as Equipment[]
+                    : data.equipment
+                  ).slice(0, eqExpanded ? undefined : EQ_PREVIEW).map((eq) => (
+                    <div
+                      key={eq.id}
+                      draggable
+                      onDragStart={() => setDragId(eq.id)}
+                      onDragOver={(e) => { e.preventDefault(); setOverId(eq.id) }}
+                      onDrop={() => {
+                        if (!dragId || dragId === eq.id) { setDragId(null); setOverId(null); return }
+                        setEqOrder((prev) => {
+                          const next = [...prev]
+                          const from = next.indexOf(dragId)
+                          const to = next.indexOf(eq.id)
+                          next.splice(from, 1)
+                          next.splice(to, 0, dragId)
+                          try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch {}
+                          return next
+                        })
+                        setDragId(null); setOverId(null)
+                      }}
+                      onDragEnd={() => { setDragId(null); setOverId(null) }}
+                      onClick={() => openEquipment(eq.id)}
+                      className={`rounded-xl border p-3 text-sm flex flex-col gap-2 transition-all text-left cursor-grab active:cursor-grabbing select-none
+                        ${dragId === eq.id ? 'opacity-40 scale-95' : 'hover:border-slate-300 hover:shadow-sm'}
+                        ${overId === eq.id && dragId !== eq.id ? 'border-green-400 ring-1 ring-green-300' : 'border-slate-200'}
+                      `}
+                    >
+                      <div className="w-full aspect-[4/3] rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
+                        {eq.thumbnail ? (
+                          <img src={eq.thumbnail} alt={eq.productName || eq.manufacturer} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-slate-300 text-3xl">📦</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1 mb-0.5">
+                          <div className="font-medium text-slate-900 leading-snug">{eq.productName || eq.manufacturer || '未知機型'}</div>
+                          {eq.status && <EquipmentStatusBadge status={eq.status} />}
+                        </div>
+                        <div className="text-slate-500 flex flex-col gap-0.5">
+                          {eq.manufacturer && <span>{eq.manufacturer}</span>}
+                          {eq.serialNumber && <span>序號 {eq.serialNumber}</span>}
+                          {eq.supportId && <span>Support {eq.supportId}</span>}
+                          {eq.teamViewerId && <span>TV {eq.teamViewerId}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {data.equipment.length > EQ_PREVIEW && (
+                  <button
+                    onClick={() => setEqExpanded((v) => !v)}
+                    className="w-full pt-3 text-xs text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    <div className="w-full aspect-[4/3] rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
-                      {eq.thumbnail ? (
-                        <img
-                          src={eq.thumbnail}
-                          alt={eq.productName || eq.manufacturer}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-slate-300 text-3xl">📦</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-1 mb-0.5">
-                        <div className="font-medium text-slate-900 leading-snug">{eq.productName || eq.manufacturer || '未知機型'}</div>
-                        {eq.status && <EquipmentStatusBadge status={eq.status} />}
-                      </div>
-                      <div className="text-slate-500 flex flex-col gap-0.5">
-                        {eq.manufacturer && <span>{eq.manufacturer}</span>}
-                        {eq.serialNumber && <span>序號 {eq.serialNumber}</span>}
-                        {eq.supportId && <span>Support {eq.supportId}</span>}
-                        {eq.teamViewerId && <span>TV {eq.teamViewerId}</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {data.equipment.length > EQ_PREVIEW && (
-                <button
-                  onClick={() => setEqExpanded((v) => !v)}
-                  className="w-full pt-3 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {eqExpanded
-                    ? '▲ 收合'
-                    : `▼ 顯示其餘 ${data.equipment.length - EQ_PREVIEW} 台`}
-                </button>
-              )}
+                    {eqExpanded ? '▲ 收合' : `▼ 顯示其餘 ${data.equipment.length - EQ_PREVIEW} 台`}
+                  </button>
+                )}
               </>
             )}
           </div>
 
-          {/* 技術支援工單紀錄 */}
+          {/* ── Visits ────────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">技術支援工單紀錄</h2>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">拜訪紀錄</h2>
+              <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                {(data.visits ?? []).length} 筆
+              </span>
+            </div>
+            {(data.visits ?? []).length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
+                尚無拜訪紀錄
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {(visitsExpanded ? data.visits : data.visits.slice(0, 5)).map((v) => (
+                  <div key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium text-slate-900">
+                        {v.date ? v.date.slice(0, 10).replace(/-/g, '/') : '—'}
+                        {v.salesperson && <span className="ml-2 font-normal text-slate-500">{v.salesperson}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {v.needsFollowUp && (
+                          <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">待追蹤</span>
+                        )}
+                        {v.status && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{v.status}</span>
+                        )}
+                      </div>
+                    </div>
+                    {v.content && (
+                      <div className="text-slate-500 mt-1 whitespace-pre-wrap text-[13px] leading-relaxed">{v.content}</div>
+                    )}
+                    {v.customerReaction && (
+                      <div className="mt-2 pt-2 border-t border-slate-100 text-[13px] text-slate-400">
+                        客戶反應：{v.customerReaction}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {data.visits.length > 5 && (
+                  <button
+                    onClick={() => setVisitsExpanded((v) => !v)}
+                    className="w-full pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {visitsExpanded ? '▲ 收合' : `▼ 顯示其餘 ${data.visits.length - 5} 筆`}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Tickets ───────────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">技術支援工單</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.tickets.length} 筆
               </span>
@@ -332,7 +456,11 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {t.status && (
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            ['已結案', '關閉'].includes(t.status)
+                              ? 'bg-gray-100 text-gray-400'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
                             {t.status}
                           </span>
                         )}
@@ -344,7 +472,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       </div>
                     </div>
                     <div className="text-slate-500 mt-0.5">
-                      {[t.ticketType, t.createdDate?.slice(0,10).replace(/-/g,'/')].filter(Boolean).join('・')}
+                      {[t.ticketType, t.createdDate?.slice(0, 10).replace(/-/g, '/')].filter(Boolean).join('・')}
                     </div>
                   </Link>
                 ))}
@@ -353,54 +481,17 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     onClick={() => setTicketsExpanded((v) => !v)}
                     className="w-full pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    {ticketsExpanded
-                      ? '▲ 收合'
-                      : `▼ 顯示其餘 ${data.tickets.length - TICKETS_PREVIEW} 筆`}
+                    {ticketsExpanded ? '▲ 收合' : `▼ 顯示其餘 ${data.tickets.length - TICKETS_PREVIEW} 筆`}
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* 拜訪紀錄 */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">拜訪紀錄</h2>
-              <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                {(data.visits ?? []).length} 筆
-              </span>
-            </div>
-            {(data.visits ?? []).length === 0 ? (
-              <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
-                尚無拜訪紀錄
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {(data.visits ?? []).map((v) => (
-                  <div key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 text-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-medium text-slate-900">
-                        {v.date ? v.date.slice(0, 10).replace(/-/g, '/') : '—'}
-                        {v.salesperson && <span className="ml-2 font-normal text-slate-500">{v.salesperson}</span>}
-                      </div>
-                      {v.status && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">
-                          {v.status}
-                        </span>
-                      )}
-                    </div>
-                    {v.content && (
-                      <div className="text-slate-500 mt-1 whitespace-pre-wrap">{v.content}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
-      {/* New Visit Modal */}
+      {/* ── New Visit Modal ────────────────────────────────────────────────── */}
       {showVisitModal && data && (
         <VisitModal
           prefillCustomer={{
@@ -420,23 +511,19 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         />
       )}
 
-      {/* Equipment Modal */}
+      {/* ── Equipment Modal ────────────────────────────────────────────────── */}
       <AnimatePresence>
         {(eqLoading || selectedEq) && (
           <>
             <motion.div
               className="fixed inset-0 z-40 bg-stone-900/50 backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => { setSelectedEq(null); setEqEditing(false) }}
             />
             <motion.div
               className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
               <motion.div
@@ -459,7 +546,6 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       </div>
                     )}
                     <div className="p-5">
-                      {/* Header */}
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h2 className="text-lg font-semibold text-slate-900">
                           {selectedEq.productName || selectedEq.manufacturer || '未知機型'}
@@ -476,7 +562,6 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       {selectedEq.manufacturer && <p className="text-sm text-slate-500 mb-3">{selectedEq.manufacturer}</p>}
 
                       {eqEditing ? (
-                        /* ── Edit Mode ── */
                         <div className="space-y-3 text-sm">
                           <div>
                             <label className="text-xs text-stone-400 block mb-1">產品狀態</label>
@@ -527,23 +612,13 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                             />
                           </div>
                           <div className="flex gap-2 pt-1">
-                            <button
-                              onClick={saveEdit}
-                              disabled={eqSaving}
-                              className="button-primary flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                            >
+                            <button onClick={saveEdit} disabled={eqSaving} className="button-primary flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                               {eqSaving ? '儲存中…' : '儲存'}
                             </button>
-                            <button
-                              onClick={() => setEqEditing(false)}
-                              className="button-secondary flex-1 py-2 rounded-lg text-sm"
-                            >
-                              取消
-                            </button>
+                            <button onClick={() => setEqEditing(false)} className="button-secondary flex-1 py-2 rounded-lg text-sm">取消</button>
                           </div>
                         </div>
                       ) : (
-                        /* ── View Mode ── */
                         <>
                           {selectedEq.status && (
                             <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-4 ${EQUIPMENT_STATUS_STYLES[selectedEq.status] ?? 'bg-gray-100 text-gray-500'}`}>
@@ -578,20 +653,22 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
   )
 }
 
-function EquipmentStatusBadge({ status }: { status: string }) {
-  const cls = EQUIPMENT_STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'
+// ─── Small components ──────────────────────────────────────────────────────────
+
+function StatCell({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${cls}`}>
-      {status}
-    </span>
+    <div className="flex flex-col items-center py-3 px-2">
+      <span className={`text-lg font-bold ${color}`}>{value}</span>
+      <span className="text-xs text-gray-400 mt-0.5">{label}</span>
+    </div>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-slate-400 mb-0.5">{label}</dt>
-      <dd className="text-slate-900 font-medium">{value || '—'}</dd>
+      <dt className="text-xs text-gray-400 mb-0.5">{label}</dt>
+      <dd className="text-gray-900 font-medium">{value || '—'}</dd>
     </div>
   )
 }
@@ -602,5 +679,14 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dt className="text-xs text-slate-400 mb-0.5">{label}</dt>
       <dd className="text-slate-900 font-medium">{value}</dd>
     </div>
+  )
+}
+
+function EquipmentStatusBadge({ status }: { status: string }) {
+  const cls = EQUIPMENT_STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'
+  return (
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${cls}`}>
+      {status}
+    </span>
   )
 }

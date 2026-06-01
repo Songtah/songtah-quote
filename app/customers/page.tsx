@@ -9,24 +9,13 @@ export default async function CustomersPage() {
   await requireViewPermission('crm')
 
   const summary = await getDashboardSummary()
-  const customers = summary.customers
 
   return (
     <AppShell
       title="客戶管理"
       description="搜尋客戶、查看主檔資訊、設備清單與相關工單紀錄。"
     >
-      <CustomersContent
-        total={customers.total}
-        recent={customers.recent.map((r) => ({
-          id: r.id,
-          name: r.title,
-          city: r.meta.split('・')[0] ?? '',
-          district: '',
-          type: r.meta.split('・')[1] ?? '',
-          salesperson: '',
-        }))}
-      />
+      <CustomersContent initialTotal={summary.customers.total} />
     </AppShell>
   )
 }

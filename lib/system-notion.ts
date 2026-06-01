@@ -911,6 +911,57 @@ export async function searchSystemCustomers(
   return items
 }
 
+export type CustomerListItem = {
+  id: string
+  name: string
+  city: string
+  district: string
+  type: string
+  salesperson: string
+  status: string
+}
+
+/**
+ * 一次拉取所有系統客戶（輕量欄位），快取 5 分鐘。
+ * 前端用於 client-side 即時搜尋，避免每次打字都打 Notion API。
+ */
+export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
+  if (!DB.customers) return []
+  const cacheKey = 'all-system-customers-v1'
+  const cached = getCachedValue<CustomerListItem[]>(cacheKey)
+  if (cached) return cached
+
+  const items: CustomerListItem[] = []
+  let cursor: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('getAllSystemCustomers', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.customers!),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        sorts: [{ property: '客戶名稱', direction: 'ascending' }],
+      })
+    )
+    for (const page of response.results ?? []) {
+      const name = getTitle(page, '客戶名稱')
+      if (!name) continue
+      items.push({
+        id: page.id,
+        name,
+        city:        getSelect(page, '縣市'),
+        district:    getSelect(page, '行政區') || getText(page, '行政區'),
+        type:        getSelect(page, '客戶類型'),
+        salesperson: getSelect(page, '負責業務'),
+        status:      getSelect(page, '機構狀態'),
+      })
+    }
+    cursor = response.has_more ? response.next_cursor : undefined
+  } while (cursor)
+
+  setCachedValue(cacheKey, items, 300_000) // 5 min
+  return items
+}
+
 export async function getCustomerFilterOptions(): Promise<{
   cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {

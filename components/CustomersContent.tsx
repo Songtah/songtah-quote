@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { staggerFast, listItem, slideDown } from '@/lib/motion'
+import { listItem, staggerFast } from '@/lib/motion'
+import { VisitModal } from '@/components/VisitsContent'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Customer = {
   id: string
@@ -12,32 +15,18 @@ type Customer = {
   district: string
   type: string
   salesperson: string
+  status: string
 }
+
 type FilterOptions = {
   cities: string[]
   districtsByCity: Record<string, string[]>
   salespersons: string[]
   types: string[]
 }
-type Filters = {
-  city: string
-  district: string
-  salesperson: string
-  type: string
-}
 
-// 前端搜尋快取（含 TTL，60 秒過期）
-const searchCache = new Map<string, { data: Customer[]; ts: number }>()
-const CACHE_TTL_MS = 60_000
-const EMPTY_FILTERS: Filters = { city: '', district: '', salesperson: '', type: '' }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Returns 1-2 char initials from a name
-function getInitials(name: string) {
-  if (!name) return '?'
-  return name.slice(0, 1)
-}
-
-// Deterministic color from string
 const AVATAR_COLORS = [
   'bg-blue-100 text-blue-700',
   'bg-green-100 text-green-700',
@@ -54,279 +43,411 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-export function CustomersContent({ recent, total }: { recent: Customer[]; total: number }) {
+// Status badge: only show if not normal / empty
+const STATUS_STYLE: Record<string, string> = {
+  '停業': 'bg-red-50 text-red-600 border border-red-200',
+  '待確認': 'bg-amber-50 text-amber-600 border border-amber-200',
+  '潛在客戶': 'bg-sky-50 text-sky-600 border border-sky-200',
+}
+function statusBadge(status: string) {
+  if (!status || status === '正常' || status === '正常營業') return null
+  const cls = STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>
+}
+
+const DISPLAY_LIMIT = 80
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export function CustomersContent({ initialTotal }: { initialTotal: number }) {
   const router = useRouter()
-  const debounceRef = useRef<NodeJS.Timeout>()
+  const inputRef = useRef<HTMLInputElement>(null)
 
+  // Data state
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([])
+  const [options, setOptions] = useState<FilterOptions>({
+    cities: [], districtsByCity: {}, salespersons: [], types: [],
+  })
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
+
+  // Filter state
   const [query, setQuery] = useState('')
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
-  const [results, setResults] = useState<Customer[]>([])
-  const [searching, setSearching] = useState(false)
-  const [options, setOptions] = useState<FilterOptions>({ cities: [], districtsByCity: {}, salespersons: [], types: [] })
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [typeFilter, setTypeFilter] = useState('')
+  const [cityFilter, setCityFilter] = useState('')
+  const [districtFilter, setDistrictFilter] = useState('')
+  const [salespersonFilter, setSalespersonFilter] = useState('')
 
-  // Load filter options once
+  // Quick add 客情 modal
+  const [quickVisitCustomer, setQuickVisitCustomer] = useState<{
+    id: string; name: string; city: string; district: string; address: string
+  } | null>(null)
+
+  // Load all customers + filter options in parallel
   useEffect(() => {
-    fetch('/api/system-customers/options')
-      .then((r) => r.json())
-      .then((d) => { if (d.cities) setOptions(d) })
-      .catch(() => {})
+    Promise.all([
+      fetch('/api/system-customers/all').then((r) => r.json()),
+      fetch('/api/system-customers/options').then((r) => r.json()),
+    ])
+      .then(([customers, opts]) => {
+        setAllCustomers(Array.isArray(customers) ? customers : [])
+        if (opts?.cities) setOptions(opts)
+        setLoadState('ready')
+      })
+      .catch(() => setLoadState('error'))
   }, [])
 
-  const advancedFilterCount = [filters.city, filters.district, filters.salesperson].filter(Boolean).length
-
-  // Search + filter logic — triggers whenever query or any filter changes
-  useEffect(() => {
-    const q = query.trim()
-    const hasFilters = !!(filters.city || filters.district || filters.salesperson || filters.type)
-
-    if (!q && !hasFilters) {
-      setResults([])
-      setSearching(false)
-      return
+  // ── Client-side instant filter ──────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    let result = allCustomers
+    const q = query.trim().toLowerCase()
+    if (q) {
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.city.toLowerCase().includes(q) ||
+          c.district.toLowerCase().includes(q) ||
+          c.salesperson.toLowerCase().includes(q),
+      )
     }
+    if (typeFilter)       result = result.filter((c) => c.type === typeFilter)
+    if (cityFilter)       result = result.filter((c) => c.city === cityFilter)
+    if (districtFilter)   result = result.filter((c) => c.district === districtFilter || c.district.includes(districtFilter))
+    if (salespersonFilter) result = result.filter((c) => c.salesperson === salespersonFilter)
+    return result
+  }, [allCustomers, query, typeFilter, cityFilter, districtFilter, salespersonFilter])
 
-    const cacheKey = `${q}|${filters.city}|${filters.district}|${filters.salesperson}|${filters.type}`
-    const cached = searchCache.get(cacheKey)
-    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-      setResults(cached.data)
-      setSearching(false)
-      return
-    }
+  const displayList = filtered.slice(0, DISPLAY_LIMIT)
+  const hasMore = filtered.length > DISPLAY_LIMIT
+  const hasActiveFilter = !!(query.trim() || typeFilter || cityFilter || districtFilter || salespersonFilter)
+  const activeDistricts = cityFilter ? (options.districtsByCity[cityFilter] ?? []) : []
+  const total = loadState === 'ready' ? allCustomers.length : initialTotal
 
-    setSearching(true)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const params = new URLSearchParams()
-        if (q) params.set('q', q)
-        if (filters.city) params.set('city', filters.city)
-        if (filters.district) params.set('district', filters.district)
-        if (filters.salesperson) params.set('salesperson', filters.salesperson)
-        if (filters.type) params.set('type', filters.type)
-        const res = await fetch(`/api/system-customers?${params}`)
-        const data: Customer[] = await res.json()
-        const items = Array.isArray(data) ? data : []
-        searchCache.set(cacheKey, { data: items, ts: Date.now() })
-        setResults(items)
-      } catch {
-        setResults([])
-      } finally {
-        setSearching(false)
-      }
-    }, 200)
-
-    return () => clearTimeout(debounceRef.current)
-  }, [query, filters])
-
-  const isActive = query.trim().length > 0 || !!(filters.city || filters.district || filters.salesperson || filters.type)
-  const displayList = isActive ? results : recent
-
-  function clearAdvanced() {
-    setFilters((f) => ({ ...f, city: '', district: '', salesperson: '' }))
+  function clearAll() {
+    setQuery('')
+    setTypeFilter('')
+    setCityFilter('')
+    setDistrictFilter('')
+    setSalespersonFilter('')
+    inputRef.current?.focus()
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* ── Search bar ─────────────────────────────────── */}
+
+      {/* ── Search bar ──────────────────────────────────────────────────────── */}
       <div className="relative">
-        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
         </svg>
         <input
+          ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜尋客戶名稱..."
-          className="input pl-10 pr-10 py-2.5"
+          placeholder="輸入客戶名稱、縣市、行政區或業務姓名…"
+          className="input pl-10 pr-10 py-3 text-[15px]"
           autoComplete="off"
+          autoFocus
         />
-        {searching && (
-          <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
-            <span className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin inline-block" />
-          </span>
-        )}
-        {query && !searching && (
-          <button
-            onClick={() => setQuery('')}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
+        <AnimatePresence>
+          {query && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.1 }}
+              onClick={() => { setQuery(''); inputRef.current?.focus() }}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
+            >
+              <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── 客戶類型 quick-filter pills ─────────────────── */}
+      {/* ── Type quick pills ─────────────────────────────────────────────────── */}
       {options.types.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilters((f) => ({ ...f, type: '' }))}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              !filters.type
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            全部
-          </button>
+        <div className="flex flex-wrap gap-1.5">
+          <TypePill label="全部" active={!typeFilter} onClick={() => setTypeFilter('')} />
           {options.types.map((t) => (
-            <button
+            <TypePill
               key={t}
-              onClick={() => setFilters((f) => ({ ...f, type: f.type === t ? '' : t }))}
-              className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                filters.type === t
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-              }`}
-            >
-              {t}
-            </button>
+              label={t}
+              active={typeFilter === t}
+              onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
+            />
           ))}
         </div>
       )}
 
-      {/* ── Advanced filters toggle ─────────────────────── */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          {isActive
-            ? searching ? '搜尋中…' : `找到 ${results.length} 筆`
-            : `共 ${total} 筆`}
-        </p>
-        <button
-          onClick={() => setShowAdvanced((v) => !v)}
-          className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-            showAdvanced || advancedFilterCount > 0 ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
-          </svg>
-          進階篩選
-          {advancedFilterCount > 0 && (
-            <span className="bg-gray-900 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-              {advancedFilterCount}
-            </span>
-          )}
-        </button>
+      {/* ── Filter bar: city / district / salesperson ────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <FilterSelect
+          value={cityFilter}
+          onChange={(v) => { setCityFilter(v); setDistrictFilter('') }}
+          placeholder="全部縣市"
+          options={options.cities}
+        />
+
+        {cityFilter && activeDistricts.length > 0 && (
+          <FilterSelect
+            value={districtFilter}
+            onChange={setDistrictFilter}
+            placeholder="全部行政區"
+            options={activeDistricts}
+          />
+        )}
+
+        <FilterSelect
+          value={salespersonFilter}
+          onChange={setSalespersonFilter}
+          placeholder="全部業務"
+          options={options.salespersons}
+        />
+
+        {hasActiveFilter && (
+          <button
+            onClick={clearAll}
+            className="text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            清除篩選
+          </button>
+        )}
       </div>
 
-      {/* ── Advanced filter panel ───────────────────────── */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            variants={slideDown}
-            initial="hidden"
-            animate="show"
-            exit="exit"
-            className="panel p-4 space-y-3"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">縣市</label>
-                <select
-                  value={filters.city}
-                  onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value, district: '' }))}
-                  className="input text-sm py-2"
-                >
-                  <option value="">全部縣市</option>
-                  {options.cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">鄉鎮市區</label>
-                <select
-                  value={filters.district}
-                  onChange={(e) => setFilters((f) => ({ ...f, district: e.target.value }))}
-                  className="input text-sm py-2"
-                  disabled={!filters.city}
-                >
-                  <option value="">
-                    {filters.city ? '全部行政區' : '請先選縣市'}
-                  </option>
-                  {(filters.city ? (options.districtsByCity[filters.city] ?? []) : []).map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5">業務</label>
-                <select
-                  value={filters.salesperson}
-                  onChange={(e) => setFilters((f) => ({ ...f, salesperson: e.target.value }))}
-                  className="input text-sm py-2"
-                >
-                  <option value="">全部業務</option>
-                  {options.salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
-            {advancedFilterCount > 0 && (
-              <div className="flex justify-end">
-                <button onClick={clearAdvanced} className="text-xs text-gray-400 hover:text-gray-600 transition">
-                  清除篩選
-                </button>
-              </div>
-            )}
-          </motion.div>
+      {/* ── Status bar ───────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-gray-400">
+          {loadState === 'loading' ? (
+            <span className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin inline-block" />
+              載入客戶資料中…
+            </span>
+          ) : loadState === 'error' ? (
+            <span className="text-red-400">載入失敗，請重新整理</span>
+          ) : hasActiveFilter ? (
+            `找到 ${filtered.length} 筆`
+          ) : (
+            `共 ${total} 筆客戶`
+          )}
+        </span>
+        {hasMore && (
+          <span className="text-amber-500 text-xs font-medium">
+            僅顯示前 {DISPLAY_LIMIT} 筆，請縮小篩選範圍
+          </span>
         )}
-      </AnimatePresence>
+      </div>
 
-      {/* ── Customer list ───────────────────────────────── */}
-      {displayList.length === 0 ? (
-        <div className="panel px-6 py-16 text-center">
-          <p className="text-sm text-gray-400">
-            {isActive && !searching ? '找不到符合的客戶' : !isActive ? '尚未載入客戶資料' : ''}
-          </p>
-        </div>
+      {/* ── Customer list ─────────────────────────────────────────────────────── */}
+      {loadState === 'loading' ? (
+        <LoadingSkeleton />
+      ) : displayList.length === 0 ? (
+        <EmptyState hasFilter={hasActiveFilter} />
       ) : (
         <motion.div
-          key={displayList.map((c) => c.id).join(',')}
+          key={`${typeFilter}|${cityFilter}|${districtFilter}|${salespersonFilter}`}
           variants={staggerFast}
           initial="hidden"
           animate="show"
-          className={`panel divide-y divide-gray-50 overflow-hidden transition-opacity ${searching ? 'opacity-50' : ''}`}
+          className="panel divide-y divide-gray-50 overflow-hidden"
         >
           {displayList.map((c) => (
             <motion.div key={c.id} variants={listItem}>
-              <button
-                onClick={() => router.push(`/customers/${c.id}`)}
-                className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-gray-50 transition-colors group"
-              >
-                {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor(c.name)}`}>
-                  {getInitials(c.name)}
-                </div>
-
-                {/* Main info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-900 truncate">{c.name}</span>
-                    {c.type && (
-                      <span className="shrink-0 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{c.type}</span>
-                    )}
-                  </div>
-                  {(c.city || c.district) && (
-                    <p className="text-sm text-gray-400 mt-0.5 truncate">
-                      {[c.city, c.district].filter(Boolean).join('・')}
-                    </p>
-                  )}
-                </div>
-
-                {/* Salesperson + arrow */}
-                <div className="flex items-center gap-3 shrink-0">
-                  {c.salesperson && (
-                    <span className="text-xs text-gray-400 hidden sm:block">{c.salesperson}</span>
-                  )}
-                  <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </button>
+              <CustomerRow
+                customer={c}
+                onNavigate={() => router.push(`/customers/${c.id}`)}
+                onQuickVisit={() =>
+                  setQuickVisitCustomer({ id: c.id, name: c.name, city: c.city, district: c.district, address: '' })
+                }
+              />
             </motion.div>
           ))}
         </motion.div>
       )}
+
+      {/* ── Quick add 客情 modal ──────────────────────────────────────────────── */}
+      {quickVisitCustomer && (
+        <VisitModal
+          prefillCustomer={quickVisitCustomer}
+          onClose={() => setQuickVisitCustomer(null)}
+          onSaved={() => setQuickVisitCustomer(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── CustomerRow ───────────────────────────────────────────────────────────────
+
+function CustomerRow({
+  customer,
+  onNavigate,
+  onQuickVisit,
+}: {
+  customer: Customer
+  onNavigate: () => void
+  onQuickVisit: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Avatar */}
+      <button
+        onClick={onNavigate}
+        tabIndex={-1}
+        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-transform group-hover:scale-105 ${avatarColor(customer.name)}`}
+      >
+        {customer.name.slice(0, 1)}
+      </button>
+
+      {/* Main info — clickable */}
+      <button
+        onClick={onNavigate}
+        className="flex-1 min-w-0 text-left"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-gray-900 truncate">{customer.name}</span>
+          {customer.type && (
+            <span className="shrink-0 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+              {customer.type}
+            </span>
+          )}
+          {statusBadge(customer.status)}
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+          {(customer.city || customer.district) && (
+            <span className="text-sm text-gray-400">
+              {[customer.city, customer.district].filter(Boolean).join('・')}
+            </span>
+          )}
+          {customer.salesperson && (
+            <span className="text-sm text-gray-400 hidden sm:inline">
+              業務：{customer.salesperson}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Right side actions */}
+      <div className="flex items-center gap-2 shrink-0">
+        <AnimatePresence>
+          {hovered && (
+            <motion.button
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 6 }}
+              transition={{ duration: 0.12 }}
+              onClick={(e) => { e.stopPropagation(); onQuickVisit() }}
+              className="text-xs text-green-700 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg hover:bg-green-100 transition-colors font-medium"
+            >
+              + 客情
+            </motion.button>
+          )}
+        </AnimatePresence>
+        <button
+          onClick={onNavigate}
+          tabIndex={-1}
+          className="text-gray-300 group-hover:text-gray-500 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function TypePill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+        active
+          ? 'bg-gray-900 text-white border-gray-900'
+          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+function FilterSelect({
+  value,
+  onChange,
+  placeholder,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  options: string[]
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`appearance-none pl-3 pr-7 py-1.5 rounded-lg border text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+          value
+            ? 'border-gray-700 bg-gray-900 text-white font-medium'
+            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+        }`}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+      <svg
+        className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${value ? 'text-white' : 'text-gray-400'}`}
+        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="panel divide-y divide-gray-50 overflow-hidden">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+          <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-100 rounded animate-pulse w-2/5" />
+            <div className="h-3 bg-gray-50 rounded animate-pulse w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function EmptyState({ hasFilter }: { hasFilter: boolean }) {
+  return (
+    <div className="panel px-6 py-16 text-center">
+      <div className="text-3xl mb-3">{hasFilter ? '🔍' : '📋'}</div>
+      <p className="text-sm text-gray-400">
+        {hasFilter ? '找不到符合條件的客戶' : '尚無客戶資料'}
+      </p>
     </div>
   )
 }
