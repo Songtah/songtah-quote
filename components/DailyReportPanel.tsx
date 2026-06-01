@@ -516,8 +516,20 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-gray-500">記錄日期</label>
-                  <input type="date" value={impDate} max={todayLocal()} onChange={(e) => setImpDate(e.target.value)} className={ic} />
+                  <label className="text-xs font-medium text-gray-500">
+                    記錄日期
+                    <span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={impDate}
+                    max={todayLocal()}
+                    onChange={(e) => setImpDate(e.target.value)}
+                    className={`${ic} ${!impDate ? 'border-red-400 ring-1 ring-red-300 focus:ring-red-400 focus:border-red-400' : ''}`}
+                  />
+                  {!impDate && (
+                    <p className="text-xs text-red-500">請填寫記錄日期才能送出</p>
+                  )}
                 </div>
               </div>
 
@@ -635,13 +647,15 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
 
               <button
                 onClick={handleImport}
-                disabled={importing || matchedVisits.some((mv) => mv.searching || mv.reactionLoading) || matchedVisits.length === 0}
+                disabled={importing || !impDate || matchedVisits.some((mv) => mv.searching || mv.reactionLoading) || matchedVisits.length === 0}
                 className="button-primary w-full py-3 text-sm rounded-xl disabled:opacity-50 font-medium"
               >
                 {importing
                   ? '建立中…'
                   : matchedVisits.some((mv) => mv.searching)
                   ? '比對中，請稍候…'
+                  : !impDate
+                  ? '請先填寫記錄日期'
                   : `✅ 確認建立 ${matchedVisits.length} 筆客情紀錄`}
               </button>
 
