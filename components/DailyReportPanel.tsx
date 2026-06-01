@@ -41,43 +41,78 @@ interface MatchedVisit {
 }
 
 function parseDailyReportText(raw: string): ParsedReport {
-  const lines  = raw.split('\n').map((l) => l.trim())
-  let date     = ''
-  let title    = ''
-  let inBody   = false
+  const lines = raw.split('\n').map((l) => l.trim())
+  let date    = ''
+  let title   = ''
+  let inBody  = false
   const visits: ParsedVisit[] = []
   let cur: { customerName: string; contentLines: string[] } | null = null
 
-  const numRe = /^(\d+)[.、．]\s*(.+)/
+  // 支援多種編號格式：1. / 1、 / 1） / 1) / 1: / (1) / ①
+  const numRe  = /^(?:\(\d+\)|\d+[.、．）)：:])\s*(.+)/
+  // 支援多種分隔線字元（LINE 常見的 ━━━ ＿＿ 也都算）
+  const sepRe  = /^[—\-─=━═＝_＿*＊~～]{3,}/
+  // 日期：YYYY/MM/DD、YYYY-MM-DD、YYYY.MM.DD、MM/DD、MM-DD（無年份）
+  const dateRe4 = /(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/
+  const dateRe2 = /(\d{1,2})[\/.\-](\d{1,2})/
+
+  function tryParseDate(text: string): string {
+    const m4 = text.match(dateRe4)
+    if (m4) return `${m4[1]}-${m4[2].padStart(2, '0')}-${m4[3].padStart(2, '0')}`
+    const m2 = text.match(dateRe2)
+    if (m2) {
+      const year = new Date().getFullYear()
+      return `${year}-${m2[1].padStart(2, '0')}-${m2[2].padStart(2, '0')}`
+    }
+    return ''
+  }
 
   for (const line of lines) {
     if (!line) {
       if (inBody && cur) cur.contentLines.push('')
       continue
     }
+
+    // ── Header 欄位（分隔線前後都可出現）──
     if (line.startsWith('職稱：') || line.startsWith('職稱:')) {
       title = line.replace(/^職稱[：:]/, '').trim()
       continue
     }
     if (line.startsWith('日期：') || line.startsWith('日期:')) {
-      const m = line.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/)
-      if (m) date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
+      if (!date) date = tryParseDate(line)
       continue
     }
-    if (/^[—\-─=]{3,}/.test(line)) { inBody = true; continue }
-    if (!inBody) continue
+    // 分隔線
+    if (sepRe.test(line)) {
+      inBody = true
+      continue
+    }
 
+    // ── 嘗試在任意位置找日期（不需在「日期：」之後）──
+    if (!date) {
+      const d = tryParseDate(line)
+      // 只有看起來真的是日期（有年份或格式完整）才採用
+      if (d && dateRe4.test(line)) date = d
+    }
+
+    // ── 編號行：匯入標題前也接受，第一個編號自動開啟 body ──
     const nm = line.match(numRe)
     if (nm) {
+      if (!inBody) inBody = true
       if (cur) {
         while (cur.contentLines.length && !cur.contentLines[cur.contentLines.length - 1]) cur.contentLines.pop()
         visits.push({ customerName: cur.customerName, content: cur.contentLines.join('\n') })
       }
-      cur = { customerName: nm[2].trim(), contentLines: [] }
-    } else if (cur) {
+      cur = { customerName: nm[1].trim(), contentLines: [] }
+      continue
+    }
+
+    // ── 內文行 ──
+    if (inBody && cur) {
       cur.contentLines.push(line)
     }
   }
+
   if (cur) {
     while (cur.contentLines.length && !cur.contentLines[cur.contentLines.length - 1]) cur.contentLines.pop()
     visits.push({ customerName: cur.customerName, content: cur.contentLines.join('\n') })
@@ -229,6 +264,13 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
     if (!rawText.trim()) return
     const p = parseDailyReportText(rawText)
     setImpResult('')
+
+    if (p.visits.length === 0) {
+      setImpResult('⚠️ 找不到編號項目（格式：1. 客戶名稱），請確認日報格式後重試')
+      setMatchedVisits([])
+      return
+    }
+
     if (p.date) setImpDate(p.date)
     if (p.title) {
       const match = spNames.find((n) => p.title.includes(n) || n.includes(p.title))
@@ -248,9 +290,8 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
     }))
     setMatchedVisits(initial)
 
-    // 逐筆搜尋客戶資料庫 + AI 判斷客戶反應（並行）
+    // 逐筆搜尋客戶資料庫
     p.visits.forEach((v, i) => {
-      // 客戶比對
       fetch(`/api/customers/search?q=${encodeURIComponent(v.customerName)}`)
         .then((r) => r.json())
         .then((results: CustomerCandidate[]) => {
@@ -268,7 +309,6 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
             prev.map((mv, idx) => idx === i ? { ...mv, searching: false } : mv)
           )
         })
-
     })
   }
 
