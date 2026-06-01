@@ -466,10 +466,13 @@ async function main() {
       address: [
         `牙醫診所：${clinics.size}`,
         `牙體技術所：${labs.size}`,
+        `崧達客戶：${customers.byCode.size}`,
         `客戶停業：${stopped.length}`,
         `客戶恢復：${restored.length}`,
         `新診所（業務）：${newOpenClinics.length}`,
         `新牙技所（業務）：${newOpenLabs.length}`,
+        `停業（非客戶）：${closedNonCust.length}`,
+        `查無代碼：${notFound.length}`,
       ].join('｜'),
       key: '', customer: '', customerUrl: '',
     })

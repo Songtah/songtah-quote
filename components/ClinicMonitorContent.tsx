@@ -29,6 +29,19 @@ function TypeBadge({ type }: { type: string }) {
 
 // ─── Summary derivation ───────────────────────────────────────────────────────
 
+/** 解析月份摘要的 address 欄位，格式：「牙醫診所：7653｜牙體技術所：1089｜...」 */
+function parseSummaryStats(address: string): Record<string, number> {
+  const stats: Record<string, number> = {}
+  for (const part of address.split('｜')) {
+    const idx = part.indexOf('：')
+    if (idx < 0) continue
+    const key = part.slice(0, idx).trim()
+    const val = parseInt(part.slice(idx + 1).trim(), 10)
+    if (key && !isNaN(val)) stats[key] = val
+  }
+  return stats
+}
+
 function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
   const byMonth: Record<string, {
     summary: ClinicMonitorRecord | null
@@ -59,7 +72,17 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
 
   return Object.entries(byMonth)
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([month, data]) => ({ month, ...data }))
+    .map(([month, data]) => {
+      const stats = data.summary ? parseSummaryStats(data.summary.address) : {}
+      return {
+        month,
+        ...data,
+        totalClinics:   stats['牙醫診所']   ?? null as number | null,
+        totalLabs:      stats['牙體技術所'] ?? null as number | null,
+        totalCustomers: stats['崧達客戶']   ?? null as number | null,
+        closedNonCust:  stats['停業（非客戶）'] ?? null as number | null,
+      }
+    })
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -121,6 +144,7 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
           {summaries.map(s => {
             const active = monthFilter === s.month
             const hasChanges = s.stopped > 0 || s.restored > 0 || s.newOpen > 0 || s.newOpenLabs > 0
+            const hasGlobalStats = s.totalClinics != null || s.totalLabs != null || s.totalCustomers != null
             return (
               <button
                 key={s.month}
@@ -132,13 +156,13 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
                 }`}
               >
                 {/* Month label */}
-                <div className={`text-xs font-semibold mb-3 tracking-wide ${active ? 'text-gray-400' : 'text-gray-400'}`}>
+                <div className={`text-xs font-semibold mb-2.5 tracking-wide ${active ? 'text-gray-400' : 'text-gray-400'}`}>
                   {s.month}
                 </div>
 
-                {/* Stats chips */}
+                {/* 異動統計 chips */}
                 {hasChanges ? (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-medium">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-medium mb-3">
                     {s.stopped > 0 && (
                       <span className={active ? 'text-red-300' : 'text-red-600'}>
                         客戶停業 {s.stopped}
@@ -159,11 +183,53 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
                         新牙技所 {s.newOpenLabs}
                       </span>
                     )}
+                    {s.notFound > 0 && (
+                      <span className={active ? 'text-orange-300' : 'text-orange-500'}>
+                        查無代碼 {s.notFound}
+                      </span>
+                    )}
                   </div>
                 ) : (
-                  <span className={`text-xs ${active ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {s.notFound > 0 ? `查無代碼 ${s.notFound} 筆` : '本月無異動'}
-                  </span>
+                  <div className="mb-3">
+                    <span className={`text-xs ${active ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {s.notFound > 0 ? `查無代碼 ${s.notFound} 筆` : '本月無異動'}
+                    </span>
+                  </div>
+                )}
+
+                {/* 對照數字：全台規模 */}
+                {hasGlobalStats && (
+                  <div className={`border-t pt-2.5 mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs ${active ? 'border-gray-700' : 'border-gray-100'}`}>
+                    {s.totalClinics != null && (
+                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
+                        診所{' '}
+                        <span className={`font-semibold tabular-nums ${active ? 'text-gray-200' : 'text-gray-600'}`}>
+                          {s.totalClinics.toLocaleString()}
+                        </span>
+                      </span>
+                    )}
+                    {s.totalLabs != null && (
+                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
+                        牙技所{' '}
+                        <span className={`font-semibold tabular-nums ${active ? 'text-gray-200' : 'text-gray-600'}`}>
+                          {s.totalLabs.toLocaleString()}
+                        </span>
+                      </span>
+                    )}
+                    {s.totalCustomers != null && (
+                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
+                        崧達客戶{' '}
+                        <span className={`font-semibold tabular-nums ${active ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                          {s.totalCustomers.toLocaleString()}
+                        </span>
+                        {s.totalClinics != null && s.totalLabs != null && (
+                          <span className={`ml-0.5 ${active ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {' '}({((s.totalCustomers / (s.totalClinics + s.totalLabs)) * 100).toFixed(1)}%)
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
                 )}
               </button>
             )
