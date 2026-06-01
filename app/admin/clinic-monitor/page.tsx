@@ -1,12 +1,12 @@
 import { AppShell } from '@/components/AppShell'
 import { ClinicMonitorContent } from '@/components/ClinicMonitorContent'
-import { requireAdmin } from '@/lib/permissions'
+import { requireViewPermission } from '@/lib/permissions'
 import { getClinicMonitorRecords } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClinicMonitorPage() {
-  await requireAdmin()
+  await requireViewPermission('clinic_monitor')
 
   const records = await getClinicMonitorRecords(3)
 

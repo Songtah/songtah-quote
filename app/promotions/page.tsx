@@ -1,17 +1,12 @@
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth'
 import { AppShell } from '@/components/AppShell'
 import { PromotionsContent } from '@/components/PromotionsContent'
+import { requireViewPermission, canEdit } from '@/lib/permissions'
 
 export default async function PromotionsPage() {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect('/login')
+  const session = await requireViewPermission('promotions')
 
   const user        = session.user as any
-  const role        = user?.role        as string | undefined
-  const accountType = user?.accountType as string | undefined
-  const isAdmin     = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  const isAdmin     = canEdit(session, 'promotions')
 
   return (
     <AppShell

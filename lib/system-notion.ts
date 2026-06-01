@@ -1842,7 +1842,7 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ── accounts & permissions ────────────────────────────────────
 
-export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'assets', 'admin', 'accounts'] as const
+export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'assets', 'admin', 'clinic_monitor', 'accounts'] as const
 export type ModuleKey = typeof MODULE_KEYS[number]
 export type ModulePermission = { view: boolean; edit: boolean }
 export type UserPermissions = Record<ModuleKey, ModulePermission>
@@ -1856,8 +1856,9 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   orders:     '訂貨',
   promotions: '促銷活動',
   assets:     '素材庫',
-  admin:      '行政管理',
-  accounts:   '帳號權限',
+  admin:          '行政管理',
+  clinic_monitor: '客戶資料監控',
+  accounts:       '帳號權限',
 }
 
 const MODULE_NOTION_FIELDS: Record<ModuleKey, { view: string; edit: string }> = {
@@ -1869,8 +1870,9 @@ const MODULE_NOTION_FIELDS: Record<ModuleKey, { view: string; edit: string }> = 
   orders:     { view: '訂貨檢視',     edit: '訂貨編輯'     },
   promotions: { view: '促銷活動檢視', edit: '促銷活動編輯' },
   assets:     { view: '素材庫檢視',   edit: '素材庫編輯'   },
-  admin:      { view: '行政管理檢視', edit: '行政管理編輯' },
-  accounts:   { view: '帳號檢視',     edit: '帳號編輯'     },
+  admin:          { view: '行政管理檢視',     edit: '行政管理編輯'     },
+  clinic_monitor: { view: '客戶資料監控檢視', edit: '客戶資料監控編輯' },
+  accounts:       { view: '帳號檢視',         edit: '帳號編輯'         },
 }
 
 export function allPermissions(): UserPermissions {

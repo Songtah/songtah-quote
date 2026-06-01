@@ -1,17 +1,14 @@
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth'
 import { AppShell } from '@/components/AppShell'
 import { AssetLibraryContent } from '@/components/AssetLibraryContent'
 import { isAssetsDbConfigured } from '@/lib/assets-notion'
+import { requireViewPermission } from '@/lib/permissions'
 
 export const metadata = {
   title: '品牌素材庫',
 }
 
 export default async function AssetLibraryPage() {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect('/login')
+  await requireViewPermission('assets')
 
   const setupNeeded = !isAssetsDbConfigured()
 
