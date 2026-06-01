@@ -172,26 +172,32 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <div className="space-y-2">
-        {/* Row 1: type pills + trigger button */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
-              className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                typeFilter === t
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-              }`}
-            >
-              {t || '全部'}
-            </button>
-          ))}
+        {/* Row 1: type pills (horizontal scroll) + trigger button */}
+        <div className="flex items-center gap-2">
+          {/* Pills — scrollable, no visible scrollbar */}
+          <div className="flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="inline-flex gap-1.5 min-w-max">
+              {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
+                    typeFilter === t
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {t || '全部'}
+                </button>
+              ))}
+            </div>
+          </div>
 
+          {/* Trigger — always visible on the right */}
           <button
             onClick={() => triggerRun(false)}
             disabled={triggering}
-            className="ml-auto px-3.5 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2 border border-gray-900"
+            className="shrink-0 px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 border border-gray-900"
           >
             {triggering ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -203,7 +209,8 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             )}
-            立即執行
+            <span className="hidden sm:inline">立即執行</span>
+            <span className="sm:hidden">執行</span>
           </button>
         </div>
 
@@ -216,19 +223,19 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="搜尋診所名稱、機構代碼、客戶…"
+              placeholder="搜尋診所、代碼、客戶…"
               className="input pl-9 pr-3 py-2 text-sm w-full"
             />
           </div>
           {hasFilter && (
             <button
               onClick={() => { setTypeFilter(''); setMonthFilter(''); setQuery('') }}
-              className="text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap"
+              className="shrink-0 text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-gray-100"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
-              清除篩選
+              <span className="hidden sm:inline">清除篩選</span>
             </button>
           )}
         </div>
@@ -295,19 +302,21 @@ function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
       : []
 
     return (
-      <div className="px-5 py-4 bg-blue-50/50 border-b border-blue-100/60">
+      <div className="px-4 sm:px-5 py-3.5 bg-blue-50/50 border-b border-blue-100/60">
         <div className="flex items-center gap-2.5 mb-2.5">
           <TypeBadge type={r.type} />
           <span className="text-sm font-semibold text-blue-900">{r.month}</span>
         </div>
         {stats.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
             {stats.map((stat, i) => {
-              const [label, val] = stat.split('：')
+              const colonIdx = stat.indexOf('：')
+              const label = colonIdx >= 0 ? stat.slice(0, colonIdx) : stat
+              const val   = colonIdx >= 0 ? stat.slice(colonIdx + 1) : ''
               return (
-                <div key={i} className="flex items-baseline gap-1.5 text-xs">
-                  <span className="text-blue-500/70">{label}</span>
-                  <span className="font-medium text-blue-800">{val}</span>
+                <div key={i} className="flex items-baseline gap-1 text-xs min-w-0">
+                  <span className="text-blue-500/70 truncate">{label}</span>
+                  <span className="font-semibold text-blue-800 shrink-0">{val}</span>
                 </div>
               )
             })}
@@ -318,44 +327,54 @@ function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
   }
 
   return (
-    <div className="flex items-start gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-      <div className="shrink-0 pt-0.5">
-        <TypeBadge type={r.type} />
-      </div>
+    <div className="px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-gray-50 transition-colors">
+      {/* Mobile: badge on top row; Desktop: badge left-aligned inline */}
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 pt-0.5 hidden sm:block">
+          <TypeBadge type={r.type} />
+        </div>
 
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-gray-900 text-sm">
-            {r.nhiName || r.institutionCode || r.customerName}
-          </span>
-          {r.institutionCode && (
-            <span className="text-xs text-gray-400 font-mono">{r.institutionCode}</span>
-          )}
+        <div className="flex-1 min-w-0">
+          {/* Mobile badge + name on same line */}
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <span className="sm:hidden shrink-0">
+              <TypeBadge type={r.type} />
+            </span>
+            <span className="font-medium text-gray-900 text-sm">
+              {r.nhiName || r.institutionCode || r.customerName}
+            </span>
+            {r.institutionCode && (
+              <span className="text-xs text-gray-400 font-mono hidden sm:inline">{r.institutionCode}</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+            {r.institutionCode && (
+              <span className="text-gray-400 font-mono sm:hidden">{r.institutionCode}</span>
+            )}
+            {r.specialty && <span>{r.specialty}</span>}
+            {r.address   && <span className="text-gray-400">{r.address}</span>}
+            {r.termDate  && <span className="text-red-400">終止：{r.termDate}</span>}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-          {r.specialty && <span>{r.specialty}</span>}
-          {r.address   && <span className="text-gray-400">{r.address}</span>}
-          {r.termDate  && <span className="text-red-400">終止：{r.termDate}</span>}
-        </div>
-      </div>
 
-      {/* Customer link */}
-      {r.customerName && (
-        <div className="shrink-0 text-right">
-          {r.customerUrl ? (
-            <a
-              href={r.customerUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
-            >
-              {r.customerName}
-            </a>
-          ) : (
-            <span className="text-xs text-gray-500">{r.customerName}</span>
-          )}
-        </div>
-      )}
+        {/* Customer link */}
+        {r.customerName && (
+          <div className="shrink-0 text-right">
+            {r.customerUrl ? (
+              <a
+                href={r.customerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline max-w-[80px] sm:max-w-none block text-right leading-tight"
+              >
+                {r.customerName}
+              </a>
+            ) : (
+              <span className="text-xs text-gray-500 max-w-[80px] sm:max-w-none block text-right leading-tight">{r.customerName}</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
