@@ -868,7 +868,8 @@ export async function searchSystemCustomers(
   const clauses: any[] = []
   if (keyword) clauses.push({ property: '客戶名稱', title: { contains: keyword } })
   if (filters?.city) clauses.push({ property: '縣市', select: { equals: filters.city } })
-  if (filters?.district) clauses.push({ property: '行政區', select: { equals: filters.district } })
+  // 行政區 is rich_text（非 select），必須用 rich_text filter
+  if (filters?.district) clauses.push({ property: '行政區', rich_text: { equals: filters.district } })
   if (filters?.salesperson) clauses.push({ property: '負責業務', select: { equals: filters.salesperson } })
   if (filters?.type) clauses.push({ property: '客戶類型', select: { equals: filters.type } })
 

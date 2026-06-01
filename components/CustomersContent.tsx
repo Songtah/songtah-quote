@@ -26,7 +26,9 @@ type Filters = {
   type: string
 }
 
-const searchCache = new Map<string, Customer[]>()
+// 前端搜尋快取（含 TTL，60 秒過期）
+const searchCache = new Map<string, { data: Customer[]; ts: number }>()
+const CACHE_TTL_MS = 60_000
 const EMPTY_FILTERS: Filters = { city: '', district: '', salesperson: '', type: '' }
 
 // Returns 1-2 char initials from a name
@@ -85,8 +87,9 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
     }
 
     const cacheKey = `${q}|${filters.city}|${filters.district}|${filters.salesperson}|${filters.type}`
-    if (searchCache.has(cacheKey)) {
-      setResults(searchCache.get(cacheKey)!)
+    const cached = searchCache.get(cacheKey)
+    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+      setResults(cached.data)
       setSearching(false)
       return
     }
@@ -104,7 +107,7 @@ export function CustomersContent({ recent, total }: { recent: Customer[]; total:
         const res = await fetch(`/api/system-customers?${params}`)
         const data: Customer[] = await res.json()
         const items = Array.isArray(data) ? data : []
-        searchCache.set(cacheKey, items)
+        searchCache.set(cacheKey, { data: items, ts: Date.now() })
         setResults(items)
       } catch {
         setResults([])
