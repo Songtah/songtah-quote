@@ -30,7 +30,7 @@ function getPageTitle(pathname: string): string {
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
-    '/admin/clinic-monitor': '診所監控',
+    '/admin/clinic-monitor': '客戶資料監控',
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
     '/promotions':        '促銷活動',
@@ -64,7 +64,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/promotions',        label: '促銷活動', module: 'promotions' },
   { href: '/assets',            label: '素材庫',   module: 'assets' },
   { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
-  { href: '/admin/clinic-monitor',   label: '診所監控', module: null,    adminOnly: true },
+  { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: null,    adminOnly: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
