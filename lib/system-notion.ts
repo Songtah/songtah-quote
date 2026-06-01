@@ -2084,7 +2084,7 @@ export type ClinicMonitorRecord = {
   id: string
   title: string
   month: string        // YYYY-MM
-  type: '新增停業' | '恢復開業' | '查無代碼' | '月份摘要'
+  type: '新增停業' | '恢復開業' | '新開業' | '停業' | '查無代碼' | '月份摘要'
   institutionCode: string
   nhiName: string
   customerName: string

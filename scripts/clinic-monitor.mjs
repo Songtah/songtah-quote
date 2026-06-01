@@ -1,135 +1,134 @@
 /**
  * scripts/clinic-monitor.mjs
  *
- * 每月比對全國健保特約牙醫診所異動，並將結果寫入 Notion「診所監控紀錄」資料庫。
+ * 每月比對全國健保特約牙醫診所＋牙體技術所異動，寫入 Notion「診所監控紀錄」。
  *
- * 執行方式：
- *   node scripts/clinic-monitor.mjs
+ * ── 資料來源 ──────────────────────────────────────────────────────────────────
+ * NHI API rId=A21030000I-D21004-009（每日更新，免費，CSV 格式）
+ * 篩選機構種類：牙醫一般診所、牙醫診所、牙醫專科診所
+ * ※ 牙體技術所：目前健保特約資料庫不收錄，請參閱 README 了解替代方案。
  *
- * 必要環境變數：
- *   NOTION_TOKEN               — Notion Integration Token
- *   NOTION_CLINIC_MONITOR_DB   — 診所監控紀錄 DB ID
- *   NOTION_CUSTOMERS_SYSTEM_DB — 客戶主檔 DB ID（取機構代碼）
+ * ── 異動類型邏輯 ──────────────────────────────────────────────────────────────
+ * 新增停業  → 上月有、本月沒有 + 是崧達客戶
+ * 恢復開業  → 上月沒有、本月有 + 是崧達客戶（且上上月曾出現過）
+ * 新開業    → 上月沒有、本月有 + 不是崧達客戶 → 業務開發機會
+ * 停業      → 上月有、本月沒有 + 不是崧達客戶
+ * 查無代碼  → 崧達客戶有機構代碼，但在健保清單完全查不到
+ * 月份摘要  → 每月一筆統計摘要
  *
- * 選用環境變數：
- *   DRY_RUN=true               — 只比對不寫入 Notion
+ * ── 執行方式 ──────────────────────────────────────────────────────────────────
+ * node scripts/clinic-monitor.mjs
+ *
+ * ── 環境變數 ──────────────────────────────────────────────────────────────────
+ * NOTION_TOKEN               必要  Notion Integration Token
+ * NOTION_CLINIC_MONITOR_DB   必要  診所監控紀錄 DB ID
+ * NOTION_CUSTOMERS_SYSTEM_DB 建議  客戶主檔 DB ID（取機構代碼）
+ * DRY_RUN=true               選用  只比對，不寫 Notion、不更新 snapshot
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-const NOTION_TOKEN        = process.env.NOTION_TOKEN
-const CLINIC_MONITOR_DB   = process.env.NOTION_CLINIC_MONITOR_DB
-const CUSTOMERS_DB        = process.env.NOTION_CUSTOMERS_SYSTEM_DB
-const DRY_RUN             = process.env.DRY_RUN === 'true'
-const SNAPSHOT_PATH       = 'data/clinic-snapshot.json'
+const NOTION_TOKEN       = process.env.NOTION_TOKEN
+const CLINIC_MONITOR_DB  = process.env.NOTION_CLINIC_MONITOR_DB
+const CUSTOMERS_DB       = process.env.NOTION_CUSTOMERS_SYSTEM_DB
+const DRY_RUN            = process.env.DRY_RUN === 'true'
+const SNAPSHOT_PATH      = 'data/clinic-snapshot.json'
 
-// NHI 健保特約牙醫診所資料（每日更新，公開免費）
-// rId A21030000I-D21004-009 = 牙醫診所特約醫事機構
-const NHI_API_BASE = 'https://info.nhi.gov.tw/api/iode0000s01/Dataset'
-const NHI_RID      = 'A21030000I-D21004-009'
-const NHI_PAGE_SIZE = 1000
+// NHI API — 回傳所有健保特約醫事機構，CSV 格式
+const NHI_API  = 'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21004-009'
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// 篩選的機構種類（僅保留牙科相關）
+const DENTAL_TYPES = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所'])
 
-function log(...args) { console.log('[clinic-monitor]', ...args) }
+// ── Logging ─────────────────────────────────────────────────────────────────
+
+function log(...args)  { console.log('[clinic-monitor]', ...args) }
 function warn(...args) { console.warn('[clinic-monitor] ⚠', ...args) }
 
-/** Notion API 的 rich_text 內容 */
-function richText(text) {
-  return [{ type: 'text', text: { content: String(text ?? '').slice(0, 2000) } }]
-}
-
-/** 格式化月份字串 YYYY-MM → YYYY-MM-01（Notion Date 格式） */
-function monthToDate(monthStr) {
-  return monthStr + '-01'
-}
-
-// ── 1. 下載健保資料 ─────────────────────────────────────────────────────────
+// ── 1. 下載並解析健保 CSV ───────────────────────────────────────────────────
 
 /**
- * 拉取 NHI API，自動分頁，回傳陣列。
- * 每筆格式：{ code, name, address, specialty, termDate }
+ * 下載 NHI API（一次性全量 CSV），解析後篩選牙科機構。
+ * 回傳 Map<機構代碼, { name, address, specialty, kind, termDate }>
  */
-async function fetchNHIData() {
-  log('下載健保特約牙醫診所資料…')
+async function fetchDentalData() {
+  log('下載健保特約醫事機構資料…')
 
-  const rows = []
-  let offset = 0
-  let total  = Infinity
+  const res = await fetch(NHI_API, {
+    headers: { Accept: 'text/csv,*/*' },
+    signal: AbortSignal.timeout(60_000),
+  })
+  if (!res.ok) throw new Error(`NHI API → HTTP ${res.status}`)
 
-  while (offset < total) {
-    const url = `${NHI_API_BASE}?rId=${NHI_RID}&page=${Math.floor(offset / NHI_PAGE_SIZE) + 1}&pageSize=${NHI_PAGE_SIZE}`
-    log(`  fetch offset=${offset} …`)
+  const raw = await res.text()
+  const lines = raw.split('\n').filter(l => l.trim())
+  if (lines.length < 2) throw new Error('NHI API 回傳空資料')
 
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(30_000),
+  // 解析 CSV header（第一行）
+  const headers = parseCSVLine(lines[0])
+  log(`  欄位（${headers.length}）：${headers.slice(0,6).join('、')} …`)
+
+  const codeIdx     = headers.findIndex(h => h.includes('代碼'))
+  const nameIdx     = headers.findIndex(h => h.includes('名稱'))
+  const kindIdx     = headers.findIndex(h => h.includes('種類'))
+  const addrIdx     = headers.findIndex(h => h.includes('地址'))
+  const specIdx     = headers.findIndex(h => h.includes('科別'))
+  const termIdx     = headers.findIndex(h => h.includes('終止') || h.includes('歇業'))
+
+  if (codeIdx < 0 || nameIdx < 0) throw new Error(`找不到必要欄位 code=${codeIdx} name=${nameIdx}`)
+
+  const result = new Map()
+  let total = 0, dental = 0
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i])
+    if (cols.length < 3) continue
+    total++
+    const kind = kindIdx >= 0 ? cols[kindIdx]?.trim() : ''
+    if (!DENTAL_TYPES.has(kind)) continue
+    dental++
+    const code = cols[codeIdx]?.trim()
+    if (!code) continue
+    result.set(code, {
+      name:     cols[nameIdx]?.trim()  ?? '',
+      address:  addrIdx >= 0 ? cols[addrIdx]?.trim()  ?? '' : '',
+      specialty:specIdx >= 0 ? cols[specIdx]?.trim()  ?? '' : '',
+      kind,
+      termDate: termIdx >= 0 ? cols[termIdx]?.trim()  ?? '' : '',
     })
-
-    if (!res.ok) {
-      throw new Error(`NHI API 回應 ${res.status} ${res.statusText}`)
-    }
-
-    const body = await res.json()
-
-    // 支援多種回傳格式
-    let list = []
-    if (Array.isArray(body)) {
-      list  = body
-      total = body.length  // 全量回傳
-    } else if (body?.data?.list) {
-      list  = body.data.list
-      total = body.data.total ?? list.length
-    } else if (body?.result?.records) {
-      list  = body.result.records
-      total = body.result.total ?? list.length
-    } else if (body?.records) {
-      list  = body.records
-      total = body.total ?? list.length
-    } else {
-      // 嘗試找第一個陣列
-      const arr = Object.values(body).find(Array.isArray)
-      if (arr) { list = arr; total = arr.length }
-      else throw new Error(`NHI API 回傳未知格式：${JSON.stringify(body).slice(0, 200)}`)
-    }
-
-    if (offset === 0 && list.length > 0) {
-      log(`  第一筆範例：${JSON.stringify(list[0]).slice(0, 200)}`)
-    }
-
-    for (const row of list) {
-      rows.push(mapNHIRow(row))
-    }
-
-    offset += list.length
-    if (list.length < NHI_PAGE_SIZE) break  // 最後一頁
   }
 
-  log(`健保資料：共 ${rows.length} 筆`)
-  return rows
+  log(`  全機構 ${total} 筆，篩選出牙科 ${dental} 筆（${result.size} 個機構代碼）`)
+  return result
 }
 
-/** 將 NHI 原始 row 正規化（欄位名稱可能因版本而異） */
-function mapNHIRow(row) {
-  // 嘗試多種欄位名稱
-  const code     = row['醫事機構代碼'] ?? row['機構代碼'] ?? row['code'] ?? ''
-  const name     = row['醫事機構名稱'] ?? row['機構名稱'] ?? row['name'] ?? ''
-  const address  = row['醫事機構地址'] ?? row['地址']     ?? row['address'] ?? ''
-  const specialty= row['診療科別']     ?? row['科別']     ?? row['specialty'] ?? ''
-  const termDate = row['合約終止日期'] ?? row['終止日期'] ?? row['termDate'] ?? ''
-  return { code: String(code).trim(), name: String(name).trim(), address: String(address).trim(), specialty: String(specialty).trim(), termDate: String(termDate).trim() }
+/** 簡易 CSV 行解析（處理雙引號包裹的欄位） */
+function parseCSVLine(line) {
+  const result = []
+  let cur = '', inQ = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') { inQ = !inQ }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = '' }
+    else { cur += ch }
+  }
+  result.push(cur)
+  return result
 }
 
-// ── 2. 載入客戶機構代碼 ──────────────────────────────────────────────────────
+// ── 2. 載入崧達客戶機構代碼 ────────────────────────────────────────────────
 
 /**
- * 從 Notion 客戶主檔撈有填機構代碼的客戶。
+ * 從 Notion 客戶主檔撈有填「機構代碼」的客戶。
  * 回傳 Map<機構代碼, { name, pageId }>
  */
 async function fetchSongtahCustomers() {
-  if (!CUSTOMERS_DB) { warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對'); return new Map() }
+  if (!CUSTOMERS_DB) {
+    warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對（所有異動將視為非客戶）')
+    return new Map()
+  }
   log('載入崧達客戶機構代碼…')
 
   const customers = new Map()
@@ -138,81 +137,159 @@ async function fetchSongtahCustomers() {
   do {
     const body = {
       page_size: 100,
-      filter: {
-        property: '機構代碼',
-        rich_text: { is_not_empty: true },
-      },
+      filter: { property: '機構代碼', rich_text: { is_not_empty: true } },
     }
     if (cursor) body.start_cursor = cursor
-
     const res = await notionPost(`/databases/${CUSTOMERS_DB}/query`, body)
+
     for (const page of res.results) {
       const code = getText(page, '機構代碼').trim()
-      const name = page.properties['名稱']?.title?.[0]?.plain_text
-                ?? page.properties['客戶名稱']?.title?.[0]?.plain_text
-                ?? page.properties['Name']?.title?.[0]?.plain_text
-                ?? ''
+      const name =
+        page.properties['名稱']?.title?.[0]?.plain_text      ??
+        page.properties['客戶名稱']?.title?.[0]?.plain_text  ??
+        page.properties['Name']?.title?.[0]?.plain_text      ?? ''
       if (code) customers.set(code, { name, pageId: page.id })
     }
     cursor = res.has_more ? res.next_cursor : null
   } while (cursor)
 
-  log(`崧達客戶：共 ${customers.size} 筆有機構代碼`)
+  log(`  崧達客戶：${customers.size} 筆有機構代碼`)
   return customers
 }
 
 // ── 3. 比對邏輯 ─────────────────────────────────────────────────────────────
 
-function buildSnapshot(data) {
-  const codes = {}
-  for (const row of data) {
-    if (row.code) codes[row.code] = { name: row.name, address: row.address, specialty: row.specialty, termDate: row.termDate }
+function buildChanges({ currentData, prevCodes, customers, month }) {
+  const changes = []
+
+  if (!prevCodes) {
+    log('第一次執行（無上月 snapshot），只建立快照，不產生異動紀錄')
+    return changes
   }
-  return codes
+
+  const prevSet    = new Set(Object.keys(prevCodes))
+  const currentSet = new Set(currentData.keys())
+
+  // ── 上月有、本月沒有 → 停業 ─────────────────────────────────────────────
+  for (const code of prevSet) {
+    if (currentSet.has(code)) continue
+    const prev     = prevCodes[code]
+    const customer = customers.get(code)
+    changes.push({
+      type:        customer ? '新增停業' : '停業',
+      month, code,
+      name:        prev.name,
+      address:     prev.address,
+      specialty:   prev.specialty,
+      kind:        prev.kind ?? '',
+      termDate:    prev.termDate ?? '',
+      customer:    customer?.name  ?? '',
+      customerUrl: customer ? customerUrl(customer.pageId) : '',
+    })
+  }
+
+  // ── 本月有、上月沒有 → 新開業 / 恢復開業 ───────────────────────────────
+  for (const [code, info] of currentData) {
+    if (prevSet.has(code)) continue
+    const customer = customers.get(code)
+    changes.push({
+      type:        customer ? '恢復開業' : '新開業',
+      month, code,
+      name:        info.name,
+      address:     info.address,
+      specialty:   info.specialty,
+      kind:        info.kind,
+      termDate:    info.termDate,
+      customer:    customer?.name  ?? '',
+      customerUrl: customer ? customerUrl(customer.pageId) : '',
+    })
+  }
+
+  return changes
+}
+
+/** 崧達客戶的機構代碼完全不在健保清單 */
+function buildNotFoundList({ currentData, customers, prevCodes }) {
+  const result = []
+  for (const [code, cust] of customers) {
+    if (!currentData.has(code)) {
+      // 若已記錄為「新增停業」則不重複計入
+      const wasInPrev = prevCodes && code in prevCodes
+      if (!wasInPrev) {
+        result.push({
+          type: '查無代碼', code,
+          customer: cust.name,
+          customerUrl: customerUrl(cust.pageId),
+        })
+      }
+    }
+  }
+  return result
+}
+
+function customerUrl(pageId) {
+  return `https://songtah-quote.vercel.app/customers/${pageId}`
 }
 
 // ── 4. 寫入 Notion ───────────────────────────────────────────────────────────
 
-const BATCH_DELAY_MS = 350  // 避免觸發 Notion rate limit（3 req/s）
+const BATCH_DELAY_MS = 340  // 避免 Notion rate limit（3 req/s）
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-async function writeClinicRecord(record) {
-  if (DRY_RUN) { log(`  [DRY] ${record.type} ${record.code} ${record.name}`); return }
-
-  const properties = {
-    '標題':    { title: richText(`${record.type}｜${record.name || record.code}`) },
-    '月份':    { date: { start: monthToDate(record.month) } },
-    '異動類型':{ select: { name: record.type } },
+async function writeRecord(rec) {
+  if (DRY_RUN) {
+    log(`  [DRY] ${rec.type} ${rec.code || ''} ${rec.name || rec.customer}`)
+    return
   }
-  if (record.code)       properties['機構代碼']  = { rich_text: richText(record.code) }
-  if (record.name)       properties['健保名稱']   = { rich_text: richText(record.name) }
-  if (record.customer)   properties['客戶名稱']   = { rich_text: richText(record.customer) }
-  if (record.address)    properties['地址']       = { rich_text: richText(record.address) }
-  if (record.specialty)  properties['診療科別']   = { rich_text: richText(record.specialty) }
-  if (record.customerUrl)properties['客戶頁面']   = { url: record.customerUrl }
-  if (record.termDate && /^\d{8}$/.test(record.termDate)) {
-    // 格式 YYYYMMDD → YYYY-MM-DD
-    const d = record.termDate
-    properties['終止日期'] = { date: { start: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` } }
+
+  // 依異動類型決定標題
+  let titleStr
+  switch (rec.type) {
+    case '月份摘要': titleStr = rec.name; break
+    case '新開業':   titleStr = `🆕 ${rec.name || rec.code}`; break
+    case '新增停業': titleStr = `🚨 ${rec.name || rec.code}（${rec.customer}）`; break
+    case '恢復開業': titleStr = `✅ ${rec.name || rec.code}（${rec.customer}）`; break
+    case '停業':     titleStr = `⬜ ${rec.name || rec.code}`; break
+    default:         titleStr = `${rec.type}｜${rec.name || rec.code}`
+  }
+
+  const props = {
+    '標題':    { title:  richText(titleStr) },
+    '異動類型':{ select: { name: rec.type } },
+  }
+  if (rec.month)       props['月份']     = { date: { start: rec.month + '-01' } }
+  if (rec.code)        props['機構代碼'] = { rich_text: richText(rec.code) }
+  if (rec.name)        props['健保名稱'] = { rich_text: richText(rec.name) }
+  if (rec.customer)    props['客戶名稱'] = { rich_text: richText(rec.customer) }
+  if (rec.address)     props['地址']     = { rich_text: richText(rec.address) }
+  if (rec.specialty)   props['診療科別'] = { rich_text: richText(rec.specialty) }
+  if (rec.customerUrl) props['客戶頁面'] = { url: rec.customerUrl }
+  if (rec.termDate && /^\d{8}$/.test(rec.termDate)) {
+    const d = rec.termDate
+    props['終止日期'] = { date: { start: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` } }
   }
 
   await notionPost('/pages', {
     parent: { database_id: CLINIC_MONITOR_DB },
-    properties,
+    properties: props,
   })
   await sleep(BATCH_DELAY_MS)
 }
 
-// ── 5. Notion API helpers ────────────────────────────────────────────────────
+// ── 5. Notion helpers ────────────────────────────────────────────────────────
+
+function richText(text) {
+  return [{ type: 'text', text: { content: String(text ?? '').slice(0, 2000) } }]
+}
 
 async function notionPost(path, body) {
   const res = await fetch(`https://api.notion.com/v1${path}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      Authorization:    `Bearer ${NOTION_TOKEN}`,
       'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
+      'Content-Type':   'application/json',
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30_000),
@@ -231,7 +308,6 @@ function getText(page, field) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  // 驗證必要環境變數
   if (!NOTION_TOKEN)      throw new Error('缺少 NOTION_TOKEN')
   if (!CLINIC_MONITOR_DB) throw new Error('缺少 NOTION_CLINIC_MONITOR_DB')
 
@@ -249,127 +325,82 @@ async function main() {
       warn('無法解析 snapshot，視為第一次執行：', e.message)
     }
   } else {
-    log('找不到 snapshot，視為第一次執行，只建立快照不比對')
+    log('找不到 snapshot，視為第一次執行')
   }
 
-  // 2. 下載健保資料
-  const currentData = await fetchNHIData()
-  const currentCodes = buildSnapshot(currentData)
+  // 2. 下載健保牙科資料
+  const currentData = await fetchDentalData()
 
   // 3. 載入崧達客戶
   const customers = await fetchSongtahCustomers()
 
   // 4. 比對
-  const changes = []
+  const changes    = buildChanges({
+    currentData,
+    prevCodes: prevSnapshot?.codes ?? null,
+    customers,
+    month,
+  })
+  const notFound   = buildNotFoundList({
+    currentData,
+    customers,
+    prevCodes: prevSnapshot?.codes ?? null,
+  })
 
-  if (prevSnapshot?.codes) {
-    const prev = prevSnapshot.codes
-
-    // 上月有、本月沒有 → 新增停業
-    for (const [code, info] of Object.entries(prev)) {
-      if (!currentCodes[code]) {
-        const customer = customers.get(code)
-        changes.push({
-          type: '新增停業',
-          month,
-          code,
-          name: info.name,
-          address: info.address,
-          specialty: info.specialty,
-          termDate: info.termDate,
-          customer: customer?.name ?? '',
-          customerUrl: customer
-            ? `https://songtah-quote.vercel.app/customers/${customer.pageId}`
-            : '',
-        })
-      }
-    }
-
-    // 本月有、上月沒有 → 恢復開業（或新開業）
-    for (const [code, info] of Object.entries(currentCodes)) {
-      if (!prev[code]) {
-        const customer = customers.get(code)
-        changes.push({
-          type: '恢復開業',
-          month,
-          code,
-          name: info.name,
-          address: info.address,
-          specialty: info.specialty,
-          termDate: info.termDate,
-          customer: customer?.name ?? '',
-          customerUrl: customer
-            ? `https://songtah-quote.vercel.app/customers/${customer.pageId}`
-            : '',
-        })
-      }
-    }
-  }
-
-  // 找出客戶機構代碼在健保資料中完全查無的
-  for (const [code, cust] of customers) {
-    if (!currentCodes[code]) {
-      // 只有在沒有被記錄為「新增停業」的情況下才記
-      if (!changes.some(c => c.code === code && c.type === '新增停業')) {
-        changes.push({
-          type: '查無代碼',
-          month,
-          code,
-          name: '',
-          customer: cust.name,
-          customerUrl: `https://songtah-quote.vercel.app/customers/${cust.pageId}`,
-          address: '', specialty: '', termDate: '',
-        })
-      }
-    }
-  }
-
-  const stopped   = changes.filter(c => c.type === '新增停業')
-  const restored  = changes.filter(c => c.type === '恢復開業')
-  const notFound  = changes.filter(c => c.type === '查無代碼')
-  const affectedCustomers = changes.filter(c => c.customer && c.type !== '查無代碼')
+  // 統計
+  const stopped          = changes.filter(c => c.type === '新增停業')
+  const restored         = changes.filter(c => c.type === '恢復開業')
+  const newOpen          = changes.filter(c => c.type === '新開業')
+  const closedNonCust    = changes.filter(c => c.type === '停業')
+  const custAffected     = [...stopped, ...restored]
 
   log(`\n比對結果：`)
-  log(`  本月健保特約診所：${Object.keys(currentCodes).length} 家`)
-  log(`  新增停業：${stopped.length} 家`)
-  log(`  恢復開業：${restored.length} 家`)
-  log(`  查無代碼：${notFound.length} 筆（崧達客戶機構代碼不在健保清單）`)
-  log(`  影響崧達客戶：${affectedCustomers.length} 家`)
+  log(`  本月牙醫機構（健保特約）：${currentData.size} 間`)
+  log(`  新增停業（客戶）：${stopped.length}`)
+  log(`  恢復開業（客戶）：${restored.length}`)
+  log(`  新開業（非客戶/業務機會）：${newOpen.length}`)
+  log(`  停業（非客戶）：${closedNonCust.length}`)
+  log(`  查無代碼：${notFound.length}`)
 
   // 5. 寫入 Notion
-  if (!DRY_RUN && !CLINIC_MONITOR_DB) {
-    warn('未設定 NOTION_CLINIC_MONITOR_DB，跳過寫入')
-  } else {
+  if (CLINIC_MONITOR_DB) {
     log('\n寫入 Notion…')
 
-    // 先寫月份摘要
-    await writeClinicRecord({
+    // 月份摘要（第一筆）
+    await writeRecord({
       type: '月份摘要',
       month,
-      code: '',
       name: `${month} 月份監控摘要`,
-      address: `本月健保特約：${Object.keys(currentCodes).length} 家｜停業：${stopped.length}｜恢復：${restored.length}｜影響客戶：${affectedCustomers.length}`,
-      specialty: '', termDate: '', customer: '', customerUrl: '',
+      address: [
+        `健保牙醫：${currentData.size} 間`,
+        `客戶停業：${stopped.length}`,
+        `客戶恢復：${restored.length}`,
+        `新診所（業務）：${newOpen.length}`,
+      ].join('｜'),
+      code: '', customer: '', customerUrl: '',
     })
 
-    // 再寫各筆異動
-    for (const change of changes) {
-      await writeClinicRecord(change)
-    }
-    log(`寫入完成：共 ${changes.length + 1} 筆`)
+    // 客戶相關優先寫（停業、恢復）
+    for (const c of custAffected) await writeRecord(c)
+
+    // 業務開發新診所（只寫非客戶新開業，停業非客戶省略以節省 API）
+    for (const c of newOpen)      await writeRecord(c)
+
+    // 查無代碼
+    for (const c of notFound)     await writeRecord(c)
+
+    const total = 1 + custAffected.length + newOpen.length + notFound.length
+    log(`寫入完成：共 ${total} 筆`)
   }
 
   // 6. 更新 snapshot
   if (!DRY_RUN) {
+    const codes = {}
+    for (const [code, info] of currentData) codes[code] = info
+    const snap = { month, fetchedAt: today.toISOString(), totalDental: currentData.size, codes }
     mkdirSync('data', { recursive: true })
-    const newSnapshot = {
-      month,
-      fetchedAt: today.toISOString(),
-      totalActive: Object.keys(currentCodes).length,
-      codes: currentCodes,
-    }
-    writeFileSync(SNAPSHOT_PATH, JSON.stringify(newSnapshot, null, 2))
-    log(`\nSnapshot 已更新：data/clinic-snapshot.json`)
+    writeFileSync(SNAPSHOT_PATH, JSON.stringify(snap, null, 2))
+    log(`\nSnapshot 已更新（${currentData.size} 筆）→ ${SNAPSHOT_PATH}`)
   }
 
   log('\n執行完成 ✅')

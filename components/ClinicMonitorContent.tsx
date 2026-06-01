@@ -6,13 +6,15 @@ import type { ClinicMonitorRecord } from '@/lib/system-notion'
 
 // ─── Types & helpers ──────────────────────────────────────────────────────────
 
-type FilterType = '' | '新增停業' | '恢復開業' | '查無代碼' | '月份摘要'
+type FilterType = '' | '新增停業' | '恢復開業' | '新開業' | '停業' | '查無代碼' | '月份摘要'
 
 const TYPE_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  '新增停業': { bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500' },
-  '恢復開業': { bg: 'bg-green-50',  text: 'text-green-700',  dot: 'bg-green-500' },
-  '查無代碼': { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
-  '月份摘要': { bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400' },
+  '新增停業': { bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
+  '恢復開業': { bg: 'bg-green-50',   text: 'text-green-700',   dot: 'bg-green-500' },
+  '新開業':   { bg: 'bg-purple-50',  text: 'text-purple-700',  dot: 'bg-purple-500' },
+  '停業':     { bg: 'bg-gray-50',    text: 'text-gray-500',    dot: 'bg-gray-400' },
+  '查無代碼': { bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-400' },
+  '月份摘要': { bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-400' },
 }
 
 function TypeBadge({ type }: { type: string }) {
@@ -32,6 +34,7 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
     summary: ClinicMonitorRecord | null
     stopped: number
     restored: number
+    newOpen: number
     notFound: number
     affectedCustomers: number
   }> = {}
@@ -39,12 +42,13 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
   for (const r of records) {
     if (!r.month) continue
     if (!byMonth[r.month]) {
-      byMonth[r.month] = { summary: null, stopped: 0, restored: 0, notFound: 0, affectedCustomers: 0 }
+      byMonth[r.month] = { summary: null, stopped: 0, restored: 0, newOpen: 0, notFound: 0, affectedCustomers: 0 }
     }
     const m = byMonth[r.month]
     if (r.type === '月份摘要') { m.summary = r; continue }
     if (r.type === '新增停業') m.stopped++
     if (r.type === '恢復開業') m.restored++
+    if (r.type === '新開業')   m.newOpen++
     if (r.type === '查無代碼') m.notFound++
     if (r.customerName && (r.type === '新增停業' || r.type === '恢復開業')) m.affectedCustomers++
   }
@@ -130,12 +134,17 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                   {s.stopped > 0 && (
                     <span className={monthFilter === s.month ? 'text-red-300' : 'text-red-600'}>
-                      停業 {s.stopped}
+                      客戶停業 {s.stopped}
                     </span>
                   )}
                   {s.restored > 0 && (
                     <span className={monthFilter === s.month ? 'text-green-300' : 'text-green-600'}>
-                      恢復 {s.restored}
+                      客戶恢復 {s.restored}
+                    </span>
+                  )}
+                  {s.newOpen > 0 && (
+                    <span className={monthFilter === s.month ? 'text-purple-300' : 'text-purple-600'}>
+                      新診所 {s.newOpen}
                     </span>
                   )}
                   {s.affectedCustomers > 0 && (
@@ -156,7 +165,7 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Type filter pills */}
-        {(['', '新增停業', '恢復開業', '查無代碼'] as FilterType[]).map(t => (
+        {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
           <button
             key={t}
             onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
