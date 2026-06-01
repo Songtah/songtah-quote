@@ -445,10 +445,13 @@ async function main() {
   const newOpen       = changes.filter(c => c.type === '新開業')
   const closedNonCust = changes.filter(c => c.type === '停業')
 
+  const newOpenClinics = newOpen.filter(c => c.kind !== '牙體技術所')
+  const newOpenLabs    = newOpen.filter(c => c.kind === '牙體技術所')
+
   log(`\n比對結果：`)
   log(`  新增停業（客戶）：${stopped.length}`)
   log(`  恢復開業（客戶）：${restored.length}`)
-  log(`  新開業（業務機會）：${newOpen.length}`)
+  log(`  新開業（業務機會）：${newOpen.length}（牙醫診所 ${newOpenClinics.length}、牙技所 ${newOpenLabs.length}）`)
   log(`  停業（非客戶）：${closedNonCust.length}`)
   log(`  查無代碼：${notFound.length}`)
 
@@ -465,7 +468,8 @@ async function main() {
         `牙體技術所：${labs.size}`,
         `客戶停業：${stopped.length}`,
         `客戶恢復：${restored.length}`,
-        `新診所（業務）：${newOpen.length}`,
+        `新診所（業務）：${newOpenClinics.length}`,
+        `新牙技所（業務）：${newOpenLabs.length}`,
       ].join('｜'),
       key: '', customer: '', customerUrl: '',
     })

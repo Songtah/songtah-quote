@@ -35,6 +35,7 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
     stopped: number
     restored: number
     newOpen: number
+    newOpenLabs: number
     notFound: number
     affectedCustomers: number
   }> = {}
@@ -42,13 +43,16 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
   for (const r of records) {
     if (!r.month) continue
     if (!byMonth[r.month]) {
-      byMonth[r.month] = { summary: null, stopped: 0, restored: 0, newOpen: 0, notFound: 0, affectedCustomers: 0 }
+      byMonth[r.month] = { summary: null, stopped: 0, restored: 0, newOpen: 0, newOpenLabs: 0, notFound: 0, affectedCustomers: 0 }
     }
     const m = byMonth[r.month]
     if (r.type === '月份摘要') { m.summary = r; continue }
     if (r.type === '新增停業') m.stopped++
     if (r.type === '恢復開業') m.restored++
-    if (r.type === '新開業')   m.newOpen++
+    if (r.type === '新開業') {
+      if (r.specialty === '牙體技術所') m.newOpenLabs++
+      else m.newOpen++
+    }
     if (r.type === '查無代碼') m.notFound++
     if (r.customerName && (r.type === '新增停業' || r.type === '恢復開業')) m.affectedCustomers++
   }
@@ -145,6 +149,11 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
                   {s.newOpen > 0 && (
                     <span className={monthFilter === s.month ? 'text-purple-300' : 'text-purple-600'}>
                       新診所 {s.newOpen}
+                    </span>
+                  )}
+                  {s.newOpenLabs > 0 && (
+                    <span className={monthFilter === s.month ? 'text-violet-300' : 'text-violet-600'}>
+                      新牙技所 {s.newOpenLabs}
                     </span>
                   )}
                   {s.affectedCustomers > 0 && (
