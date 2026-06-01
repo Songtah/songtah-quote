@@ -434,7 +434,10 @@ async function main() {
   log(`\n合計：${clinics.size} 牙醫診所 ＋ ${labs.size} 牙技所 ＝ ${currentData.size} 筆`)
 
   // 3. 崧達客戶
-  const customers = await fetchSongtahCustomers()
+  const customers = await fetchSongtahCustomers().catch(e => {
+    warn('載入崧達客戶失敗：', e.message, '— 繼續執行（無客戶比對）')
+    return { byCode: new Map(), byName: new Map() }
+  })
 
   // 4. 比對
   const changes  = buildChanges({ currentData, prevCodes: prevSnapshot?.codes ?? null, customers, month })
@@ -489,13 +492,15 @@ async function main() {
 
   // 6. 更新 snapshot
   if (!DRY_RUN) {
+    mkdirSync('data', { recursive: true })   // 確保目錄存在（首次執行時）
     const codes = {}
     for (const [k, v] of currentData) codes[k] = v
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
       month, fetchedAt: today.toISOString(),
-      totalClinics: clinics.size, totalLabs: labs.size, codes,
+      totalClinics: clinics.size, totalLabs: labs.size,
+      totalCustomers: customers.byCode.size,
+      codes,
     }, null, 2))
-    mkdirSync('data', { recursive: true })
     log(`\nSnapshot 更新：${currentData.size} 筆 → ${SNAPSHOT_PATH}`)
   }
 
