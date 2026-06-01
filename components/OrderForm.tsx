@@ -1119,6 +1119,20 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       setError('請至少新增一個品項')
       return
     }
+    // 跨規格系列買N送M：門檻已達但未加入贈品，不允許儲存
+    for (const [seriesId, s] of Object.entries(seriesBuyNGetMStatus)) {
+      if (s.freeQty <= 0) continue
+      const giftCount = items.filter(
+        it => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample')
+      ).reduce((sum, it) => sum + (it.quantity || 1), 0)
+      if (giftCount < s.freeQty) {
+        setError(
+          `「${s.seriesName}」買${s.n}送${s.m}門檻已達，` +
+          `請加入 ${s.freeQty} 件贈品（目前 ${giftCount} 件）後再儲存`
+        )
+        return
+      }
+    }
     setError('')
     setSaving(true)
 
