@@ -34,9 +34,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }).catch((error) => console.error('audit updateVisit error:', error))
 
     return NextResponse.json({ ok: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('updateVisit error:', error)
-    return NextResponse.json({ error: '更新客情紀錄失敗' }, { status: 500 })
+    // 把 Notion 的原始錯誤訊息也回傳，方便前端顯示更精確的原因
+    const detail = error?.body?.message ?? error?.message ?? ''
+    return NextResponse.json(
+      { error: `更新客情紀錄失敗${detail ? `：${detail}` : ''}` },
+      { status: 500 }
+    )
   }
 }
 

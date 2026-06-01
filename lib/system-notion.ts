@@ -1736,8 +1736,13 @@ export async function updateVisit(id: string, data: {
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
-  if (data.date !== undefined) properties['日期'] = { date: { start: data.date } }
-  if (data.salesperson !== undefined) properties['業務人員'] = { select: { name: data.salesperson } }
+  // ⚠️ date / salesperson 不能傳空值給 Notion（select 空名稱、date 空字串均會 400）
+  if (data.date !== undefined) {
+    properties['日期'] = data.date ? { date: { start: data.date } } : { date: null }
+  }
+  if (data.salesperson !== undefined) {
+    properties['業務人員'] = data.salesperson ? { select: { name: data.salesperson } } : { select: null }
+  }
   if (data.content !== undefined) properties['拜訪內容'] = { rich_text: richText(data.content) }
   if (data.address !== undefined) properties['地址'] = { rich_text: richText(data.address) }
   if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
