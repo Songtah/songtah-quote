@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listItem, staggerFast } from '@/lib/motion'
@@ -59,16 +59,19 @@ const DISPLAY_LIMIT = 80
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function CustomersContent({ initialTotal }: { initialTotal: number }) {
+export function CustomersContent({
+  initialCustomers,
+  initialOptions,
+}: {
+  initialCustomers: Customer[]
+  initialOptions: FilterOptions
+}) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Data state
-  const [allCustomers, setAllCustomers] = useState<Customer[]>([])
-  const [options, setOptions] = useState<FilterOptions>({
-    cities: [], districtsByCity: {}, salespersons: [], types: [],
-  })
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
+  // SSR 資料直接就緒，不需要 loading 狀態
+  const allCustomers = initialCustomers
+  const options = initialOptions
 
   // Filter state
   const [query, setQuery] = useState('')
@@ -81,20 +84,6 @@ export function CustomersContent({ initialTotal }: { initialTotal: number }) {
   const [quickVisitCustomer, setQuickVisitCustomer] = useState<{
     id: string; name: string; city: string; district: string; address: string
   } | null>(null)
-
-  // Load all customers + filter options in parallel
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/system-customers/all').then((r) => r.json()),
-      fetch('/api/system-customers/options').then((r) => r.json()),
-    ])
-      .then(([customers, opts]) => {
-        setAllCustomers(Array.isArray(customers) ? customers : [])
-        if (opts?.cities) setOptions(opts)
-        setLoadState('ready')
-      })
-      .catch(() => setLoadState('error'))
-  }, [])
 
   // ── Client-side instant filter ──────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -109,9 +98,9 @@ export function CustomersContent({ initialTotal }: { initialTotal: number }) {
           c.salesperson.toLowerCase().includes(q),
       )
     }
-    if (typeFilter)       result = result.filter((c) => c.type === typeFilter)
-    if (cityFilter)       result = result.filter((c) => c.city === cityFilter)
-    if (districtFilter)   result = result.filter((c) => c.district === districtFilter || c.district.includes(districtFilter))
+    if (typeFilter)        result = result.filter((c) => c.type === typeFilter)
+    if (cityFilter)        result = result.filter((c) => c.city === cityFilter)
+    if (districtFilter)    result = result.filter((c) => c.district === districtFilter || c.district.includes(districtFilter))
     if (salespersonFilter) result = result.filter((c) => c.salesperson === salespersonFilter)
     return result
   }, [allCustomers, query, typeFilter, cityFilter, districtFilter, salespersonFilter])
@@ -120,7 +109,7 @@ export function CustomersContent({ initialTotal }: { initialTotal: number }) {
   const hasMore = filtered.length > DISPLAY_LIMIT
   const hasActiveFilter = !!(query.trim() || typeFilter || cityFilter || districtFilter || salespersonFilter)
   const activeDistricts = cityFilter ? (options.districtsByCity[cityFilter] ?? []) : []
-  const total = loadState === 'ready' ? allCustomers.length : initialTotal
+  const total = allCustomers.length
 
   function clearAll() {
     setQuery('')
@@ -226,18 +215,7 @@ export function CustomersContent({ initialTotal }: { initialTotal: number }) {
       {/* ── Status bar ───────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-400">
-          {loadState === 'loading' ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin inline-block" />
-              載入客戶資料中…
-            </span>
-          ) : loadState === 'error' ? (
-            <span className="text-red-400">載入失敗，請重新整理</span>
-          ) : hasActiveFilter ? (
-            `找到 ${filtered.length} 筆`
-          ) : (
-            `共 ${total} 筆客戶`
-          )}
+          {hasActiveFilter ? `找到 ${filtered.length} 筆` : `共 ${total} 筆客戶`}
         </span>
         {hasMore && (
           <span className="text-amber-500 text-xs font-medium">
@@ -247,9 +225,7 @@ export function CustomersContent({ initialTotal }: { initialTotal: number }) {
       </div>
 
       {/* ── Customer list ─────────────────────────────────────────────────────── */}
-      {loadState === 'loading' ? (
-        <LoadingSkeleton />
-      ) : displayList.length === 0 ? (
+      {displayList.length === 0 ? (
         <EmptyState hasFilter={hasActiveFilter} />
       ) : (
         <motion.div
