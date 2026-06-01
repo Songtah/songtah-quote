@@ -2077,3 +2077,94 @@ export async function deleteSystemUser(id: string): Promise<void> {
   )
   transientCache.delete('users:all')
 }
+
+// ─── Clinic Monitor ───────────────────────────────────────────────────────────
+
+export type ClinicMonitorRecord = {
+  id: string
+  title: string
+  month: string        // YYYY-MM
+  type: '新增停業' | '恢復開業' | '查無代碼' | '月份摘要'
+  institutionCode: string
+  nhiName: string
+  customerName: string
+  customerUrl: string
+  address: string
+  specialty: string
+  termDate: string     // ISO date or empty
+}
+
+export type ClinicMonitorSummary = {
+  month: string
+  totalActive: number
+  stopped: number
+  restored: number
+  notFound: number
+  affectedCustomers: number
+}
+
+function mapClinicRecord(page: any): ClinicMonitorRecord {
+  const props = page.properties
+  const getT  = (f: string) => props[f]?.rich_text?.map((t: any) => t.plain_text).join('') ?? ''
+  const getU  = (f: string) => props[f]?.url ?? ''
+  const getDt = (f: string) => props[f]?.date?.start ?? ''
+  const getSel= (f: string) => props[f]?.select?.name ?? ''
+  const title = props['標題']?.title?.map((t: any) => t.plain_text).join('') ?? ''
+  const monthRaw = getDt('月份')   // YYYY-MM-DD
+  const month = monthRaw ? monthRaw.slice(0, 7) : ''
+
+  return {
+    id:              page.id,
+    title,
+    month,
+    type:            getSel('異動類型') as ClinicMonitorRecord['type'],
+    institutionCode: getT('機構代碼'),
+    nhiName:         getT('健保名稱'),
+    customerName:    getT('客戶名稱'),
+    customerUrl:     getU('客戶頁面'),
+    address:         getT('地址'),
+    specialty:       getT('診療科別'),
+    termDate:        getDt('終止日期'),
+  }
+}
+
+/** 取得診所監控紀錄（最近 N 個月，預設 3 個月） */
+export async function getClinicMonitorRecords(months = 3): Promise<ClinicMonitorRecord[]> {
+  const dbId = process.env.NOTION_CLINIC_MONITOR_DB
+  if (!dbId) return []
+
+  const cacheKey = `clinic-monitor:${months}`
+  const cached = await getRedisValue<ClinicMonitorRecord[]>(cacheKey)
+  if (cached) return cached
+
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - months)
+  const cutoffDate = cutoff.toISOString().slice(0, 10)
+
+  const records: ClinicMonitorRecord[] = []
+  let cursor: string | undefined
+
+  do {
+    const body: any = {
+      page_size: 100,
+      sorts: [{ property: '月份', direction: 'descending' }],
+      filter: {
+        property: '月份',
+        date: { on_or_after: cutoffDate },
+      },
+    }
+    if (cursor) body.start_cursor = cursor
+
+    const res = await notionCallWithRetry('getClinicMonitorRecords', () =>
+      notion.databases.query({ database_id: dbId, ...body })
+    ) as any
+
+    for (const page of res.results) {
+      records.push(mapClinicRecord(page))
+    }
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+
+  await setRedisValue(cacheKey, records, 10 * 60_000)  // cache 10 min
+  return records
+}

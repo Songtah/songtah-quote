@@ -30,6 +30,7 @@ function getPageTitle(pathname: string): string {
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
+    '/admin/clinic-monitor': '診所監控',
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
     '/promotions':        '促銷活動',
@@ -62,7 +63,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/orders',            label: '訂貨',     module: 'orders' },
   { href: '/promotions',        label: '促銷活動', module: 'promotions' },
   { href: '/assets',            label: '素材庫',   module: 'assets' },
-  { href: '/admin',             label: '行政管理', module: 'admin', adminOrStaff: true },
+  { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
+  { href: '/admin/clinic-monitor',   label: '診所監控', module: null,    adminOnly: true },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
@@ -159,10 +161,11 @@ export function AppShell({
                 href={item.href}
                 className={`rounded-full px-3 sm:px-4 py-2 sm:py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
                   (pathname === item.href ||
-                    (item.href === '/quotes'           && pathname.startsWith('/quote')) ||
-                    (item.href === '/orders'           && pathname.startsWith('/orders')) ||
-                    (item.href === '/admin'            && pathname.startsWith('/admin')) ||
-                    (item.href === '/products/catalog' && pathname.startsWith('/products')))
+                    (item.href === '/quotes'                && pathname.startsWith('/quote')) ||
+                    (item.href === '/orders'                && pathname.startsWith('/orders')) ||
+                    (item.href === '/admin/clinic-monitor'  && pathname.startsWith('/admin/clinic-monitor')) ||
+                    (item.href === '/admin'                 && pathname.startsWith('/admin') && !pathname.startsWith('/admin/clinic-monitor')) ||
+                    (item.href === '/products/catalog'      && pathname.startsWith('/products')))
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}

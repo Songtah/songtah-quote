@@ -1,0 +1,51 @@
+name: 診所監控 — 每月比對健保特約診所異動
+
+on:
+  # 每月 1 日早上 9:00 UTC（台灣時間 17:00）自動執行
+  schedule:
+    - cron: '0 9 1 * *'
+  # 允許手動觸發（從 GitHub Actions 頁面或 API）
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只下載比對，不寫入 Notion（測試用）'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write   # 允許把 snapshot 寫回 repo
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run clinic monitor script
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_CLINIC_MONITOR_DB: ${{ secrets.NOTION_CLINIC_MONITOR_DB }}
+          NOTION_CUSTOMERS_SYSTEM_DB: ${{ secrets.NOTION_CUSTOMERS_SYSTEM_DB }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: node scripts/clinic-monitor.mjs
+
+      - name: Commit updated snapshot
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.name  "clinic-monitor[bot]"
+          git config user.email "clinic-monitor@songtah"
+          git add data/clinic-snapshot.json
+          # 若沒有變更就不 commit
+          git diff --cached --quiet || git commit -m "chore: update clinic snapshot $(date +%Y-%m)"
+          git push
