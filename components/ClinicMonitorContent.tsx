@@ -58,7 +58,7 @@ function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
   }
 
   return Object.entries(byMonth)
-    .sort(([a], [b]) => b.localeCompare(a))  // newest first
+    .sort(([a], [b]) => b.localeCompare(a))
     .map(([month, data]) => ({ month, ...data }))
 }
 
@@ -112,126 +112,125 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
   const hasFilter = !!(typeFilter || monthFilter || query.trim())
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* ── Month summaries ──────────────────────────────────────────────────── */}
+      {/* ── Month summary cards ──────────────────────────────────────────────── */}
       {summaries.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {summaries.map(s => (
-            <button
-              key={s.month}
-              onClick={() => setMonthFilter(monthFilter === s.month ? '' : s.month)}
-              className={`text-left p-4 rounded-2xl border transition-all ${
-                monthFilter === s.month
-                  ? 'border-gray-700 bg-gray-900 text-white shadow-sm'
-                  : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm'
-              }`}
-            >
-              <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${monthFilter === s.month ? 'text-gray-400' : 'text-gray-400'}`}>
-                {s.month}
-              </div>
-              {s.summary ? (
-                <p className={`text-xs leading-relaxed ${monthFilter === s.month ? 'text-gray-300' : 'text-gray-500'}`}>
-                  {s.summary.address}
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  {s.stopped > 0 && (
-                    <span className={monthFilter === s.month ? 'text-red-300' : 'text-red-600'}>
-                      客戶停業 {s.stopped}
-                    </span>
-                  )}
-                  {s.restored > 0 && (
-                    <span className={monthFilter === s.month ? 'text-green-300' : 'text-green-600'}>
-                      客戶恢復 {s.restored}
-                    </span>
-                  )}
-                  {s.newOpen > 0 && (
-                    <span className={monthFilter === s.month ? 'text-purple-300' : 'text-purple-600'}>
-                      新診所 {s.newOpen}
-                    </span>
-                  )}
-                  {s.newOpenLabs > 0 && (
-                    <span className={monthFilter === s.month ? 'text-violet-300' : 'text-violet-600'}>
-                      新牙技所 {s.newOpenLabs}
-                    </span>
-                  )}
-                  {s.affectedCustomers > 0 && (
-                    <span className={monthFilter === s.month ? 'text-yellow-300' : 'text-amber-600'}>
-                      影響客戶 {s.affectedCustomers}
-                    </span>
-                  )}
-                  {s.stopped === 0 && s.restored === 0 && (
-                    <span className={monthFilter === s.month ? 'text-gray-400' : 'text-gray-400'}>無異動</span>
-                  )}
+          {summaries.map(s => {
+            const active = monthFilter === s.month
+            const hasChanges = s.stopped > 0 || s.restored > 0 || s.newOpen > 0 || s.newOpenLabs > 0
+            return (
+              <button
+                key={s.month}
+                onClick={() => setMonthFilter(active ? '' : s.month)}
+                className={`text-left p-4 rounded-2xl border transition-all ${
+                  active
+                    ? 'border-gray-700 bg-gray-900 shadow-sm'
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                }`}
+              >
+                {/* Month label */}
+                <div className={`text-xs font-semibold mb-3 tracking-wide ${active ? 'text-gray-400' : 'text-gray-400'}`}>
+                  {s.month}
                 </div>
-              )}
-            </button>
-          ))}
+
+                {/* Stats chips */}
+                {hasChanges ? (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-medium">
+                    {s.stopped > 0 && (
+                      <span className={active ? 'text-red-300' : 'text-red-600'}>
+                        客戶停業 {s.stopped}
+                      </span>
+                    )}
+                    {s.restored > 0 && (
+                      <span className={active ? 'text-green-300' : 'text-green-600'}>
+                        客戶恢復 {s.restored}
+                      </span>
+                    )}
+                    {s.newOpen > 0 && (
+                      <span className={active ? 'text-purple-300' : 'text-purple-600'}>
+                        新診所 {s.newOpen}
+                      </span>
+                    )}
+                    {s.newOpenLabs > 0 && (
+                      <span className={active ? 'text-violet-300' : 'text-violet-600'}>
+                        新牙技所 {s.newOpenLabs}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className={`text-xs ${active ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {s.notFound > 0 ? `查無代碼 ${s.notFound} 筆` : '本月無異動'}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {/* Type filter pills */}
-        {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
-            className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              typeFilter === t
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            {t || '全部'}
-          </button>
-        ))}
+      <div className="space-y-2">
+        {/* Row 1: type pills + trigger button */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                typeFilter === t
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {t || '全部'}
+            </button>
+          ))}
 
-        {/* Search */}
-        <div className="relative flex-1 min-w-48">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-          </svg>
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="搜尋診所名稱、機構代碼、客戶…"
-            className="input pl-9 pr-3 py-2 text-sm w-full"
-          />
-        </div>
-
-        {hasFilter && (
-          <button
-            onClick={() => { setTypeFilter(''); setMonthFilter(''); setQuery('') }}
-            className="text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            清除
-          </button>
-        )}
-
-        {/* Manual trigger */}
-        <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => triggerRun(false)}
             disabled={triggering}
-            className="px-3.5 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="ml-auto px-3.5 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-2 border border-gray-900"
           >
             {triggering ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             )}
             立即執行
           </button>
+        </div>
+
+        {/* Row 2: search + clear */}
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="搜尋診所名稱、機構代碼、客戶…"
+              className="input pl-9 pr-3 py-2 text-sm w-full"
+            />
+          </div>
+          {hasFilter && (
+            <button
+              onClick={() => { setTypeFilter(''); setMonthFilter(''); setQuery('') }}
+              className="text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-gray-100 whitespace-nowrap"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              清除篩選
+            </button>
+          )}
         </div>
       </div>
 
@@ -239,24 +238,20 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
       <AnimatePresence>
         {triggerMsg && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3"
+            className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap"
           >
-            {triggerMsg}
-            <span className="ml-2 text-xs text-gray-400">
-              可前往{' '}
-              <a
-                href="https://github.com/Songtah/songtah-quote/actions/workflows/clinic-monitor.yml"
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-gray-700"
-              >
-                GitHub Actions
-              </a>{' '}
-              查看進度
-            </span>
+            <span>{triggerMsg}</span>
+            <a
+              href="https://github.com/Songtah/songtah-quote/actions/workflows/clinic-monitor.yml"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-gray-400 underline hover:text-gray-600 ml-1"
+            >
+              查看 GitHub Actions
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
@@ -266,7 +261,7 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
         {hasFilter ? `找到 ${filtered.length} 筆` : `共 ${records.length} 筆監控紀錄`}
         {records.length === 0 && (
           <span className="ml-2 text-amber-500">
-            尚無資料 — 請先執行一次「立即執行」，或等待每月 1 日自動執行
+            尚無資料 — 請先執行「立即執行」，或等待每月 1 日自動執行
           </span>
         )}
       </div>
@@ -280,7 +275,7 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
           </p>
         </div>
       ) : (
-        <div className="panel divide-y divide-gray-50 overflow-hidden">
+        <div className="panel divide-y divide-gray-100 overflow-hidden">
           {filtered.map(r => (
             <ClinicRow key={r.id} record={r} />
           ))}
@@ -294,13 +289,30 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
 
 function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
   if (r.type === '月份摘要') {
+    // Parse "牙醫診所：N｜牙體技術所：N｜客戶停業：N｜..." into chips
+    const stats = r.address
+      ? r.address.split('｜').map(s => s.trim()).filter(Boolean)
+      : []
+
     return (
-      <div className="px-5 py-3 bg-blue-50/60">
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="px-5 py-4 bg-blue-50/50 border-b border-blue-100/60">
+        <div className="flex items-center gap-2.5 mb-2.5">
           <TypeBadge type={r.type} />
-          <span className="text-sm font-medium text-blue-800">{r.month}</span>
-          <span className="text-sm text-blue-600">{r.address}</span>
+          <span className="text-sm font-semibold text-blue-900">{r.month}</span>
         </div>
+        {stats.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1">
+            {stats.map((stat, i) => {
+              const [label, val] = stat.split('：')
+              return (
+                <div key={i} className="flex items-baseline gap-1.5 text-xs">
+                  <span className="text-blue-500/70">{label}</span>
+                  <span className="font-medium text-blue-800">{val}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     )
   }
@@ -320,7 +332,6 @@ function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
             <span className="text-xs text-gray-400 font-mono">{r.institutionCode}</span>
           )}
         </div>
-
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
           {r.specialty && <span>{r.specialty}</span>}
           {r.address   && <span className="text-gray-400">{r.address}</span>}
