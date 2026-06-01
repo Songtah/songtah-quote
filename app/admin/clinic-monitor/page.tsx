@@ -13,7 +13,7 @@ export default async function ClinicMonitorPage() {
   return (
     <AppShell
       title="客戶資料監控"
-      description="每月比對全台健保特約牙醫診所開業／停業狀況，關聯崧達客戶。"
+      description="每月比對全台牙科單位的開業／停業狀況，關聯崧達客戶。"
       hidePhaseNote
     >
       <ClinicMonitorContent initialRecords={records} />
