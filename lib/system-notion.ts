@@ -866,12 +866,25 @@ export async function searchSystemCustomers(
   if (cached) return cached
 
   const clauses: any[] = []
-  if (keyword) clauses.push({ property: '客戶名稱', title: { contains: keyword } })
-  if (filters?.city) clauses.push({ property: '縣市', select: { equals: filters.city } })
+
+  if (keyword) {
+    // 關鍵字同時比對：客戶名稱、行政區（rich_text）、地址
+    // 縣市是 select 欄位，Notion 不支援 contains，改由下拉篩選處理
+    clauses.push({
+      or: [
+        { property: '客戶名稱', title:     { contains: keyword } },
+        { property: '行政區',   rich_text: { contains: keyword } },
+        { property: '地址',     rich_text: { contains: keyword } },
+      ],
+    })
+  }
+
+  // 進階篩選（AND 組合）
+  if (filters?.city)        clauses.push({ property: '縣市',   select:    { equals: filters.city } })
   // 行政區 is rich_text（非 select），必須用 rich_text filter
-  if (filters?.district) clauses.push({ property: '行政區', rich_text: { equals: filters.district } })
-  if (filters?.salesperson) clauses.push({ property: '負責業務', select: { equals: filters.salesperson } })
-  if (filters?.type) clauses.push({ property: '客戶類型', select: { equals: filters.type } })
+  if (filters?.district)    clauses.push({ property: '行政區', rich_text: { equals: filters.district } })
+  if (filters?.salesperson) clauses.push({ property: '負責業務', select:  { equals: filters.salesperson } })
+  if (filters?.type)        clauses.push({ property: '客戶類型', select:  { equals: filters.type } })
 
   const notionFilter = clauses.length === 1 ? clauses[0] : { and: clauses }
 
