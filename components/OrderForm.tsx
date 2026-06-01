@@ -689,6 +689,11 @@ function applyPromoCondition(newItem: OrderItem, promoItem: PromotionItem): {
       if (p?.n && p?.m) hintLabel = `買${p.n}送${p.m}（數量足時自動補贈品）`
       break
 
+    case 'series_buy_n_get_m':
+      // 僅顯示靜態提示；進度由 SeriesPromoBanner 動態計算
+      if (p?.n && p?.m) hintLabel = `系列買${p.n}送${p.m}（詳見上方進度條）`
+      break
+
     case 'series_discount':
       if (p?.rate != null) {
         if (newItem.unitPrice > 0) {
@@ -787,6 +792,27 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   const [giftLinkMap,   setGiftLinkMap]   = useState<Record<string, string>>({})
   // 促銷提示文字：itemId → label
   const [promoHints,    setPromoHints]    = useState<Record<string, string>>({})
+
+  // 跨規格系列買N送M 進度：seriesId → { seriesName, n, m, totalQty, freeQty }
+  const seriesBuyNGetMStatus = useMemo(() => {
+    const result: Record<string, { seriesName: string; n: number; m: number; totalQty: number; freeQty: number }> = {}
+    const seriesPromos = promoItems.filter(p => p.conditionType === 'series_buy_n_get_m' && p.seriesId)
+    for (const promo of seriesPromos) {
+      const params = promo.conditionParams as any
+      if (!params?.n || !params?.m) continue
+      const totalQty = items
+        .filter(it => it.seriesId === promo.seriesId && it.itemType !== 'gift' && it.itemType !== 'sample')
+        .reduce((sum, it) => sum + (it.quantity || 1), 0)
+      result[promo.seriesId] = {
+        seriesName: promo.seriesName || promo.skuName || '系列優惠',
+        n: params.n,
+        m: params.m,
+        totalQty,
+        freeQty: Math.floor(totalQty / params.n) * params.m,
+      }
+    }
+    return result
+  }, [items, promoItems])
 
   // 客戶資訊
   const [customer, setCustomer] = useState<SelectedCustomer>({
@@ -1337,6 +1363,45 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
           </button>
         )}
         </div>
+
+        {/* ── 跨規格系列買N送M 進度 banner ── */}
+        {Object.values(seriesBuyNGetMStatus).map(({ seriesName, n, m, totalQty, freeQty }) => {
+          const pct     = Math.min(100, Math.round((totalQty % n || (totalQty > 0 ? n : 0)) / n * 100))
+          const reached = freeQty > 0
+          return (
+            <div
+              key={seriesName}
+              className={`mx-4 sm:mx-5 my-3 rounded-xl border px-4 py-3 text-sm ${
+                reached
+                  ? 'bg-teal-50 border-teal-200 text-teal-800'
+                  : 'bg-gray-50 border-gray-200 text-gray-600'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                <span className="font-medium">
+                  {reached ? '🎁' : '🏷'} {seriesName}
+                  <span className="ml-2 font-normal text-xs opacity-70">買{n}送{m}（跨規格合計）</span>
+                </span>
+                <span className={`text-xs font-semibold ${reached ? 'text-teal-700' : 'text-gray-500'}`}>
+                  {totalQty} / {n} 件
+                  {freeQty > 0 && ` → 可自選 ${freeQty} 件贈品`}
+                </span>
+              </div>
+              {/* progress bar */}
+              <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${reached ? 'bg-teal-400' : 'bg-gray-400'}`}
+                  style={{ width: `${totalQty === 0 ? 0 : Math.min(100, (totalQty / n) * 100)}%` }}
+                />
+              </div>
+              {reached && (
+                <p className="mt-1.5 text-xs text-teal-600">
+                  ✓ 門檻已達，請在品項中手動加入贈品（類型選「贈品」）
+                </p>
+              )}
+            </div>
+          )
+        })}
 
         {items.length === 0 ? (
           <div className="text-center text-gray-400 py-12 sm:py-16">

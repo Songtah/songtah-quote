@@ -44,25 +44,27 @@ function formatId(id: string): string {
 // breaking existing code.
 
 export type ConditionType =
-  | 'single_price'     // 單品特價
-  | 'series_discount'  // 全系列折扣
-  | 'qty_discount'     // 滿件折扣
-  | 'buy_n_get_m'      // 買N送M
-  | 'fixed_set_price'  // N件固定價
-  | 'buy_a_get_b'      // 買A送B（主商品觸發贈品）
-  | 'add_on'           // 加價購（需綁定主商品）
-  | 'bundle'           // 商品組合優惠
-  | (string & {})      // extensible — future types won't break the union
+  | 'single_price'          // 單品特價
+  | 'series_discount'       // 全系列折扣
+  | 'qty_discount'          // 滿件折扣
+  | 'buy_n_get_m'           // 買N送M（單品計數）
+  | 'series_buy_n_get_m'    // 跨規格系列買N送M（系列合計計數，贈品自選）
+  | 'fixed_set_price'       // N件固定價
+  | 'buy_a_get_b'           // 買A送B（主商品觸發贈品）
+  | 'add_on'                // 加價購（需綁定主商品）
+  | 'bundle'                // 商品組合優惠
+  | (string & {})           // extensible — future types won't break the union
 
 export const CONDITION_TYPE_LABEL: Record<string, string> = {
-  single_price:    '單品特價',
-  series_discount: '全系列折扣',
-  qty_discount:    '滿件折扣',
-  buy_n_get_m:     '買N送M',
-  fixed_set_price: 'N件固定價',
-  buy_a_get_b:     '買A送B',
-  add_on:          '加價購',
-  bundle:          '商品組合優惠',
+  single_price:         '單品特價',
+  series_discount:      '全系列折扣',
+  qty_discount:         '滿件折扣',
+  buy_n_get_m:          '買N送M',
+  series_buy_n_get_m:   '跨規格系列買N送M',
+  fixed_set_price:      'N件固定價',
+  buy_a_get_b:          '買A送B',
+  add_on:               '加價購',
+  bundle:               '商品組合優惠',
 }
 
 // Tier used by qty_discount and fixed_set_price
@@ -71,14 +73,15 @@ export interface FixedSetPriceTier { qty: number; totalPrice: number }
 
 // Discriminated union — add new branches here as new types are introduced
 export type ConditionParams =
-  | { type: 'single_price';    price: number }
-  | { type: 'series_discount'; rate: number }                         // 0.7 = 七折
-  | { type: 'qty_discount';    tiers: QtyDiscountTier[] }
-  | { type: 'buy_n_get_m';     n: number; m: number }
-  | { type: 'fixed_set_price'; tiers: FixedSetPriceTier[] }
-  | { type: 'buy_a_get_b';     giftSkuCode: string; giftSkuName: string; giftQty: number }
-  | { type: 'add_on';          addOnPrice: number; mainSkuCode?: string; mainSkuName?: string }
-  | { type: 'bundle';          partnerSkuCode: string; partnerSkuName?: string; bundlePrice?: number; rate?: number }
+  | { type: 'single_price';        price: number }
+  | { type: 'series_discount';     rate: number }                         // 0.7 = 七折
+  | { type: 'qty_discount';        tiers: QtyDiscountTier[] }
+  | { type: 'buy_n_get_m';         n: number; m: number }
+  | { type: 'series_buy_n_get_m';  n: number; m: number }                // 跨規格系列合計，贈品自選
+  | { type: 'fixed_set_price';     tiers: FixedSetPriceTier[] }
+  | { type: 'buy_a_get_b';         giftSkuCode: string; giftSkuName: string; giftQty: number }
+  | { type: 'add_on';              addOnPrice: number; mainSkuCode?: string; mainSkuName?: string }
+  | { type: 'bundle';              partnerSkuCode: string; partnerSkuName?: string; bundlePrice?: number; rate?: number }
   | { type: string; [key: string]: unknown }  // catch-all for forward-compat
 
 // ── Types ─────────────────────────────────────────────────────

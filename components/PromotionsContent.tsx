@@ -93,7 +93,8 @@ const CONDITION_TYPE_COLOR: Record<string, string> = {
   single_price:    'bg-blue-50 text-blue-700 border-blue-200',
   series_discount: 'bg-purple-50 text-purple-700 border-purple-200',
   qty_discount:    'bg-indigo-50 text-indigo-700 border-indigo-200',
-  buy_n_get_m:     'bg-green-50 text-green-700 border-green-200',
+  buy_n_get_m:          'bg-green-50 text-green-700 border-green-200',
+  series_buy_n_get_m:   'bg-teal-50  text-teal-700  border-teal-200',
   fixed_set_price: 'bg-teal-50 text-teal-700 border-teal-200',
   buy_a_get_b:     'bg-emerald-50 text-emerald-700 border-emerald-200',
   add_on:          'bg-orange-50 text-orange-700 border-orange-200',
@@ -190,7 +191,8 @@ function defaultParams(type: ConditionType): ConditionParams {
     case 'single_price':    return { type, price: 0 }
     case 'series_discount': return { type, rate: 0.7 }
     case 'qty_discount':    return { type, tiers: [{ minQty: 5, rate: 0.9 }] }
-    case 'buy_n_get_m':     return { type, n: 5, m: 1 }
+    case 'buy_n_get_m':          return { type, n: 5, m: 1 }
+    case 'series_buy_n_get_m':  return { type, n: 4, m: 1 }
     case 'fixed_set_price': return { type, tiers: [{ qty: 2, totalPrice: 0 }] }
     case 'buy_a_get_b':     return { type, giftSkuCode: '', giftSkuName: '', giftQty: 1 }
     case 'add_on':          return { type, addOnPrice: 0 }
@@ -287,6 +289,26 @@ function ConditionEditor({ conditionType, conditionParams, onChange }: {
             <input type="number" min={1} value={p?.m ?? ''} onChange={(e) => patch({ m: parseInt(e.target.value) || 1 })}
               className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
           </div>
+        </div>
+      )}
+
+      {conditionType === 'series_buy_n_get_m' && (
+        <div className="space-y-2">
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">系列合計買 N 件</label>
+              <input type="number" min={1} value={p?.n ?? ''} onChange={(e) => patch({ n: parseInt(e.target.value) || 1 })}
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-gray-400 mb-1">送 M 件（自選）</label>
+              <input type="number" min={1} value={p?.m ?? ''} onChange={(e) => patch({ m: parseInt(e.target.value) || 1 })}
+                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            </div>
+          </div>
+          <p className="text-[11px] text-teal-600 bg-teal-50 rounded-lg px-3 py-2">
+            同系列不同規格的數量會合計計算。贈品由業務在訂單中手動加入，系統顯示進度提示。
+          </p>
         </div>
       )}
 
