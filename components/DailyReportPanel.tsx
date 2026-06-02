@@ -336,8 +336,21 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
         }),
       })
       const data = await res.json()
-      if (data.error) { setImpResult(`❌ ${data.error}`); return }
-      setImpResult(`✅ 已建立 ${data.created} 筆客情紀錄${data.errors?.length ? `，${data.errors.length} 筆失敗` : ''}`)
+      if (!res.ok || data.error) {
+        setImpResult(`❌ ${data.error ?? '匯入失敗'}`)
+        return
+      }
+      const failDetails = (data.errors ?? [])
+        .map((e: any) => `${e.customerName}：${e.error}`)
+        .join('、')
+      if (data.created === 0) {
+        setImpResult(`❌ 全部建立失敗${failDetails ? `（${failDetails}）` : '，請重試'}`)
+        return
+      }
+      setImpResult(
+        `✅ 已建立 ${data.created} 筆客情紀錄` +
+        (data.errors?.length ? `，${data.errors.length} 筆失敗（${failDetails}）` : '')
+      )
       if (data.created > 0) { setRawText(''); setMatchedVisits([]) }
     } catch { setImpResult('❌ 匯入失敗，請重試') }
     finally  { setImporting(false) }

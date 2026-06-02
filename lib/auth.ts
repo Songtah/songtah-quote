@@ -142,4 +142,8 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: '/login' },
   session: { strategy: 'jwt', maxAge: 8 * 60 * 60, updateAge: 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
+  // 讓 NextAuth 信任 Vercel / proxy 的 X-Forwarded-Host，
+  // 避免 cookie domain 不符導致 session 讀不到
+  trustHost: true,
+  useSecureCookies: process.env.NODE_ENV === 'production',
 }
