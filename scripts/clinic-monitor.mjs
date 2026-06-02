@@ -113,13 +113,11 @@ const BROWSER_HEADERS = {
   'sec-ch-ua-platform': '"macOS"',
 }
 
-async function fetchDentalLabs() {
-  log('【MOHW BAS】下載牙體技術所資料 …')
-
+async function fetchDentalLabsOnce() {
   // Step 1: 取首頁，抓 CSRF token + CAPTCHA code（直接放在 img[data-code]）
   const pageRes = await fetch(MOHW_SEARCH, {
     headers: { ...BROWSER_HEADERS, 'Upgrade-Insecure-Requests': '1' },
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(120_000),
   })
   if (!pageRes.ok) throw new Error(`MOHW 首頁 → HTTP ${pageRes.status}`)
 
@@ -133,10 +131,7 @@ async function fetchDentalLabs() {
                  pageHtml.match(/value="(CfDJ[^"]+)"/))?.[1]
   const vcode = pageHtml.match(/data-code="([^"]+)"/)?.[1]
 
-  if (!csrf || !vcode) {
-    warn('無法取得 CSRF token 或 CAPTCHA code，跳過牙體技術所')
-    return new Map()
-  }
+  if (!csrf || !vcode) throw new Error('無法取得 CSRF token 或 CAPTCHA code')
   log(`  CAPTCHA: ${vcode}`)
 
   // Step 2: POST 搜尋（BAS_KIND=2 → 牙體技術所，全台）
@@ -165,7 +160,7 @@ async function fetchDentalLabs() {
       'Cache-Control':   'max-age=0',
     },
     body: params.toString(),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(180_000),
   })
   if (!resHtml.ok) throw new Error(`MOHW 搜尋結果 → HTTP ${resHtml.status}`)
 
@@ -211,6 +206,23 @@ async function fetchDentalLabs() {
 
   log(`  牙體技術所：${result.size} 間`)
   return result
+}
+
+/** 最多重試 MAX_RETRY 次（每次重新取首頁 + CAPTCHA）*/
+async function fetchDentalLabs(maxRetry = 3) {
+  log('【MOHW BAS】下載牙體技術所資料 …')
+  for (let attempt = 1; attempt <= maxRetry; attempt++) {
+    try {
+      return await fetchDentalLabsOnce()
+    } catch (e) {
+      if (attempt < maxRetry) {
+        warn(`BAS 第 ${attempt} 次失敗（${e.message}），5 秒後重試 …`)
+        await sleep(5_000)
+      } else {
+        throw e
+      }
+    }
+  }
 }
 
 // ── 3. 崧達客戶機構代碼 ────────────────────────────────────────────────────
@@ -322,13 +334,15 @@ function matchCustomer(customers, key, info) {
 }
 
 function buildNotFoundList({ currentData, customers, prevCodes }) {
+  // 第一次執行（無 snapshot）時跳過，避免把所有不在 NHI 的客戶都誤報為查無代碼
+  if (!prevCodes) return []
+
   const result = []
   for (const [code, cust] of customers.byCode) {
     if (!currentData.has(code)) {
-      const wasInPrev = prevCodes && code in prevCodes
-      if (!wasInPrev) {
-        result.push({ type: '查無代碼', code, customer: cust.name, customerUrl: custUrl(cust.pageId) })
-      }
+      // 上月也查不到 → 已知問題，不重複寫入
+      if (code in prevCodes) continue
+      result.push({ type: '查無代碼', code, customer: cust.name, customerUrl: custUrl(cust.pageId) })
     }
   }
   return result
