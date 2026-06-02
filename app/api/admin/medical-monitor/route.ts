@@ -268,14 +268,23 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 條件 2：無代碼客戶，依名稱建議快照候選 ────────────────────────────────
-  // 僅對牙醫診所/牙技所/醫院類型的客戶進行比對（跳過非牙科）
-  const DENTAL_CUSTOMER_TYPES = [...CLINIC_TYPES_DB, ...LAB_TYPES_DB, ...HOSPITAL_TYPES_DB]
-  const isDentalCustomer = (type: string) =>
-    DENTAL_CUSTOMER_TYPES.some(t => type.includes(t))
+  // 僅對牙醫診所/牙技所類型的客戶進行比對（醫院無資料來源，跳過）
+  // 關鍵：只允許同類型的快照機構作為候選（診所客戶 → NHI診所代碼，牙技所客戶 → BAS牙技所代碼）
+  // 同時過濾掉無效的 fallback key（非 10 位純數字，代表取碼失敗的備用 key）
 
-  // 先建立快照的「正規名稱 → entries」索引，加速查找
+  const isValidCode = (code: string) => /^\d{10}$/.test(code)
+
+  /** 根據客戶類型，回傳允許比對的快照 kind 集合（null = 不做建議） */
+  function getAllowedKinds(customerType: string): Set<string> | null {
+    if (LAB_TYPES_DB.some(t => customerType.includes(t)))    return new Set(['牙體技術所'])
+    if (CLINIC_TYPES_DB.some(t => customerType.includes(t))) return new Set(Array.from(CLINIC_KINDS))
+    return null
+  }
+
+  // 先建立快照的「正規名稱 → entries（只含有效代碼）」索引，加速查找
   const snapshotByNorm = new Map<string, Array<{ code: string; entry: SnapshotEntry }>>()
   for (const [code, entry] of Object.entries(codes)) {
+    if (!isValidCode(code)) continue   // 排除 BAS 取碼失敗的 fallback key
     const norm = normalizeName(entry.name)
     if (!norm) continue
     if (!snapshotByNorm.has(norm)) snapshotByNorm.set(norm, [])
@@ -284,22 +293,27 @@ export async function GET(req: NextRequest) {
 
   const suggestedMatches: SuggestedMatch[] = []
   for (const c of customersNoCode) {
-    if (!isDentalCustomer(c.type)) continue
+    const allowedKinds = getAllowedKinds(c.type)
+    if (!allowedKinds) continue   // 醫院或未知類型，跳過
+
     const normCustomer = normalizeName(c.name)
     if (!normCustomer || normCustomer.length < 2) continue
 
     const seen    = new Set<string>()
     const results: SuggestedMatch['suggestions'] = []
 
+    const addCandidate = (code: string, entry: SnapshotEntry, score: number) => {
+      if (seen.has(code)) return
+      if (!allowedKinds.has(entry.kind)) return  // 類型不符（診所 vs 牙技所），排除
+      seen.add(code)
+      const { city, district } = parseAddress(entry.address)
+      results.push({ code, name: entry.name, kind: entry.kind, city, district, address: entry.address, termDate: entry.termDate, score })
+    }
+
     // 精確正規名稱命中
     const exact = snapshotByNorm.get(normCustomer)
     if (exact) {
-      for (const { code, entry } of exact) {
-        if (seen.has(code)) continue
-        seen.add(code)
-        const { city, district } = parseAddress(entry.address)
-        results.push({ code, name: entry.name, kind: entry.kind, city, district, address: entry.address, termDate: entry.termDate, score: 1.0 })
-      }
+      for (const { code, entry } of exact) addCandidate(code, entry, 1.0)
     }
 
     // 包含關係（無精確命中才補充）
@@ -310,12 +324,7 @@ export async function GET(req: NextRequest) {
                  : normCustomer.includes(norm) && norm.length >= 2 ? 0.8
                  : 0
         if (sc < 0.75) continue
-        for (const { code, entry } of entries) {
-          if (seen.has(code)) continue
-          seen.add(code)
-          const { city, district } = parseAddress(entry.address)
-          results.push({ code, name: entry.name, kind: entry.kind, city, district, address: entry.address, termDate: entry.termDate, score: sc })
-        }
+        for (const { code, entry } of entries) addCandidate(code, entry, sc)
       }
     }
 
