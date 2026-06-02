@@ -31,6 +31,7 @@ function getPageTitle(pathname: string): string {
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
     '/admin/clinic-monitor': '客戶資料監控',
+    '/admin/trip-planner':   '行程規劃',
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
     '/promotions':        '促銷活動',
@@ -65,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/assets',            label: '素材庫',   module: 'assets' },
   { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
   { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: 'clinic_monitor' },
+  { href: '/admin/trip-planner',     label: '行程規劃',     module: 'trip_planner' },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
@@ -164,7 +166,8 @@ export function AppShell({
                     (item.href === '/quotes'                && pathname.startsWith('/quote')) ||
                     (item.href === '/orders'                && pathname.startsWith('/orders')) ||
                     (item.href === '/admin/clinic-monitor'  && pathname.startsWith('/admin/clinic-monitor')) ||
-                    (item.href === '/admin'                 && pathname.startsWith('/admin') && !pathname.startsWith('/admin/clinic-monitor')) ||
+                    (item.href === '/admin/trip-planner'    && pathname.startsWith('/admin/trip-planner')) ||
+                    (item.href === '/admin'                 && pathname.startsWith('/admin') && !pathname.startsWith('/admin/clinic-monitor') && !pathname.startsWith('/admin/trip-planner')) ||
                     (item.href === '/products/catalog'      && pathname.startsWith('/products')))
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-500 hover:text-gray-700'
