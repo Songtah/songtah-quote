@@ -220,7 +220,7 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
   const [rawText,      setRawText]      = useState('')
   const [matchedVisits, setMatchedVisits] = useState<MatchedVisit[]>([])
   const [impSp,        setImpSp]        = useState('')
-  const [impDate,      setImpDate]      = useState(todayLocal)
+  const [impDate,      setImpDate]      = useState('')
   const [importing,    setImporting]    = useState(false)
   const [impResult,    setImpResult]    = useState('')
 
