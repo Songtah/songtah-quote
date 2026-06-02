@@ -715,8 +715,16 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台醫事單位規模</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="牙醫診所"   value={stats.totalClinics}  sub="NHI 特約" />
-              <StatCard label="牙體技術所" value={stats.totalLabs}     sub="MOHW BAS" />
-              <StatCard label="有牙科的醫院" value="待納入" sub="資料來源建置中" />
+              {stats.totalLabs > 0
+                ? <StatCard label="牙體技術所" value={stats.totalLabs} sub="MOHW BAS" />
+                : (
+                  <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
+                    <span className="text-xs text-gray-400 font-medium">牙體技術所</span>
+                    <span className="text-lg font-bold text-amber-500">資料未取得</span>
+                    <span className="text-xs text-amber-500">BAS 上次抓取失敗，請點「更新醫事資料」重新執行</span>
+                  </div>
+                )
+              }
               <StatCard label="崧達客戶（有代碼）" value={stats.customerClinics + stats.customerLabs + stats.customerHospitals} />
             </div>
           </div>
