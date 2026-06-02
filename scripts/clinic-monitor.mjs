@@ -140,8 +140,8 @@ async function fetchLabCode(basSeq, zoneSeq, cookieStr) {
     })
     if (!res.ok) return null
     const html = decodeEntities(await res.text())
-    // 機構代碼是 10 位數字，緊跟在「機構代碼」之後（允許標籤和空白）
-    const m = html.match(/機構代碼[\s\S]{0,200}?(\d{10})/)
+    // BAS 機構代碼為英數混合（如 2Y07110045），放在機構代碼標籤後的 col-7 span 中
+    const m = html.match(/機構代碼[\s\S]{0,400}?<span[^>]*>\s*([A-Za-z0-9]{5,20})\s*<\/span>/)
     return m ? m[1] : null
   } catch {
     return null

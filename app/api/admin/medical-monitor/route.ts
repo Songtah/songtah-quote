@@ -265,7 +265,9 @@ export async function GET(req: NextRequest) {
   }
 
   // 3. 快照查找表（只含有效 10 位代碼）
-  const isValidCode = (code: string) => /^\d{10}$/.test(code)
+  // NHI 診所代碼：10 位純數字；BAS 牙技所代碼：英數混合（如 2Y07110045）
+  // fallback key 含雙底線，排除
+  const isValidCode = (code: string) => /^[A-Za-z0-9]{5,20}$/.test(code) && !code.includes('__')
   const snapshotByCode = new Map<string, SnapshotEntry & { code: string }>()
   for (const [code, entry] of Object.entries(codes)) {
     if (isValidCode(code)) snapshotByCode.set(code, { ...entry, code })
