@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import type {
-  MonitorResult, NewOpening, ClosureDetail,
-  SuggestedMatch, MatchedCustomer, MonitorStats,
+  MonitorResult, NewOpening,
+  NormalOperating, SuspectedClosure, CodeNotFound,
+  SelfManagedCustomer, InconsistentData,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -60,158 +61,6 @@ function CollapsibleSection({ title, count, color, children, defaultOpen = true 
   )
 }
 
-// ── Detail Modal ───────────────────────────────────────────────────────────────
-
-type DetailModalData =
-  | { kind: 'matched';   item: MatchedCustomer }
-  | { kind: 'suggested'; item: SuggestedMatch }
-  | { kind: 'closure';   item: ClosureDetail }
-
-function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => void }) {
-  const formatTermDate = (td: string) => {
-    if (!td || td.length < 8) return '—'
-    return `${td.slice(0,4)}/${td.slice(4,6)}/${td.slice(6,8)}`
-  }
-
-  const isTerminated = (td?: string) => {
-    if (!td || td.length < 8) return false
-    const d = new Date(+td.slice(0,4), +td.slice(4,6)-1, +td.slice(6,8))
-    return d < new Date()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">
-              {data.kind === 'matched'   ? '✅ 已對應客戶'   :
-               data.kind === 'suggested' ? '🔍 建議補代碼'   :
-                                           '⚠️ 可能歇業'}
-            </p>
-            <h2 className="font-bold text-gray-900 text-lg leading-tight">
-              {data.item.customerName}
-            </h2>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {data.item.customerCity}{data.item.customerDistrict && ` ${data.item.customerDistrict}`}
-              {data.item.customerType && ` · ${data.item.customerType}`}
-              {data.item.customerStatus && ` · ${data.item.customerStatus}`}
-            </p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">✕</button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          {/* 條件 1：已對應 */}
-          {data.kind === 'matched' && (() => {
-            const { item } = data
-            const terminated = isTerminated(item.snapshotTermDate)
-            return (
-              <>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                  <p className="text-xs font-semibold text-gray-400 mb-2">機構代碼資訊</p>
-                  <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{item.institutionCode}</code>} />
-                  <Row label="快照名稱" value={item.snapshotName} />
-                  <Row label="類型"     value={<TypeChip kind={item.snapshotKind} />} />
-                  <Row label="地址"     value={item.snapshotAddress} />
-                  <Row label="NHI 特約終止日"
-                    value={
-                      <span className={terminated ? 'text-red-600 font-semibold' : 'text-gray-700'}>
-                        {formatTermDate(item.snapshotTermDate)}
-                        {terminated && ' ⚠️ 已終止'}
-                      </span>
-                    }
-                  />
-                </div>
-                {terminated && (
-                  <div className="text-xs bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-amber-700">
-                    ⚠️ NHI 特約已終止，建議確認診所是否仍在開業
-                  </div>
-                )}
-              </>
-            )
-          })()}
-
-          {/* 條件 2：建議補代碼 */}
-          {data.kind === 'suggested' && (
-            <>
-              <p className="text-xs text-gray-400">以下是依名稱比對到的候選機構，請確認後在客戶頁面手動填入機構代碼</p>
-              <div className="space-y-2">
-                {data.item.suggestions.map(s => (
-                  <div key={s.code} className="rounded-xl border border-gray-200 p-3 space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-gray-900">{s.name}</span>
-                      <TypeChip kind={s.kind} />
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                        s.score >= 1.0 ? 'bg-emerald-100 text-emerald-700' :
-                        s.score >= 0.85 ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {s.score >= 1.0 ? '精確' : s.score >= 0.85 ? '高度相符' : '相符'}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-400 space-y-0.5">
-                      <p><span className="font-mono bg-gray-100 rounded px-1 text-gray-600">{s.code}</span>　{s.city}{s.district}</p>
-                      <p>{s.address}</p>
-                      {s.termDate && (
-                        <p className={isTerminated(s.termDate) ? 'text-red-500' : ''}>
-                          NHI 特約終止日：{formatTermDate(s.termDate)}
-                          {isTerminated(s.termDate) && ' ⚠️ 已終止'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* 條件 3：可能歇業 */}
-          {data.kind === 'closure' && (() => {
-            const { item } = data
-            return (
-              <>
-                <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                  <p className="text-xs font-semibold text-gray-400 mb-2">異常原因</p>
-                  <div className={`text-sm font-semibold px-3 py-2 rounded-lg ${
-                    item.reason === 'nhi_terminated'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {item.reason === 'nhi_terminated' ? '⚠️ NHI 特約已終止（代碼仍在快照中）' : '❌ 代碼查無（快照中找不到此代碼）'}
-                  </div>
-                  <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{item.institutionCode}</code>} />
-                  {item.reason === 'nhi_terminated' && (
-                    <>
-                      <Row label="快照名稱" value={item.snapshotName ?? '—'} />
-                      <Row label="類型"     value={item.snapshotKind ? <TypeChip kind={item.snapshotKind} /> : '—'} />
-                      <Row label="地址"     value={item.snapshotAddress ?? '—'} />
-                      <Row label="特約終止日" value={<span className="text-red-600 font-semibold">{formatTermDate(item.snapshotTermDate ?? '')}</span>} />
-                    </>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">建議在客戶頁面確認機構狀態，並更新為「停業」或「歇業」</p>
-              </>
-            )
-          })()}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 pb-5 flex justify-end">
-          <a
-            href={`/customers/${data.item.customerId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700"
-          >
-            前往客戶頁面 →
-          </a>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2">
@@ -221,7 +70,146 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-// ── Import Preview Modal (for 新開業) ──────────────────────────────────────────
+function ChevronRight() {
+  return (
+    <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+// ── Detail Modals ──────────────────────────────────────────────────────────────
+
+type DetailModalData =
+  | { kind: 'normal';       item: NormalOperating }
+  | { kind: 'closure';      item: SuspectedClosure }
+  | { kind: 'notfound';     item: CodeNotFound }
+  | { kind: 'inconsistent'; item: InconsistentData }
+
+function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => void }) {
+  const fmt = (td?: string) => {
+    if (!td || td.length < 8) return '—'
+    return `${td.slice(0,4)}/${td.slice(4,6)}/${td.slice(6,8)}`
+  }
+  const isExpired = (td?: string) => {
+    if (!td || td.length < 8) return false
+    return new Date(+td.slice(0,4), +td.slice(4,6)-1, +td.slice(6,8)) < new Date()
+  }
+
+  const label =
+    data.kind === 'normal'       ? '✅ 既有正常營業' :
+    data.kind === 'closure'      ? '⚠️ 疑似歇業/停業' :
+    data.kind === 'notfound'     ? '❓ 查無機構代碼' :
+                                   '🔄 資料不一致'
+  const base = data.item  // common fields exist on all types
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs text-gray-400 mb-1">{label}</p>
+            <h2 className="font-bold text-gray-900 text-lg leading-tight">{base.customerName}</h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {base.customerCity}{base.customerDistrict && ` ${base.customerDistrict}`}
+              {base.customerType && ` · ${base.customerType}`}
+              {base.customerStatus && ` · ${base.customerStatus}`}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">✕</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+
+          {/* 狀態 1：既有正常營業 */}
+          {data.kind === 'normal' && (() => { const it = data.item; return (
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <p className="text-xs font-semibold text-gray-400 mb-2">醫事快照資訊</p>
+              <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
+              <Row label="快照名稱" value={it.snapshotName} />
+              <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
+              <Row label="地址"     value={it.snapshotAddress} />
+              <Row label="NHI 特約終止" value={fmt(it.snapshotTermDate)} />
+            </div>
+          )})()}
+
+          {/* 狀態 3：疑似歇業 */}
+          {data.kind === 'closure' && (() => { const it = data.item; return (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 font-medium">
+                ⚠️ NHI 特約已終止，診所可能已停業或更換特約
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
+                <Row label="快照名稱" value={it.snapshotName} />
+                <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
+                <Row label="地址"     value={it.snapshotAddress} />
+                <Row label="特約終止日" value={<span className="text-red-600 font-semibold">{fmt(it.snapshotTermDate)} ✕</span>} />
+              </div>
+              <p className="text-xs text-gray-400">請至客戶頁面確認現況，並視情況更新機構狀態為「停業」或「歇業」</p>
+            </>
+          )})()}
+
+          {/* 狀態 4：查無機構代碼 */}
+          {data.kind === 'notfound' && (() => { const it = data.item; return (
+            <>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700">
+                <p className="font-semibold mb-1">❓ 快照中完全查不到此代碼</p>
+                <p className="text-xs text-gray-400">可能原因：資料庫更新延遲、代碼格式有誤、機構更名換碼、或公司資料填寫錯誤。<br />不代表該機構已歇業，請人工確認後再決定是否更新。</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
+              </div>
+            </>
+          )})()}
+
+          {/* 狀態 6：資料不一致 */}
+          {data.kind === 'inconsistent' && (() => { const it = data.item; return (
+            <>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800">
+                🔄 機構代碼相符，但以下欄位與醫事快照有落差，請確認是否需要同步
+              </div>
+              <div className="space-y-2">
+                {it.diffs.map((d: { field: string; customerValue: string; snapshotValue: string }) => (
+                  <div key={d.field} className="rounded-xl border border-gray-200 p-3">
+                    <p className="text-xs font-semibold text-gray-400 mb-1.5">{d.field}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] text-gray-400 mb-0.5">公司資料</p>
+                        <p className="text-sm text-gray-900 font-medium">{d.customerValue}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 mb-0.5">醫事快照</p>
+                        <p className="text-sm text-gray-600">{d.snapshotValue}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                <p className="text-xs font-semibold text-gray-400 mb-2">完整快照資料</p>
+                <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
+                <Row label="快照名稱" value={it.snapshotName} />
+                <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
+                <Row label="地址"     value={it.snapshotAddress} />
+                <Row label="NHI 特約終止" value={fmt(it.snapshotTermDate)} />
+              </div>
+            </>
+          )})()}
+        </div>
+
+        <div className="px-5 pb-5 flex justify-end">
+          <a href={`/customers/${base.customerId}`} target="_blank" rel="noreferrer"
+            className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700">
+            前往客戶頁面 →
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Import Preview Modal ────────────────────────────────────────────────────────
 
 function ImportPreviewModal({ selected, onConfirm, onClose }: {
   selected: NewOpening[]; onConfirm: () => void; onClose: () => void
@@ -266,7 +254,7 @@ function ImportPreviewModal({ selected, onConfirm, onClose }: {
   )
 }
 
-// ── 新開業 Tab ─────────────────────────────────────────────────────────────────
+// ── 狀態 2：新開業候選 Tab ─────────────────────────────────────────────────────
 
 type NewOpeningFilter = 'all' | 'new' | 'existing'
 
@@ -392,11 +380,11 @@ function NewOpeningRow({ inst, selected, onToggle }: {
   )
 }
 
-// ── 條件 1：已對應客戶 Tab ─────────────────────────────────────────────────────
+// ── 狀態 1：既有正常營業 Tab ───────────────────────────────────────────────────
 
-function MatchedCustomersTab({ items, onOpen }: {
-  items: MatchedCustomer[]
-  onOpen: (item: MatchedCustomer) => void
+function NormalOperatingTab({ items, onOpen }: {
+  items: NormalOperating[]
+  onOpen: (item: NormalOperating) => void
 }) {
   const [search, setSearch] = useState('')
   const filtered = search.trim()
@@ -435,9 +423,7 @@ function MatchedCustomersTab({ items, onOpen }: {
                 {item.snapshotAddress && ` · ${item.snapshotAddress}`}
               </div>
             </div>
-            <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight />
           </button>
         ))}
         {filtered.length > 300 && (
@@ -448,23 +434,22 @@ function MatchedCustomersTab({ items, onOpen }: {
   )
 }
 
-// ── 條件 2：建議補代碼 Tab ─────────────────────────────────────────────────────
+// ── 狀態 3：疑似歇業/停業 Tab ──────────────────────────────────────────────────
 
-function SuggestedMatchesTab({ items, onOpen }: {
-  items: SuggestedMatch[]
-  onOpen: (item: SuggestedMatch) => void
+function SuspectedClosuresTab({ items, onOpen }: {
+  items: SuspectedClosure[]
+  onOpen: (item: SuspectedClosure) => void
 }) {
   if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
-      <p>所有符合條件的客戶都已有機構代碼，或找不到名稱相符的機構</p>
+      <p>目前沒有 NHI 特約終止的客戶機構</p>
     </div>
   )
-
   return (
     <div className="space-y-3">
-      <div className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
-        💡 以下客戶目前沒有機構代碼，但依名稱在醫事快照中找到相符機構。點擊查看建議後，請至客戶頁面手動填入代碼。
+      <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+        ⚠️ 以下客戶的機構代碼在快照中找到，但 NHI 健保特約已終止，診所可能已停業或更換特約，請人工確認。
       </div>
       <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
         {items.map(item => (
@@ -473,21 +458,16 @@ function SuggestedMatchesTab({ items, onOpen }: {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
-                  {item.suggestions.length} 個候選
-                </span>
+                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                <TypeChip kind={item.snapshotKind} />
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold">特約終止</span>
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
                 {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                {' · 最佳：'}
-                <span className="text-gray-600">{item.suggestions[0]?.name}</span>
-                <span className="font-mono ml-1 text-gray-400">{item.suggestions[0]?.code}</span>
+                {item.customerStatus && ` · ${item.customerStatus}`}
               </div>
             </div>
-            <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight />
           </button>
         ))}
       </div>
@@ -495,95 +475,170 @@ function SuggestedMatchesTab({ items, onOpen }: {
   )
 }
 
-// ── 條件 3：可能歇業 Tab ────────────────────────────────────────────────────────
+// ── 狀態 4：查無機構代碼 Tab ───────────────────────────────────────────────────
 
-function ClosureDetailsTab({ clinics, labs, hospitals, onOpen }: {
-  clinics: ClosureDetail[]; labs: ClosureDetail[]; hospitals: ClosureDetail[]
-  onOpen: (item: ClosureDetail) => void
+function CodeNotFoundTab({ items, onOpen }: {
+  items: CodeNotFound[]
+  onOpen: (item: CodeNotFound) => void
 }) {
-  const total = clinics.length + labs.length + hospitals.length
-  if (total === 0) return (
+  if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
-      <p>所有有機構代碼的客戶均在醫事資料中找到，且特約有效</p>
+      <p>所有客戶機構代碼都在快照中找到</p>
     </div>
   )
-
-  const ClosureRow = ({ item }: { item: ClosureDetail }) => (
-    <button onClick={() => onOpen(item)}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-          <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-          {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-            item.reason === 'nhi_terminated' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-          }`}>
-            {item.reason === 'nhi_terminated' ? '特約終止' : '代碼查無'}
-          </span>
-        </div>
-        <div className="text-xs text-gray-400 mt-0.5">
-          {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-          {item.customerStatus && ` · ${item.customerStatus}`}
-        </div>
-      </div>
-      <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
-  )
-
   return (
-    <div className="space-y-4">
-      <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-        ⚠️ 以下客戶的機構代碼有異常。「代碼查無」表示快照中找不到此代碼；「特約終止」表示 NHI 特約已過期，診所可能已停業。
+    <div className="space-y-3">
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+        ❓ 以下客戶的機構代碼在醫事快照中完全查無。可能是代碼有誤、資料更新延遲、或機構已更換代碼，<strong>不代表已歇業</strong>，請人工確認。
       </div>
-      {clinics.length > 0 && (
-        <CollapsibleSection title="牙醫診所" count={clinics.length} color="bg-orange-50 text-orange-700">
-          {clinics.map(item => <ClosureRow key={item.customerId} item={item} />)}
-        </CollapsibleSection>
-      )}
-      {labs.length > 0 && (
-        <CollapsibleSection title="牙體技術所" count={labs.length} color="bg-orange-50 text-orange-700">
-          {labs.map(item => <ClosureRow key={item.customerId} item={item} />)}
-        </CollapsibleSection>
-      )}
-      {hospitals.length > 0 && (
-        <CollapsibleSection title="醫院 / 其他" count={hospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
-          {hospitals.map(item => <ClosureRow key={item.customerId} item={item} />)}
-        </CollapsibleSection>
-      )}
+      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+        {items.map(item => (
+          <button key={item.customerId} onClick={() => onOpen(item)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold">待確認</span>
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                {item.customerStatus && ` · ${item.customerStatus}`}
+              </div>
+            </div>
+            <ChevronRight />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── 狀態 5：公司自建客戶 Tab ───────────────────────────────────────────────────
+
+function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
+  const [search, setSearch] = useState('')
+  const filtered = search.trim()
+    ? items.filter(i => i.customerName.includes(search) || i.customerCity.includes(search) || i.customerType.includes(search))
+    : items
+
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-gray-400 text-sm">
+      <div className="text-3xl mb-3">✅</div>
+      <p>所有客戶都已填入機構代碼</p>
+    </div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+        👤 以下客戶目前沒有機構代碼，無法納入自動醫事監控。如需監控，請至客戶頁面填入正確的機構代碼。
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="搜尋客戶名稱 / 縣市 / 類型…"
+          className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <span className="text-xs text-gray-400 shrink-0">{filtered.length} / {items.length} 筆</span>
+      </div>
+      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+        {filtered.slice(0, 300).map(item => (
+          <a key={item.customerId} href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                {item.customerStatus && ` · ${item.customerStatus}`}
+              </div>
+            </div>
+            <ChevronRight />
+          </a>
+        ))}
+        {filtered.length > 300 && (
+          <div className="px-4 py-3 text-xs text-gray-400 text-center">顯示前 300 筆，請搜尋縮小範圍</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── 狀態 6：資料不一致 Tab ─────────────────────────────────────────────────────
+
+function InconsistentDataTab({ items, onOpen }: {
+  items: InconsistentData[]
+  onOpen: (item: InconsistentData) => void
+}) {
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-gray-400 text-sm">
+      <div className="text-3xl mb-3">✅</div>
+      <p>所有代碼對應的客戶資料與醫事快照一致</p>
+    </div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
+        🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請點擊查看差異並確認是否需要更新。
+      </div>
+      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+        {items.map(item => (
+          <button key={item.customerId} onClick={() => onOpen(item)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                <TypeChip kind={item.snapshotKind} />
+                {item.diffs.map(d => (
+                  <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
+                    {d.field}不符
+                  </span>
+                ))}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                {' · 快照：'}<span className="text-gray-600">{item.snapshotName}</span>
+              </div>
+            </div>
+            <ChevronRight />
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v2'
-const CACHE_TAB_KEY = 'clinic-monitor-tab-v1'
+const CACHE_KEY     = 'clinic-monitor-result-v3'
+const CACHE_TAB_KEY = 'clinic-monitor-tab-v2'
 
-type MainTab = 'new' | 'matched' | 'suggested' | 'closure'
+type MainTab = 'new' | 'normal' | 'closure' | 'notfound' | 'selfmanaged' | 'inconsistent'
 
 export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [tab, setTab]               = useState<MainTab>('new')
   const [result, setResult]         = useState<MonitorResult | null>(null)
-  const [cachedAt, setCachedAt]     = useState<string | null>(null)  // ISO 字串
+  const [cachedAt, setCachedAt]     = useState<string | null>(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [triggering, setTriggering] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState('')
 
   // 新開業 匯入
-  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
-  const [showPreview, setShowPreview]     = useState(false)
-  const [importing, setImporting]         = useState(false)
-  const [importResult, setImportResult]   = useState('')
+  const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
+  const [showPreview, setShowPreview]   = useState(false)
+  const [importing, setImporting]       = useState(false)
+  const [importResult, setImportResult] = useState('')
 
-  // 詳細資訊 modal
+  // Detail modal
   const [detailModal, setDetailModal] = useState<DetailModalData | null>(null)
 
-  // ── 從 localStorage 還原上次比對結果 ─────────────────────────────────────────
+  // ── 還原 localStorage ─────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CACHE_KEY)
@@ -592,24 +647,22 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       setResult(data)
       setCachedAt(timestamp)
     } catch {}
-
     try {
       const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
       if (savedTab) setTab(savedTab)
     } catch {}
   }, [])
 
-  // 記住目前 tab
   useEffect(() => {
     try { localStorage.setItem(CACHE_TAB_KEY, tab) } catch {}
   }, [tab])
 
-  // ── Load ─────────────────────────────────────────────────────────────────────
+  // ── API calls ─────────────────────────────────────────────────────────────────
   async function loadComparison() {
     setLoading(true); setError('')
     setSelectedIds(new Set()); setImportResult('')
     try {
-      const res = await fetch('/api/admin/medical-monitor')
+      const res  = await fetch('/api/admin/medical-monitor')
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? '比對失敗'); return }
       const now = new Date().toISOString()
@@ -626,7 +679,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   async function triggerDataUpdate() {
     setTriggering(true); setTriggerMsg('')
     try {
-      const res = await fetch('/api/clinic-monitor', {
+      const res  = await fetch('/api/clinic-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dry_run: false }),
@@ -641,7 +694,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     }
   }
 
-  // ── Selection ─────────────────────────────────────────────────────────────────
+  // ── 新開業 選取/匯入 ──────────────────────────────────────────────────────────
   function toggleId(code: string) {
     setSelectedIds(prev => { const s = new Set(prev); s.has(code) ? s.delete(code) : s.add(code); return s })
   }
@@ -655,11 +708,10 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       .filter(i => selectedIds.has(i.code))
   }, [result, selectedIds])
 
-  // ── Import ────────────────────────────────────────────────────────────────────
   async function handleImport() {
     setImporting(true); setImportResult('')
     try {
-      const res = await fetch('/api/admin/medical-monitor/import', {
+      const res  = await fetch('/api/admin/medical-monitor/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ institutions: selectedInstitutions }),
@@ -683,12 +735,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // ── Render ────────────────────────────────────────────────────────────────────
   const stats = result?.stats
 
-  const tabDefs = result ? [
-    { id: 'new',      label: '🆕 業務機會',  count: (result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length) },
-    { id: 'matched',  label: '✅ 已對應客戶', count: result.matchedCustomers.length },
-    { id: 'suggested',label: '🔍 建議補代碼', count: result.suggestedMatches.length },
-    { id: 'closure',  label: '⚠️ 可能歇業',  count: (result.closureDetails.clinics.length + result.closureDetails.labs.length + result.closureDetails.hospitals.length) },
-  ] as const : []
+  const tabDefs = result ? ([
+    { id: 'new',         label: '🆕 新開業候選',  count: result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length },
+    { id: 'normal',      label: '✅ 既有正常營業', count: result.normalOperating.length },
+    { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
+    { id: 'closure',     label: '⚠️ 疑似歇業',    count: result.suspectedClosures.length },
+    { id: 'notfound',    label: '❓ 查無代碼',     count: result.codeNotFound.length },
+    { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
+  ] as const) : []
 
   return (
     <div className="space-y-5">
@@ -713,15 +767,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         </button>
         {cachedAt && (
           <span className="text-xs text-gray-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="結果已快取，重新整理不會消失" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
             上次比對：{new Date(cachedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             <button
               onClick={() => {
                 try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TAB_KEY) } catch {}
                 setResult(null); setCachedAt(null)
               }}
-              className="ml-1 text-gray-300 hover:text-gray-500 transition-colors"
-              title="清除快取"
+              className="ml-1 text-gray-300 hover:text-gray-500"
             >✕</button>
           </span>
         )}
@@ -767,16 +820,19 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
                   </div>
                 )
               }
-              <StatCard label="崧達客戶（有代碼）" value={stats.customerClinics + stats.customerLabs + stats.customerHospitals} />
+              <StatCard label="客戶（有代碼）" value={stats.customerWithCode} />
+              <StatCard label="客戶（無代碼）" value={stats.customerNoCode} sub="未納入監控" />
             </div>
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">比對結果摘要</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="本月新開業"    value={stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals} sub={`診所 ${stats.newThisMonthClinics} ／牙技所 ${stats.newThisMonthLabs}`} accent="text-emerald-600" />
-              <StatCard label="既有未開發"    value={(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)} sub="在醫事DB但從未成為客戶" accent="text-amber-600" />
-              <StatCard label="建議補代碼"    value={stats.suggestedMatchCount} sub="無代碼但名稱可比對" accent="text-blue-600" />
-              <StatCard label="可能歇業"      value={stats.closureClinics + stats.closureLabs + stats.closureHospitals} sub={`查無 ${stats.closureClinics + stats.closureLabs + stats.closureHospitals - stats.terminatedClinics - stats.terminatedLabs - stats.terminatedHospitals} ／特約終止 ${stats.terminatedClinics + stats.terminatedLabs + stats.terminatedHospitals}`} accent="text-orange-500" />
+              <StatCard label="本月新開業"  value={stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}
+                sub={`診所 ${stats.newThisMonthClinics} ／牙技所 ${stats.newThisMonthLabs}`} accent="text-emerald-600" />
+              <StatCard label="既有未開發"  value={(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}
+                sub="在醫事DB但從未成為客戶" accent="text-amber-600" />
+              <StatCard label="疑似歇業"    value={stats.suspectedClosures}  sub="NHI 特約已終止" accent="text-orange-500" />
+              <StatCard label="資料不一致"  value={stats.inconsistentData}   sub="代碼符但資料有落差" accent="text-blue-600" />
             </div>
           </div>
         </>
@@ -785,7 +841,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {/* Tabs */}
       {result?.hasSnapshot && (
         <>
-          <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 gap-1 w-fit">
+          <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 gap-1">
             {tabDefs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id as MainTab)}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -813,28 +869,32 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               importing={importing}
             />
           )}
-
-          {tab === 'matched' && (
-            <MatchedCustomersTab
-              items={result.matchedCustomers}
-              onOpen={item => setDetailModal({ kind: 'matched', item })}
+          {tab === 'normal' && (
+            <NormalOperatingTab
+              items={result.normalOperating}
+              onOpen={item => setDetailModal({ kind: 'normal', item })}
             />
           )}
-
-          {tab === 'suggested' && (
-            <SuggestedMatchesTab
-              items={result.suggestedMatches}
-              onOpen={item => setDetailModal({ kind: 'suggested', item })}
+          {tab === 'inconsistent' && (
+            <InconsistentDataTab
+              items={result.inconsistentData}
+              onOpen={item => setDetailModal({ kind: 'inconsistent', item })}
             />
           )}
-
           {tab === 'closure' && (
-            <ClosureDetailsTab
-              clinics={result.closureDetails.clinics}
-              labs={result.closureDetails.labs}
-              hospitals={result.closureDetails.hospitals}
+            <SuspectedClosuresTab
+              items={result.suspectedClosures}
               onOpen={item => setDetailModal({ kind: 'closure', item })}
             />
+          )}
+          {tab === 'notfound' && (
+            <CodeNotFoundTab
+              items={result.codeNotFound}
+              onOpen={item => setDetailModal({ kind: 'notfound', item })}
+            />
+          )}
+          {tab === 'selfmanaged' && (
+            <SelfManagedTab items={result.selfManagedCustomers} />
           )}
         </>
       )}
