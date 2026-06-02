@@ -491,6 +491,47 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
 例行關心，討論新產品…`}</pre>
           </div>
 
+          {/* 業務 + 日期（解析前就要填） */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500">
+                業務姓名
+                <span className="text-red-500 ml-0.5">*</span>
+              </label>
+              <select
+                value={impSp}
+                onChange={(e) => setImpSp(e.target.value)}
+                className={`${ic} ${!impSp ? 'border-amber-300 ring-1 ring-amber-200' : ''}`}
+              >
+                <option value="">請選擇業務…</option>
+                {spNames.map((n) => (
+                  <option key={n} value={n}>
+                    {inactiveNames.has(n) ? `${n}（已停用）` : n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500">
+                記錄日期
+                <span className="text-red-500 ml-0.5">*</span>
+              </label>
+              <input
+                type="date"
+                value={impDate}
+                max={todayLocal()}
+                onChange={(e) => setImpDate(e.target.value)}
+                className={`${ic} ${!impDate ? 'border-amber-300 ring-1 ring-amber-200' : ''}`}
+              />
+            </div>
+          </div>
+
+          {(!impSp || !impDate) && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              ⚠️ 請先選擇業務姓名與記錄日期，才能解析日報
+            </p>
+          )}
+
           {/* Paste area */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-gray-500">貼入日報文字</label>
@@ -503,7 +544,10 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
             />
           </div>
 
-          <button onClick={handleParse} disabled={!rawText.trim()}
+          <button
+            onClick={handleParse}
+            disabled={!rawText.trim() || !impSp || !impDate}
+            title={!impSp ? '請先選擇業務' : !impDate ? '請先填寫日期' : ''}
             className="button-secondary w-full py-2.5 text-sm rounded-xl disabled:opacity-40">
             🔍 解析日報
           </button>
@@ -515,35 +559,12 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
                 解析結果：{matchedVisits.length} 筆 — 請確認客戶對應
               </h4>
 
-              {/* 指定業務 + 日期 */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-gray-500">業務姓名</label>
-                  <select value={impSp} onChange={(e) => setImpSp(e.target.value)} className={ic}>
-                    <option value="">（未指定）</option>
-                    {spNames.map((n) => (
-                      <option key={n} value={n}>
-                        {inactiveNames.has(n) ? `${n}（已停用）` : n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-gray-500">
-                    記錄日期
-                    <span className="text-red-500 ml-0.5">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={impDate}
-                    max={todayLocal()}
-                    onChange={(e) => setImpDate(e.target.value)}
-                    className={`${ic} ${!impDate ? 'border-red-400 ring-1 ring-red-300 focus:ring-red-400 focus:border-red-400' : ''}`}
-                  />
-                  {!impDate && (
-                    <p className="text-xs text-red-500">請填寫記錄日期才能送出</p>
-                  )}
-                </div>
+              {/* 已選：業務 + 日期（唯讀摘要，可點擊欄位修改） */}
+              <div className="flex items-center gap-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                <span>👤 {impSp}</span>
+                <span className="text-gray-300">｜</span>
+                <span>📅 {impDate}</span>
+                <span className="ml-auto text-gray-400 italic">如需修改請往上更改</span>
               </div>
 
               {/* 比對確認清單 */}
