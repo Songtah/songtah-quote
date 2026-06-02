@@ -33,6 +33,7 @@ const SNAPSHOT_PATH      = 'data/clinic-snapshot.json'
 const NHI_API        = 'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21004-009'
 const MOHW_SEARCH    = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/MASearchBAS'
 const MOHW_RESULTS   = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/BasResults'
+const MOHW_DETAIL    = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/BASBasicData'
 
 const DENTAL_TYPES   = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所'])
 
@@ -101,6 +102,13 @@ function parseCSVLine(line) {
 
 // ── 2. 牙體技術所（MOHW BAS 網頁）──────────────────────────────────────────
 
+// HTML entity decode（BAS 回傳的中文全部是 &#x...;）
+function decodeEntities(str) {
+  return str
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+}
+
 // 模擬瀏覽器的共用 headers（WAF 偵測用）
 const BROWSER_HEADERS = {
   'User-Agent':       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -111,6 +119,27 @@ const BROWSER_HEADERS = {
   'sec-ch-ua':        '"Google Chrome";v="125", "Chromium";v="125"',
   'sec-ch-ua-mobile': '?0',
   'sec-ch-ua-platform': '"macOS"',
+}
+
+/**
+ * 從 BASBasicData 詳細頁取出機構代碼（10 位數字）。
+ * basSeq / zoneSeq 傳入已單次 decodeURIComponent 的值（仍為 URL 合法字串）。
+ */
+async function fetchLabCode(basSeq, zoneSeq) {
+  const url = `${MOHW_DETAIL}?BAS_SEQ=${basSeq}&ZONE_SEQ=${zoneSeq}`
+  try {
+    const res = await fetch(url, {
+      headers: BROWSER_HEADERS,
+      signal:  AbortSignal.timeout(25_000),
+    })
+    if (!res.ok) return null
+    const html = decodeEntities(await res.text())
+    // 機構代碼是 10 位數字，緊跟在「機構代碼」之後
+    const m = html.match(/機構代碼[^\d]{0,40}(\d{10})/)
+    return m ? m[1] : null
+  } catch {
+    return null
+  }
 }
 
 async function fetchDentalLabsOnce() {
@@ -166,45 +195,85 @@ async function fetchDentalLabsOnce() {
 
   const html = await resHtml.text()
 
-  // Step 3: 解析 HTML table rows
-  // HTML entity decode（BAS 回傳的中文全部是 &#x...;）
-  function decodeEntities(str) {
-    return str.replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16))
-    ).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-  }
-
-  const result = new Map()  // key = BAS_SEQ（唯一識別碼）
-  const rowRe  = /<tr[^>]*>([\s\S]*?)<\/tr>/g
+  // Step 3: 解析列表，收集 {name, city, dist, basSeq, zoneSeq}
+  const rawLabs = []
+  const rowRe   = /<tr[^>]*>([\s\S]*?)<\/tr>/g
   let match
   while ((match = rowRe.exec(html)) !== null) {
     const row   = match[1]
     const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m =>
       decodeEntities(m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim())
     )
-    // BAS_KIND=2 已限制為牙體技術所，直接取 cells[1]=名稱, [2]=縣市, [3]=區鄉鎮
     if (cells.length < 4) continue
 
     const name = cells[1]?.trim()
     const city = cells[2]?.trim()
     const dist = cells[3]?.trim()
-    if (!name || name === '機構名稱') continue  // 跳過 header
+    if (!name || name === '機構名稱') continue
 
-    // BAS_SEQ 當唯一 key（從連結取出）
-    const seqMatch = row.match(/BAS_SEQ=([^&"]+)/)
-    const seq      = seqMatch ? decodeURIComponent(decodeURIComponent(seqMatch[1])) : `${name}__${city}__${dist}`
+    // 從連結取出 BAS_SEQ + ZONE_SEQ（href 裡是雙重 URL 編碼，單次解碼後可直接用在 URL）
+    const rawSeq  = row.match(/BAS_SEQ=([^&"]+)/)?.[1]
+    const rawZone = row.match(/ZONE_SEQ=([^&"]+)/)?.[1]
+    if (!rawSeq) continue
 
-    result.set(seq, {
-      source:   'bas',
-      kind:     '牙體技術所',
-      name,
-      address:  `${city}${dist}`,
-      specialty:'',
-      termDate: '',
+    rawLabs.push({
+      name, city, dist,
+      basSeq:  decodeURIComponent(rawSeq),
+      zoneSeq: rawZone ? decodeURIComponent(rawZone) : '',
     })
   }
 
-  log(`  牙體技術所：${result.size} 間`)
+  log(`  列表解析完成：${rawLabs.length} 間牙體技術所`)
+  log('  開始從詳細頁取機構代碼（每批 5 筆並行）…')
+
+  // Step 4: 批次並行抓 BASBasicData，取得真正的「機構代碼」
+  const CONCURRENCY = 5
+  const result = new Map()  // key = 機構代碼
+  let fetched = 0, noCode = 0
+
+  for (let i = 0; i < rawLabs.length; i += CONCURRENCY) {
+    const batch = rawLabs.slice(i, i + CONCURRENCY)
+    const codes = await Promise.all(
+      batch.map(lab => fetchLabCode(lab.basSeq, lab.zoneSeq))
+    )
+
+    for (let j = 0; j < batch.length; j++) {
+      const lab  = batch[j]
+      const code = codes[j]
+      fetched++
+
+      if (code) {
+        result.set(code, {
+          source:    'bas',
+          kind:      '牙體技術所',
+          name:      lab.name,
+          address:   `${lab.city}${lab.dist}`,
+          specialty: '',
+          termDate:  '',
+        })
+      } else {
+        noCode++
+        // 取代碼失敗時以「名稱__縣市__區」當備用 key，讓快照不漏資料
+        // （但這個 key 不會和客戶代碼比對到，僅用來保留紀錄）
+        const fallback = `${lab.name}__${lab.city}__${lab.dist}`
+        result.set(fallback, {
+          source: 'bas', kind: '牙體技術所',
+          name: lab.name, address: `${lab.city}${lab.dist}`,
+          specialty: '', termDate: '',
+        })
+      }
+    }
+
+    // 每 100 筆 log 進度
+    if (fetched % 100 === 0 || fetched === rawLabs.length) {
+      log(`    進度：${fetched} / ${rawLabs.length}（失敗 ${noCode} 筆）`)
+    }
+
+    // 批次間短暫休息，避免對伺服器造成壓力
+    if (i + CONCURRENCY < rawLabs.length) await sleep(300)
+  }
+
+  log(`  牙體技術所完成：${result.size - noCode} 間有機構代碼，${noCode} 間取碼失敗`)
   return result
 }
 
