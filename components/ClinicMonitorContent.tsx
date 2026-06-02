@@ -1,131 +1,325 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import type { ClinicMonitorRecord } from '@/lib/system-notion'
+import { useState, useMemo } from 'react'
+import type { MonitorResult, NewOpening, PossibleClosure, MonitorStats } from '@/app/api/admin/medical-monitor/route'
 
-// ─── Types & helpers ──────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
-type FilterType = '' | '新增停業' | '恢復開業' | '新開業' | '停業' | '查無代碼' | '月份摘要'
-
-const TYPE_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  '新增停業': { bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
-  '恢復開業': { bg: 'bg-green-50',   text: 'text-green-700',   dot: 'bg-green-500' },
-  '新開業':   { bg: 'bg-purple-50',  text: 'text-purple-700',  dot: 'bg-purple-500' },
-  '停業':     { bg: 'bg-gray-50',    text: 'text-gray-500',    dot: 'bg-gray-400' },
-  '查無代碼': { bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-400' },
-  '月份摘要': { bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-400' },
+function StatCard({
+  label, value, sub, accent,
+}: { label: string; value: number | string; sub?: string; accent?: string }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col gap-1">
+      <span className="text-xs text-gray-400 font-medium">{label}</span>
+      <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-gray-900'}`}>
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </span>
+      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    </div>
+  )
 }
 
-function TypeBadge({ type }: { type: string }) {
-  const s = TYPE_STYLE[type] ?? { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' }
+function SectionHeader({ title, count, color }: { title: string; count: number; color: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full font-medium ${s.bg} ${s.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {type}
+    <div className="flex items-center gap-3 mb-3">
+      <h3 className="font-semibold text-gray-800 text-sm">{title}</h3>
+      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>{count} 筆</span>
+    </div>
+  )
+}
+
+// ── Preview Modal ──────────────────────────────────────────────────────────────
+
+function ImportPreviewModal({
+  selected,
+  onConfirm,
+  onClose,
+}: {
+  selected: NewOpening[]
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="font-bold text-gray-900">匯入預覽</h2>
+            <p className="text-sm text-gray-400 mt-0.5">以下 {selected.length} 筆資料將新增至客戶資料庫</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-5 space-y-2">
+          {selected.map((inst, i) => (
+            <div key={inst.code} className="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-xs text-gray-400 shrink-0 w-5 text-right">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-gray-900">{inst.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-mono">{inst.code}</span>
+                  <TypeChip kind={inst.kind} />
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
+                  {inst.city && <span>{inst.city}{inst.district}</span>}
+                  {inst.address && <span className="truncate max-w-[300px]">{inst.address}</span>}
+                </div>
+              </div>
+              <div className="shrink-0 text-xs text-right text-gray-400 space-y-0.5">
+                <div className="text-green-600 font-medium">開業</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-5 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+          <button onClick={onConfirm} className="px-5 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700">
+            ✅ 確認新增 {selected.length} 筆
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Type Chip ─────────────────────────────────────────────────────────────────
+
+function TypeChip({ kind }: { kind: string }) {
+  const MAP: Record<string, string> = {
+    '牙醫一般診所': 'bg-blue-50 text-blue-700',
+    '牙醫診所':     'bg-blue-50 text-blue-700',
+    '牙醫專科診所': 'bg-indigo-50 text-indigo-700',
+    '牙體技術所':   'bg-violet-50 text-violet-700',
+    '醫院':         'bg-orange-50 text-orange-700',
+  }
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${MAP[kind] ?? 'bg-gray-100 text-gray-600'}`}>
+      {kind}
     </span>
   )
 }
 
-// ─── Summary derivation ───────────────────────────────────────────────────────
+// ── New Opening Row ────────────────────────────────────────────────────────────
 
-/** 解析月份摘要的 address 欄位，格式：「牙醫診所：7653｜牙體技術所：1089｜...」 */
-function parseSummaryStats(address: string): Record<string, number> {
-  const stats: Record<string, number> = {}
-  for (const part of address.split('｜')) {
-    const idx = part.indexOf('：')
-    if (idx < 0) continue
-    const key = part.slice(0, idx).trim()
-    const val = parseInt(part.slice(idx + 1).trim(), 10)
-    if (key && !isNaN(val)) stats[key] = val
-  }
-  return stats
+function NewOpeningRow({
+  inst,
+  selected,
+  onToggle,
+}: {
+  inst: NewOpening
+  selected: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div
+      onClick={onToggle}
+      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
+        selected ? 'bg-blue-50' : 'hover:bg-gray-50'
+      }`}
+    >
+      <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+        selected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+      }`}>
+        {selected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round"/>
+        </svg>}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-gray-900">{inst.name}</span>
+          <span className="text-[10px] font-mono text-gray-400">{inst.code}</span>
+          <TypeChip kind={inst.kind} />
+        </div>
+        <div className="text-xs text-gray-400 flex flex-wrap gap-x-2 mt-0.5">
+          {inst.city && <span>{inst.city}{inst.district}</span>}
+          {inst.address && <span className="truncate max-w-[40vw]">{inst.address}</span>}
+        </div>
+      </div>
+      <span className="shrink-0 text-xs font-medium text-emerald-600">開業</span>
+    </div>
+  )
 }
 
-function deriveMonthSummaries(records: ClinicMonitorRecord[]) {
-  const byMonth: Record<string, {
-    summary: ClinicMonitorRecord | null
-    stopped: number
-    restored: number
-    newOpen: number
-    newOpenLabs: number
-    notFound: number
-    affectedCustomers: number
-  }> = {}
+// ── Closure Row ────────────────────────────────────────────────────────────────
 
-  for (const r of records) {
-    if (!r.month) continue
-    if (!byMonth[r.month]) {
-      byMonth[r.month] = { summary: null, stopped: 0, restored: 0, newOpen: 0, newOpenLabs: 0, notFound: 0, affectedCustomers: 0 }
-    }
-    const m = byMonth[r.month]
-    if (r.type === '月份摘要') { m.summary = r; continue }
-    if (r.type === '新增停業') m.stopped++
-    if (r.type === '恢復開業') m.restored++
-    if (r.type === '新開業') {
-      if (r.specialty === '牙體技術所') m.newOpenLabs++
-      else m.newOpen++
-    }
-    if (r.type === '查無代碼') m.notFound++
-    if (r.customerName && (r.type === '新增停業' || r.type === '恢復開業')) m.affectedCustomers++
-  }
-
-  return Object.entries(byMonth)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([month, data]) => {
-      const stats = data.summary ? parseSummaryStats(data.summary.address) : {}
-      return {
-        month,
-        ...data,
-        totalClinics:   stats['牙醫診所']   ?? null as number | null,
-        totalLabs:      stats['牙體技術所'] ?? null as number | null,
-        totalCustomers: stats['崧達客戶']   ?? null as number | null,
-        closedNonCust:  stats['停業（非客戶）'] ?? null as number | null,
-      }
-    })
+function ClosureRow({ item }: { item: PossibleClosure }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={`/customers/${item.customerId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-semibold text-indigo-600 hover:underline"
+            onClick={e => e.stopPropagation()}
+          >
+            {item.customerName}
+          </a>
+          <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+          {item.customerType && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>
+          )}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+        </div>
+      </div>
+      <span className="shrink-0 text-xs font-medium text-orange-500">代碼查無</span>
+    </div>
+  )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ── Collapsible Section ────────────────────────────────────────────────────────
 
-export function ClinicMonitorContent({ initialRecords }: { initialRecords: ClinicMonitorRecord[] }) {
-  const [records] = useState(initialRecords)
-  const [typeFilter, setTypeFilter] = useState<FilterType>('')
-  const [monthFilter, setMonthFilter] = useState('')
-  const [query, setQuery] = useState('')
+function CollapsibleSection({
+  title, count, color, children, defaultOpen = true,
+}: {
+  title: string; count: number; color: string; children: React.ReactNode; defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
+      >
+        <span className="flex-1">
+          <SectionHeader title={title} count={count} color={color} />
+        </span>
+        <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && <div className="bg-white divide-y-0">{children}</div>}
+    </div>
+  )
+}
+
+// ── Tab for New Openings ───────────────────────────────────────────────────────
+
+function NewOpeningsTab({
+  clinics, labs, hospitals, selectedIds, onToggle, onToggleAll, onImport, importing,
+}: {
+  clinics: NewOpening[]
+  labs: NewOpening[]
+  hospitals: NewOpening[]
+  selectedIds: Set<string>
+  onToggle: (code: string) => void
+  onToggleAll: (items: NewOpening[]) => void
+  onImport: () => void
+  importing: boolean
+}) {
+  const totalNew = clinics.length + labs.length + hospitals.length
+  const selectedCount = selectedIds.size
+
+  if (totalNew === 0) {
+    return (
+      <div className="py-16 text-center text-gray-400 text-sm">
+        <div className="text-3xl mb-3">🎉</div>
+        <p>沒有找到新開業的牙科單位</p>
+        <p className="text-xs mt-1">所有在醫事資料庫的牙科單位均已在客戶資料庫中</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Batch actions */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-sm text-gray-500">已選 <strong>{selectedCount}</strong> 筆</span>
+        <button
+          onClick={() => onToggleAll([...clinics, ...labs, ...hospitals])}
+          className="text-xs text-blue-600 hover:underline"
+        >
+          {selectedCount === totalNew ? '取消全選' : '全選'}
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={onImport}
+          disabled={selectedCount === 0 || importing}
+          className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40 transition-colors"
+        >
+          {importing ? '匯入中…' : `📥 預覽並匯入（${selectedCount}）`}
+        </button>
+      </div>
+
+      {clinics.length > 0 && (
+        <CollapsibleSection title="牙醫診所" count={clinics.length} color="bg-blue-50 text-blue-700">
+          <div className="divide-y divide-gray-50">
+            {clinics.map(inst => (
+              <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {labs.length > 0 && (
+        <CollapsibleSection title="牙體技術所" count={labs.length} color="bg-violet-50 text-violet-700">
+          <div className="divide-y divide-gray-50">
+            {labs.map(inst => (
+              <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {hospitals.length > 0 && (
+        <CollapsibleSection title="有牙科的醫院" count={hospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
+          <div className="divide-y divide-gray-50">
+            {hospitals.map(inst => (
+              <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+
+export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
+  const [tab, setTab] = useState<'new' | 'closure'>('new')
+  const [result, setResult]     = useState<MonitorResult | null>(null)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
   const [triggering, setTriggering] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState('')
 
-  const summaries = useMemo(() => deriveMonthSummaries(records), [records])
+  // Selection state for import
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showPreview, setShowPreview] = useState(false)
+  const [importing, setImporting]     = useState(false)
+  const [importResult, setImportResult] = useState('')
 
-  const filtered = useMemo(() => {
-    // 月份摘要已由上方卡片呈現，清單不重複顯示
-    let res = records.filter(r => r.type !== '月份摘要')
-    if (typeFilter)  res = res.filter(r => r.type === typeFilter)
-    if (monthFilter) res = res.filter(r => r.month === monthFilter)
-    if (query.trim()) {
-      const q = query.trim().toLowerCase()
-      res = res.filter(r =>
-        r.nhiName.toLowerCase().includes(q) ||
-        r.customerName.toLowerCase().includes(q) ||
-        r.institutionCode.toLowerCase().includes(q) ||
-        r.address.toLowerCase().includes(q)
-      )
+  // ── Load comparison ────────────────────────────────────────────────────────
+  async function loadComparison() {
+    setLoading(true); setError(''); setResult(null)
+    setSelectedIds(new Set()); setImportResult('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor')
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? '比對失敗'); return }
+      setResult(data)
+    } catch (e: any) {
+      setError(e.message ?? '比對失敗，請重試')
+    } finally {
+      setLoading(false)
     }
-    return res
-  }, [records, typeFilter, monthFilter, query])
+  }
 
-  async function triggerRun(dryRun = false) {
-    setTriggering(true)
-    setTriggerMsg('')
+  // ── Trigger GitHub Actions ────────────────────────────────────────────────
+  async function triggerDataUpdate() {
+    setTriggering(true); setTriggerMsg('')
     try {
       const res = await fetch('/api/clinic-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dry_run: dryRun }),
+        body: JSON.stringify({ dry_run: false }),
       })
       const data = await res.json()
       if (!res.ok) setTriggerMsg(`❌ ${data.error}`)
-      else setTriggerMsg(dryRun ? '✅ 測試執行已觸發（不寫入 Notion）' : '✅ 監控工作已觸發，約 5 分鐘後可在 GitHub Actions 查看結果')
+      else setTriggerMsg('✅ 醫事資料更新已觸發，約 25 分鐘後完成，完成後請再執行比對')
     } catch (e: any) {
       setTriggerMsg(`❌ ${e.message}`)
     } finally {
@@ -133,284 +327,284 @@ export function ClinicMonitorContent({ initialRecords }: { initialRecords: Clini
     }
   }
 
-  const hasFilter = !!(typeFilter || monthFilter || query.trim())
+  // ── Selection ──────────────────────────────────────────────────────────────
+  function toggleId(code: string) {
+    setSelectedIds(prev => {
+      const s = new Set(prev)
+      s.has(code) ? s.delete(code) : s.add(code)
+      return s
+    })
+  }
+
+  function toggleAll(items: NewOpening[]) {
+    const allSelected = items.every(i => selectedIds.has(i.code))
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(items.map(i => i.code)))
+    }
+  }
+
+  const selectedInstitutions = useMemo(() => {
+    if (!result) return []
+    return [
+      ...result.newOpenings.clinics,
+      ...result.newOpenings.labs,
+      ...result.newOpenings.hospitals,
+    ].filter(i => selectedIds.has(i.code))
+  }, [result, selectedIds])
+
+  // ── Import ─────────────────────────────────────────────────────────────────
+  async function handleImport() {
+    setImporting(true); setImportResult('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ institutions: selectedInstitutions }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setImportResult(`❌ ${data.error ?? '匯入失敗'}`)
+        return
+      }
+      const failDetails = (data.errors ?? []).map((e: any) => e.name).join('、')
+      if (data.created === 0) {
+        setImportResult(`❌ 全部建立失敗${failDetails ? `（${failDetails}）` : ''}`)
+      } else {
+        setImportResult(
+          `✅ 已新增 ${data.created} 筆至客戶資料庫` +
+          (data.errors?.length ? `，${data.errors.length} 筆失敗（${failDetails}）` : '')
+        )
+        setSelectedIds(new Set())
+        setShowPreview(false)
+      }
+    } catch (e: any) {
+      setImportResult(`❌ ${e.message}`)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const stats = result?.stats
 
   return (
     <div className="space-y-5">
 
-      {/* ── Month summary cards ──────────────────────────────────────────────── */}
-      {summaries.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {summaries.map(s => {
-            const active = monthFilter === s.month
-            const hasChanges = s.stopped > 0 || s.restored > 0 || s.newOpen > 0 || s.newOpenLabs > 0
-            const hasGlobalStats = s.totalClinics != null || s.totalLabs != null || s.totalCustomers != null
-            return (
-              <button
-                key={s.month}
-                onClick={() => setMonthFilter(active ? '' : s.month)}
-                className={`text-left p-4 rounded-2xl border transition-all ${
-                  active
-                    ? 'border-gray-700 bg-gray-900 shadow-sm'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                }`}
-              >
-                {/* Month label */}
-                <div className={`text-xs font-semibold mb-2.5 tracking-wide ${active ? 'text-gray-400' : 'text-gray-400'}`}>
-                  {s.month}
-                </div>
-
-                {/* 異動統計 chips */}
-                {hasChanges ? (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-medium mb-3">
-                    {s.stopped > 0 && (
-                      <span className={active ? 'text-red-300' : 'text-red-600'}>
-                        客戶停業 {s.stopped}
-                      </span>
-                    )}
-                    {s.restored > 0 && (
-                      <span className={active ? 'text-green-300' : 'text-green-600'}>
-                        客戶恢復 {s.restored}
-                      </span>
-                    )}
-                    {s.newOpen > 0 && (
-                      <span className={active ? 'text-purple-300' : 'text-purple-600'}>
-                        新診所 {s.newOpen}
-                      </span>
-                    )}
-                    {s.newOpenLabs > 0 && (
-                      <span className={active ? 'text-violet-300' : 'text-violet-600'}>
-                        新牙技所 {s.newOpenLabs}
-                      </span>
-                    )}
-                    {s.notFound > 0 && (
-                      <span className={active ? 'text-orange-300' : 'text-orange-500'}>
-                        查無代碼 {s.notFound}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mb-3">
-                    <span className={`text-xs ${active ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {s.notFound > 0 ? `查無代碼 ${s.notFound} 筆` : '本月無異動'}
-                    </span>
-                  </div>
-                )}
-
-                {/* 對照數字：全台規模 */}
-                {hasGlobalStats && (
-                  <div className={`border-t pt-2.5 mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs ${active ? 'border-gray-700' : 'border-gray-100'}`}>
-                    {s.totalClinics != null && (
-                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
-                        診所{' '}
-                        <span className={`font-semibold tabular-nums ${active ? 'text-gray-200' : 'text-gray-600'}`}>
-                          {s.totalClinics.toLocaleString()}
-                        </span>
-                      </span>
-                    )}
-                    {s.totalLabs != null && (
-                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
-                        牙技所{' '}
-                        <span className={`font-semibold tabular-nums ${active ? 'text-gray-200' : 'text-gray-600'}`}>
-                          {s.totalLabs.toLocaleString()}
-                        </span>
-                      </span>
-                    )}
-                    {s.totalCustomers != null && (
-                      <span className={active ? 'text-gray-400' : 'text-gray-400'}>
-                        崧達客戶{' '}
-                        <span className={`font-semibold tabular-nums ${active ? 'text-indigo-300' : 'text-indigo-600'}`}>
-                          {s.totalCustomers.toLocaleString()}
-                        </span>
-                        {s.totalClinics != null && s.totalLabs != null && (
-                          <span className={`ml-0.5 ${active ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {' '}({((s.totalCustomers / (s.totalClinics + s.totalLabs)) * 100).toFixed(1)}%)
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <div className="space-y-2">
-        {/* Row 1: type pills (horizontal scroll) + trigger button */}
-        <div className="flex items-center gap-2">
-          {/* Pills — scrollable, no visible scrollbar */}
-          <div className="flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="inline-flex gap-1.5 min-w-max">
-              {(['', '新增停業', '恢復開業', '新開業', '停業', '查無代碼'] as FilterType[]).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${
-                    typeFilter === t
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  {t || '全部'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Trigger — always visible on the right */}
-          <button
-            onClick={() => triggerRun(false)}
-            disabled={triggering}
-            className="shrink-0 px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 border border-gray-900"
-          >
-            {triggering ? (
-              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            )}
-            <span className="hidden sm:inline">立即執行</span>
-            <span className="sm:hidden">執行</span>
-          </button>
-        </div>
-
-        {/* Row 2: search + clear */}
-        <div className="flex gap-2 items-center">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+      {/* ── Control bar ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={loadComparison}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        >
+          {loading ? (
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="搜尋診所、代碼、客戶…"
-              className="input pl-9 pr-3 py-2 text-sm w-full"
-            />
-          </div>
-          {hasFilter && (
-            <button
-              onClick={() => { setTypeFilter(''); setMonthFilter(''); setQuery('') }}
-              className="shrink-0 text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-gray-100"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              <span className="hidden sm:inline">清除篩選</span>
-            </button>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
           )}
-        </div>
-      </div>
+          {loading ? '比對中…' : '🔍 執行比對'}
+        </button>
 
-      {/* Trigger message */}
-      <AnimatePresence>
-        {triggerMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap"
-          >
-            <span>{triggerMsg}</span>
-            <a
-              href="https://github.com/Songtah/songtah-quote/actions/workflows/clinic-monitor.yml"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-gray-400 underline hover:text-gray-600 ml-1"
-            >
-              查看 GitHub Actions
-            </a>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <button
+          onClick={triggerDataUpdate}
+          disabled={triggering}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          {triggering ? (
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          )}
+          更新醫事資料
+        </button>
 
-      {/* ── Status bar ───────────────────────────────────────────────────────── */}
-      <div className="text-sm text-gray-400">
-        {hasFilter ? `找到 ${filtered.length} 筆` : `共 ${records.filter(r => r.type !== '月份摘要').length} 筆監控紀錄`}
-        {records.length === 0 && (
-          <span className="ml-2 text-amber-500">
-            尚無資料 — 請先執行「立即執行」，或等待每月 1 日自動執行
+        {result && (
+          <span className="text-xs text-gray-400">
+            資料時間：{result.snapshotMonth}（{new Date(result.snapshotFetched).toLocaleDateString('zh-TW')} 擷取）
           </span>
         )}
       </div>
 
-      {/* ── Records list ─────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
-        <div className="panel px-6 py-16 text-center">
-          <div className="text-3xl mb-3">{hasFilter ? '🔍' : '📡'}</div>
-          <p className="text-sm text-gray-400">
-            {hasFilter ? '找不到符合條件的紀錄' : '尚無監控紀錄，執行後資料將顯示在這裡'}
-          </p>
-        </div>
-      ) : (
-        <div className="panel divide-y divide-gray-100 overflow-hidden">
-          {filtered.map(r => (
-            <ClinicRow key={r.id} record={r} />
-          ))}
+      {/* Trigger message */}
+      {triggerMsg && (
+        <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
+          <span>{triggerMsg}</span>
+          <a href="https://github.com/Songtah/songtah-quote/actions/workflows/clinic-monitor.yml"
+            target="_blank" rel="noreferrer"
+            className="text-xs text-gray-400 underline hover:text-gray-600 ml-1">
+            查看進度
+          </a>
         </div>
       )}
-    </div>
-  )
-}
 
-// ─── Row component ────────────────────────────────────────────────────────────
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>
+      )}
 
-function ClinicRow({ record: r }: { record: ClinicMonitorRecord }) {
-  return (
-    <div className="px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-gray-50 transition-colors">
-      {/* Mobile: badge on top row; Desktop: badge left-aligned inline */}
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 pt-0.5 hidden sm:block">
-          <TypeBadge type={r.type} />
+      {/* ── No snapshot state ────────────────────────────────────────────────── */}
+      {result && !result.hasSnapshot && (
+        <div className="panel px-6 py-16 text-center">
+          <div className="text-3xl mb-3">📡</div>
+          <p className="text-sm text-gray-600 font-medium">尚無醫事資料快照</p>
+          <p className="text-sm text-gray-400 mt-1">請點擊「更新醫事資料」後等待約 25 分鐘，資料更新完成後再執行比對</p>
         </div>
+      )}
 
-        <div className="flex-1 min-w-0">
-          {/* Mobile badge + name on same line */}
-          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <span className="sm:hidden shrink-0">
-              <TypeBadge type={r.type} />
-            </span>
-            <span className="font-medium text-gray-900 text-sm">
-              {r.nhiName || r.institutionCode || r.customerName}
-            </span>
-            {r.institutionCode && (
-              <span className="text-xs text-gray-400 font-mono hidden sm:inline">{r.institutionCode}</span>
-            )}
+      {/* ── Stats ──────────────────────────────────────────────────────────── */}
+      {stats && (
+        <>
+          {/* 全台規模 */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台醫事單位規模</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="牙醫診所" value={stats.totalClinics} sub="NHI 特約" />
+              <StatCard label="牙體技術所" value={stats.totalLabs} sub="MOHW BAS" />
+              <StatCard label="有牙科的醫院" value="待納入" sub="資料來源建置中" />
+              <StatCard label="崧達客戶" value={stats.customerClinics + stats.customerLabs + stats.customerHospitals} sub={`（有代碼）`} />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-            {r.institutionCode && (
-              <span className="text-gray-400 font-mono sm:hidden">{r.institutionCode}</span>
-            )}
-            {r.specialty && <span>{r.specialty}</span>}
-            {r.address   && <span className="text-gray-400">{r.address}</span>}
-            {r.termDate  && <span className="text-red-400">終止：{r.termDate}</span>}
-          </div>
-        </div>
 
-        {/* Customer link */}
-        {r.customerName && (
-          <div className="shrink-0 text-right">
-            {r.customerUrl ? (
-              <a
-                href={r.customerUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium hover:underline max-w-[80px] sm:max-w-none block text-right leading-tight"
+          {/* 客戶比對狀態 */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">客戶資料庫比對狀態</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="診所客戶（有代碼）" value={stats.customerClinics} />
+              <StatCard label="牙技所客戶（有代碼）" value={stats.customerLabs} />
+              <StatCard label="醫院客戶（有代碼）" value={stats.customerHospitals} />
+              <StatCard label="無機構代碼" value={stats.customerNoCode} sub="不列入比對" accent="text-gray-400" />
+            </div>
+          </div>
+
+          {/* 比對結果摘要 */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">比對結果摘要</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <StatCard
+                label="新開業（業務機會）"
+                value={stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals}
+                sub={`診所 ${stats.newOpeningClinics} ／牙技所 ${stats.newOpeningLabs}`}
+                accent="text-emerald-600"
+              />
+              <StatCard
+                label="代碼查無（可能歇業）"
+                value={stats.closureClinics + stats.closureLabs + stats.closureHospitals}
+                sub={`診所 ${stats.closureClinics} ／牙技所 ${stats.closureLabs}`}
+                accent="text-orange-500"
+              />
+              <StatCard
+                label="已對應客戶"
+                value={stats.customerMatched}
+                sub="代碼有對應到快照"
+                accent="text-blue-600"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
+      {result?.hasSnapshot && (
+        <>
+          <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-fit">
+            {([
+              { id: 'new',     label: '🆕 新開業（業務機會）', count: (result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length) },
+              { id: 'closure', label: '⚠️ 代碼查無（可能歇業）', count: (result.possibleClosures.clinics.length + result.possibleClosures.labs.length + result.possibleClosures.hospitals.length) },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+                  tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
-                {r.customerName}
-              </a>
-            ) : (
-              <span className="text-xs text-gray-500 max-w-[80px] sm:max-w-none block text-right leading-tight">{r.customerName}</span>
-            )}
+                {t.label}
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                  tab === t.id ? 'bg-gray-100 text-gray-700' : 'bg-white text-gray-500'
+                }`}>{t.count}</span>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Import result message */}
+          {importResult && (
+            <div className={`text-sm px-4 py-3 rounded-xl border ${
+              importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}>
+              {importResult}
+            </div>
+          )}
+
+          {/* ── 新開業 Tab ── */}
+          {tab === 'new' && (
+            <NewOpeningsTab
+              clinics={result.newOpenings.clinics}
+              labs={result.newOpenings.labs}
+              hospitals={result.newOpenings.hospitals}
+              selectedIds={selectedIds}
+              onToggle={toggleId}
+              onToggleAll={toggleAll}
+              onImport={() => selectedIds.size > 0 && setShowPreview(true)}
+              importing={importing}
+            />
+          )}
+
+          {/* ── 可能歇業 Tab ── */}
+          {tab === 'closure' && (
+            <div className="space-y-4">
+              <div className="text-xs text-gray-400 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                ⚠️ 以下客戶的機構代碼在醫事快照中查無對應，可能已歇業、停業，或代碼有誤。請自行確認後在客戶頁面更新機構狀態。
+              </div>
+
+              {(result.possibleClosures.clinics.length + result.possibleClosures.labs.length + result.possibleClosures.hospitals.length) === 0 ? (
+                <div className="py-12 text-center text-gray-400 text-sm">
+                  <div className="text-3xl mb-3">✅</div>
+                  <p>所有有機構代碼的客戶均在醫事資料中找到</p>
+                </div>
+              ) : (
+                <>
+                  {result.possibleClosures.clinics.length > 0 && (
+                    <CollapsibleSection title="牙醫診所" count={result.possibleClosures.clinics.length} color="bg-orange-50 text-orange-700">
+                      {result.possibleClosures.clinics.map(item => <ClosureRow key={item.customerId} item={item} />)}
+                    </CollapsibleSection>
+                  )}
+                  {result.possibleClosures.labs.length > 0 && (
+                    <CollapsibleSection title="牙體技術所" count={result.possibleClosures.labs.length} color="bg-orange-50 text-orange-700">
+                      {result.possibleClosures.labs.map(item => <ClosureRow key={item.customerId} item={item} />)}
+                    </CollapsibleSection>
+                  )}
+                  {result.possibleClosures.hospitals.length > 0 && (
+                    <CollapsibleSection title="醫院 / 其他" count={result.possibleClosures.hospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
+                      {result.possibleClosures.hospitals.map(item => <ClosureRow key={item.customerId} item={item} />)}
+                    </CollapsibleSection>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Preview Modal ── */}
+      {showPreview && selectedInstitutions.length > 0 && (
+        <ImportPreviewModal
+          selected={selectedInstitutions}
+          onConfirm={handleImport}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   )
 }

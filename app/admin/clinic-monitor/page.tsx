@@ -1,14 +1,11 @@
 import { AppShell } from '@/components/AppShell'
 import { ClinicMonitorContent } from '@/components/ClinicMonitorContent'
 import { requireViewPermission } from '@/lib/permissions'
-import { getClinicMonitorRecords } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClinicMonitorPage() {
   await requireViewPermission('clinic_monitor')
-
-  const records = await getClinicMonitorRecords(3)
 
   return (
     <AppShell
@@ -16,7 +13,7 @@ export default async function ClinicMonitorPage() {
       description="每月比對全台牙科單位的開業／停業狀況，關聯崧達客戶。"
       hidePhaseNote
     >
-      <ClinicMonitorContent initialRecords={records} />
+      <ClinicMonitorContent />
     </AppShell>
   )
 }

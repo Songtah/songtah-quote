@@ -962,6 +962,86 @@ export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   return items
 }
 
+// ── 醫事監控用：載入所有有機構代碼的客戶（含代碼欄位）──────────────────
+export interface CustomerWithCode {
+  id:              string
+  name:            string
+  city:            string
+  district:        string
+  type:            string
+  status:          string
+  institutionCode: string
+}
+
+export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
+  if (!DB.customers) return []
+  const cacheKey = 'customers-with-codes-v1'
+  const cached = await getRedisValue<CustomerWithCode[]>(cacheKey)
+  if (cached) return cached
+
+  const items: CustomerWithCode[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('getCustomersWithCodes', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.customers!),
+        page_size:   100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) {
+      const name = getTitle(page, '客戶名稱')
+      if (!name) continue
+      items.push({
+        id:              page.id,
+        name,
+        city:            getSelect(page, '縣市'),
+        district:        getSelect(page, '行政區') || getText(page, '行政區'),
+        type:            getSelect(page, '客戶類型'),
+        status:          getSelect(page, '機構狀態'),
+        institutionCode: getText(page, '機構代碼'),
+      })
+    }
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+
+  await setRedisValue(cacheKey, items, 60 * 60_000) // 1 hr
+  return items
+}
+
+// ── 醫事監控用：建立新客戶 ───────────────────────────────────────────────
+export async function createSystemCustomer(data: {
+  name:            string
+  city:            string
+  district:        string
+  address:         string
+  phone?:          string
+  institutionCode: string
+  type:            string  // 客戶類型 select value
+  status?:         string  // 機構狀態 select value, default '開業'
+  note?:           string
+}): Promise<{ id: string }> {
+  if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
+  const page: any = await notionCallWithRetry('createSystemCustomer', () =>
+    notion.pages.create({
+      parent: { database_id: normalizeDatabaseId(DB.customers!) },
+      properties: {
+        '客戶名稱':  { title:     [{ text: { content: data.name } }] },
+        '縣市':      { select:    { name: data.city } },
+        '行政區':    { rich_text: [{ text: { content: data.district } }] },
+        '地址':      { rich_text: [{ text: { content: data.address } }] },
+        '機構代碼':  { rich_text: [{ text: { content: data.institutionCode } }] },
+        '客戶類型':  { select:    { name: data.type } },
+        '機構狀態':  { select:    { name: data.status ?? '開業' } },
+        ...(data.phone ? { '電話': { phone_number: data.phone } } : {}),
+      } as any,
+    })
+  )
+  // invalidate cache
+  try { await setRedisValue('customers-with-codes-v1', null, 1) } catch {}
+  return { id: page.id }
+}
+
 export async function getCustomerFilterOptions(): Promise<{
   cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {
