@@ -102,10 +102,11 @@ function parseCSVLine(line) {
 
 // ── 2. 牙體技術所（MOHW BAS 網頁）──────────────────────────────────────────
 
-// HTML entity decode（BAS 回傳的中文全部是 &#x...;）
+// HTML entity decode（BAS 回傳的中文可能是 &#x...;（hex）或 &#...;（decimal））
 function decodeEntities(str) {
   return str
     .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
 }
 
@@ -123,19 +124,24 @@ const BROWSER_HEADERS = {
 
 /**
  * 從 BASBasicData 詳細頁取出機構代碼（10 位數字）。
- * basSeq / zoneSeq 傳入已單次 decodeURIComponent 的值（仍為 URL 合法字串）。
+ * basSeq / zoneSeq 傳入 HTML href 中取出的原始字串（保留 URL 編碼，直接拼接）。
+ * cookieStr 為搜尋頁取得的 session cookie，避免 WAF 拒絕。
  */
-async function fetchLabCode(basSeq, zoneSeq) {
+async function fetchLabCode(basSeq, zoneSeq, cookieStr) {
   const url = `${MOHW_DETAIL}?BAS_SEQ=${basSeq}&ZONE_SEQ=${zoneSeq}`
   try {
     const res = await fetch(url, {
-      headers: BROWSER_HEADERS,
-      signal:  AbortSignal.timeout(25_000),
+      headers: {
+        ...BROWSER_HEADERS,
+        'Cookie':  cookieStr,
+        'Referer': MOHW_RESULTS,
+      },
+      signal: AbortSignal.timeout(25_000),
     })
     if (!res.ok) return null
     const html = decodeEntities(await res.text())
-    // 機構代碼是 10 位數字，緊跟在「機構代碼」之後
-    const m = html.match(/機構代碼[^\d]{0,40}(\d{10})/)
+    // 機構代碼是 10 位數字，緊跟在「機構代碼」之後（允許標籤和空白）
+    const m = html.match(/機構代碼[\s\S]{0,200}?(\d{10})/)
     return m ? m[1] : null
   } catch {
     return null
@@ -211,15 +217,15 @@ async function fetchDentalLabsOnce() {
     const dist = cells[3]?.trim()
     if (!name || name === '機構名稱') continue
 
-    // 從連結取出 BAS_SEQ + ZONE_SEQ（href 裡是雙重 URL 編碼，單次解碼後可直接用在 URL）
+    // 從連結取出 BAS_SEQ + ZONE_SEQ（保留原始 URL 編碼，直接拼接至詳細頁 URL）
     const rawSeq  = row.match(/BAS_SEQ=([^&"]+)/)?.[1]
     const rawZone = row.match(/ZONE_SEQ=([^&"]+)/)?.[1]
     if (!rawSeq) continue
 
     rawLabs.push({
       name, city, dist,
-      basSeq:  decodeURIComponent(rawSeq),
-      zoneSeq: rawZone ? decodeURIComponent(rawZone) : '',
+      basSeq:  rawSeq,
+      zoneSeq: rawZone ?? '',
     })
   }
 
@@ -234,7 +240,7 @@ async function fetchDentalLabsOnce() {
   for (let i = 0; i < rawLabs.length; i += CONCURRENCY) {
     const batch = rawLabs.slice(i, i + CONCURRENCY)
     const codes = await Promise.all(
-      batch.map(lab => fetchLabCode(lab.basSeq, lab.zoneSeq))
+      batch.map(lab => fetchLabCode(lab.basSeq, lab.zoneSeq, cookieStr))
     )
 
     for (let j = 0; j < batch.length; j++) {
