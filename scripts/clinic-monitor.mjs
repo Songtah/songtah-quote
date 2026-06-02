@@ -507,12 +507,22 @@ async function main() {
   // 6. 更新 snapshot
   if (!DRY_RUN) {
     mkdirSync('data', { recursive: true })   // 確保目錄存在（首次執行時）
+
+    // 計算本月相較上月新增的代碼（真正新開業）
+    // 若無上月快照（首次執行）則 newCodes 為空陣列
+    const prevCodeSet = prevSnapshot?.codes ? new Set(Object.keys(prevSnapshot.codes)) : null
+    const newCodes = prevCodeSet
+      ? [...currentData.keys()].filter(k => !prevCodeSet.has(k))
+      : []
+    log(`本月新增代碼：${newCodes.length} 筆（vs 上月 ${prevCodeSet?.size ?? 0} 筆）`)
+
     const codes = {}
     for (const [k, v] of currentData) codes[k] = v
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
       month, fetchedAt: today.toISOString(),
       totalClinics: clinics.size, totalLabs: labs.size,
       totalCustomers: customers.byCode.size,
+      newCodes,   // 本月相較上月新增的機構代碼（真正新開業）
       codes,
     }, null, 2))
     log(`\nSnapshot 更新：${currentData.size} 筆 → ${SNAPSHOT_PATH}`)

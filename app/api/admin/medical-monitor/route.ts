@@ -30,20 +30,22 @@ export interface Snapshot {
   fetchedAt:  string
   totalClinics: number
   totalLabs:    number
+  newCodes?:  string[]   // 本月相較上月新增的代碼（真正新開業）
   codes:      Record<string, SnapshotEntry>
 }
 
 export type InstitutionCategory = 'clinic' | 'lab' | 'hospital'
 
 export interface NewOpening {
-  code:      string
-  name:      string
-  kind:      string
-  category:  InstitutionCategory
-  city:      string
-  district:  string
-  address:   string
-  specialty: string
+  code:           string
+  name:           string
+  kind:           string
+  category:       InstitutionCategory
+  city:           string
+  district:       string
+  address:        string
+  specialty:      string
+  isNewThisMonth: boolean  // true = 本月快照才出現（真正新開業）；false = 以前就存在只是不是客戶
 }
 
 export interface PossibleClosure {
@@ -66,10 +68,14 @@ export interface MonitorStats {
   customerHospitals: number
   customerNoCode:    number
   customerMatched:   number  // 代碼有對應到
-  // 比對結果
+  // 比對結果（全部：尚未開發 + 本月新增）
   newOpeningClinics:   number
   newOpeningLabs:      number
   newOpeningHospitals: number
+  // 其中本月快照才出現的（真正新開業）
+  newThisMonthClinics:   number
+  newThisMonthLabs:      number
+  newThisMonthHospitals: number
   closureClinics:   number
   closureLabs:      number
   closureHospitals: number
@@ -149,6 +155,9 @@ export async function GET(req: NextRequest) {
 
   const codes = snapshot.codes ?? {}
 
+  // 本月相較上月新增的代碼集合（真正新開業）
+  const newThisMonthSet = new Set(snapshot.newCodes ?? [])
+
   // 2. 載入崧達客戶
   const customers = await getCustomersWithCodes()
 
@@ -175,20 +184,21 @@ export async function GET(req: NextRequest) {
 
   // 4. 比對
 
-  // 規則 1：在快照中但不在客戶 DB → 新開業
+  // 規則 1：在快照中但不在客戶 DB → 新開業（含本月新增 / 既有未開發兩種）
   const newOpenings: NewOpening[] = []
   for (const [code, entry] of Array.from(snapshotByCode)) {
     if (!customerByCode.has(code)) {
       const { city, district } = parseAddress(entry.address)
       newOpenings.push({
         code,
-        name:      entry.name,
-        kind:      entry.kind,
-        category:  getCategory(entry.kind),
+        name:           entry.name,
+        kind:           entry.kind,
+        category:       getCategory(entry.kind),
         city,
         district,
-        address:   entry.address,
-        specialty: entry.specialty,
+        address:        entry.address,
+        specialty:      entry.specialty,
+        isNewThisMonth: newThisMonthSet.has(code),
       })
     }
   }
@@ -232,6 +242,11 @@ export async function GET(req: NextRequest) {
 
   const matched = customersWithCode.filter(c => snapshotByCode.has(c.institutionCode.trim())).length
 
+  // 本月新開業（isNewThisMonth）分類統計
+  const newThisMonthClinic   = newClinic.filter(n => n.isNewThisMonth)
+  const newThisMonthLab      = newLab.filter(n => n.isNewThisMonth)
+  const newThisMonthHospital = newHospital.filter(n => n.isNewThisMonth)
+
   const stats: MonitorStats = {
     totalClinics:   snapshot.totalClinics,
     totalLabs:      snapshot.totalLabs,
@@ -241,9 +256,12 @@ export async function GET(req: NextRequest) {
     customerHospitals,
     customerNoCode:    customersNoCode.length,
     customerMatched:   matched,
-    newOpeningClinics: newClinic.length,
-    newOpeningLabs:    newLab.length,
+    newOpeningClinics:   newClinic.length,
+    newOpeningLabs:      newLab.length,
     newOpeningHospitals: newHospital.length,
+    newThisMonthClinics:   newThisMonthClinic.length,
+    newThisMonthLabs:      newThisMonthLab.length,
+    newThisMonthHospitals: newThisMonthHospital.length,
     closureClinics:    closureClinic.length,
     closureLabs:       closureLab.length,
     closureHospitals:  closureHospital.length,

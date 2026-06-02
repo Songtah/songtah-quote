@@ -128,6 +128,9 @@ function NewOpeningRow({
           <span className="text-sm font-semibold text-gray-900">{inst.name}</span>
           <span className="text-[10px] font-mono text-gray-400">{inst.code}</span>
           <TypeChip kind={inst.kind} />
+          {inst.isNewThisMonth && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">本月新增</span>
+          )}
         </div>
         <div className="text-xs text-gray-400 flex flex-wrap gap-x-2 mt-0.5">
           {inst.city && <span>{inst.city}{inst.district}</span>}
@@ -197,6 +200,8 @@ function CollapsibleSection({
 
 // ── Tab for New Openings ───────────────────────────────────────────────────────
 
+type NewOpeningFilter = 'all' | 'new' | 'existing'
+
 function NewOpeningsTab({
   clinics, labs, hospitals, selectedIds, onToggle, onToggleAll, onImport, importing,
 }: {
@@ -209,14 +214,30 @@ function NewOpeningsTab({
   onImport: () => void
   importing: boolean
 }) {
-  const totalNew = clinics.length + labs.length + hospitals.length
-  const selectedCount = selectedIds.size
+  const [filter, setFilter] = useState<NewOpeningFilter>('all')
+
+  const allItems = [...clinics, ...labs, ...hospitals]
+  const totalNew = allItems.length
+  const newThisMonthCount = allItems.filter(i => i.isNewThisMonth).length
+  const existingCount     = totalNew - newThisMonthCount
+
+  const filterFn = (items: NewOpening[]) => {
+    if (filter === 'new')      return items.filter(i => i.isNewThisMonth)
+    if (filter === 'existing') return items.filter(i => !i.isNewThisMonth)
+    return items
+  }
+
+  const filteredClinics   = filterFn(clinics)
+  const filteredLabs      = filterFn(labs)
+  const filteredHospitals = filterFn(hospitals)
+  const filteredAll       = [...filteredClinics, ...filteredLabs, ...filteredHospitals]
+  const selectedCount     = selectedIds.size
 
   if (totalNew === 0) {
     return (
       <div className="py-16 text-center text-gray-400 text-sm">
         <div className="text-3xl mb-3">🎉</div>
-        <p>沒有找到新開業的牙科單位</p>
+        <p>沒有找到尚未加入客戶資料庫的牙科單位</p>
         <p className="text-xs mt-1">所有在醫事資料庫的牙科單位均已在客戶資料庫中</p>
       </div>
     )
@@ -224,49 +245,83 @@ function NewOpeningsTab({
 
   return (
     <div className="space-y-4">
-      {/* Batch actions */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm text-gray-500">已選 <strong>{selectedCount}</strong> 筆</span>
-        <button
-          onClick={() => onToggleAll([...clinics, ...labs, ...hospitals])}
-          className="text-xs text-blue-600 hover:underline"
-        >
-          {selectedCount === totalNew ? '取消全選' : '全選'}
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={onImport}
-          disabled={selectedCount === 0 || importing}
-          className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40 transition-colors"
-        >
-          {importing ? '匯入中…' : `📥 預覽並匯入（${selectedCount}）`}
-        </button>
+      {/* 篩選 sub-tabs */}
+      <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-fit">
+        {([
+          { id: 'all',      label: '全部',     count: totalNew },
+          { id: 'new',      label: '本月新增',  count: newThisMonthCount },
+          { id: 'existing', label: '既有未開發', count: existingCount },
+        ] as const).map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+              filter === f.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {f.label}
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+              filter === f.id
+                ? f.id === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                : 'bg-white text-gray-500'
+            }`}>{f.count}</span>
+          </button>
+        ))}
       </div>
 
-      {clinics.length > 0 && (
-        <CollapsibleSection title="牙醫診所" count={clinics.length} color="bg-blue-50 text-blue-700">
+      {filter === 'new' && newThisMonthCount === 0 && (
+        <div className="py-10 text-center text-gray-400 text-sm bg-gray-50 rounded-xl">
+          <div className="text-2xl mb-2">📅</div>
+          <p>本月快照中沒有新增的機構</p>
+          <p className="text-xs mt-1">可能是本月為首次執行，或資料尚未更新</p>
+        </div>
+      )}
+
+      {/* Batch actions */}
+      {filteredAll.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-gray-500">已選 <strong>{selectedCount}</strong> 筆</span>
+          <button
+            onClick={() => onToggleAll(filteredAll)}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            {filteredAll.every(i => selectedIds.has(i.code)) ? '取消全選' : '全選此頁'}
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={onImport}
+            disabled={selectedCount === 0 || importing}
+            className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40 transition-colors"
+          >
+            {importing ? '匯入中…' : `📥 預覽並匯入（${selectedCount}）`}
+          </button>
+        </div>
+      )}
+
+      {filteredClinics.length > 0 && (
+        <CollapsibleSection title="牙醫診所" count={filteredClinics.length} color="bg-blue-50 text-blue-700">
           <div className="divide-y divide-gray-50">
-            {clinics.map(inst => (
+            {filteredClinics.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
           </div>
         </CollapsibleSection>
       )}
 
-      {labs.length > 0 && (
-        <CollapsibleSection title="牙體技術所" count={labs.length} color="bg-violet-50 text-violet-700">
+      {filteredLabs.length > 0 && (
+        <CollapsibleSection title="牙體技術所" count={filteredLabs.length} color="bg-violet-50 text-violet-700">
           <div className="divide-y divide-gray-50">
-            {labs.map(inst => (
+            {filteredLabs.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
           </div>
         </CollapsibleSection>
       )}
 
-      {hospitals.length > 0 && (
-        <CollapsibleSection title="有牙科的醫院" count={hospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
+      {filteredHospitals.length > 0 && (
+        <CollapsibleSection title="有牙科的醫院" count={filteredHospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
           <div className="divide-y divide-gray-50">
-            {hospitals.map(inst => (
+            {filteredHospitals.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
           </div>
@@ -491,12 +546,21 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           {/* 比對結果摘要 */}
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">比對結果摘要</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
-                label="新開業（業務機會）"
-                value={stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals}
-                sub={`診所 ${stats.newOpeningClinics} ／牙技所 ${stats.newOpeningLabs}`}
+                label="本月新開業"
+                value={stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}
+                sub={`診所 ${stats.newThisMonthClinics} ／牙技所 ${stats.newThisMonthLabs}`}
                 accent="text-emerald-600"
+              />
+              <StatCard
+                label="既有未開發"
+                value={
+                  (stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) -
+                  (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)
+                }
+                sub="在醫事DB但從未成為客戶"
+                accent="text-amber-600"
               />
               <StatCard
                 label="代碼查無（可能歇業）"
