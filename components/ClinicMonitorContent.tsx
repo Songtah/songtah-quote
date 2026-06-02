@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type {
   MonitorResult, NewOpening, ClosureDetail,
   SuggestedMatch, MatchedCustomer, MonitorStats,
@@ -560,11 +560,15 @@ function ClosureDetailsTab({ clinics, labs, hospitals, onOpen }: {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
+const CACHE_KEY     = 'clinic-monitor-result-v2'
+const CACHE_TAB_KEY = 'clinic-monitor-tab-v1'
+
 type MainTab = 'new' | 'matched' | 'suggested' | 'closure'
 
 export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [tab, setTab]               = useState<MainTab>('new')
   const [result, setResult]         = useState<MonitorResult | null>(null)
+  const [cachedAt, setCachedAt]     = useState<string | null>(null)  // ISO 字串
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [triggering, setTriggering] = useState(false)
@@ -579,15 +583,39 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // 詳細資訊 modal
   const [detailModal, setDetailModal] = useState<DetailModalData | null>(null)
 
+  // ── 從 localStorage 還原上次比對結果 ─────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY)
+      if (!raw) return
+      const { data, timestamp } = JSON.parse(raw) as { data: MonitorResult; timestamp: string }
+      setResult(data)
+      setCachedAt(timestamp)
+    } catch {}
+
+    try {
+      const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
+      if (savedTab) setTab(savedTab)
+    } catch {}
+  }, [])
+
+  // 記住目前 tab
+  useEffect(() => {
+    try { localStorage.setItem(CACHE_TAB_KEY, tab) } catch {}
+  }, [tab])
+
   // ── Load ─────────────────────────────────────────────────────────────────────
   async function loadComparison() {
-    setLoading(true); setError(''); setResult(null)
+    setLoading(true); setError('')
     setSelectedIds(new Set()); setImportResult('')
     try {
       const res = await fetch('/api/admin/medical-monitor')
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? '比對失敗'); return }
+      const now = new Date().toISOString()
       setResult(data)
+      setCachedAt(now)
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: now })) } catch {}
     } catch (e: any) {
       setError(e.message ?? '比對失敗，請重試')
     } finally {
@@ -683,9 +711,23 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           }
           更新醫事資料
         </button>
+        {cachedAt && (
+          <span className="text-xs text-gray-400 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" title="結果已快取，重新整理不會消失" />
+            上次比對：{new Date(cachedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            <button
+              onClick={() => {
+                try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TAB_KEY) } catch {}
+                setResult(null); setCachedAt(null)
+              }}
+              className="ml-1 text-gray-300 hover:text-gray-500 transition-colors"
+              title="清除快取"
+            >✕</button>
+          </span>
+        )}
         {result && (
-          <span className="text-xs text-gray-400">
-            資料時間：{result.snapshotMonth}（{new Date(result.snapshotFetched).toLocaleDateString('zh-TW')} 擷取）
+          <span className="text-xs text-gray-300">
+            快照：{result.snapshotMonth}（{new Date(result.snapshotFetched).toLocaleDateString('zh-TW')} 擷取）
           </span>
         )}
       </div>
