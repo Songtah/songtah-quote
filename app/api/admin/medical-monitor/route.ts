@@ -67,7 +67,7 @@ export interface NormalOperating {
   snapshotTermDate: string
 }
 
-/** 狀態 3：疑似歇業/停業 — NHI 特約終止 */
+/** 狀態 3：已歇業 — NHI 特約終止，或機構代碼已從醫事資料消失 */
 export interface SuspectedClosure {
   customerId:       string
   customerName:     string
@@ -76,14 +76,14 @@ export interface SuspectedClosure {
   customerType:     string
   customerStatus:   string
   institutionCode:  string
-  reason:           'nhi_terminated'
-  snapshotName:     string
-  snapshotKind:     string
-  snapshotAddress:  string
-  snapshotTermDate: string
+  reason:           'nhi_terminated' | 'code_vanished'
+  snapshotName?:    string
+  snapshotKind?:    string
+  snapshotAddress?: string
+  snapshotTermDate?:string
 }
 
-/** 狀態 4：查無機構代碼 — 快照完全查不到，標為待確認（不直接判定歇業） */
+/** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
   customerName:     string
@@ -284,15 +284,15 @@ export async function GET(req: NextRequest) {
     const entry = snapshotByCode.get(code)
 
     if (!entry) {
-      // 狀態 4：查無機構代碼（快照找不到，不直接判定歇業）
-      codeNotFound.push({
+      // 狀態 3b：已歇業（機構代碼從醫事資料消失）
+      suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
-        institutionCode: code,
+        institutionCode: code, reason: 'code_vanished',
       })
     } else if (isNhiTerminated(entry.termDate)) {
-      // 狀態 3：疑似歇業/停業（NHI 特約已終止）
+      // 狀態 3a：已歇業（NHI 特約已終止）
       suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
@@ -367,7 +367,7 @@ export async function GET(req: NextRequest) {
     newThisMonthLabs:      newLab.filter(n => n.isNewThisMonth).length,
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
     suspectedClosures:   suspectedClosures.length,
-    codeNotFound:        codeNotFound.length,
+    codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
   }
 
@@ -381,7 +381,7 @@ export async function GET(req: NextRequest) {
     },
     normalOperating:      normalOperating.slice(0, 3000),
     suspectedClosures,
-    codeNotFound,
+    codeNotFound:         [],
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
     inconsistentData,
     snapshotMonth:   snapshot.month,
