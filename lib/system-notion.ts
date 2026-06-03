@@ -2485,12 +2485,13 @@ export async function updateRegistrationStatus(id: string, status: string): Prom
 export type CourseCost = {
   id:          string
   name:        string   // 課程名稱
-  venueFee:    number   // 場地費
-  speakerFee:  number   // 講師費
-  materialFee: number   // 教材費
-  marketingFee:number   // 行銷費
-  cateringFee: number   // 餐飲費
-  otherFee:    number   // 其他費用
+  venueFee:      number   // 場地費
+  speakerFee:    number   // 講師費
+  materialFee:   number   // 教材費
+  marketingFee:  number   // 行銷費
+  cateringFee:   number   // 餐飲費
+  transportFee:  number   // 交通費
+  otherFee:      number   // 其他費用
   feePerPerson:number   // 報名費_人
   headcount:   number   // 預計人數
   totalCost:   number   // 總成本 (formula)
@@ -2516,6 +2517,7 @@ function mapCourseCost(page: any): CourseCost {
     materialFee:  getNumber(page, '教材費'),
     marketingFee: getNumber(page, '行銷費'),
     cateringFee:  getNumber(page, '餐飲費'),
+    transportFee: getNumber(page, '交通費'),
     otherFee:     getNumber(page, '其他費用'),
     feePerPerson: getNumber(page, '報名費_人'),
     headcount:    getNumber(page, '預計人數'),
@@ -2559,6 +2561,7 @@ export async function createCourseCost(data: Omit<CourseCost, 'id'|'totalCost'|'
         '教材費':    { number: data.materialFee || null },
         '行銷費':    { number: data.marketingFee || null },
         '餐飲費':    { number: data.cateringFee || null },
+        '交通費':    { number: data.transportFee || null },
         '其他費用':  { number: data.otherFee || null },
         '報名費_人': { number: data.feePerPerson || null },
         '預計人數':  { number: data.headcount || null },
@@ -2578,6 +2581,7 @@ export async function updateCourseCost(id: string, data: Partial<Omit<CourseCost
   if (data.materialFee  !== undefined) props['教材費']    = { number: data.materialFee || null }
   if (data.marketingFee !== undefined) props['行銷費']    = { number: data.marketingFee || null }
   if (data.cateringFee  !== undefined) props['餐飲費']    = { number: data.cateringFee || null }
+  if (data.transportFee !== undefined) props['交通費']    = { number: data.transportFee || null }
   if (data.otherFee     !== undefined) props['其他費用']  = { number: data.otherFee || null }
   if (data.feePerPerson !== undefined) props['報名費_人'] = { number: data.feePerPerson || null }
   if (data.headcount    !== undefined) props['預計人數']  = { number: data.headcount || null }

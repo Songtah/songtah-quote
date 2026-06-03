@@ -16,13 +16,13 @@ const fmtPct = (n: number) => n ? `${n.toFixed(1)}%` : '—'
 type FormState = {
   name: string
   venueFee: string; speakerFee: string; materialFee: string
-  marketingFee: string; cateringFee: string; otherFee: string
+  marketingFee: string; cateringFee: string; transportFee: string; otherFee: string
   feePerPerson: string; headcount: string
   status: string; note: string
 }
 const EMPTY: FormState = {
   name: '', venueFee: '', speakerFee: '', materialFee: '',
-  marketingFee: '', cateringFee: '', otherFee: '',
+  marketingFee: '', cateringFee: '', transportFee: '', otherFee: '',
   feePerPerson: '', headcount: '', status: '規劃中', note: '',
 }
 
@@ -52,6 +52,7 @@ export function CourseCostsContent() {
       materialFee: item.materialFee ? String(item.materialFee) : '',
       marketingFee: item.marketingFee ? String(item.marketingFee) : '',
       cateringFee: item.cateringFee ? String(item.cateringFee) : '',
+      transportFee: item.transportFee ? String(item.transportFee) : '',
       otherFee: item.otherFee ? String(item.otherFee) : '',
       feePerPerson: item.feePerPerson ? String(item.feePerPerson) : '',
       headcount: item.headcount ? String(item.headcount) : '',
@@ -67,7 +68,8 @@ export function CourseCostsContent() {
       name: form.name, status: form.status, note: form.note,
       venueFee: toNum(form.venueFee), speakerFee: toNum(form.speakerFee),
       materialFee: toNum(form.materialFee), marketingFee: toNum(form.marketingFee),
-      cateringFee: toNum(form.cateringFee), otherFee: toNum(form.otherFee),
+      cateringFee: toNum(form.cateringFee), transportFee: toNum(form.transportFee),
+      otherFee: toNum(form.otherFee),
       feePerPerson: toNum(form.feePerPerson), headcount: toNum(form.headcount),
     }
     if (editId) {
@@ -77,11 +79,11 @@ export function CourseCostsContent() {
       })
       setItems(prev => prev.map(i => i.id === editId ? {
         ...i, ...payload,
-        totalCost: payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.otherFee,
+        totalCost: payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.transportFee + payload.otherFee,
         totalRevenue: payload.feePerPerson * payload.headcount,
-        netProfit: payload.feePerPerson * payload.headcount - (payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.otherFee),
+        netProfit: payload.feePerPerson * payload.headcount - (payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.transportFee + payload.otherFee),
         marginPct: payload.feePerPerson * payload.headcount > 0
-          ? Math.round((payload.feePerPerson * payload.headcount - (payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.otherFee)) / (payload.feePerPerson * payload.headcount) * 10000) / 100
+          ? Math.round((payload.feePerPerson * payload.headcount - (payload.venueFee + payload.speakerFee + payload.materialFee + payload.marketingFee + payload.cateringFee + payload.transportFee + payload.otherFee)) / (payload.feePerPerson * payload.headcount) * 10000) / 100
           : 0,
       } : i))
     } else {
@@ -212,7 +214,7 @@ export function CourseCostsContent() {
 
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">支出費用</p>
             <div className="grid grid-cols-2 gap-3">
-              {([['場地費', 'venueFee'], ['講師費', 'speakerFee'], ['教材費', 'materialFee'], ['行銷費', 'marketingFee'], ['餐飲費', 'cateringFee'], ['其他費用', 'otherFee']] as [string, keyof FormState][]).map(([label, key]) => (
+              {([['場地費', 'venueFee'], ['講師費', 'speakerFee'], ['教材費', 'materialFee'], ['行銷費', 'marketingFee'], ['餐飲費', 'cateringFee'], ['交通費', 'transportFee'], ['其他費用', 'otherFee']] as [string, keyof FormState][]).map(([label, key]) => (
                 <div key={key}>
                   <label className="label">{label}</label>
                   <input type="number" className="input w-full" min="0" value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder="0" />
@@ -232,7 +234,7 @@ export function CourseCostsContent() {
 
             {/* Live preview */}
             {(form.venueFee || form.speakerFee || form.materialFee || form.feePerPerson || form.headcount) && (() => {
-              const cost = toNum(form.venueFee) + toNum(form.speakerFee) + toNum(form.materialFee) + toNum(form.marketingFee) + toNum(form.cateringFee) + toNum(form.otherFee)
+              const cost = toNum(form.venueFee) + toNum(form.speakerFee) + toNum(form.materialFee) + toNum(form.marketingFee) + toNum(form.cateringFee) + toNum(form.transportFee) + toNum(form.otherFee)
               const rev = toNum(form.feePerPerson) * toNum(form.headcount)
               const net = rev - cost
               const pct = rev > 0 ? (net / rev * 100).toFixed(1) : null
