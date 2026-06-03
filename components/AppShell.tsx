@@ -36,6 +36,8 @@ function getPageTitle(pathname: string): string {
     '/orders/new':        '新增訂貨單',
     '/promotions':        '促銷活動',
     '/events':            '活動管理',
+    '/course-costs':      '辦課成本試算',
+    '/pricing':           '報價成本試算',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
@@ -66,6 +68,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/orders',            label: '訂貨',     module: 'orders' },
   { href: '/promotions',        label: '促銷活動', module: 'promotions' },
   { href: '/events',            label: '活動管理', module: 'events' },
+  { href: '/course-costs',      label: '辦課成本', module: 'course_costs' },
+  { href: '/pricing',           label: '報價成本', module: 'pricing' },
   { href: '/assets',            label: '素材庫',   module: 'assets' },
   { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
   { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: 'clinic_monitor' },

@@ -86,6 +86,8 @@ const DB = {
   customers: process.env.NOTION_CUSTOMERS_SYSTEM_DB ?? process.env.NOTION_CUSTOMERS_DB,
   events: process.env.NOTION_EVENTS_DB,
   registrations: process.env.NOTION_REGISTRATIONS_DB,
+  course_costs: process.env.NOTION_COURSE_COSTS_DB,
+  pricing: process.env.NOTION_PRICING_DB,
   visits: process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16',
   tickets:
     process.env.NOTION_TICKETS_SYSTEM_DB ??
@@ -1924,7 +1926,7 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ── accounts & permissions ────────────────────────────────────
 
-export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'events', 'assets', 'admin', 'clinic_monitor', 'trip_planner', 'accounts'] as const
+export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'events', 'course_costs', 'pricing', 'assets', 'admin', 'clinic_monitor', 'trip_planner', 'accounts'] as const
 export type ModuleKey = typeof MODULE_KEYS[number]
 export type ModulePermission = { view: boolean; edit: boolean }
 export type UserPermissions = Record<ModuleKey, ModulePermission>
@@ -1937,8 +1939,10 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   quote:      '報價',
   orders:     '訂貨',
   promotions: '促銷活動',
-  events:     '活動管理',
-  assets:     '素材庫',
+  events:       '活動管理',
+  course_costs: '辦課成本',
+  pricing:      '報價成本',
+  assets:       '素材庫',
   admin:          '行政管理',
   clinic_monitor: '客戶資料監控',
   trip_planner:   '行程規劃',
@@ -1953,8 +1957,10 @@ const MODULE_NOTION_FIELDS: Record<ModuleKey, { view: string; edit: string }> = 
   quote:      { view: '報價檢視',     edit: '報價編輯'     },
   orders:     { view: '訂貨檢視',     edit: '訂貨編輯'     },
   promotions: { view: '促銷活動檢視', edit: '促銷活動編輯' },
-  events:     { view: '活動管理檢視', edit: '活動管理編輯' },
-  assets:     { view: '素材庫檢視',   edit: '素材庫編輯'   },
+  events:       { view: '活動管理檢視', edit: '活動管理編輯' },
+  course_costs: { view: '辦課成本檢視', edit: '辦課成本編輯' },
+  pricing:      { view: '報價成本檢視', edit: '報價成本編輯' },
+  assets:       { view: '素材庫檢視',   edit: '素材庫編輯'   },
   admin:          { view: '行政管理檢視',     edit: '行政管理編輯'     },
   clinic_monitor: { view: '客戶資料監控檢視', edit: '客戶資料監控編輯' },
   trip_planner:   { view: '行程規劃檢視',     edit: '行程規劃編輯'     },
@@ -2467,5 +2473,209 @@ export async function updateRegistrationStatus(id: string, status: string): Prom
       page_id: id,
       properties: { '狀態': { select: { name: status } } },
     })
+  )
+}
+
+// ─── 辦課成本試算 ──────────────────────────────────────────────────────────────
+
+export type CourseCost = {
+  id:          string
+  name:        string   // 課程名稱
+  venueFee:    number   // 場地費
+  speakerFee:  number   // 講師費
+  materialFee: number   // 教材費
+  marketingFee:number   // 行銷費
+  cateringFee: number   // 餐飲費
+  otherFee:    number   // 其他費用
+  feePerPerson:number   // 報名費_人
+  headcount:   number   // 預計人數
+  totalCost:   number   // 總成本 (formula)
+  totalRevenue:number   // 總收入 (formula)
+  netProfit:   number   // 淨利 (formula)
+  marginPct:   number   // 利潤率% (formula)
+  status:      string   // 規劃中 / 已確認 / 已結算
+  note:        string
+}
+
+function getFormula(page: any, field: string): number {
+  const prop = getProp(page, field)
+  if (!prop || prop.type !== 'formula') return 0
+  return prop.formula?.number ?? 0
+}
+
+function mapCourseCost(page: any): CourseCost {
+  return {
+    id:           page.id,
+    name:         getTitle(page, '課程名稱'),
+    venueFee:     getNumber(page, '場地費'),
+    speakerFee:   getNumber(page, '講師費'),
+    materialFee:  getNumber(page, '教材費'),
+    marketingFee: getNumber(page, '行銷費'),
+    cateringFee:  getNumber(page, '餐飲費'),
+    otherFee:     getNumber(page, '其他費用'),
+    feePerPerson: getNumber(page, '報名費_人'),
+    headcount:    getNumber(page, '預計人數'),
+    totalCost:    getFormula(page, '總成本'),
+    totalRevenue: getFormula(page, '總收入'),
+    netProfit:    getFormula(page, '淨利'),
+    marginPct:    getFormula(page, '利潤率%'),
+    status:       getSelect(page, '狀態'),
+    note:         getText(page, '備註'),
+  }
+}
+
+export async function listCourseCosts(): Promise<CourseCost[]> {
+  if (!DB.course_costs) return []
+  const items: CourseCost[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listCourseCosts', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.course_costs!),
+        page_size: 100,
+        sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) items.push(mapCourseCost(page))
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  return items
+}
+
+export async function createCourseCost(data: Omit<CourseCost, 'id'|'totalCost'|'totalRevenue'|'netProfit'|'marginPct'>): Promise<CourseCost> {
+  if (!DB.course_costs) throw new Error('NOTION_COURSE_COSTS_DB not set')
+  const page: any = await notionCallWithRetry('createCourseCost', () =>
+    notion.pages.create({
+      parent: { database_id: normalizeDatabaseId(DB.course_costs!) },
+      properties: {
+        '課程名稱':  { title: [{ text: { content: data.name } }] },
+        '場地費':    { number: data.venueFee || null },
+        '講師費':    { number: data.speakerFee || null },
+        '教材費':    { number: data.materialFee || null },
+        '行銷費':    { number: data.marketingFee || null },
+        '餐飲費':    { number: data.cateringFee || null },
+        '其他費用':  { number: data.otherFee || null },
+        '報名費_人': { number: data.feePerPerson || null },
+        '預計人數':  { number: data.headcount || null },
+        '狀態':      { select: { name: data.status || '規劃中' } },
+        '備註':      { rich_text: [{ text: { content: data.note || '' } }] },
+      },
+    })
+  )
+  return mapCourseCost(page)
+}
+
+export async function updateCourseCost(id: string, data: Partial<Omit<CourseCost, 'id'|'totalCost'|'totalRevenue'|'netProfit'|'marginPct'>>): Promise<void> {
+  const props: any = {}
+  if (data.name         !== undefined) props['課程名稱']  = { title: [{ text: { content: data.name } }] }
+  if (data.venueFee     !== undefined) props['場地費']    = { number: data.venueFee || null }
+  if (data.speakerFee   !== undefined) props['講師費']    = { number: data.speakerFee || null }
+  if (data.materialFee  !== undefined) props['教材費']    = { number: data.materialFee || null }
+  if (data.marketingFee !== undefined) props['行銷費']    = { number: data.marketingFee || null }
+  if (data.cateringFee  !== undefined) props['餐飲費']    = { number: data.cateringFee || null }
+  if (data.otherFee     !== undefined) props['其他費用']  = { number: data.otherFee || null }
+  if (data.feePerPerson !== undefined) props['報名費_人'] = { number: data.feePerPerson || null }
+  if (data.headcount    !== undefined) props['預計人數']  = { number: data.headcount || null }
+  if (data.status       !== undefined) props['狀態']      = { select: { name: data.status } }
+  if (data.note         !== undefined) props['備註']      = { rich_text: [{ text: { content: data.note } }] }
+  await notionCallWithRetry('updateCourseCost', () =>
+    notion.pages.update({ page_id: id, properties: props })
+  )
+}
+
+export async function deleteCourseCost(id: string): Promise<void> {
+  await notionCallWithRetry('deleteCourseCost', () =>
+    notion.pages.update({ page_id: id, archived: true })
+  )
+}
+
+// ─── 報價成本試算 ──────────────────────────────────────────────────────────────
+
+export type PricingItem = {
+  id:           string
+  name:         string   // 品名
+  brand:        string   // 品牌
+  costPrice:    number   // 進貨成本
+  listPrice:    number   // 定價
+  discountRate: number   // 折扣率 (0~1)
+  floorPrice:   number   // 最低售價
+  actualPrice:  number   // 實際售價 (formula)
+  grossProfit:  number   // 毛利 (formula)
+  grossMargin:  number   // 毛利率% (formula)
+  note:         string
+}
+
+function mapPricingItem(page: any): PricingItem {
+  return {
+    id:           page.id,
+    name:         getTitle(page, '品名'),
+    brand:        getSelect(page, '品牌'),
+    costPrice:    getNumber(page, '進貨成本'),
+    listPrice:    getNumber(page, '定價'),
+    discountRate: getNumber(page, '折扣率'),
+    floorPrice:   getNumber(page, '最低售價'),
+    actualPrice:  getFormula(page, '實際售價'),
+    grossProfit:  getFormula(page, '毛利'),
+    grossMargin:  getFormula(page, '毛利率%'),
+    note:         getText(page, '備註'),
+  }
+}
+
+export async function listPricingItems(): Promise<PricingItem[]> {
+  if (!DB.pricing) return []
+  const items: PricingItem[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listPricingItems', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.pricing!),
+        page_size: 100,
+        sorts: [{ property: '品牌', direction: 'ascending' }],
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) items.push(mapPricingItem(page))
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  return items
+}
+
+export async function createPricingItem(data: Omit<PricingItem, 'id'|'actualPrice'|'grossProfit'|'grossMargin'>): Promise<PricingItem> {
+  if (!DB.pricing) throw new Error('NOTION_PRICING_DB not set')
+  const page: any = await notionCallWithRetry('createPricingItem', () =>
+    notion.pages.create({
+      parent: { database_id: normalizeDatabaseId(DB.pricing!) },
+      properties: {
+        '品名':    { title: [{ text: { content: data.name } }] },
+        '品牌':    { select: { name: data.brand } },
+        '進貨成本':{ number: data.costPrice || null },
+        '定價':    { number: data.listPrice || null },
+        '折扣率':  { number: data.discountRate ?? null },
+        '最低售價':{ number: data.floorPrice || null },
+        '備註':    { rich_text: [{ text: { content: data.note || '' } }] },
+      },
+    })
+  )
+  return mapPricingItem(page)
+}
+
+export async function updatePricingItem(id: string, data: Partial<Omit<PricingItem, 'id'|'actualPrice'|'grossProfit'|'grossMargin'>>): Promise<void> {
+  const props: any = {}
+  if (data.name         !== undefined) props['品名']     = { title: [{ text: { content: data.name } }] }
+  if (data.brand        !== undefined) props['品牌']     = { select: { name: data.brand } }
+  if (data.costPrice    !== undefined) props['進貨成本'] = { number: data.costPrice || null }
+  if (data.listPrice    !== undefined) props['定價']     = { number: data.listPrice || null }
+  if (data.discountRate !== undefined) props['折扣率']   = { number: data.discountRate ?? null }
+  if (data.floorPrice   !== undefined) props['最低售價'] = { number: data.floorPrice || null }
+  if (data.note         !== undefined) props['備註']     = { rich_text: [{ text: { content: data.note } }] }
+  await notionCallWithRetry('updatePricingItem', () =>
+    notion.pages.update({ page_id: id, properties: props })
+  )
+}
+
+export async function deletePricingItem(id: string): Promise<void> {
+  await notionCallWithRetry('deletePricingItem', () =>
+    notion.pages.update({ page_id: id, archived: true })
   )
 }
