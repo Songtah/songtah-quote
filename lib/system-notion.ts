@@ -2414,6 +2414,13 @@ export async function updateEvent(id: string, data: Partial<{
   deleteRedisValue('events-list-v1')
 }
 
+export async function deleteEvent(id: string): Promise<void> {
+  await notionCallWithRetry('deleteEvent', () =>
+    notion.pages.update({ page_id: id, archived: true })
+  )
+  deleteRedisValue('events-list-v1')
+}
+
 export async function listEventRegistrations(eventId: string): Promise<EventRegistration[]> {
   if (!DB.registrations) return []
   const items: EventRegistration[] = []

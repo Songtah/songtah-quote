@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getEventById, updateEvent, listEventRegistrations, updateRegistrationStatus } from '@/lib/system-notion'
+import { getEventById, updateEvent, deleteEvent, listEventRegistrations, updateRegistrationStatus } from '@/lib/system-notion'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -34,5 +34,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   await updateEvent(id, body)
+  return NextResponse.json({ ok: true })
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+
+  await deleteEvent(params.id)
   return NextResponse.json({ ok: true })
 }
