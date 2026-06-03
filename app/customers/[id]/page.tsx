@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AppShell } from '@/components/AppShell'
 import { VisitModal } from '@/components/VisitsContent'
 import type { Equipment, Ticket } from '@/types'
-import type { SystemCustomerDetail, Visit } from '@/lib/system-notion'
+import type { SystemCustomerDetail, Visit, EventRegistration } from '@/lib/system-notion'
 
 type CustomerData = {
   customer: SystemCustomerDetail
@@ -69,6 +69,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
   const [ticketsExpanded, setTicketsExpanded] = useState(false)
   const [visitsExpanded, setVisitsExpanded] = useState(false)
   const [eqExpanded, setEqExpanded] = useState(false)
+  const [customerEvents, setCustomerEvents] = useState<EventRegistration[]>([])
+  const [eventsExpanded, setEventsExpanded] = useState(false)
 
   const [selectedEq, setSelectedEq] = useState<EquipmentDetail | null>(null)
   const [eqLoading, setEqLoading] = useState(false)
@@ -104,6 +106,12 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       })
       .catch(() => setError('無法載入客戶資料'))
       .finally(() => setLoading(false))
+
+    // load events (non-blocking)
+    fetch(`/api/customers/${params.id}/events`)
+      .then(r => r.ok ? r.json() : [])
+      .then(evs => setCustomerEvents(Array.isArray(evs) ? evs : []))
+      .catch(() => {})
   }, [params.id])
 
   function openEquipment(eqId: string) {
@@ -482,6 +490,45 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     className="w-full pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {ticketsExpanded ? '▲ 收合' : `▼ 顯示其餘 ${data.tickets.length - TICKETS_PREVIEW} 筆`}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── 參加活動 ───────────────────────────────────────────────────── */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">參加活動</h2>
+              <span className="text-xs text-gray-400">{customerEvents.length} 筆</span>
+            </div>
+            {customerEvents.length === 0 ? (
+              <p className="text-sm text-gray-400">尚無活動報名紀錄</p>
+            ) : (
+              <div className="space-y-2">
+                {(eventsExpanded ? customerEvents : customerEvents.slice(0, 3)).map(ev => (
+                  <Link
+                    key={ev.id}
+                    href={`/events/${ev.eventId}`}
+                    className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{ev.institution}</p>
+                      <p className="text-xs text-gray-400">{ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : ''}</p>
+                    </div>
+                    <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      ev.status === '已確認' ? 'bg-green-100 text-green-700' :
+                      ev.status === '取消'   ? 'bg-red-100 text-red-600' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>{ev.status}</span>
+                  </Link>
+                ))}
+                {customerEvents.length > 3 && (
+                  <button
+                    onClick={() => setEventsExpanded(v => !v)}
+                    className="w-full pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {eventsExpanded ? '▲ 收合' : `▼ 顯示其餘 ${customerEvents.length - 3} 筆`}
                   </button>
                 )}
               </div>
