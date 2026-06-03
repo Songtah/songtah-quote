@@ -66,11 +66,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/products/catalog',  label: '產品',     module: 'products' },
   { href: '/quotes',            label: '報價',     module: 'quote' },
   { href: '/orders',            label: '訂貨',     module: 'orders' },
-  { href: '/course-costs',      label: '辦課成本', module: 'course_costs' },
   { href: '/marketing',         label: '行銷管理', module: null },
   { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
   { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: 'clinic_monitor' },
-  { href: '/admin/trip-planner',     label: '行程規劃',     module: 'trip_planner' },
   { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
   { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
 ]
