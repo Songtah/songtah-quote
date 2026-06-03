@@ -35,6 +35,7 @@ function getPageTitle(pathname: string): string {
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
     '/promotions':        '促銷活動',
+    '/events':            '活動管理',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
@@ -43,6 +44,7 @@ function getPageTitle(pathname: string): string {
   if (/^\/quotes/.test(pathname)) return '報價單管理'
   if (/^\/share\//.test(pathname)) return '報價單分享頁'
   if (/^\/orders\//.test(pathname)) return '訂貨單詳情'
+  if (/^\/events\//.test(pathname)) return '活動詳情'
   return pathname
 }
 
@@ -63,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/quotes',            label: '報價',     module: 'quote' },
   { href: '/orders',            label: '訂貨',     module: 'orders' },
   { href: '/promotions',        label: '促銷活動', module: 'promotions' },
+  { href: '/events',            label: '活動管理', module: 'events' },
   { href: '/assets',            label: '素材庫',   module: 'assets' },
   { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
   { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: 'clinic_monitor' },
