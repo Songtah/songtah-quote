@@ -87,7 +87,6 @@ const DB = {
   events: process.env.NOTION_EVENTS_DB,
   registrations: process.env.NOTION_REGISTRATIONS_DB,
   course_costs: process.env.NOTION_COURSE_COSTS_DB,
-  pricing: process.env.NOTION_PRICING_DB,
   visits: process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16',
   tickets:
     process.env.NOTION_TICKETS_SYSTEM_DB ??
@@ -1926,7 +1925,7 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ── accounts & permissions ────────────────────────────────────
 
-export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'events', 'course_costs', 'pricing', 'assets', 'admin', 'clinic_monitor', 'trip_planner', 'accounts'] as const
+export const MODULE_KEYS = ['crm', 'rma', 'bd', 'products', 'quote', 'orders', 'promotions', 'events', 'course_costs', 'assets', 'admin', 'clinic_monitor', 'trip_planner', 'accounts'] as const
 export type ModuleKey = typeof MODULE_KEYS[number]
 export type ModulePermission = { view: boolean; edit: boolean }
 export type UserPermissions = Record<ModuleKey, ModulePermission>
@@ -1941,7 +1940,6 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   promotions: '促銷活動',
   events:       '活動管理',
   course_costs: '辦課成本',
-  pricing:      '報價成本',
   assets:       '素材庫',
   admin:          '行政管理',
   clinic_monitor: '客戶資料監控',
@@ -1959,7 +1957,6 @@ const MODULE_NOTION_FIELDS: Record<ModuleKey, { view: string; edit: string }> = 
   promotions: { view: '促銷活動檢視', edit: '促銷活動編輯' },
   events:       { view: '活動管理檢視', edit: '活動管理編輯' },
   course_costs: { view: '辦課成本檢視', edit: '辦課成本編輯' },
-  pricing:      { view: '報價成本檢視', edit: '報價成本編輯' },
   assets:       { view: '素材庫檢視',   edit: '素材庫編輯'   },
   admin:          { view: '行政管理檢視',     edit: '行政管理編輯'     },
   clinic_monitor: { view: '客戶資料監控檢視', edit: '客戶資料監控編輯' },
@@ -2590,92 +2587,3 @@ export async function deleteCourseCost(id: string): Promise<void> {
   )
 }
 
-// ─── 報價成本試算 ──────────────────────────────────────────────────────────────
-
-export type PricingItem = {
-  id:           string
-  name:         string   // 品名
-  brand:        string   // 品牌
-  costPrice:    number   // 進貨成本
-  listPrice:    number   // 定價
-  discountRate: number   // 折扣率 (0~1)
-  floorPrice:   number   // 最低售價
-  actualPrice:  number   // 實際售價 (formula)
-  grossProfit:  number   // 毛利 (formula)
-  grossMargin:  number   // 毛利率% (formula)
-  note:         string
-}
-
-function mapPricingItem(page: any): PricingItem {
-  return {
-    id:           page.id,
-    name:         getTitle(page, '品名'),
-    brand:        getSelect(page, '品牌'),
-    costPrice:    getNumber(page, '進貨成本'),
-    listPrice:    getNumber(page, '定價'),
-    discountRate: getNumber(page, '折扣率'),
-    floorPrice:   getNumber(page, '最低售價'),
-    actualPrice:  getFormula(page, '實際售價'),
-    grossProfit:  getFormula(page, '毛利'),
-    grossMargin:  getFormula(page, '毛利率%'),
-    note:         getText(page, '備註'),
-  }
-}
-
-export async function listPricingItems(): Promise<PricingItem[]> {
-  if (!DB.pricing) return []
-  const items: PricingItem[] = []
-  let cursor: string | undefined
-  do {
-    const res: any = await notionCallWithRetry('listPricingItems', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.pricing!),
-        page_size: 100,
-        sorts: [{ property: '品牌', direction: 'ascending' }],
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    for (const page of res.results ?? []) items.push(mapPricingItem(page))
-    cursor = res.has_more ? res.next_cursor : undefined
-  } while (cursor)
-  return items
-}
-
-export async function createPricingItem(data: Omit<PricingItem, 'id'|'actualPrice'|'grossProfit'|'grossMargin'>): Promise<PricingItem> {
-  if (!DB.pricing) throw new Error('NOTION_PRICING_DB not set')
-  const page: any = await notionCallWithRetry('createPricingItem', () =>
-    notion.pages.create({
-      parent: { database_id: normalizeDatabaseId(DB.pricing!) },
-      properties: {
-        '品名':    { title: [{ text: { content: data.name } }] },
-        '品牌':    { select: { name: data.brand } },
-        '進貨成本':{ number: data.costPrice || null },
-        '定價':    { number: data.listPrice || null },
-        '折扣率':  { number: data.discountRate ?? null },
-        '最低售價':{ number: data.floorPrice || null },
-        '備註':    { rich_text: [{ text: { content: data.note || '' } }] },
-      },
-    })
-  )
-  return mapPricingItem(page)
-}
-
-export async function updatePricingItem(id: string, data: Partial<Omit<PricingItem, 'id'|'actualPrice'|'grossProfit'|'grossMargin'>>): Promise<void> {
-  const props: any = {}
-  if (data.name         !== undefined) props['品名']     = { title: [{ text: { content: data.name } }] }
-  if (data.brand        !== undefined) props['品牌']     = { select: { name: data.brand } }
-  if (data.costPrice    !== undefined) props['進貨成本'] = { number: data.costPrice || null }
-  if (data.listPrice    !== undefined) props['定價']     = { number: data.listPrice || null }
-  if (data.discountRate !== undefined) props['折扣率']   = { number: data.discountRate ?? null }
-  if (data.floorPrice   !== undefined) props['最低售價'] = { number: data.floorPrice || null }
-  if (data.note         !== undefined) props['備註']     = { rich_text: [{ text: { content: data.note } }] }
-  await notionCallWithRetry('updatePricingItem', () =>
-    notion.pages.update({ page_id: id, properties: props })
-  )
-}
-
-export async function deletePricingItem(id: string): Promise<void> {
-  await notionCallWithRetry('deletePricingItem', () =>
-    notion.pages.update({ page_id: id, archived: true })
-  )
-}
