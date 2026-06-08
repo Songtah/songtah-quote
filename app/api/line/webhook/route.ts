@@ -1,17 +1,19 @@
 /**
  * POST /api/line/webhook
  *
- * 接收 LINE Messaging API Webhook，自動將群組客情訊息寫入 Notion。
+ * 接收 LINE Messaging API Webhook。
+ * 只處理符合「每日報表」格式的業務訊息，其他訊息一律忽略。
+ * 每個編號客戶自動建立一筆客情紀錄。
  *
- * 環境變數需求：
- *   LINE_CHANNEL_SECRET       — 用於驗證簽名（必填）
- *   LINE_CHANNEL_ACCESS_TOKEN — 用於查詢發送人姓名（可選）
- *   LINE_GROUP_ID             — 限定特定群組（留空則接受所有群組）
+ * 環境變數：
+ *   LINE_CHANNEL_SECRET       — 簽名驗證（必填）
+ *   LINE_CHANNEL_ACCESS_TOKEN — 查詢發送人姓名（可選）
+ *   LINE_GROUP_ID             — 限定群組（留空則接受所有群組）
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { parseVisitFromMessage } from '@/lib/line-message-ai'
+import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +24,7 @@ function verifyLineSignature(rawBody: string, signature: string): boolean {
   const secret = process.env.LINE_CHANNEL_SECRET
   if (!secret) {
     console.warn('[LINE Webhook] LINE_CHANNEL_SECRET 未設定，跳過驗證')
-    return true  // 開發模式下允許
+    return true
   }
   const hash = crypto.createHmac('SHA256', secret).update(rawBody).digest('base64')
   return hash === signature
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
 
-  // 立即回應 LINE（必須在 200ms 內）
+  // 立即回應 LINE（200ms 內）
   void processEvents(events)
   return NextResponse.json({ ok: true })
 }
@@ -75,76 +77,80 @@ async function processEvents(events: any[]) {
 
   for (const event of events) {
     try {
-      // 只處理群組文字訊息
       if (event.type !== 'message' || event.message?.type !== 'text') continue
       if (event.source?.type !== 'group') continue
       if (targetGroupId && event.source?.groupId !== targetGroupId) continue
 
       const text: string = event.message.text ?? ''
-      if (text.length < 10) continue  // 太短，略過
 
-      const groupId: string = event.source.groupId
-      const userId: string = event.source.userId ?? ''
-      const date = new Date(event.timestamp).toISOString().split('T')[0]
-
-      // 取得發送人顯示名稱
-      const displayName = await getLineDisplayName(groupId, userId)
-      const senderLabel = displayName || userId
-
-      // 取得表單選項（有 Redis 快取，速度快）
-      const formOptions = await getVisitFormOptions()
-
-      // AI 解析
-      const parsed = await parseVisitFromMessage(
-        text,
-        senderLabel,
-        date,
-        formOptions.interactionTypes,
-        formOptions.customerReactions,
-      )
-
-      if (!parsed.isVisitRecord || !parsed.customerName || parsed.confidence === 'low') {
-        console.log(`[LINE Webhook] skip (not visit): "${text.slice(0, 30)}…"`)
+      // ── 只處理每日報表格式 ────────────────────────────────────────────────
+      if (!isDailyReport(text)) {
+        console.log(`[LINE Webhook] skip (not daily report): "${text.slice(0, 30)}…"`)
         continue
       }
 
-      // 比對 Notion 客戶
-      let customerId: string | undefined
-      const matches = await searchSystemCustomers(parsed.customerName)
-      if (matches.length > 0) {
-        customerId = matches[0].id
+      const report = parseDailyReport(text)
+      if (!report || report.visits.length === 0) {
+        console.log('[LINE Webhook] skip: parsed report has no visits')
+        continue
       }
 
-      // 比對業務人員（用顯示名稱對應系統業務清單）
+      const groupId: string = event.source.groupId
+      const userId: string = event.source.userId ?? ''
+
+      // 取得發送人顯示名稱
+      const displayName = await getLineDisplayName(groupId, userId)
+
+      // 取得系統業務清單
+      const formOptions = await getVisitFormOptions()
+
+      // 比對業務人員（LINE 顯示名稱 vs 系統清單）
       const salesperson =
         formOptions.salespersons.find((s) =>
           displayName && (displayName.includes(s) || s.includes(displayName))
         ) ?? displayName ?? ''
 
-      await createVisit({
-        customerName: parsed.customerName,
-        customerId,
-        date: parsed.date,
-        salesperson,
-        content: parsed.content ?? text,
-        interactionType: parsed.interactionType ?? '',
-        interactionPurpose: '',
-        customerReaction: parsed.customerReaction ?? '',
-        followUpAction: '',
-        needsFollowUp: parsed.needsFollowUp ?? false,
-        nextFollowUpDate: '',
-        status: '',
-        address: '',
-        city: '',
-        district: '',
-        tags: [],
-        competitorEquipment: [],
-        interestedProductIds: [],
-      })
+      // ── 每個客戶建立一筆紀錄 ──────────────────────────────────────────────
+      for (const visit of report.visits) {
+        try {
+          // 比對 Notion 客戶主檔
+          let customerId: string | undefined
+          const matches = await searchSystemCustomers(visit.customerName)
+          if (matches.length > 0) customerId = matches[0].id
 
-      console.log(
-        `[LINE Webhook] ✅ created visit: ${parsed.customerName} / ${salesperson} / ${parsed.date}`
-      )
+          // 確認 customerReaction 在系統選項內，否則清空
+          const validReaction = formOptions.customerReactions.includes(visit.customerReaction)
+            ? visit.customerReaction
+            : ''
+
+          await createVisit({
+            customerName: visit.customerName,
+            customerId,
+            date: report.date,
+            salesperson,
+            content: visit.content,
+            interactionType: '拜訪',
+            interactionPurpose: '',
+            customerReaction: validReaction,
+            followUpAction: '',
+            needsFollowUp: visit.needsFollowUp,
+            nextFollowUpDate: '',
+            status: '',
+            address: '',
+            city: '',
+            district: '',
+            tags: [],
+            competitorEquipment: [],
+            interestedProductIds: [],
+          })
+
+          console.log(
+            `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}`
+          )
+        } catch (err) {
+          console.error(`[LINE Webhook] createVisit error (${visit.customerName}):`, err)
+        }
+      }
     } catch (err) {
       console.error('[LINE Webhook] processEvents error:', err)
     }
