@@ -4,12 +4,11 @@ import { useRef, useState } from 'react'
 
 type ImportResult = {
   totalMessages: number
-  candidates: number
-  detected: number
+  dailyReports: number
   imported: number
   errors: number
-  records: { customerName: string; date: string; id: string }[]
-  errorDetails: { customerName?: string; error: string }[]
+  records: { customerName: string; date: string; salesperson: string; id: string }[]
+  errorDetails: { customerName?: string; sender: string; error: string }[]
 }
 
 type Stage = 'idle' | 'uploading' | 'done' | 'error'
@@ -131,15 +130,10 @@ export function LineImportContent() {
           <h2 className="font-semibold text-gray-800">匯入結果</h2>
 
           {/* 統計數字 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard label="解析訊息" value={result.totalMessages} />
-            <StatCard label="候選訊息" value={result.candidates} />
-            <StatCard label="識別為客情" value={result.detected} />
-            <StatCard
-              label="成功匯入"
-              value={result.imported}
-              highlight={result.imported > 0}
-            />
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="總訊息數" value={result.totalMessages} />
+            <StatCard label="每日報表" value={result.dailyReports} />
+            <StatCard label="匯入筆數" value={result.imported} highlight={result.imported > 0} />
           </div>
 
           {/* 匯入清單 */}
@@ -150,7 +144,10 @@ export function LineImportContent() {
                 {result.records.map((r) => (
                   <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
                     <span className="text-sm font-medium text-gray-800">{r.customerName}</span>
-                    <span className="text-xs text-gray-400">{r.date}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">{r.salesperson}</span>
+                      <span className="text-xs text-gray-400">{r.date}</span>
+                    </div>
                   </div>
                 ))}
               </div>
