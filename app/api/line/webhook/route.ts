@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
+import { resolveSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
@@ -98,17 +99,12 @@ async function processEvents(events: any[]) {
       const groupId: string = event.source.groupId
       const userId: string = event.source.userId ?? ''
 
-      // 取得發送人顯示名稱
+      // 取得發送人顯示名稱，並透過對應表轉換為系統業務姓名
       const displayName = await getLineDisplayName(groupId, userId)
+      const salesperson = resolveSalesperson(displayName)
 
-      // 取得系統業務清單
+      // 取得系統表單選項
       const formOptions = await getVisitFormOptions()
-
-      // 比對業務人員（LINE 顯示名稱 vs 系統清單）
-      const salesperson =
-        formOptions.salespersons.find((s) =>
-          displayName && (displayName.includes(s) || s.includes(displayName))
-        ) ?? displayName ?? ''
 
       // ── 每個客戶建立一筆紀錄 ──────────────────────────────────────────────
       for (const visit of report.visits) {
