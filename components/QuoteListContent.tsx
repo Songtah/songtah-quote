@@ -207,7 +207,10 @@ export default function QuoteListContent() {
   }
 
   const [quotes, setQuotes]           = useState<Quote[]>([])
+  const [hasMore, setHasMore]         = useState(false)
+  const [nextCursor, setNextCursor]   = useState<string | null>(null)
   const [loading, setLoading]         = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError]             = useState('')
   const [filterStatus, setFilterStatus] = useState(ALL)
   const [sortDir, setSortDir]         = useState<'desc' | 'asc'>('desc')
@@ -225,14 +228,40 @@ export default function QuoteListContent() {
   // ── Fetch ──────────────────────────────────────────────────────
   function loadQuotes() {
     setLoading(true)
-    fetch('/api/quotes')
+    setError('')
+    fetch('/api/quotes?limit=10')
       .then(async (res) => {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? '讀取失敗')
-        setQuotes(Array.isArray(data) ? data : [])
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setQuotes(data.items)
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        } else {
+          setQuotes(Array.isArray(data) ? data : [])
+          setHasMore(false)
+          setNextCursor(null)
+        }
       })
       .catch((err: Error) => setError(err.message || '讀取失敗'))
       .finally(() => setLoading(false))
+  }
+
+  function loadMore() {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    fetch(`/api/quotes?limit=10&cursor=${encodeURIComponent(nextCursor)}`)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) return
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setQuotes((prev) => [...prev, ...data.items])
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false))
   }
 
   useEffect(() => { loadQuotes() }, [])
@@ -509,6 +538,24 @@ export default function QuoteListContent() {
               )
             })}
           </div>
+        )}
+
+        {/* Load more */}
+        {hasMore && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="button-secondary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingMore ? '載入中…' : '載入更多'}
+            </button>
+          </div>
+        )}
+        {!hasMore && quotes.length > 0 && (
+          <p className="mt-3 text-center text-xs text-stone-300">
+            已顯示全部 {quotes.length} 筆
+          </p>
         )}
       </section>
 

@@ -15,13 +15,16 @@ function isRateLimited(error: unknown) {
   )
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
   try {
-    const tickets = await listSystemTickets()
-    return NextResponse.json(tickets)
+    const p = req.nextUrl.searchParams
+    const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
+    const cursor = p.get('cursor') ?? undefined
+    const result = await listSystemTickets({ limit, cursor })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('listSystemTickets error:', error)
     return NextResponse.json(

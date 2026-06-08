@@ -15,11 +15,14 @@ const STATUS_COLOR: Record<string, string> = {
 
 const STATUS_OPTIONS = ['草稿', '已送出', '確認中', '已到貨', '已取消']
 
+const DISPLAY_STEP = 10
+
 export default function OrdersContent() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('')
+  const [displayLimit, setDisplayLimit] = useState(DISPLAY_STEP)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -72,6 +75,9 @@ export default function OrdersContent() {
     ? orders.filter((o) => o.status === filterStatus)
     : orders
 
+  const displayed = filtered.slice(0, displayLimit)
+  const hasDisplayMore = filtered.length > displayLimit
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -89,6 +95,7 @@ export default function OrdersContent() {
           </select>
           <span className="text-sm text-gray-400">
             共 {filtered.length} 筆
+            {hasDisplayMore && <span className="ml-1 text-amber-500">（顯示前 {displayLimit} 筆）</span>}
           </span>
         </div>
         <Link
@@ -111,7 +118,7 @@ export default function OrdersContent() {
         <>
           {/* ── Mobile cards (< md) ── */}
           <div className="md:hidden space-y-3">
-            {filtered.map((order) => (
+            {displayed.map((order) => (
               <div key={order.id} className="bg-white border rounded-lg p-4 space-y-3">
                 {/* Top row: order number + status */}
                 <div className="flex items-center justify-between gap-2">
@@ -198,7 +205,7 @@ export default function OrdersContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filtered.map((order) => (
+                  {displayed.map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link
@@ -273,6 +280,23 @@ export default function OrdersContent() {
               </table>
             </div>
           </div>
+
+          {/* Load more */}
+          {hasDisplayMore && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => setDisplayLimit((prev) => prev + DISPLAY_STEP)}
+                className="button-secondary px-5 py-2 text-sm"
+              >
+                載入更多
+              </button>
+            </div>
+          )}
+          {!hasDisplayMore && displayed.length > 0 && (
+            <p className="mt-3 text-center text-xs text-stone-300">
+              已顯示全部 {filtered.length} 筆
+            </p>
+          )}
         </>
       )}
     </div>

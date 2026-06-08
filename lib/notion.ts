@@ -296,14 +296,19 @@ export async function createQuote(data: {
   }
 }
 
-export async function listQuotes(): Promise<Quote[]> {
+export async function listQuotes(options?: {
+  limit?: number
+  cursor?: string
+}): Promise<{ items: Quote[]; hasMore: boolean; nextCursor: string | null }> {
+  const limit = options?.limit ?? 10
   const resp: any = await notion.databases.query({
     database_id: DB.quotes,
     sorts: [{ property: '建立時間', direction: 'descending' }],
-    page_size: 100,
+    page_size: limit,
+    ...(options?.cursor ? { start_cursor: options.cursor } : {}),
   })
 
-  return resp.results
+  const items: Quote[] = resp.results
     .filter((p: any) => !p.archived)
     .map((p: any) => ({
       id:           p.id,
@@ -324,6 +329,12 @@ export async function listQuotes(): Promise<Quote[]> {
       approvalNote: getText(p, '審核意見'),
       createdAt:    getCreatedTime(p, '建立時間'),
     }))
+
+  return {
+    items,
+    hasMore: resp.has_more ?? false,
+    nextCursor: resp.next_cursor ?? null,
+  }
 }
 
 export async function getQuote(pageId: string): Promise<Quote | null> {

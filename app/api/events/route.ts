@@ -3,12 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listEvents, createEvent } from '@/lib/system-notion'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
-  const events = await listEvents()
-  return NextResponse.json(events)
+  const p = req.nextUrl.searchParams
+  const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
+  const cursor = p.get('cursor') ?? undefined
+  const result = await listEvents({ limit, cursor })
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {

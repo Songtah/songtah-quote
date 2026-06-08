@@ -52,7 +52,10 @@ function eventToForm(ev: EventItem): FormState {
 
 export function EventsContent() {
   const [events, setEvents]     = useState<EventItem[]>([])
+  const [hasMore, setHasMore]   = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm]         = useState<FormState>(EMPTY_FORM)
   const [editId, setEditId]     = useState<string | null>(null)
@@ -60,11 +63,38 @@ export function EventsContent() {
   const [filter, setFilter]     = useState<string>('全部')
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch('/api/events?limit=10')
       .then(r => r.json())
-      .then(data => { setEvents(data); setLoading(false) })
+      .then(data => {
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setEvents(data.items)
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        } else {
+          setEvents(Array.isArray(data) ? data : [])
+          setHasMore(false)
+          setNextCursor(null)
+        }
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
+
+  function loadMore() {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    fetch(`/api/events?limit=10&cursor=${encodeURIComponent(nextCursor)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setEvents(prev => [...prev, ...data.items])
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false))
+  }
 
   function openCreate() {
     setForm(EMPTY_FORM)
@@ -200,6 +230,24 @@ export function EventsContent() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="button-secondary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? '載入中…' : '載入更多'}
+          </button>
+        </div>
+      )}
+      {!hasMore && events.length > 0 && (
+        <p className="mt-3 text-center text-xs text-stone-300">
+          已顯示全部 {events.length} 筆
+        </p>
       )}
 
       {/* Create / Edit modal */}

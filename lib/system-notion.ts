@@ -965,6 +965,45 @@ export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   return items
 }
 
+export async function listSystemCustomersPaginated(options?: {
+  limit?: number
+  cursor?: string
+}): Promise<{ items: CustomerListItem[]; hasMore: boolean; nextCursor: string | null }> {
+  if (!DB.customers) return { items: [], hasMore: false, nextCursor: null }
+  const limit = options?.limit ?? 10
+  const startCursor = options?.cursor
+
+  const response: any = await notionCallWithRetry('listSystemCustomersPaginated', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(DB.customers!),
+      page_size: limit,
+      sorts: [{ property: '客戶名稱', direction: 'ascending' }],
+      ...(startCursor ? { start_cursor: startCursor } : {}),
+    })
+  )
+
+  const items: CustomerListItem[] = []
+  for (const page of response.results ?? []) {
+    const name = getTitle(page, '客戶名稱')
+    if (!name) continue
+    items.push({
+      id: page.id,
+      name,
+      city:        getSelect(page, '縣市'),
+      district:    getSelect(page, '行政區') || getText(page, '行政區'),
+      type:        getSelect(page, '客戶類型'),
+      salesperson: getSelect(page, '負責業務'),
+      status:      getSelect(page, '機構狀態'),
+    })
+  }
+
+  return {
+    items,
+    hasMore: response.has_more ?? false,
+    nextCursor: response.next_cursor ?? null,
+  }
+}
+
 // ── 醫事監控用：載入所有有機構代碼的客戶（含代碼欄位）──────────────────
 export interface CustomerWithCode {
   id:              string
@@ -1348,22 +1387,53 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
   }
 }
 
-export async function listSystemTickets(): Promise<Ticket[]> {
-  const cached = getCachedValue<Ticket[]>('tickets:list')
-  if (cached) return cached
+export async function listSystemTickets(options?: {
+  limit?: number
+  cursor?: string
+}): Promise<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }> {
+  const limit = options?.limit ?? 10
+  const cursor = options?.cursor
 
+  // 只有第一頁（無 cursor）才用 cache
+  if (!cursor) {
+    const cacheKey = `tickets:list:v2:${limit}`
+    const cached = getCachedValue<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }>(cacheKey)
+    if (cached) return cached
+
+    const response: any = await notionCallWithRetry('listSystemTickets', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.tickets),
+        page_size: limit,
+        sorts: [{ property: '建立日期', direction: 'descending' }],
+      })
+    )
+    const rawItems = (response.results ?? []).map(mapTicketPageRaw)
+    const items = (await resolveTicketNames(rawItems)) as Ticket[]
+    const result = {
+      items,
+      hasMore: response.has_more ?? false,
+      nextCursor: response.next_cursor ?? null,
+    }
+    setCachedValue(cacheKey, result, 180_000)
+    return result
+  }
+
+  // cursor 分頁
   const response: any = await notionCallWithRetry('listSystemTickets', () =>
     notion.databases.query({
       database_id: normalizeDatabaseId(DB.tickets),
-      page_size: 100,
+      page_size: limit,
       sorts: [{ property: '建立日期', direction: 'descending' }],
+      start_cursor: cursor,
     })
   )
-
   const rawItems = (response.results ?? []).map(mapTicketPageRaw)
   const items = (await resolveTicketNames(rawItems)) as Ticket[]
-  setCachedValue('tickets:list', items, 180_000) // 3 min
-  return items
+  return {
+    items,
+    hasMore: response.has_more ?? false,
+    nextCursor: response.next_cursor ?? null,
+  }
 }
 
 export async function getSystemTicketById(id: string) {
@@ -2322,31 +2392,49 @@ function mapRegistration(page: any): EventRegistration {
   }
 }
 
-export async function listEvents(): Promise<EventItem[]> {
-  if (!DB.events) return []
-  const cacheKey = 'events-list-v1'
-  const cached = await getRedisValue<EventItem[]>(cacheKey)
-  if (cached) return cached
+export async function listEvents(options?: {
+  limit?: number
+  cursor?: string
+}): Promise<{ items: EventItem[]; hasMore: boolean; nextCursor: string | null }> {
+  if (!DB.events) return { items: [], hasMore: false, nextCursor: null }
+  const limit = options?.limit ?? 10
+  const startCursor = options?.cursor
 
-  const items: EventItem[] = []
-  let cursor: string | undefined
-  do {
+  if (!startCursor) {
+    const cacheKey = `events-list-v2:${limit}`
+    const cached = await getRedisValue<{ items: EventItem[]; hasMore: boolean; nextCursor: string | null }>(cacheKey)
+    if (cached) return cached
+
     const res: any = await notionCallWithRetry('listEvents', () =>
       notion.databases.query({
         database_id: normalizeDatabaseId(DB.events!),
-        page_size: 100,
+        page_size: limit,
         sorts: [{ property: '日期', direction: 'descending' }],
-        ...(cursor ? { start_cursor: cursor } : {}),
       })
     )
-    for (const page of res.results ?? []) {
-      items.push(mapEvent(page))
+    const items: EventItem[] = (res.results ?? []).map(mapEvent)
+    const result = {
+      items,
+      hasMore: res.has_more ?? false,
+      nextCursor: res.next_cursor ?? null,
     }
-    cursor = res.has_more ? res.next_cursor : undefined
-  } while (cursor)
+    await setRedisValue(cacheKey, result, 5 * 60_000)
+    return result
+  }
 
-  await setRedisValue(cacheKey, items, 5 * 60_000) // 5 min
-  return items
+  const res: any = await notionCallWithRetry('listEvents', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(DB.events!),
+      page_size: limit,
+      sorts: [{ property: '日期', direction: 'descending' }],
+      start_cursor: startCursor,
+    })
+  )
+  return {
+    items: (res.results ?? []).map(mapEvent),
+    hasMore: res.has_more ?? false,
+    nextCursor: res.next_cursor ?? null,
+  }
 }
 
 export async function getEventById(id: string): Promise<EventItem | null> {

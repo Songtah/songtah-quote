@@ -5,13 +5,16 @@ import { createQuote, listQuotes } from '@/lib/notion'
 import type { QuoteItem } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
   try {
-    const quotes = await listQuotes()
-    return NextResponse.json(quotes)
+    const p = req.nextUrl.searchParams
+    const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
+    const cursor = p.get('cursor') ?? undefined
+    const result = await listQuotes({ limit, cursor })
+    return NextResponse.json(result)
   } catch (err) {
     console.error('listQuotes error:', err)
     return NextResponse.json({ error: '無法取得報價單列表' }, { status: 500 })

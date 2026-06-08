@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AuditLogRow } from '@/lib/audit'
 
 function formatDateTime(value: string) {
@@ -39,7 +39,10 @@ const ACTION_LABEL: Record<string, { label: string; cls: string }> = {
 
 export default function AuditLogsContent() {
   const [logs, setLogs] = useState<AuditLogRow[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [moduleFilter, setModuleFilter] = useState('')
@@ -48,15 +51,40 @@ export default function AuditLogsContent() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    fetch('/api/audit-logs')
+    fetch('/api/audit-logs?limit=10')
       .then(async (response) => {
         const data = await response.json()
         if (!response.ok) throw new Error(data.error ?? '讀取失敗')
-        setLogs(Array.isArray(data) ? data : [])
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setLogs(data.items)
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        } else {
+          setLogs(Array.isArray(data) ? data : [])
+          setHasMore(false)
+          setNextCursor(null)
+        }
       })
       .catch((err: Error) => setError(err.message || '讀取失敗'))
       .finally(() => setLoading(false))
   }, [])
+
+  const loadMore = useCallback(() => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    fetch(`/api/audit-logs?limit=10&cursor=${encodeURIComponent(nextCursor)}`)
+      .then(async (response) => {
+        const data = await response.json()
+        if (!response.ok) return
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setLogs((prev) => [...prev, ...data.items])
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false))
+  }, [nextCursor, loadingMore])
 
   const moduleOptions = useMemo(
     () => Array.from(new Set(logs.map((log) => log.module).filter(Boolean))),
@@ -118,7 +146,7 @@ export default function AuditLogsContent() {
       {/* Stats */}
       {!loading && !error && logs.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-stone-400 px-1">
-          <span>共 <strong className="text-stone-700">{logs.length}</strong> 筆紀錄</span>
+          <span>已載入 <strong className="text-stone-700">{logs.length}</strong> 筆紀錄{hasMore && <span className="text-stone-400">+</span>}</span>
           {filteredLogs.length !== logs.length && (
             <span>・篩選後 <strong className="text-brand-600">{filteredLogs.length}</strong> 筆</span>
           )}
@@ -199,6 +227,24 @@ export default function AuditLogsContent() {
           </div>
         )}
       </div>
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="button-secondary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? '載入中…' : '載入更多'}
+          </button>
+        </div>
+      )}
+      {!hasMore && logs.length > 0 && (
+        <p className="mt-3 text-center text-xs text-stone-300">
+          已顯示全部 {logs.length} 筆
+        </p>
+      )}
     </div>
   )
 }

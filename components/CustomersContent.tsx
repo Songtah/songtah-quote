@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listItem, staggerFast } from '@/lib/motion'
@@ -55,23 +55,68 @@ function statusBadge(status: string) {
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>
 }
 
-const DISPLAY_LIMIT = 80
-
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function CustomersContent({
-  initialCustomers,
   initialOptions,
 }: {
-  initialCustomers: Customer[]
-  initialOptions: FilterOptions
+  initialOptions?: FilterOptions
 }) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // SSR 資料直接就緒，不需要 loading 狀態
-  const allCustomers = initialCustomers
-  const options = initialOptions
+  // Client-side fetch state
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [options, setOptions] = useState<FilterOptions>(
+    initialOptions ?? { cities: [], districtsByCity: {}, salespersons: [], types: [] }
+  )
+
+  useEffect(() => {
+    fetch('/api/system-customers/all?limit=10')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setAllCustomers(data.items)
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        } else if (Array.isArray(data)) {
+          setAllCustomers(data)
+          setHasMore(false)
+          setNextCursor(null)
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+
+    if (!initialOptions) {
+      fetch('/api/system-customers/options')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && typeof data === 'object') setOptions(data)
+        })
+        .catch(console.error)
+    }
+  }, [initialOptions])
+
+  const loadMore = useCallback(() => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    fetch(`/api/system-customers/all?limit=10&cursor=${encodeURIComponent(nextCursor)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data === 'object' && Array.isArray(data.items)) {
+          setAllCustomers((prev) => [...prev, ...data.items])
+          setHasMore(data.hasMore ?? false)
+          setNextCursor(data.nextCursor ?? null)
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false))
+  }, [nextCursor, loadingMore])
 
   // Filter state
   const [query, setQuery] = useState('')
@@ -105,8 +150,7 @@ export function CustomersContent({
     return result
   }, [allCustomers, query, typeFilter, cityFilter, districtFilter, salespersonFilter])
 
-  const displayList = filtered.slice(0, DISPLAY_LIMIT)
-  const hasMore = filtered.length > DISPLAY_LIMIT
+  const displayList = filtered
   const hasActiveFilter = !!(query.trim() || typeFilter || cityFilter || districtFilter || salespersonFilter)
   const activeDistricts = cityFilter ? (options.districtsByCity[cityFilter] ?? []) : []
   const total = allCustomers.length
@@ -215,17 +259,18 @@ export function CustomersContent({
       {/* ── Status bar ───────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-400">
-          {hasActiveFilter ? `找到 ${filtered.length} 筆` : `共 ${total} 筆客戶`}
+          {loading
+            ? '載入中…'
+            : hasActiveFilter
+            ? `找到 ${filtered.length} 筆${hasMore ? '（篩選範圍限於已載入資料）' : ''}`
+            : `已載入 ${total} 筆客戶${hasMore ? '+' : ''}`}
         </span>
-        {hasMore && (
-          <span className="text-amber-500 text-xs font-medium">
-            僅顯示前 {DISPLAY_LIMIT} 筆，請縮小篩選範圍
-          </span>
-        )}
       </div>
 
       {/* ── Customer list ─────────────────────────────────────────────────────── */}
-      {displayList.length === 0 ? (
+      {loading ? (
+        <LoadingSkeleton />
+      ) : displayList.length === 0 ? (
         <EmptyState hasFilter={hasActiveFilter} />
       ) : (
         <motion.div
@@ -247,6 +292,24 @@ export function CustomersContent({
             </motion.div>
           ))}
         </motion.div>
+      )}
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="button-secondary px-5 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? '載入中…' : '載入更多'}
+          </button>
+        </div>
+      )}
+      {!hasMore && allCustomers.length > 0 && (
+        <p className="mt-3 text-center text-xs text-stone-300">
+          已顯示全部 {allCustomers.length} 筆
+        </p>
       )}
 
       {/* ── Quick add 客情 modal ──────────────────────────────────────────────── */}

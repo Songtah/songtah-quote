@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listAuditLogs } from '@/lib/audit'
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
   if ((session.user as any)?.role !== 'admin') {
@@ -11,8 +11,11 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    const logs = await listAuditLogs(100)
-    return NextResponse.json(logs)
+    const p = req.nextUrl.searchParams
+    const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
+    const cursor = p.get('cursor') ?? undefined
+    const result = await listAuditLogs({ limit, cursor })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('listAuditLogs error:', error)
     return NextResponse.json({ error: '讀取操作紀錄失敗' }, { status: 500 })

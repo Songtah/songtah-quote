@@ -323,7 +323,12 @@ function getPlainText(value: any) {
   return ''
 }
 
-export async function listAuditLogs(limit = 100): Promise<AuditLogRow[]> {
+export async function listAuditLogs(options?: {
+  limit?: number
+  cursor?: string
+}): Promise<{ items: AuditLogRow[]; hasMore: boolean; nextCursor: string | null }> {
+  const limit = typeof options === 'number' ? options : (options?.limit ?? 10)
+  const cursor = typeof options === 'object' ? options?.cursor : undefined
   const dbId = await ensureAuditDb()
 
   const response: any = await notionCallWithRetry('audit.listLogs', () =>
@@ -331,10 +336,11 @@ export async function listAuditLogs(limit = 100): Promise<AuditLogRow[]> {
       database_id: dbId,
       page_size: limit,
       sorts: [{ property: '發生時間', direction: 'descending' }],
+      ...(cursor ? { start_cursor: cursor } : {}),
     })
   )
 
-  return (response.results ?? []).map((page: any) => ({
+  const items: AuditLogRow[] = (response.results ?? []).map((page: any) => ({
     id: page.id,
     occurredAt: getPlainText(page.properties?.['發生時間']),
     module: getPlainText(page.properties?.['模組']),
@@ -349,4 +355,10 @@ export async function listAuditLogs(limit = 100): Promise<AuditLogRow[]> {
     path: getPlainText(page.properties?.['路徑']),
     url: page.url ?? '',
   }))
+
+  return {
+    items,
+    hasMore: response.has_more ?? false,
+    nextCursor: response.next_cursor ?? null,
+  }
 }
