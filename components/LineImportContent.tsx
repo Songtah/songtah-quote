@@ -6,6 +6,7 @@ type ImportResult = {
   totalMessages: number
   dailyReports: number
   imported: number
+  skipped: number
   errors: number
   records: { customerName: string; date: string; salesperson: string; id: string }[]
   errorDetails: { customerName?: string; sender: string; error: string }[]
@@ -130,9 +131,10 @@ export function LineImportContent() {
           <h2 className="font-semibold text-gray-800">匯入結果</h2>
 
           {/* 統計數字 */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard label="總訊息數" value={result.totalMessages} />
             <StatCard label="每日報表" value={result.dailyReports} />
+            <StatCard label="跳過（重複）" value={result.skipped} />
             <StatCard label="匯入筆數" value={result.imported} highlight={result.imported > 0} />
           </div>
 
