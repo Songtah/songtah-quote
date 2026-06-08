@@ -285,6 +285,7 @@ export default function VisitsContent() {
 
   // ── 一鍵批次 AI 分析 ─────────────────────────────────────────
   const [batchReactionOptions, setBatchReactionOptions] = useState<string[]>([])
+  const [batchInteractionTypeOptions, setBatchInteractionTypeOptions] = useState<string[]>([])
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
 
@@ -386,6 +387,11 @@ export default function VisitsContent() {
           setBatchReactionOptions(Array.from(new Set([...DEFAULT_REACTION_OPTIONS, ...data.customerReactions])))
         } else {
           setBatchReactionOptions([...DEFAULT_REACTION_OPTIONS])
+        }
+        if (Array.isArray(data?.interactionTypes)) {
+          setBatchInteractionTypeOptions(data.interactionTypes)
+        } else {
+          setBatchInteractionTypeOptions(Object.keys(INTERACTION_TYPE_COLORS))
         }
       })
       .catch(() => { setBatchReactionOptions([...DEFAULT_REACTION_OPTIONS]) })
@@ -579,9 +585,11 @@ export default function VisitsContent() {
     }, 500)
   }, [aiAnalysis, aiTimestamp, aiVisitCount, aiFilterSalesperson, aiFilterDateFrom, aiFilterDateTo])
 
-  // 一鍵批次分析：對所有已載入、有拜訪內容但尚未填客戶反應的紀錄執行 AI 判斷並寫回 Notion
+  // 一鍵批次分析：對所有已載入、有拜訪內容但尚未填「互動類型」或「客戶反應」的紀錄執行 AI 判斷並寫回 Notion
   const handleBatchAnalyze = useCallback(async () => {
-    const toAnalyze = filteredVisits.filter((v) => !v.customerReaction && v.content?.trim())
+    const toAnalyze = filteredVisits.filter(
+      (v) => v.content?.trim() && (!v.customerReaction || !v.interactionType)
+    )
     if (toAnalyze.length === 0 || batchAnalyzing) return
 
     setBatchAnalyzing(true)
@@ -590,22 +598,33 @@ export default function VisitsContent() {
     for (let i = 0; i < toAnalyze.length; i++) {
       const visit = toAnalyze[i]
       try {
-        const suggestRes = await fetch('/api/ai/suggest-reaction', {
+        // 一次呼叫同時判斷「互動類型」與「客戶反應」
+        const suggestRes = await fetch('/api/ai/suggest-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: visit.content, options: batchReactionOptions }),
+          body: JSON.stringify({
+            content: visit.content,
+            interactionTypeOptions: batchInteractionTypeOptions,
+            reactionOptions: batchReactionOptions,
+          }),
         })
-        const { suggestion } = await suggestRes.json()
-        if (suggestion) {
+        const { interactionType, customerReaction } = await suggestRes.json()
+
+        // 只更新目前為空的欄位
+        const patch: Record<string, string> = {}
+        if (!visit.interactionType && interactionType) patch.interactionType = interactionType
+        if (!visit.customerReaction && customerReaction) patch.customerReaction = customerReaction
+
+        if (Object.keys(patch).length > 0) {
           // 寫回 Notion
           await fetch(`/api/visits/${visit.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customerReaction: suggestion }),
+            body: JSON.stringify(patch),
           })
           // 樂觀更新本地狀態
           setVisits((prev) =>
-            prev.map((v) => v.id === visit.id ? { ...v, customerReaction: suggestion } : v)
+            prev.map((v) => v.id === visit.id ? { ...v, ...patch } : v)
           )
         }
       } catch {
@@ -616,10 +635,12 @@ export default function VisitsContent() {
 
     setBatchAnalyzing(false)
     setBatchProgress(null)
-  }, [filteredVisits, batchReactionOptions, batchAnalyzing])
+  }, [filteredVisits, batchReactionOptions, batchInteractionTypeOptions, batchAnalyzing])
 
-  // 計算目前有幾筆等待分析
-  const batchPendingCount = filteredVisits.filter((v) => !v.customerReaction && v.content?.trim()).length
+  // 計算目前有幾筆等待分析（有內容但缺少互動類型或客戶反應）
+  const batchPendingCount = filteredVisits.filter(
+    (v) => v.content?.trim() && (!v.customerReaction || !v.interactionType)
+  ).length
 
   return (
     <div>
@@ -633,8 +654,8 @@ export default function VisitsContent() {
           {/* 一鍵批次 AI 分析 */}
           <button
             onClick={handleBatchAnalyze}
-            disabled={batchAnalyzing || batchPendingCount === 0 || batchReactionOptions.length === 0}
-            title={batchPendingCount === 0 ? '所有已載入紀錄均已有客戶反應' : `分析 ${batchPendingCount} 筆尚未填寫客戶反應的紀錄`}
+            disabled={batchAnalyzing || batchPendingCount === 0}
+            title={batchPendingCount === 0 ? '所有已載入紀錄均已填寫互動類型與客戶反應' : `分析 ${batchPendingCount} 筆缺少互動類型或客戶反應的紀錄`}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {batchAnalyzing && batchProgress ? (
