@@ -289,7 +289,7 @@ export default function VisitsContent() {
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
 
-  const CACHE_KEY = 'bd-visits-v2'   // v2 = new paginated format
+  const CACHE_KEY = 'bd-visits-v3'   // v3 = page size 10
   const CACHE_TTL = 2 * 60 * 1000
 
   // Build query string from current server-side filters (salesperson)
@@ -356,6 +356,7 @@ export default function VisitsContent() {
     setLoadingMore(true)
     const qs = new URLSearchParams()
     qs.set('cursor', nextCursor)
+    qs.set('limit', '10')
     if (filterSalesperson) qs.set('salesperson', filterSalesperson)
     fetch(`/api/visits?${qs}`)
       .then((r) => {

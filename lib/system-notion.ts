@@ -1619,8 +1619,8 @@ async function resolveCustomerNames(relIds: string[]): Promise<Record<string, st
   return Object.fromEntries(Object.entries(infoMap).map(([id, v]) => [id, v.name]))
 }
 
-// Cache for the first page of visits (no filters, no cursor)
-const VISITS_PAGE1_CACHE_KEY = 'visits:page1'
+// Cache for the first page of visits (no filters, no cursor) — v2 = page size 10
+const VISITS_PAGE1_CACHE_KEY = 'visits:page1:v2'
 const VISITS_PAGE1_TTL = 2 * 60 * 1000 // 2 minutes
 
 function invalidateVisitsCache() {
@@ -1730,7 +1730,7 @@ export async function listVisits(options?: {
   }
 
   // ── Single-page query (the normal paginated path) ───────────────────────────
-  const limit = options?.limit ?? 50
+  const limit = options?.limit ?? 10
   const response: any = await notionCallWithRetry('listVisits', () =>
     notion.databases.query({
       database_id: normalizeDatabaseId(DB.visits),

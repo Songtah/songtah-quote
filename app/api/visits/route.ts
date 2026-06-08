@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const customerName = p.get('customerName') ?? undefined
     const salesperson  = p.get('salesperson')  ?? undefined
     const cursor       = p.get('cursor')        ?? undefined
-    const limit        = Math.min(parseInt(p.get('limit') ?? '50') || 50, 100)
+    const limit        = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
 
     const result = await listVisits({ customerName, salesperson, cursor, limit })
     return NextResponse.json(result)
