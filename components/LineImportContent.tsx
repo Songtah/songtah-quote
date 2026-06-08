@@ -1,51 +1,88 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import type { ParsedVisitItem } from '@/app/api/line/import/route'
 
-type ImportResult = {
-  totalMessages: number
-  dailyReports: number
+type Stage = 'idle' | 'parsing' | 'importing' | 'done' | 'error'
+
+type Progress = {
+  total: number
   imported: number
   skipped: number
   errors: number
-  records: { customerName: string; date: string; salesperson: string; id: string }[]
-  errorDetails: { customerName?: string; sender: string; error: string }[]
+  processed: number
 }
-
-type Stage = 'idle' | 'uploading' | 'done' | 'error'
 
 export function LineImportContent() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [stage, setStage] = useState<Stage>('idle')
-  const [result, setResult] = useState<ImportResult | null>(null)
-  const [errorMsg, setErrorMsg] = useState('')
   const [fileName, setFileName] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [progress, setProgress] = useState<Progress | null>(null)
+  const abortRef = useRef(false)
 
   async function handleUpload(file: File) {
     setFileName(file.name)
-    setStage('uploading')
-    setResult(null)
+    setStage('parsing')
+    setProgress(null)
     setErrorMsg('')
+    abortRef.current = false
 
+    // ── 第一步：解析檔案 ─────────────────────────────────────────────────────
     const formData = new FormData()
     formData.append('file', file)
 
+    let visits: ParsedVisitItem[]
     try {
       const res = await fetch('/api/line/import', { method: 'POST', body: formData })
       const data = await res.json()
-
-      if (!res.ok) {
-        setErrorMsg(data.error ?? '匯入失敗')
-        setStage('error')
-        return
-      }
-
-      setResult(data)
-      setStage('done')
+      if (!res.ok) { setErrorMsg(data.error ?? '解析失敗'); setStage('error'); return }
+      visits = data.visits ?? []
+      if (visits.length === 0) { setErrorMsg('未找到符合條件的每日報表'); setStage('error'); return }
     } catch {
       setErrorMsg('網路錯誤，請稍後再試')
       setStage('error')
+      return
     }
+
+    // ── 第二步：分批匯入 ─────────────────────────────────────────────────────
+    setStage('importing')
+    setProgress({ total: visits.length, imported: 0, skipped: 0, errors: 0, processed: 0 })
+
+    let offset = 0
+    let totalImported = 0, totalSkipped = 0, totalErrors = 0
+
+    while (true) {
+      if (abortRef.current) break
+
+      try {
+        const res = await fetch('/api/line/import/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visits, offset }),
+        })
+        const data = await res.json()
+        if (!res.ok) { totalErrors += (data.errors ?? 1) }
+        else {
+          totalImported += data.imported ?? 0
+          totalSkipped  += data.skipped  ?? 0
+          totalErrors   += data.errors   ?? 0
+        }
+
+        offset = data.nextOffset ?? (offset + 30)
+        const processed = Math.min(offset, visits.length)
+
+        setProgress({ total: visits.length, imported: totalImported, skipped: totalSkipped, errors: totalErrors, processed })
+
+        if (!data.hasMore) break
+      } catch {
+        totalErrors++
+        offset += 30
+        if (offset >= visits.length) break
+      }
+    }
+
+    setStage('done')
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -60,20 +97,21 @@ export function LineImportContent() {
     if (file) handleUpload(file)
   }
 
+  const pct = progress ? Math.round((progress.processed / progress.total) * 100) : 0
+
   return (
     <div className="space-y-6 max-w-2xl">
 
-      {/* 說明卡 */}
+      {/* 說明 */}
       <div className="panel p-5 space-y-3">
         <h2 className="font-semibold text-gray-800">使用方式</h2>
         <ol className="text-sm text-gray-600 space-y-1.5 list-decimal list-inside">
-          <li>在 LINE App 中開啟業務群組</li>
-          <li>點選右上角 ☰ → 聊天設定 → 匯出聊天記錄</li>
+          <li>在 LINE App 開啟業務群組 → 右上角 ☰ → 聊天設定 → 匯出聊天記錄</li>
           <li>選擇「以文字格式儲存」，取得 .txt 檔案</li>
-          <li>上傳到下方，系統會自動識別客情訊息並匯入</li>
+          <li>上傳到下方，系統自動篩選每日回報並逐批匯入</li>
         </ol>
         <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          ⚠️ 每則訊息都會經過 AI 判斷，大量訊息可能需要數分鐘。建議一次處理 1-3 個月的記錄。
+          ⚠️ 只匯入「行程回報」區段，早上行程規劃自動跳過。已存在的紀錄（同客戶＋同日期）不重複建立。
         </div>
       </div>
 
@@ -81,16 +119,12 @@ export function LineImportContent() {
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        onClick={() => fileRef.current?.click()}
-        className="panel border-2 border-dashed border-gray-200 hover:border-gray-400 transition-colors cursor-pointer px-6 py-12 text-center"
+        onClick={() => { if (stage === 'idle' || stage === 'done' || stage === 'error') fileRef.current?.click() }}
+        className={`panel border-2 border-dashed transition-colors px-6 py-12 text-center ${
+          stage === 'importing' ? 'cursor-default border-gray-100' : 'cursor-pointer border-gray-200 hover:border-gray-400'
+        }`}
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".txt"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        <input ref={fileRef} type="file" accept=".txt" className="hidden" onChange={handleFileChange} />
 
         {stage === 'idle' && (
           <>
@@ -100,15 +134,37 @@ export function LineImportContent() {
           </>
         )}
 
-        {stage === 'uploading' && (
+        {stage === 'parsing' && (
           <>
-            <div className="text-3xl mb-3 animate-pulse">⏳</div>
-            <p className="font-medium text-gray-700">分析中：{fileName}</p>
-            <p className="text-sm text-gray-400 mt-1">AI 正在逐條判斷客情訊息，請稍候…</p>
+            <div className="text-3xl mb-3 animate-pulse">📊</div>
+            <p className="font-medium text-gray-700">解析中：{fileName}</p>
+            <p className="text-sm text-gray-400 mt-1">正在識別每日報表訊息…</p>
           </>
         )}
 
-        {stage === 'done' && (
+        {stage === 'importing' && progress && (
+          <div className="space-y-4">
+            <div className="text-3xl">⬆️</div>
+            <p className="font-medium text-gray-700">匯入中…</p>
+            {/* 進度條 */}
+            <div className="w-full bg-gray-100 rounded-full h-2.5">
+              <div
+                className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-sm text-gray-500">
+              {progress.processed} / {progress.total} 筆（{pct}%）
+            </p>
+            <div className="flex justify-center gap-6 text-sm">
+              <span className="text-green-600">✅ 匯入 {progress.imported}</span>
+              <span className="text-gray-400">⏭ 跳過 {progress.skipped}</span>
+              {progress.errors > 0 && <span className="text-red-500">❌ 失敗 {progress.errors}</span>}
+            </div>
+          </div>
+        )}
+
+        {stage === 'done' && progress && (
           <>
             <div className="text-3xl mb-3">✅</div>
             <p className="font-medium text-gray-700">匯入完成！</p>
@@ -125,79 +181,25 @@ export function LineImportContent() {
         )}
       </div>
 
-      {/* 結果摘要 */}
-      {result && (
-        <div className="panel p-5 space-y-4">
+      {/* 完成後結果摘要 */}
+      {stage === 'done' && progress && (
+        <div className="panel p-5 space-y-3">
           <h2 className="font-semibold text-gray-800">匯入結果</h2>
-
-          {/* 統計數字 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard label="總訊息數" value={result.totalMessages} />
-            <StatCard label="每日報表" value={result.dailyReports} />
-            <StatCard label="跳過（重複）" value={result.skipped} />
-            <StatCard label="匯入筆數" value={result.imported} highlight={result.imported > 0} />
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="成功匯入" value={progress.imported} highlight />
+            <StatCard label="跳過（重複）" value={progress.skipped} />
+            <StatCard label="失敗" value={progress.errors} />
           </div>
-
-          {/* 匯入清單 */}
-          {result.records.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">已匯入紀錄</p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
-                {result.records.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-sm font-medium text-gray-800">{r.customerName}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400">{r.salesperson}</span>
-                      <span className="text-xs text-gray-400">{r.date}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 錯誤清單 */}
-          {result.errorDetails.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-red-600 mb-2">
-                失敗 {result.errorDetails.length} 筆
-              </p>
-              <div className="divide-y divide-red-50 border border-red-100 rounded-xl overflow-hidden">
-                {result.errorDetails.map((e, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-sm text-gray-700">{e.customerName ?? '未知客戶'}</span>
-                    <span className="text-xs text-red-400">{e.error}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
   )
 }
 
-function StatCard({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string
-  value: number
-  highlight?: boolean
-}) {
+function StatCard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div
-      className={`rounded-xl px-4 py-3 text-center ${
-        highlight ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-      }`}
-    >
-      <div
-        className={`text-2xl font-bold ${highlight ? 'text-green-700' : 'text-gray-800'}`}
-      >
-        {value}
-      </div>
+    <div className={`rounded-xl px-4 py-3 text-center ${highlight ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+      <div className={`text-2xl font-bold ${highlight ? 'text-green-700' : 'text-gray-800'}`}>{value}</div>
       <div className="text-xs text-gray-500 mt-0.5">{label}</div>
     </div>
   )
