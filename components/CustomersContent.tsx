@@ -3,12 +3,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import Fuse from 'fuse.js'
 import { listItem, staggerFast } from '@/lib/motion'
 import { VisitModal } from '@/components/VisitsContent'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Customer = {
+  id: string
+  name: string
+  city: string
+  district: string
+  type: string
+  salesperson: string
+  status: string
+}
+
+type NameIndexEntry = {
   id: string
   name: string
   city: string
@@ -65,6 +76,8 @@ export function CustomersContent({
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fuseRef = useRef<Fuse<NameIndexEntry> | null>(null)
+  const nameIndexRef = useRef<NameIndexEntry[]>([])
 
   // Filter options (loaded once on mount)
   const [options, setOptions] = useState<FilterOptions>(
@@ -78,8 +91,9 @@ export function CustomersContent({
   const [districtFilter, setDistrictFilter] = useState('')
   const [salespersonFilter, setSalespersonFilter] = useState('')
 
-  // Results state
+  // Results state: exact results + fuzzy-only results (shown with separator)
   const [results, setResults] = useState<Customer[]>([])
+  const [fuzzyResults, setFuzzyResults] = useState<NameIndexEntry[]>([])
   const [searching, setSearching] = useState(false)
 
   // Quick add 客情 modal
@@ -87,7 +101,7 @@ export function CustomersContent({
     id: string; name: string; city: string; district: string; address: string
   } | null>(null)
 
-  // Load filter options on mount
+  // Load filter options + name index on mount
   useEffect(() => {
     if (!initialOptions) {
       fetch('/api/system-customers/options')
@@ -95,6 +109,20 @@ export function CustomersContent({
         .then((data) => { if (data && typeof data === 'object') setOptions(data) })
         .catch(console.error)
     }
+    // Load name index for fuzzy search
+    fetch('/api/system-customers/names')
+      .then((r) => r.json())
+      .then((data: NameIndexEntry[]) => {
+        if (!Array.isArray(data)) return
+        nameIndexRef.current = data
+        fuseRef.current = new Fuse(data, {
+          keys: ['name'],
+          threshold: 0.4,
+          includeScore: true,
+          minMatchCharLength: 1,
+        })
+      })
+      .catch(console.error)
   }, [initialOptions])
 
   // Trigger search when query or filters change (debounced)
@@ -102,7 +130,7 @@ export function CustomersContent({
   const activeDistricts = cityFilter ? (options.districtsByCity[cityFilter] ?? []) : []
 
   useEffect(() => {
-    if (!hasActiveFilter) { setResults([]); return }
+    if (!hasActiveFilter) { setResults([]); setFuzzyResults([]); return }
 
     if (searchTimer.current) clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(() => {
@@ -116,7 +144,24 @@ export function CustomersContent({
 
       fetch(`/api/system-customers?${qs}`)
         .then((r) => r.json())
-        .then((data) => setResults(Array.isArray(data) ? data : []))
+        .then((data) => {
+          const exactList: Customer[] = Array.isArray(data) ? data : []
+          setResults(exactList)
+
+          // Fuzzy search — only when there's a text query and no filter-only search
+          if (query.trim() && fuseRef.current) {
+            const exactIds = new Set(exactList.map((c) => c.id))
+            const fuzzyHits = fuseRef.current.search(query.trim())
+            // Keep only results not already in exact list, top 5
+            const fuzzyOnly = fuzzyHits
+              .filter((hit) => !exactIds.has(hit.item.id))
+              .slice(0, 5)
+              .map((hit) => hit.item)
+            setFuzzyResults(fuzzyOnly)
+          } else {
+            setFuzzyResults([])
+          }
+        })
         .catch(console.error)
         .finally(() => setSearching(false))
     }, 300)
@@ -131,6 +176,7 @@ export function CustomersContent({
     setDistrictFilter('')
     setSalespersonFilter('')
     setResults([])
+    setFuzzyResults([])
     inputRef.current?.focus()
   }
 
@@ -234,11 +280,14 @@ export function CustomersContent({
         </div>
       ) : searching ? (
         <LoadingSkeleton />
-      ) : results.length === 0 ? (
+      ) : results.length === 0 && fuzzyResults.length === 0 ? (
         <EmptyState hasFilter={hasActiveFilter} />
       ) : (
         <>
-          <div className="text-xs text-gray-400 px-1">找到 {results.length} 筆</div>
+          <div className="text-xs text-gray-400 px-1">
+            找到 {results.length} 筆
+            {fuzzyResults.length > 0 && `，另有 ${fuzzyResults.length} 筆相似結果`}
+          </div>
           <motion.div
             key={`${query}|${typeFilter}|${cityFilter}|${districtFilter}|${salespersonFilter}`}
             variants={staggerFast}
@@ -257,6 +306,27 @@ export function CustomersContent({
                 />
               </motion.div>
             ))}
+
+            {/* Fuzzy-only results with separator */}
+            {fuzzyResults.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 px-5 py-2 bg-gray-50">
+                  <span className="text-xs text-gray-400 font-medium">🔍 相似結果</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+                {fuzzyResults.map((c) => (
+                  <motion.div key={c.id} variants={listItem}>
+                    <CustomerRow
+                      customer={c}
+                      onNavigate={() => router.push(`/customers/${c.id}`)}
+                      onQuickVisit={() =>
+                        setQuickVisitCustomer({ id: c.id, name: c.name, city: c.city, district: c.district, address: '' })
+                      }
+                    />
+                  </motion.div>
+                ))}
+              </>
+            )}
           </motion.div>
         </>
       )}
