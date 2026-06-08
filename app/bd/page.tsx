@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
 import VisitsContent from '@/components/VisitsContent'
 import DailyReportPanel from '@/components/DailyReportPanel'
+import { LineImportContent } from '@/components/LineImportContent'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 
@@ -20,11 +21,16 @@ export default async function BdPage({
   const accountType = (session?.user as any)?.accountType as string | undefined
   const isAdmin = role === 'admin' || accountType === '行政' || accountType === '中央管理'
 
-  const tab = searchParams.tab === 'report' ? 'report' : 'visits'
+  const tab = searchParams.tab === 'report'
+    ? 'report'
+    : searchParams.tab === 'line-import' && isAdmin
+      ? 'line-import'
+      : 'visits'
 
   const TAB_ITEMS = [
-    { id: 'visits', href: '/bd',             label: '📋 客情紀錄' },
-    { id: 'report', href: '/bd?tab=report',  label: '📤 業務日報' },
+    { id: 'visits',      href: '/bd',                   label: '📋 客情紀錄', adminOnly: false },
+    { id: 'report',      href: '/bd?tab=report',        label: '📤 業務日報', adminOnly: false },
+    { id: 'line-import', href: '/bd?tab=line-import',   label: '📥 LINE 匯入', adminOnly: true },
   ] as const
 
   return (
@@ -38,7 +44,7 @@ export default async function BdPage({
     >
       {/* Sub-tab bar */}
       <div className="flex gap-1 border-b border-gray-200 mb-6">
-        {TAB_ITEMS.map((t) => (
+        {TAB_ITEMS.filter((t) => !t.adminOnly || isAdmin).map((t) => (
           <Link
             key={t.id}
             href={t.href}
@@ -55,8 +61,10 @@ export default async function BdPage({
 
       {tab === 'visits' ? (
         <VisitsContent />
-      ) : (
+      ) : tab === 'report' ? (
         <DailyReportPanel isAdmin={isAdmin} />
+      ) : (
+        <LineImportContent />
       )}
     </AppShell>
   )
