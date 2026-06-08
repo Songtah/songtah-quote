@@ -910,6 +910,17 @@ export async function searchSystemCustomers(
     salesperson: getSelect(page, '負責業務'),
   }))
 
+  // 名稱命中排前面，地址/行政區命中排後面，同優先級內保留字母序
+  if (keyword) {
+    const kw = keyword.toLowerCase()
+    items.sort((a, b) => {
+      const aNameMatch = a.name.toLowerCase().includes(kw) ? 0 : 1
+      const bNameMatch = b.name.toLowerCase().includes(kw) ? 0 : 1
+      if (aNameMatch !== bNameMatch) return aNameMatch - bNameMatch
+      return a.name.localeCompare(b.name, 'zh-TW')
+    })
+  }
+
   setCachedValue(cacheKey, items, 180_000) // 3 min
   return items
 }
