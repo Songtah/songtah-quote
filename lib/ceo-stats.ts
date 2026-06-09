@@ -190,7 +190,7 @@ async function fetchVisitsFull(from: string, to: string): Promise<VisitStat[]> {
 
 /**
  * 「單月拜訪筆數」（用於 6 個月趨勢圖，只需要數字）
- * 每月查一次，最多 5 頁（500 筆），超過的截斷（圖表用，近似即可）
+ * 每月查一次，最多 10 頁（1000 筆），超過的截斷（圖表用，近似即可）
  * 多個月份用 Promise.all 並行，總耗時 ≈ 單月最慢者 ≈ 2–3s
  */
 async function fetchVisitCount(from: string, to: string): Promise<number> {
@@ -203,7 +203,7 @@ async function fetchVisitCount(from: string, to: string): Promise<number> {
       ],
     },
     undefined,
-    5   // 最多 5 頁，500 筆上限
+    10   // 最多 10 頁，1000 筆上限
   )
   return pages.length
 }
