@@ -290,20 +290,33 @@ function BarChart({
   const max    = Math.max(...values, 1)
 
   return (
-    <div className="flex items-end gap-1 h-24 w-full">
+    <div className="flex items-end gap-1 w-full">
       {data.map((d, i) => {
-        const v   = values[i]
-        const pct = (v / max) * 100
+        const v      = values[i]
+        const pct    = (v / max) * 100
         const isLast = i === data.length - 1
+        const label  = formatValue ? formatValue(v) : String(v)
         return (
-          <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full relative" style={{ height: '80px' }}>
+          <div key={d.month} className="flex-1 flex flex-col items-center gap-0.5">
+            {/* 柱頂數值 */}
+            <span
+              className={`text-[9px] font-semibold leading-none ${
+                isLast ? 'text-teal-700' : 'text-gray-400'
+              }`}
+            >
+              {label}
+            </span>
+            {/* 柱體 */}
+            <div className="w-full relative" style={{ height: '64px' }}>
               <div
-                className={`absolute bottom-0 w-full rounded-t-md transition-all ${isLast ? 'opacity-100' : 'opacity-60'}`}
+                className={`absolute bottom-0 w-full rounded-t-sm transition-all ${
+                  isLast ? 'opacity-100' : 'opacity-55'
+                }`}
                 style={{ height: `${Math.max(pct, 2)}%`, background: color }}
               />
             </div>
-            <span className="text-[10px] text-gray-400">{d.label}</span>
+            {/* 月份標籤 */}
+            <span className="text-[10px] text-gray-400 leading-none mt-0.5">{d.label}</span>
           </div>
         )
       })}
