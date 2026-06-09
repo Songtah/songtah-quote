@@ -1,6 +1,7 @@
 import { Client } from '@notionhq/client'
 import { Redis } from '@upstash/redis'
 import type { CreateTicketPayload, Equipment, Ticket } from '@/types'
+import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 
 export type ModuleSummary = {
   total: number
@@ -1114,7 +1115,7 @@ export async function getCustomerFilterOptions(): Promise<{
     const opts = (propName: string): string[] =>
       (db.properties?.[propName]?.select?.options ?? []).map((o: any) => o.name).filter(Boolean)
     cities      = opts('縣市')
-    salespersons = opts('負責業務')
+    salespersons = opts('負責業務').filter((s) => !INACTIVE_SALESPERSONS.has(s))
     types       = opts('客戶類型')
   } catch { /* return what we have */ }
 
@@ -1583,7 +1584,7 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
     } while (cursor)
 
     const result: VisitFormOptions = {
-      salespersons: Array.from(allSalespersonSet).sort(),
+      salespersons: Array.from(allSalespersonSet).filter((s) => !INACTIVE_SALESPERSONS.has(s)).sort(),
       statuses: statusOptions,
       tagOptions: Array.from(allTagsSet).sort(),
       competitorOptions: Array.from(allCompetitorSet).sort(),

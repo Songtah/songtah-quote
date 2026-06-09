@@ -39,8 +39,9 @@ export function parseLineTxt(content: string): LineMessage[] {
 
     // ── 日期標題 ──────────────────────────────────────────────────────────────
     // 2025/01/08（三） 或 2025/01/08(三) 或 2025/01/08
+    // 注意：尾端加 $ 避免把「2026/1/17 明年第一場課程...」這類訊息誤判為日期標題
     if (!line.includes('\t')) {
-      const dateM = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+      const dateM = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\s*[（(][一二三四五六日][）)])?$/)
       if (dateM) {
         const [, y, m, d] = dateM
         currentDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`

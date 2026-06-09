@@ -137,10 +137,28 @@ function extractNameAndContent(rest: string): { name: string; inlineContent: str
 
 // ── 跳過非拜訪項目 ────────────────────────────────────────────────────────────
 
-const NON_VISIT_KEYWORDS = ['業務會議', '內部會議', '公司會議', '培訓', '教育訓練', '開會', '進公司']
+const NON_VISIT_KEYWORDS = [
+  '業務會議', '內部會議', '公司會議', '培訓', '教育訓練', '開會', '進公司',
+  '例行會議', '週一會議', '週一例行', '局寄貨', '銀行',
+]
+
+// 明顯的任務描述動詞開頭（不是客戶名稱）
+const TASK_VERB_PREFIXES = [
+  '致電', '通知', '整理', '前往', '協助', '遠端', '預約', '邀約',
+  '推薦客戶', '整理公司', '與小胖', '與Julian', '與Aaron',
+  '9:', '19:', '08:', '10:', '11:', '12:', '13:', '14:', '15:', '16:', '17:', '18:',
+]
 
 function isNonVisitEntry(name: string): boolean {
-  return NON_VISIT_KEYWORDS.some((kw) => name.includes(kw))
+  // 關鍵字比對
+  if (NON_VISIT_KEYWORDS.some((kw) => name.includes(kw))) return true
+  // 任務動詞開頭
+  if (TASK_VERB_PREFIXES.some((p) => name.startsWith(p))) return true
+  // 名稱含 & 代表是多任務描述，不是客戶
+  if (name.includes('&')) return true
+  // 名稱超長（>15字）且不含任何分隔符 → 可能是整段任務描述
+  if (name.length > 15 && !/[-，,]/.test(name)) return true
+  return false
 }
 
 // ── 推斷客戶反應 ──────────────────────────────────────────────────────────────

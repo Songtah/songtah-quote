@@ -289,6 +289,16 @@ export default function VisitsContent() {
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
 
+  // ── 批次補齊客戶關聯 ─────────────────────────────────────────
+  const [autoLinkOpen,    setAutoLinkOpen]    = useState(false)
+  const [autoLinkRunning, setAutoLinkRunning] = useState(false)
+  const [autoLinkDone,    setAutoLinkDone]    = useState(false)
+  const [autoLinkStats,   setAutoLinkStats]   = useState<{
+    linked: number; skipped: number; noMatch: number; multiMatch: number
+    noMatchNames: string[]; multiMatchNames: string[]
+  } | null>(null)
+  const autoLinkAbort = useRef(false)
+
   const CACHE_KEY = 'bd-visits-v3'   // v3 = page size 10
   const CACHE_TTL = 2 * 60 * 1000
 
@@ -643,6 +653,62 @@ export default function VisitsContent() {
     (v) => v.content?.trim() && (!v.customerReaction || !v.interactionType)
   ).length
 
+  // ── 批次補齊客戶關聯 handler ─────────────────────────────────
+  const handleAutoLink = async () => {
+    setAutoLinkRunning(true)
+    setAutoLinkDone(false)
+    setAutoLinkStats(null)
+    autoLinkAbort.current = false
+
+    let cursor: string | undefined
+    let totalLinked = 0, totalSkipped = 0, totalNoMatch = 0, totalMultiMatch = 0
+    const allNoMatchNames: string[] = []
+    const allMultiMatchNames: string[] = []
+
+    while (true) {
+      if (autoLinkAbort.current) break
+      try {
+        const res = await fetch('/api/visits/auto-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cursor, batchSize: 30 }),
+        })
+        const data = await res.json()
+        if (!res.ok) break
+
+        totalLinked    += data.linked    ?? 0
+        totalSkipped   += data.skipped   ?? 0
+        totalNoMatch   += data.noMatch   ?? 0
+        totalMultiMatch += data.multiMatch ?? 0
+        for (const n of (data.noMatchNames ?? [])) {
+          if (allNoMatchNames.length < 10 && !allNoMatchNames.includes(n)) allNoMatchNames.push(n)
+        }
+        for (const n of (data.multiMatchNames ?? [])) {
+          if (allMultiMatchNames.length < 10 && !allMultiMatchNames.includes(n)) allMultiMatchNames.push(n)
+        }
+
+        setAutoLinkStats({
+          linked: totalLinked, skipped: totalSkipped,
+          noMatch: totalNoMatch, multiMatch: totalMultiMatch,
+          noMatchNames: allNoMatchNames, multiMatchNames: allMultiMatchNames,
+        })
+
+        if (!data.hasMore || !data.nextCursor) break
+        cursor = data.nextCursor
+      } catch {
+        break
+      }
+    }
+
+    setAutoLinkRunning(false)
+    setAutoLinkDone(true)
+    // 重新載入第一頁（關聯已更新）
+    if (totalLinked > 0) {
+      try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+      loadVisits({ silent: true })
+    }
+  }
+
   return (
     <div>
       {/* Header */}
@@ -672,6 +738,13 @@ export default function VisitsContent() {
           >
             <span className="text-base leading-none">✦</span>
             AI 商機分析
+          </button>
+          <button
+            onClick={() => { setAutoLinkOpen(true); setAutoLinkDone(false); setAutoLinkStats(null) }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition"
+            title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
+          >
+            <span className="text-base leading-none">🔗</span> 補齊關聯
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -968,6 +1041,108 @@ export default function VisitsContent() {
           onDelete={(id) => { setViewingVisit(null); setDeleteConfirmId(id) }}
         />
       )}
+
+      {/* ── 批次補齊客戶關聯 Modal ── */}
+      <AnimatePresence>
+        {autoLinkOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => { if (!autoLinkRunning) setAutoLinkOpen(false) }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">🔗 批次補齊客戶關聯</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    自動比對客情紀錄的客戶簡稱與客戶資料庫，若唯一符合則建立關聯並更新為完整名稱。
+                  </p>
+                </div>
+
+                {!autoLinkRunning && !autoLinkDone && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 space-y-1">
+                    <p className="font-medium">執行前請確認：</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-xs">
+                      <li>只處理尚未關聯客戶的紀錄</li>
+                      <li>搜尋結果唯一才會自動關聯（多個候選則略過）</li>
+                      <li>關聯後客戶名稱會更新為資料庫中的完整名稱</li>
+                      <li>大量資料需要幾分鐘，請勿關閉視窗</li>
+                    </ul>
+                  </div>
+                )}
+
+                {/* 進度 / 結果 */}
+                {(autoLinkRunning || autoLinkDone) && autoLinkStats && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      <div className="bg-green-50 border border-green-200 rounded-xl py-3">
+                        <div className="text-2xl font-bold text-green-700">{autoLinkStats.linked}</div>
+                        <div className="text-xs text-green-600 mt-0.5">成功關聯</div>
+                      </div>
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl py-3">
+                        <div className="text-2xl font-bold text-gray-700">{autoLinkStats.skipped}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">略過</div>
+                      </div>
+                    </div>
+
+                    {autoLinkStats.noMatch > 0 && (
+                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="font-medium text-gray-700">找不到客戶（{autoLinkStats.noMatch} 筆）：</span>
+                        {' '}{autoLinkStats.noMatchNames.slice(0, 5).join('、')}
+                        {autoLinkStats.noMatchNames.length > 5 ? '…' : ''}
+                      </div>
+                    )}
+                    {autoLinkStats.multiMatch > 0 && (
+                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="font-medium text-gray-700">多個候選（{autoLinkStats.multiMatch} 筆）：</span>
+                        {' '}{autoLinkStats.multiMatchNames.slice(0, 5).join('、')}
+                        {autoLinkStats.multiMatchNames.length > 5 ? '…' : ''}
+                      </div>
+                    )}
+
+                    {autoLinkRunning && (
+                      <p className="text-xs text-blue-500 text-center animate-pulse">處理中，請稍候…</p>
+                    )}
+                    {autoLinkDone && (
+                      <p className="text-sm text-emerald-600 text-center font-medium">✅ 完成！</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  {!autoLinkRunning && !autoLinkDone && (
+                    <button
+                      onClick={handleAutoLink}
+                      className="button-primary flex-1 py-2.5 text-sm rounded-xl font-medium"
+                    >
+                      開始補齊關聯
+                    </button>
+                  )}
+                  {autoLinkRunning && (
+                    <button
+                      onClick={() => { autoLinkAbort.current = true }}
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition"
+                    >
+                      停止
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { if (!autoLinkRunning) setAutoLinkOpen(false) }}
+                    disabled={autoLinkRunning}
+                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                  >
+                    {autoLinkDone ? '關閉' : '取消'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
