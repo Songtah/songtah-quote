@@ -2138,6 +2138,47 @@ function AiAnalysisModal({
 }) {
   const [showPromptEditor, setShowPromptEditor] = useState(false)
 
+  // ── 快速期間預設 ─────────────────────────────────────────────
+  function getPresetRange(preset: 'week' | 'month' | 'quarter') {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+    if (preset === 'week') {
+      const day = now.getDay() === 0 ? 7 : now.getDay() // Mon=1 … Sun=7
+      const mon = new Date(now); mon.setDate(now.getDate() - day + 1)
+      const sun = new Date(mon);  sun.setDate(mon.getDate() + 6)
+      return { from: fmt(mon), to: fmt(sun) }
+    }
+    if (preset === 'month') {
+      const from = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      return { from, to: fmt(last) }
+    }
+    // quarter
+    const q     = Math.floor(now.getMonth() / 3)
+    const qFrom = new Date(now.getFullYear(), q * 3, 1)
+    const qTo   = new Date(now.getFullYear(), q * 3 + 3, 0)
+    return { from: fmt(qFrom), to: fmt(qTo) }
+  }
+
+  const activePreset = (() => {
+    const { from: wf, to: wt } = getPresetRange('week')
+    const { from: mf, to: mt } = getPresetRange('month')
+    const { from: qf, to: qt } = getPresetRange('quarter')
+    if (filterDateFrom === wf && filterDateTo === wt) return 'week'
+    if (filterDateFrom === mf && filterDateTo === mt) return 'month'
+    if (filterDateFrom === qf && filterDateTo === qt) return 'quarter'
+    return null
+  })()
+
+  function applyPreset(preset: 'week' | 'month' | 'quarter') {
+    const { from, to } = getPresetRange(preset)
+    onFilterDateFromChange(from)
+    onFilterDateToChange(to)
+  }
+
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -2227,7 +2268,27 @@ function AiAnalysisModal({
                     <option value="">全部業務</option>
                     {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  <span className="text-xs text-stone-400 shrink-0 ml-1">日期</span>
+                  {/* 快速期間 */}
+                  {(
+                    [
+                      { key: 'week',    label: '本週' },
+                      { key: 'month',   label: '本月' },
+                      { key: 'quarter', label: '本季' },
+                    ] as const
+                  ).map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => applyPreset(key)}
+                      className={`h-8 px-3 text-xs font-medium rounded-lg border transition ${
+                        activePreset === key
+                          ? 'bg-violet-600 text-white border-violet-600'
+                          : 'bg-white text-stone-500 border-stone-200 hover:border-violet-300 hover:text-violet-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <span className="text-xs text-stone-300">|</span>
                   <input
                     type="date"
                     value={filterDateFrom}
