@@ -260,6 +260,7 @@ export interface SalespersonStat {
   orders: number
   amount: number
   followUps: number
+  followUpItems: VisitStat[]
 }
 
 export interface MonthlyTrend {
@@ -347,13 +348,16 @@ export async function getCEOStats(): Promise<CEOStats> {
   const spMap: Record<string, SalespersonStat> = {}
   for (const v of thisMonthVisits as VisitStat[]) {
     const name = v.salesperson || '（未填）'
-    if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0 }
+    if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0, followUpItems: [] }
     spMap[name].visits++
-    if (v.needsFollowUp) spMap[name].followUps++
+    if (v.needsFollowUp) {
+      spMap[name].followUps++
+      spMap[name].followUpItems.push(v)
+    }
   }
   for (const o of thisMonthOrders) {
     const name = o.salesperson || '（未填）'
-    if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0 }
+    if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0, followUpItems: [] }
     spMap[name].orders++
     spMap[name].amount += o.totalAmount
   }

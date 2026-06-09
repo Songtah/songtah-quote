@@ -102,9 +102,11 @@ function KPICard({
 function FollowUpModal({
   items,
   onClose,
+  title,
 }: {
   items: VisitStat[]
   onClose: () => void
+  title?: string
 }) {
   function formatDate(d: string) {
     if (!d) return ''
@@ -133,7 +135,7 @@ function FollowUpModal({
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-red-400">本月待追蹤</p>
               <h3 className="text-base font-bold text-gray-900 mt-0.5">
-                ⚠️ 客情追蹤清單
+                {title ?? '⚠️ 客情追蹤清單'}
                 <span className="ml-2 text-sm font-medium text-red-500">（{items.length} 筆）</span>
               </h3>
             </div>
@@ -362,7 +364,15 @@ function BarChart({
 
 // ── Salesperson Table ──────────────────────────────────────────
 
-function SalespersonTable({ stats, loading }: { stats: SalespersonStat[]; loading: boolean }) {
+function SalespersonTable({
+  stats,
+  loading,
+  onFollowUpClick,
+}: {
+  stats: SalespersonStat[]
+  loading: boolean
+  onFollowUpClick?: (items: VisitStat[], name: string) => void
+}) {
   if (loading) return <Skeleton className="h-48" />
   if (!stats.length) return (
     <div className="text-center text-gray-400 py-8 text-sm">本月尚無業務活動紀錄</div>
@@ -407,9 +417,13 @@ function SalespersonTable({ stats, loading }: { stats: SalespersonStat[]; loadin
                 </td>
                 <td className="py-2.5 text-center">
                   {s.followUps > 0 ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
+                    <button
+                      onClick={() => onFollowUpClick?.(s.followUpItems, s.name)}
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold hover:bg-amber-200 hover:scale-110 transition-all cursor-pointer"
+                      title={`查看 ${s.name} 的待追蹤案件`}
+                    >
                       {s.followUps}
-                    </span>
+                    </button>
                   ) : (
                     <span className="text-gray-200">—</span>
                   )}
@@ -626,6 +640,7 @@ export function CEODashboardContent({
   const [error,           setError]           = useState('')
   const [refreshed,       setRefreshed]       = useState<Date | null>(null)
   const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+  const [spFollowUpTarget,  setSpFollowUpTarget]  = useState<{ items: VisitStat[]; name: string } | null>(null)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -737,6 +752,13 @@ export function CEODashboardContent({
           onClose={() => setShowFollowUpModal(false)}
         />
       )}
+      {spFollowUpTarget && (
+        <FollowUpModal
+          items={spFollowUpTarget.items}
+          title={`⚠️ ${spFollowUpTarget.name} 待追蹤案件`}
+          onClose={() => setSpFollowUpTarget(null)}
+        />
+      )}
 
       {/* ── Charts Row ── */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -807,7 +829,11 @@ export function CEODashboardContent({
               查看客情拜訪紀錄 →
             </Link>
           </div>
-          <SalespersonTable stats={s?.salespersonStats ?? []} loading={loading} />
+          <SalespersonTable
+            stats={s?.salespersonStats ?? []}
+            loading={loading}
+            onFollowUpClick={(items, name) => setSpFollowUpTarget({ items, name })}
+          />
         </div>
 
         {/* Right column */}
