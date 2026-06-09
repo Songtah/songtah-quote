@@ -13,11 +13,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { waitUntil } from '@vercel/functions'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { resolveSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60  // Vercel function 最長 60 秒
 
 // ── 簽名驗證 ──────────────────────────────────────────────────────────────────
 
@@ -66,8 +68,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
 
-  // 立即回應 LINE（200ms 內）
-  void processEvents(events)
+  // 立即回應 LINE，讓 Vercel 在背景繼續執行 processEvents
+  waitUntil(processEvents(events))
   return NextResponse.json({ ok: true })
 }
 
