@@ -222,31 +222,41 @@ function LineChart({
   valueKey,
   color,
   height = 80,
+  formatValue,
 }: {
-  data:     MonthlyTrend[]
-  valueKey: 'amount' | 'visits' | 'orders' | 'quotes'
-  color:    string
-  height?:  number
+  data:         MonthlyTrend[]
+  valueKey:     'amount' | 'visits' | 'orders' | 'quotes'
+  color:        string
+  height?:      number
+  formatValue?: (v: number) => string
 }) {
   if (!data.length) return null
 
-  const values = data.map((d) => d[valueKey] as number)
-  const max    = Math.max(...values, 1)
-  const W = 320
-  const H = height
-  const pad = 4
+  const values  = data.map((d) => d[valueKey] as number)
+  const max     = Math.max(...values, 1)
+  const W       = 320
+  const labelH  = 14          // reserved space at top for value labels
+  const pad     = 6
+  const H       = height + labelH
+  const drawTop = labelH + pad
+  const drawH   = H - drawTop - pad
 
-  const pts = values.map((v, i) => {
-    const x = pad + (i / (values.length - 1)) * (W - pad * 2)
-    const y = H - pad - ((v / max) * (H - pad * 2))
-    return `${x},${y}`
-  })
+  const coords = values.map((v, i) => ({
+    x: pad + (i / Math.max(values.length - 1, 1)) * (W - pad * 2),
+    y: drawTop + drawH - (v / max) * drawH,
+  }))
 
+  const pts        = coords.map((c) => `${c.x},${c.y}`).join(' ')
   const areaBottom = `${W - pad},${H} ${pad},${H}`
-  const area = `${pts.join(' ')} ${areaBottom}`
+  const area       = `${pts} ${areaBottom}`
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full"
+      style={{ height: H }}
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient id={`grad-${valueKey}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor={color} stopOpacity="0.18" />
@@ -255,18 +265,44 @@ function LineChart({
       </defs>
       <polygon points={area} fill={`url(#grad-${valueKey})`} />
       <polyline
-        points={pts.join(' ')}
+        points={pts}
         fill="none"
         stroke={color}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {values.map((v, i) => {
-        const x = pad + (i / (values.length - 1)) * (W - pad * 2)
-        const y = H - pad - ((v / max) * (H - pad * 2))
+      {coords.map(({ x, y }, i) => {
+        const v      = values[i]
+        const isLast = i === values.length - 1
+        const label  = formatValue ? formatValue(v) : String(v)
+        const anchor = i === 0 ? 'start' : i === values.length - 1 ? 'end' : 'middle'
         return (
-          <circle key={i} cx={x} cy={y} r="3" fill={color} />
+          <g key={i}>
+            {/* 白色背景讓數字在漸層上可讀 */}
+            <text
+              x={x} y={y - 5}
+              textAnchor={anchor}
+              fontSize="9"
+              fill="white"
+              stroke="white"
+              strokeWidth="3"
+              paintOrder="stroke"
+              fontWeight={isLast ? 'bold' : 'normal'}
+            >
+              {label}
+            </text>
+            <text
+              x={x} y={y - 5}
+              textAnchor={anchor}
+              fontSize="9"
+              fill={isLast ? color : '#9ca3af'}
+              fontWeight={isLast ? 'bold' : 'normal'}
+            >
+              {label}
+            </text>
+            <circle cx={x} cy={y} r={isLast ? 4 : 3} fill={color} />
+          </g>
         )
       })}
     </svg>
@@ -722,7 +758,7 @@ export function CEODashboardContent({
             ? <Skeleton className="h-24" />
             : s && (
               <>
-                <LineChart data={s.monthlyTrend} valueKey="amount" color="#2563eb" height={80} />
+                <LineChart data={s.monthlyTrend} valueKey="amount" color="#2563eb" height={80} formatValue={fmtAmt} />
                 <div className="flex justify-between mt-2">
                   {s.monthlyTrend.map((m) => (
                     <span key={m.month} className="text-[10px] text-gray-400 flex-1 text-center">{m.label}</span>
