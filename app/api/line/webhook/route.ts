@@ -17,6 +17,7 @@ import { waitUntil } from '@vercel/functions'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { resolveSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
+import { detectCompetitors } from '@/lib/competitor-detector'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60  // Vercel function 最長 60 秒
@@ -121,6 +122,12 @@ async function processEvents(events: any[]) {
             ? visit.customerReaction
             : ''
 
+          // 從內文偵測競品
+          const detectedCompetitors = detectCompetitors(
+            visit.content,
+            formOptions.competitorOptions
+          )
+
           await createVisit({
             customerName: visit.customerName,
             customerId,
@@ -138,7 +145,7 @@ async function processEvents(events: any[]) {
             city: '',
             district: '',
             tags: [],
-            competitorEquipment: [],
+            competitorEquipment: detectedCompetitors,
             interestedProductIds: [],
           })
 

@@ -299,6 +299,17 @@ export default function VisitsContent() {
   } | null>(null)
   const autoLinkAbort = useRef(false)
 
+  // ── 偵測競品 state ─────────────────────────────────────────────
+  const [detectOpen,    setDetectOpen]    = useState(false)
+  const [detectRunning, setDetectRunning] = useState(false)
+  const [detectDone,    setDetectDone]    = useState(false)
+  const [detectStats,   setDetectStats]   = useState<{
+    filled: number; skipped: number; noContent: number
+    competitorOptions: string[]
+    examples: { customerName: string; detected: string[] }[]
+  } | null>(null)
+  const detectAbort = useRef(false)
+
   const CACHE_KEY = 'bd-visits-v3'   // v3 = page size 10
   const CACHE_TTL = 2 * 60 * 1000
 
@@ -709,6 +720,58 @@ export default function VisitsContent() {
     }
   }
 
+  // ── 批次偵測競品 ───────────────────────────────────────────────
+  const handleDetectCompetitors = async () => {
+    setDetectRunning(true)
+    setDetectDone(false)
+    setDetectStats(null)
+    detectAbort.current = false
+
+    let cursor: string | undefined
+    let totalFilled = 0, totalSkipped = 0, totalNoContent = 0
+    let competitorOptions: string[] = []
+    const allExamples: { customerName: string; detected: string[] }[] = []
+
+    while (true) {
+      if (detectAbort.current) break
+      try {
+        const res = await fetch('/api/visits/detect-competitors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cursor, batchSize: 30 }),
+        })
+        const data = await res.json()
+        if (!res.ok) break
+
+        totalFilled    += data.filled    ?? 0
+        totalSkipped   += data.skipped   ?? 0
+        totalNoContent += data.noContent ?? 0
+        if (data.competitorOptions?.length) competitorOptions = data.competitorOptions
+        for (const ex of (data.examples ?? [])) {
+          if (allExamples.length < 5) allExamples.push(ex)
+        }
+
+        setDetectStats({
+          filled: totalFilled, skipped: totalSkipped,
+          noContent: totalNoContent, competitorOptions,
+          examples: allExamples,
+        })
+
+        if (!data.hasMore || !data.nextCursor) break
+        cursor = data.nextCursor
+      } catch {
+        break
+      }
+    }
+
+    setDetectRunning(false)
+    setDetectDone(true)
+    if (totalFilled > 0) {
+      try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+      loadVisits({ silent: true })
+    }
+  }
+
   return (
     <div>
       {/* Header */}
@@ -745,6 +808,13 @@ export default function VisitsContent() {
             title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
           >
             <span className="text-base leading-none">🔗</span> 補齊關聯
+          </button>
+          <button
+            onClick={() => { setDetectOpen(true); setDetectDone(false); setDetectStats(null) }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition"
+            title="掃描拜訪內文，自動偵測並填入競品欄位"
+          >
+            <span className="text-base leading-none">🔍</span> 偵測競品
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -1136,6 +1206,119 @@ export default function VisitsContent() {
                     className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
                   >
                     {autoLinkDone ? '關閉' : '取消'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* ── 偵測競品 Modal ───────────────────────────────────── */}
+        {detectOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { if (!detectRunning) setDetectOpen(false) }}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+              initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
+            >
+              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-emerald-100/60 bg-emerald-50/40">
+                  <h3 className="font-bold text-gray-900">🔍 自動偵測競品</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">掃描拜訪內文，比對 Notion 競品選項並自動填入</p>
+                </div>
+
+                <div className="px-5 py-4 space-y-4">
+                  {/* 說明 */}
+                  {!detectRunning && !detectDone && (
+                    <div className="text-sm text-gray-600 space-y-1.5">
+                      <p>• 只處理<span className="font-medium">競品欄位為空</span>的紀錄，不覆蓋已填資料</p>
+                      <p>• 以 Notion 競品選項名稱直接比對內文關鍵字</p>
+                      <p>• 如需新增競品選項，請至 Notion 競品欄位新增後再執行</p>
+                    </div>
+                  )}
+
+                  {/* 統計 */}
+                  {detectStats && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: '成功填入', value: detectStats.filled, color: 'text-emerald-600' },
+                          { label: '無匹配', value: detectStats.skipped, color: 'text-gray-500' },
+                          { label: '無內文', value: detectStats.noContent, color: 'text-gray-400' },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} className="text-center bg-gray-50 rounded-xl py-3">
+                            <div className={`text-xl font-bold ${color}`}>{value}</div>
+                            <div className="text-[11px] text-gray-400 mt-0.5">{label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 競品選項清單 */}
+                      {detectStats.competitorOptions.length > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1.5">比對的競品選項（共 {detectStats.competitorOptions.length} 項）</p>
+                          <div className="flex flex-wrap gap-1">
+                            {detectStats.competitorOptions.map((opt) => (
+                              <span key={opt} className="text-[11px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full">{opt}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 成功範例 */}
+                      {detectStats.examples.length > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1.5">填入範例</p>
+                          <div className="space-y-1">
+                            {detectStats.examples.map((ex, i) => (
+                              <div key={i} className="text-xs bg-gray-50 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
+                                <span className="text-gray-700 truncate">{ex.customerName || '（未知客戶）'}</span>
+                                <span className="text-emerald-600 font-medium shrink-0">{ex.detected.join('、')}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 執行中 */}
+                  {detectRunning && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600">
+                      <span className="animate-spin">⏳</span> 掃描中，請稍候…
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-5 pb-5 flex gap-2">
+                  {!detectRunning && !detectDone && (
+                    <button
+                      onClick={handleDetectCompetitors}
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                    >
+                      開始偵測
+                    </button>
+                  )}
+                  {detectRunning && (
+                    <button
+                      onClick={() => { detectAbort.current = true }}
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition"
+                    >
+                      停止
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { if (!detectRunning) setDetectOpen(false) }}
+                    disabled={detectRunning}
+                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                  >
+                    {detectDone ? '關閉' : '取消'}
                   </button>
                 </div>
               </div>
