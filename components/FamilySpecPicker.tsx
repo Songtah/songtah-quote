@@ -344,26 +344,26 @@ export function YMHToothGridPanel({
 
   // 共用樣式工具
   const chip = (sel: boolean, disabled = false) => [
-    'px-3 py-1 rounded-full text-xs font-medium border transition-all',
-    disabled ? 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed' :
-    sel       ? 'bg-brand-500 border-brand-500 text-white shadow-sm' :
-                'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:text-brand-600',
+    'px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95',
+    disabled ? 'bg-stone-50 border-stone-200 text-stone-300 cursor-not-allowed' :
+    sel       ? 'bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/25' :
+                'bg-white border-stone-200 text-stone-600 hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50',
   ].join(' ')
 
   const tab = (sel: boolean) => [
-    'px-5 py-1.5 rounded-lg text-sm font-medium border transition-all',
-    sel ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-        : 'bg-white border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+    'px-5 py-2 rounded-xl text-sm font-semibold border transition-all active:scale-95',
+    sel ? 'bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/25'
+        : 'bg-white border-stone-200 text-stone-600 hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50',
   ].join(' ')
 
   const toothBtn = (sel: boolean) => [
-    'px-2.5 py-1 rounded text-xs font-mono font-medium border transition-all min-w-[2.5rem] text-center',
-    sel ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-        : 'bg-white border-gray-300 text-gray-700 hover:border-brand-400 hover:bg-brand-50',
+    'px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold border transition-all min-w-[2.5rem] text-center active:scale-95',
+    sel ? 'bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/25'
+        : 'bg-white border-stone-200 text-stone-600 hover:border-brand-400 hover:bg-brand-50',
   ].join(' ')
 
   return (
-    <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
+    <div className="border-t border-stone-900/[0.05] bg-stone-50/80 px-5 py-4 space-y-4">
 
       {/* ① 顏色 */}
       <div>
@@ -474,7 +474,7 @@ export function YMHToothGridPanel({
       {/* 結果區 */}
       <div className="pt-1">
         {skuCode ? (
-          <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3 card-soft px-4 py-3">
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-800 leading-snug">{skuName}</div>
               <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{skuCode}</div>
@@ -484,7 +484,7 @@ export function YMHToothGridPanel({
                 onAdd(skuCode, skuName)
                 setBase(''); setSubPos(''); setQty('')
               }}
-              className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
+              className="shrink-0 bg-brand-500 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all"
             >
               {actionLabel ?? '+ 加入'}
             </button>
@@ -600,7 +600,7 @@ export function FamilySpecPanel({
   const isValid = allSelected && skuCode !== ''
 
   return (
-    <div className="border-t border-gray-100 bg-stone-50 px-5 py-4 space-y-4">
+    <div className="border-t border-stone-900/[0.05] bg-stone-50/80 px-5 py-4 space-y-4">
       {visibleRows.map(({ spec, options, specIdx }) => {
         const isConfirmed = !!selected[spec.key]
         // "confirmed" row: show only the selected chip + an "×" to clear
@@ -641,7 +641,7 @@ export function FamilySpecPanel({
       <div className="pt-1">
         {allSelected ? (
           isValid ? (
-            <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-brand-200 px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3 card-soft px-4 py-3">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-800 leading-snug">{skuName}</div>
                 <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{skuCode}</div>
@@ -651,7 +651,7 @@ export function FamilySpecPanel({
                   onAdd(skuCode, skuName)
                   setSelected({})
                 }}
-                className="shrink-0 bg-brand-500 text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-brand-600 transition-colors"
+                className="shrink-0 bg-brand-500 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all"
               >
                 {actionLabel ?? '+ 加入'}
               </button>

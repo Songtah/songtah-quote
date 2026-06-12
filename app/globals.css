@@ -167,6 +167,63 @@ input[type="date"] {
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-widest text-gray-400;
   }
+
+  /* ── 2026 設計語言 tokens ─────────────────────────────── */
+
+  /* 層疊柔影卡片：取代細灰框平卡 */
+  .card-soft {
+    @apply rounded-2xl bg-white ring-1 ring-stone-900/[0.06];
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -16px rgba(28, 25, 23, 0.12);
+  }
+
+  .card-soft-hover {
+    @apply transition-all duration-200;
+  }
+  .card-soft-hover:hover {
+    box-shadow: 0 2px 4px rgba(28, 25, 23, 0.05), 0 16px 32px -16px rgba(28, 25, 23, 0.18);
+    transform: translateY(-1px);
+  }
+
+  /* 玻璃吸頂工具列 */
+  .glass-bar {
+    @apply sticky top-0 z-20 backdrop-blur-xl border-b border-stone-900/[0.06];
+    background: rgba(252, 251, 248, 0.85);
+  }
+
+  /* 規格選擇 chip */
+  .chip {
+    @apply inline-flex items-center justify-center rounded-full border text-sm font-medium
+           transition-all duration-150 cursor-pointer select-none
+           border-stone-200 bg-white text-stone-600
+           hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50
+           active:scale-95;
+    min-width: 2.5rem;
+    padding: 0.375rem 0.875rem;
+  }
+  .chip-active {
+    @apply border-brand-500 bg-brand-500 text-white shadow-sm
+           hover:bg-brand-600 hover:border-brand-600 hover:text-white;
+  }
+
+  /* 價格徽章 */
+  .price-pill {
+    @apply inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2.5 py-0.5
+           text-xs font-semibold tabular-nums text-emerald-700 ring-1 ring-emerald-600/10;
+  }
+
+  /* 柔和輸入框 */
+  .input-soft {
+    @apply w-full rounded-xl border-0 bg-stone-100/80 px-4 py-2.5 text-sm text-stone-900
+           outline-none transition placeholder:text-stone-400
+           focus:bg-white focus:ring-2 focus:ring-brand-400/60;
+  }
+
+  /* 下拉（與 input-soft 同語言） */
+  .select-soft {
+    @apply rounded-xl border-0 bg-stone-100/80 px-3 py-2.5 text-sm text-stone-700
+           outline-none transition cursor-pointer
+           focus:bg-white focus:ring-2 focus:ring-brand-400/60;
+  }
 }
 
 @theme inline {

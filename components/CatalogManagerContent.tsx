@@ -2035,9 +2035,9 @@ function FamilyCard({
   }
 
   return (
-    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+    <div className="card-soft card-soft-hover overflow-hidden">
       {/* Family header */}
-      <div className="w-full flex items-center gap-3 px-5 py-4">
+      <div className="w-full flex items-center gap-3 px-5 py-4 group">
         <button
           onClick={handleToggle}
           className={`text-gray-400 hover:text-gray-600 transition-transform shrink-0 ${open ? 'rotate-90' : ''}`}
@@ -2050,15 +2050,15 @@ function FamilyCard({
           className="flex-1 min-w-0 text-left hover:bg-gray-50 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
         >
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-900">{family.seriesName}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{family.brand}</span>
+            <span className="text-[15px] font-bold text-stone-800 group-hover:text-brand-700 transition-colors">{family.seriesName}</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">{family.brand}</span>
             {family.productType && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600">{family.productType}</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-medium">{family.productType}</span>
             )}
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-xs text-gray-400">{items.length} 個 SKU</span>
-            {priceSetCount > 0 && <span className="text-xs text-emerald-600">✓ {priceSetCount} 已設售價</span>}
+            {priceSetCount > 0 && <span className="price-pill">✓ {priceSetCount} 已設售價</span>}
             {imageSetCount > 0 && <span className="text-xs text-blue-600">✓ {imageSetCount} 已設圖片</span>}
           </div>
         </button>
@@ -2511,16 +2511,16 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜尋貨號、品名、品牌…"
-            className="flex-1 max-w-lg px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+            className="flex-1 max-w-lg input-soft rounded-full px-5"
           />
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
             className={[
-              'relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0',
+              'relative flex items-center gap-1.5 px-4 py-2.5 rounded-full border text-sm font-semibold transition-all active:scale-95 shrink-0',
               filtersOpen || filterBrand || filterCategory
                 ? 'border-brand-400 bg-brand-50 text-brand-700'
-                : 'border-gray-300 bg-white text-gray-600 hover:border-brand-300 hover:text-brand-600',
+                : 'border-stone-200 bg-white text-stone-600 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50/40',
             ].join(' ')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -2609,7 +2609,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
         </div>
       ) : isSearching ? (
         /* ── Search results mode ── */
-        <div className="panel p-0 overflow-hidden">
+        <div className="card-soft p-0 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-700">
               {searchLoading ? '搜尋中…' : `找到 ${searchResults.length} 筆`}

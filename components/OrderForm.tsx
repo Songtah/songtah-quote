@@ -228,7 +228,7 @@ function ProductPicker({
 
       {/* Modal */}
       <motion.div
-        className="relative w-full max-w-2xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+        className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-t-3xl sm:rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] flex flex-col overflow-hidden"
         style={{ maxHeight: '92vh' }}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -236,8 +236,8 @@ function ProductPicker({
         transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b rounded-t-2xl">
-          <h2 className="text-base font-semibold text-gray-800">選擇品項</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-900/[0.06]">
+          <h2 className="text-base font-bold text-stone-800 tracking-wide">選擇品項</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-lg leading-none transition-colors"
@@ -247,20 +247,20 @@ function ProductPicker({
         </div>
 
         {/* Filters */}
-        <div className="px-4 py-3 border-b space-y-2">
+        <div className="px-5 py-3.5 border-b border-stone-900/[0.06] space-y-2.5 bg-white/60">
           <input
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null) }}
-            placeholder="搜尋全部 6,037 筆商品（品名 / 貨品碼）..."
-            className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            placeholder="搜尋全部 6,037 筆商品（品名 / 貨品碼）…"
+            className="input-soft"
             autoFocus
           />
           <div className="flex gap-2">
             <select
               value={filterBrand}
               onChange={(e) => { setFilterBrand(e.target.value); setExpandedFamilyId(null) }}
-              className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
+              className="select-soft flex-1 min-w-0"
             >
               <option value="">全部品牌</option>
               {allBrands.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -268,7 +268,7 @@ function ProductPicker({
             <select
               value={filterType}
               onChange={(e) => { setFilterType(e.target.value); setExpandedFamilyId(null) }}
-              className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
+              className="select-soft flex-1 min-w-0"
             >
               <option value="">全部類型</option>
               {allTypes.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -276,7 +276,7 @@ function ProductPicker({
             <select
               value={filterCategory}
               onChange={(e) => { setFilterCategory(e.target.value); setExpandedFamilyId(null) }}
-              className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
+              className="select-soft flex-1 min-w-0"
             >
               <option value="">全部分類</option>
               {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -293,21 +293,21 @@ function ProductPicker({
             ) : familySearchResults.length === 0 && remainingSearchResults.length === 0 ? (
               <div className="text-center text-gray-400 py-12 text-sm">無符合品項</div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-stone-900/[0.05]">
                 {/* ① 符合的規格系列 */}
                 {familySearchResults.map((family) => {
                   const isExpanded = expandedFamilyId === family.id
                   return (
                     <div key={family.id}>
                       <button
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 text-left transition-colors group"
                         onClick={() => toggleFamily(family.id)}
                       >
-                        <span className="text-gray-400 text-xs w-4 shrink-0">
+                        <span className="text-stone-300 group-hover:text-brand-500 text-xs w-4 shrink-0 transition-colors">
                           {isExpanded ? '▾' : '▸'}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-800">{family.seriesName}</div>
+                          <div className="text-sm font-semibold text-stone-800">{family.seriesName}</div>
                           <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
                             <span>{family.brand}</span>
                             <span>·</span>
@@ -341,14 +341,14 @@ function ProductPicker({
                 {remainingSearchResults.length > 0 && (
                   <>
                     {familySearchResults.length > 0 && (
-                      <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 text-xs text-gray-500 font-medium">
+                      <div className="px-5 py-2 bg-stone-100/70 text-[11px] font-bold uppercase tracking-widest text-stone-400">
                         其他品項
                       </div>
                     )}
                     {remainingSearchResults.map((item) => (
                       <div
                         key={item.skuCode}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50"
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
@@ -359,7 +359,7 @@ function ProductPicker({
                         </div>
                         <button
                           onClick={() => handleAddCatalogItem(item)}
-                          className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                          className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-full border border-brand-200 text-brand-700 bg-white hover:bg-brand-500 hover:text-white hover:border-brand-500 active:scale-95 transition-all"
                         >
                           + 加入
                         </button>
@@ -380,9 +380,9 @@ function ProductPicker({
               <div className="text-center text-gray-400 py-12 text-sm animate-pulse">載入中...</div>
             ) : filteredFamilies.length === 0 ? (
               browseItems.length > 0 ? (
-                <div className="divide-y">
+                <div className="divide-y divide-stone-900/[0.05]">
                   {browseItems.map((item) => (
-                    <div key={item.skuCode} className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50">
+                    <div key={item.skuCode} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
                         <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
@@ -392,7 +392,7 @@ function ProductPicker({
                       </div>
                       <button
                         onClick={() => handleAddCatalogItem(item)}
-                        className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                        className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-full border border-brand-200 text-brand-700 bg-white hover:bg-brand-500 hover:text-white hover:border-brand-500 active:scale-95 transition-all"
                       >
                         + 加入
                       </button>
@@ -403,20 +403,20 @@ function ProductPicker({
                 <div className="text-center text-gray-400 py-12 text-sm">沒有符合條件的品項</div>
               )
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-stone-900/[0.05]">
                 {filteredFamilies.map((family) => {
                   const isExpanded = expandedFamilyId === family.id
                   return (
                     <div key={family.id}>
                       <button
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                        className="w-full flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 text-left transition-colors group"
                         onClick={() => toggleFamily(family.id)}
                       >
-                        <span className="text-gray-400 text-xs w-4 shrink-0">
+                        <span className="text-stone-300 group-hover:text-brand-500 text-xs w-4 shrink-0 transition-colors">
                           {isExpanded ? '▾' : '▸'}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-800">{family.seriesName}</div>
+                          <div className="text-sm font-semibold text-stone-800">{family.seriesName}</div>
                           <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
                             <span>{family.brand}</span>
                             <span>·</span>
@@ -449,11 +449,11 @@ function ProductPicker({
                 {/* 篩選模式下，屬於該品牌/類型但不在規格系列中的個別品項 */}
                 {browseItems.length > 0 && (
                   <>
-                    <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 text-xs text-gray-500 font-medium">
+                    <div className="px-5 py-2 bg-stone-100/70 text-[11px] font-bold uppercase tracking-widest text-stone-400">
                       其他品項
                     </div>
                     {browseItems.map((item) => (
-                      <div key={item.skuCode} className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50">
+                      <div key={item.skuCode} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item">
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
                           <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
@@ -463,7 +463,7 @@ function ProductPicker({
                         </div>
                         <button
                           onClick={() => handleAddCatalogItem(item)}
-                          className="shrink-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-2.5 py-1 hover:bg-blue-100 rounded transition-colors"
+                          className="shrink-0 text-sm font-semibold px-3.5 py-1.5 rounded-full border border-brand-200 text-brand-700 bg-white hover:bg-brand-500 hover:text-white hover:border-brand-500 active:scale-95 transition-all"
                         >
                           + 加入
                         </button>
@@ -1212,7 +1212,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header info */}
-      <div className="bg-white border rounded-lg p-4 sm:p-5 space-y-4">
+      <div className="card-soft p-5 sm:p-6 space-y-4">
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-start gap-3">
           {isEdit && (
             <div className="col-span-1">
@@ -1226,7 +1226,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border rounded px-3 py-2 sm:py-1.5 text-sm w-full sm:w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
           <div className="col-span-1">
@@ -1235,7 +1235,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
               <select
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
-                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
+                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
               >
                 <option value="">請選擇</option>
                 {salespersonOptions.map((s) => (
@@ -1248,7 +1248,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
                 placeholder="輸入姓名"
-                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
+                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
               />
             )}
           </div>
@@ -1258,7 +1258,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-auto"
+                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-auto"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -1295,7 +1295,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                 })
               }}
               disabled={!canEdit}
-              className="border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 w-full sm:max-w-[280px]"
+              className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 w-full sm:max-w-[280px]"
             >
               <option value="">— 無關聯活動 —</option>
               {activePromos.map((p) => (
@@ -1380,9 +1380,9 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       </div>
 
       {/* Items table */}
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b gap-2">
-          <h2 className="font-semibold text-gray-800 min-w-0 truncate">
+      <div className="card-soft overflow-hidden">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-900/[0.06] gap-2">
+          <h2 className="font-bold text-stone-800 min-w-0 truncate tracking-wide">
             訂貨品項
             {items.length > 0 && (
               <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-gray-400 whitespace-nowrap">
@@ -1393,7 +1393,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
           {canEdit && (
           <button
             onClick={() => setShowPicker(true)}
-            className="button-primary px-3 sm:px-4 py-[7px] sm:py-1.5 text-[13px] sm:text-sm rounded shrink-0 whitespace-nowrap"
+            className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-4 sm:px-5 py-2 rounded-full text-[13px] sm:text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all"
           >
             + 新增品項
           </button>
@@ -1440,9 +1440,10 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
         })}
 
         {items.length === 0 ? (
-          <div className="text-center text-gray-400 py-12 sm:py-16">
-            <div className="text-3xl mb-2">📦</div>
-            <div className="text-sm">尚未新增品項，點擊「新增品項」開始選擇</div>
+          <div className="text-center py-14 sm:py-20">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center text-3xl mb-4">📦</div>
+            <div className="text-sm text-stone-400">尚未新增品項</div>
+            <div className="text-xs text-stone-300 mt-1">點擊右上「+ 新增品項」開始選擇商品</div>
           </div>
         ) : (
           <>
@@ -1798,19 +1799,19 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+        <div className="rounded-2xl bg-red-50 ring-1 ring-red-200 text-red-700 px-5 py-3.5 text-sm font-medium">
           {error}
         </div>
       )}
 
       {/* Footer actions */}
       {/* Action bar — sticky on mobile */}
-      <div className="sticky bottom-0 z-10 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 sm:py-0 bg-white sm:bg-transparent border-t sm:border-none shadow-[0_-2px_8px_rgba(0,0,0,0.06)] sm:shadow-none flex flex-wrap items-center justify-between gap-[10px] sm:gap-3">
+      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 sm:py-3.5 backdrop-blur-xl border-t border-stone-900/[0.06] shadow-[0_-4px_24px_rgba(28,25,23,0.06)] flex flex-wrap items-center justify-between gap-[10px] sm:gap-3 rounded-t-2xl" style={{ background: 'rgba(252,251,248,0.9)' }}>
         {/* 左：取消 ＋ 儲存草稿 */}
         <div className="flex gap-[8px] sm:gap-2">
           <button
             onClick={() => router.back()}
-            className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded"
+            className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
           >
             取消
           </button>
@@ -1818,18 +1819,26 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
             <button
               onClick={() => handleSave('草稿')}
               disabled={saving}
-              className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded disabled:opacity-50"
+              className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all disabled:opacity-50"
             >
               {saving ? '儲存中...' : '儲存草稿'}
             </button>
           )}
         </div>
-        {/* 右：列印 ＋ 送出訂單 */}
-        <div className="flex gap-[8px] sm:gap-2 flex-1 sm:flex-none justify-end">
+        {/* 右：合計 ＋ 列印 ＋ 送出訂單 */}
+        <div className="flex items-center gap-[8px] sm:gap-3 flex-1 sm:flex-none justify-end">
+          {items.length > 0 && (
+            <div className="hidden sm:flex flex-col items-end leading-none mr-1">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">合計</span>
+              <span className="text-lg font-bold tabular-nums text-stone-800">
+                NT$ {totalAmount.toLocaleString('zh-TW')}
+              </span>
+            </div>
+          )}
           {items.length > 0 && (
             <button
               onClick={handlePrint}
-              className="button-secondary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded"
+              className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
             >
               🖨️ 列印
             </button>
@@ -1838,7 +1847,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
             <button
               onClick={() => handleSave('已送出')}
               disabled={saving}
-              className="button-primary px-3 sm:px-4 py-[10px] sm:py-2 text-[13px] sm:text-sm rounded disabled:opacity-50 flex-1 sm:flex-none"
+              className="px-5 sm:px-6 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-semibold rounded-full bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50 flex-1 sm:flex-none"
             >
               {saving ? '送出中...' : '✓ 送出訂單'}
             </button>
