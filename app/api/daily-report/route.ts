@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { buildDailyReportData, formatDailyReport, todayTW } from '@/lib/ceo-stats'
+import { buildDailyReportData, formatDailyReport, todayTW, businessDayTW } from '@/lib/ceo-stats'
 import { sendDailyReport } from '@/lib/line-push'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body        = await req.json().catch(() => ({}))
-    const date        = (body.date        as string | undefined)                    ?? todayTW()
+    const date        = (body.date        as string | undefined)                    ?? businessDayTW()
     const period      = (body.period      as 'AM' | 'PM' | 'FULL' | undefined)     ?? 'FULL'
     const salesperson = (body.salesperson as string | undefined)                    ?? ''
     const title       = (body.title       as string | undefined)                    ?? ''
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
   const p           = req.nextUrl.searchParams
-  const date        = p.get('date')        ?? todayTW()
+  const date        = p.get('date')        ?? businessDayTW()
   const period      = (p.get('period')     ?? 'FULL') as 'AM' | 'PM' | 'FULL'
   const salesperson = p.get('salesperson') ?? ''
   const title       = p.get('title')       ?? ''

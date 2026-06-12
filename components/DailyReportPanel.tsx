@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // ── helpers ────────────────────────────────────────────────────
 
 function todayLocal(): string {
-  const tw = new Date(Date.now() + 8 * 60 * 60 * 1000)
+  // 業務日：凌晨 03:00 前仍算前一天（回報窗 17:00～隔日 03:00）
+  const tw = new Date(Date.now() + 8 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000)
   return tw.toISOString().slice(0, 10)
 }
 

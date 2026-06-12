@@ -42,7 +42,9 @@ export function parseDailyReport(text: string): DailyReport | null {
 
   // ── 日期：多種格式 ─────────────────────────────────────────────────────────
   // 日期： 2025 / 01 / 08（三）  日期：2026/06/05（五）  日期: 2025/01/08
-  let date = new Date().toISOString().split('T')[0]
+  // 預設日期 = 台灣「業務日」：回報窗 17:00～隔日 03:00，
+  // 凌晨 03:00 前發的訊息歸前一天（UTC+8 再減 3 小時取日期）。
+  let date = new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().split('T')[0]
   const dateLine = lines.find((l) => /日期[：:]/.test(l))
   if (dateLine) {
     const m = dateLine.match(/(\d{4})\s*\/\s*(\d{1,2})\s*\/\s*(\d{1,2})/)

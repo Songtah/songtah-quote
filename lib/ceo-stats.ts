@@ -39,6 +39,14 @@ export function todayTW(): string {
   return new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 }
 
+/**
+ * 台灣「業務日」：業務回報窗為 17:00～隔日凌晨 03:00。
+ * 03:00 前查詢/推播日報時，仍視為前一天的業務日。
+ */
+export function businessDayTW(): string {
+  return new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().slice(0, 10)
+}
+
 function tzDate(): Date {
   return new Date(Date.now() + 8 * 3600_000)
 }
@@ -208,9 +216,9 @@ async function fetchVisitCount(from: string, to: string): Promise<number> {
   return pages.length
 }
 
-/** 今日拜訪（日報用） */
+/** 今日拜訪（日報用）。未指定日期時以「業務日」為準（03:00 前算前一天）。 */
 export async function fetchTodayVisits(date?: string): Promise<VisitStat[]> {
-  const d = date ?? todayTW()
+  const d = date ?? businessDayTW()
   const pages = await queryPaged(VISITS_DB, {
     and: [
       { property: '日期', date: { on_or_after: d } },
