@@ -62,10 +62,12 @@ function ProductPicker({
   const [search, setSearch] = useState('')
   const [filterBrand, setFilterBrand] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
   const [families, setFamilies] = useState<ProductFamily[]>([])
   const [familiesLoading, setFamiliesLoading] = useState(true)
   const [allBrands, setAllBrands] = useState<string[]>([])
   const [allTypes, setAllTypes] = useState<string[]>([])
+  const [allCategories, setAllCategories] = useState<string[]>([])
   const [searchResults, setSearchResults] = useState<CatalogItem[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [browseItems, setBrowseItems] = useState<CatalogItem[]>([])
@@ -92,6 +94,7 @@ function ProductPicker({
       .then((data) => {
         if (data.brands) setAllBrands(data.brands)
         if (data.productTypes) setAllTypes(data.productTypes)
+        if (data.categories) setAllCategories(data.categories)
       })
       .catch(() => {})
 
@@ -117,24 +120,26 @@ function ProductPicker({
         params.set('q', q)
         if (filterBrand) params.set('brand', filterBrand)
         if (filterType) params.set('type', filterType)
+        if (filterCategory) params.set('category', filterCategory)
         const res = await fetch(`/api/products/search?${params}`)
         if (res.ok) setSearchResults(await res.json())
       } catch { /* ignore */ } finally { setSearchLoading(false) }
     }, 300)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [search, filterBrand, filterType])
+  }, [search, filterBrand, filterType, filterCategory])
 
   const isSearching = search.trim().length > 0
 
   // 瀏覽模式：依品牌 / 類型篩選系列
   const filteredFamilies = useMemo(() => {
-    if (!filterBrand && !filterType) return families
+    if (!filterBrand && !filterType && !filterCategory) return families
     return families.filter((f) => {
       if (filterBrand && f.brand !== filterBrand) return false
       if (filterType && f.productType !== filterType) return false
+      if (filterCategory && f.category !== filterCategory) return false
       return true
     })
-  }, [families, filterBrand, filterType])
+  }, [families, filterBrand, filterType, filterCategory])
 
   // 搜尋模式：以關鍵字比對系列名稱 / 品牌 / 分類，同時套用 brand/type 篩選
   const familySearchResults = useMemo(() => {
@@ -143,6 +148,7 @@ function ProductPicker({
     return families.filter((f) => {
       if (filterBrand && f.brand !== filterBrand) return false
       if (filterType && f.productType !== filterType) return false
+      if (filterCategory && f.category !== filterCategory) return false
       return (
         f.seriesName.toLowerCase().includes(kw) ||
         f.brand.toLowerCase().includes(kw) ||
@@ -150,7 +156,7 @@ function ProductPicker({
         f.seriesCode.toLowerCase().includes(kw)
       )
     })
-  }, [families, search, filterBrand, filterType])
+  }, [families, search, filterBrand, filterType, filterCategory])
 
   // 所有已被規格系列涵蓋的貨品碼（skuMap 中的 value），用於過濾搜尋結果
   const coveredSkuCodes = useMemo(() => {
@@ -171,17 +177,18 @@ function ProductPicker({
   // 瀏覽模式 fallback：當篩選條件有效但沒有符合的規格系列時，直接從目錄 API 拉個別品項
   useEffect(() => {
     if (isSearching) { setBrowseItems([]); return }
-    if (!filterBrand && !filterType) { setBrowseItems([]); return }
+    if (!filterBrand && !filterType && !filterCategory) { setBrowseItems([]); return }
     const params = new URLSearchParams({ limit: '200' })
     if (filterBrand) params.set('brand', filterBrand)
     if (filterType)  params.set('type', filterType)
+    if (filterCategory) params.set('category', filterCategory)
     fetch(`/api/products/search?${params}`)
       .then((r) => r.ok ? r.json() : [])
       .then((items: CatalogItem[]) => {
         setBrowseItems(items.filter((it) => !coveredSkuCodes.has(it.skuCode)))
       })
       .catch(() => setBrowseItems([]))
-  }, [isSearching, filterBrand, filterType, coveredSkuCodes])
+  }, [isSearching, filterBrand, filterType, filterCategory, coveredSkuCodes])
 
   const handleAddItem = useCallback(
     (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => onAdd(item),
@@ -265,6 +272,14 @@ function ProductPicker({
             >
               <option value="">全部類型</option>
               {allTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select
+              value={filterCategory}
+              onChange={(e) => { setFilterCategory(e.target.value); setExpandedFamilyId(null) }}
+              className="flex-1 border rounded px-2 py-1.5 text-sm text-gray-700"
+            >
+              <option value="">全部分類</option>
+              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
@@ -457,10 +472,10 @@ function ProductPicker({
                   </>
                 )}
                 {/* 提示：規格系列以外的品項請搜尋 */}
-                {!filterBrand && !filterType && (
+                {!filterBrand && !filterType && !filterCategory && (
                 <div className="px-4 py-3 bg-blue-50/60 border-t border-blue-100">
                   <p className="text-xs text-blue-600 leading-relaxed">
-                    💡 以上為含規格選項的系列。其餘 <span className="font-semibold">6,037 筆</span> 商品請在上方搜尋欄輸入品名或貨品碼，或選擇品牌 / 類型篩選。
+                    💡 以上為含規格選項的系列。其餘 <span className="font-semibold">6,037 筆</span> 商品請在上方搜尋欄輸入品名或貨品碼，或選擇品牌 / 類型 / 分類篩選。
                   </p>
                 </div>
                 )}
