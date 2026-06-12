@@ -33,9 +33,9 @@ export async function GET(req: NextRequest) {
       productType:  p.productType,
       category:     p.category,
       skuCode:      p.code,
-      // Fields not in the static catalog — left empty; Notion-backed entries fill these
-      price:        null,
-      salePrice:    null,
+      // 售價來自主檔（價格表回填）；無價格的品項為 null
+      price:        p.price ?? null,
+      salePrice:    p.salePrice ?? null,
       notes:        '',
     }))
   )

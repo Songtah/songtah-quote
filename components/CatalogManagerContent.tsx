@@ -59,6 +59,9 @@ interface CatalogItem {
   brand: string
   productType: string
   category: string
+  price?: number      // 售價（products_catalog.json 靜態維護）
+  salePrice?: number
+  spec?: string
 }
 
 interface FamilySpec {
@@ -2388,7 +2391,16 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
     ])
       .then(([fams, raw]) => {
         setFamilies(Array.isArray(fams) ? fams : [])
-        setAllItems(Array.isArray(raw) ? raw : [])
+        const items: CatalogItem[] = Array.isArray(raw) ? raw : []
+        setAllItems(items)
+        // JSON 主檔內的售價直接灌入 priceCache，列表立即顯示
+        setPriceCache((prev) => {
+          const next = new Map(prev)
+          for (const it of items) {
+            if (it.price != null && !next.has(it.code)) next.set(it.code, it.price)
+          }
+          return next
+        })
       })
       .catch(console.error)
       .finally(() => setLoading(false))

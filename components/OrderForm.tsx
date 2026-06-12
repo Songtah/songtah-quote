@@ -71,6 +71,7 @@ function ProductPicker({
   const [browseItems, setBrowseItems] = useState<CatalogItem[]>([])
   const [expandedFamilyId, setExpandedFamilyId] = useState<string | null>(null)
   const [notionAssignedCodes, setNotionAssignedCodes] = useState<Set<string>>(new Set())
+  const [priceMap, setPriceMap] = useState<Record<string, { p: number; s?: number }>>({})
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 同時載入規格系列 + 完整目錄的篩選選項（44 品牌、7 類型）
@@ -79,6 +80,12 @@ function ProductPicker({
       .then((r) => r.json())
       .then((data) => { setFamilies(data); setFamiliesLoading(false) })
       .catch(() => setFamiliesLoading(false))
+
+    // 主檔價格對照表（系列矩陣選品帶入單價用）
+    fetch('/api/products/prices')
+      .then((r) => r.json())
+      .then((data) => { if (data && typeof data === 'object') setPriceMap(data) })
+      .catch(() => {})
 
     fetch('/api/products/options')
       .then((r) => r.json())
@@ -305,11 +312,11 @@ function ProductPicker({
                         family.uiVariant === 'ymh-tooth-grid'
                           ? <YMHToothGridPanel
                               family={family}
-                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })}
+                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
                           : <FamilySpecPanel
                               family={family}
-                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })}
+                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
                       )}
                     </div>
@@ -414,11 +421,11 @@ function ProductPicker({
                         family.uiVariant === 'ymh-tooth-grid'
                           ? <YMHToothGridPanel
                               family={family}
-                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })}
+                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
                           : <FamilySpecPanel
                               family={family}
-                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: 0 })}
+                              onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
                       )}
                     </div>

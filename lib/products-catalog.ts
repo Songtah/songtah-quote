@@ -17,6 +17,9 @@ export interface CatalogProduct {
   brand: string       // 品牌 / 生產商
   productType: string // 商品類型
   category: string    // 分類
+  price?: number      // 售價（由產品價格主檔.xlsx 維護）
+  salePrice?: number  // 優惠價
+  spec?: string       // 技術規格摘要
 }
 
 export interface SpecDefinition {
