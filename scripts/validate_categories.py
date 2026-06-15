@@ -30,7 +30,11 @@ RULES = [
     (r'^(Temp Basic|Temp Premiu|TEMP PREMIUM|MULTISTRATUM|Tecno Med|TECNO MED|ABRO|DENTURE GINGIVA)', 'PMMA 塊'),
     # 金屬圓盤
     (r'^(Sintermetall \d|SINTERNIT|Titan 5|TITANIT|Chrom-cobalt|MEAC\d|MEAL\d)', '金屬材料'),
-    # 染液 / 色料
+    # 內染液 SHT Standard（VITA 16色：SHT-A/B/C/D 開頭，或整組 Standard）
+    (r'內染液 SHT[- \s]+(Standard|[ABCD]\d)', '染液 - SHT Standard'),
+    # 內染液 SHT 3D Master（3D Master 色號：SHT-數字 開頭，或整組 3D Master）
+    (r'內染液 SHT[- \s]+(3D Master|\d)', '染液 - SHT 3D Master'),
+    # 其他染液 / 色料
     (r'(Artamic Stain|Bio-Pigme|Colour Liquid|Color Liquid|Color Luquid|Aquarell(?! Set)|內染液)', '染液 / 色料'),
     # 蠟
     (r'(Curving Wax|Wax White|蠟塊|Wax Disk)', '蠟 / 壓鑄材'),
@@ -60,6 +64,8 @@ WHITELIST_CATEGORIES = {
     'PMMA 塊': {'PMMA 塊'},
     '金屬材料': {'金屬材料'},
     '染液 / 色料': {'染液 / 色料'},
+    '染液 - SHT Standard': {'染液 - SHT Standard'},
+    '染液 - SHT 3D Master': {'染液 - SHT 3D Master'},
     '蠟 / 壓鑄材': {'蠟 / 壓鑄材', '蠟塊'},
     '樹脂材料': {'樹脂材料'},
     '玻璃陶瓷塊': {'玻璃陶瓷塊'},
