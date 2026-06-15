@@ -30,12 +30,8 @@ RULES = [
     (r'^(Temp Basic|Temp Premiu|TEMP PREMIUM|MULTISTRATUM|Tecno Med|TECNO MED|ABRO|DENTURE GINGIVA)', 'PMMA 塊'),
     # 金屬圓盤
     (r'^(Sintermetall \d|SINTERNIT|Titan 5|TITANIT|Chrom-cobalt|MEAC\d|MEAL\d)', '金屬材料'),
-    # 內染液 SHT Standard（VITA 16色：SHT-A/B/C/D 開頭，或整組 Standard）
-    (r'內染液 SHT[- \s]+(Standard|[ABCD]\d)', '染液 - SHT Standard'),
-    # 內染液 SHT 3D Master（3D Master 色號：SHT-數字 開頭，或整組 3D Master）
-    (r'內染液 SHT[- \s]+(3D Master|\d)', '染液 - SHT 3D Master'),
-    # 染液 - 內染（鋯塊預染：Color Liquid / Aquarell / Waterbased / Bio-Pigmetn / 貝施美內染液）
-    (r'(Color Liquid|Colour Liquid|Color Luquid|Aquarell(?! Set)|Waterbased [A-Z]|Bio-Pigme|Fresco Liquid|內染液(?! SHT))', '染液 - 內染'),
+    # 染液 - 內染（含 SHT Standard / 3D Master 及所有預染液）
+    (r'(Color Liquid|Colour Liquid|Color Luquid|Aquarell(?! Set)|Waterbased [A-Z]|Bio-Pigme|Fresco Liquid|內染液)', '染液 - 內染'),
     # 染液 - 外染（烤燒後表面染色：Stain、Artamic）
     (r'(Artamic Stain|Matchmaker Stain|3D Stain|Initial Spectrum Stain)', '染液 - 外染'),
     # 染液 - 瓷粉（3D Base 粉末）
@@ -73,8 +69,6 @@ WHITELIST_CATEGORIES = {
     '染液 - 內染': {'染液 - 內染'},
     '染液 - 外染': {'染液 - 外染'},
     '染液 - 瓷粉': {'染液 - 瓷粉'},
-    '染液 - SHT Standard': {'染液 - SHT Standard'},
-    '染液 - SHT 3D Master': {'染液 - SHT 3D Master'},
     '蠟 / 壓鑄材': {'蠟 / 壓鑄材', '蠟塊'},
     '樹脂材料': {'樹脂材料'},
     '玻璃陶瓷塊': {'玻璃陶瓷塊'},
