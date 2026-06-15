@@ -1932,7 +1932,14 @@ function SkuRow({
 
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-800 truncate">{item.name}</p>
-        <p className="font-mono text-[11px] text-gray-400 mt-0.5">{item.code}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {item.brand && (
+            <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded-full shrink-0">
+              {item.brand}
+            </span>
+          )}
+          <p className="font-mono text-[11px] text-gray-400 truncate">{item.code}</p>
+        </div>
       </div>
 
       {hasPrice && price != null && (
