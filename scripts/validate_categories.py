@@ -33,7 +33,7 @@ RULES = [
     # 染液 - 內染（含 SHT Standard / 3D Master 及所有預染液）
     (r'(Color Liquid|Colour Liquid|Color Luquid|Aquarell(?! Set)|Waterbased [A-Z]|Bio-Pigme|Fresco Liquid|內染液)', '染液 - 內染'),
     # 染液 - 外染（烤燒後表面染色：Stain、Artamic）
-    (r'(Artamic Stain|Matchmaker Stain|3D Stain|Initial Spectrum Stain)', '染液 - 外染'),
+    (r'(Artamic[\w\s]*Stain|Matchmaker Stain|3D Stain|Initial Spectrum Stain)', '染液 - 外染'),
     # 瓷粉（3D Base 粉末，歸染液色料大分類）
     (r'3D Base [ABCD]|3D Base Glaze', '瓷粉'),
     # 染液試色板
@@ -43,7 +43,7 @@ RULES = [
     # 樹脂材料（義齒床/補修/臨時冠樹脂）
     (r'(Basing Resin|Re-Fine Bright|Ortho Bright|Soft Liner|OSTRON|TEMPSMART|Basis 慢性粉)', '樹脂材料'),
     # CAD/CAM 複合瓷塊
-    (r'(CERASMART|CEARSMART)', '玻璃陶瓷塊'),
+    (r'(CERASMART|CEARSMART)', '玻璃陶瓷'),
     # 器械（American Eagle 刮治器/探針，GC 代理）
     (r'^(AEGA|AEDG|AESM|AEDGM)', '牙科器材'),
     # 植體工具
@@ -71,7 +71,7 @@ WHITELIST_CATEGORIES = {
     '瓷粉': {'瓷粉'},
     '蠟 / 壓鑄材': {'蠟 / 壓鑄材', '蠟塊'},
     '樹脂材料': {'樹脂材料'},
-    '玻璃陶瓷塊': {'玻璃陶瓷塊'},
+    '玻璃陶瓷': {'玻璃陶瓷'},
     '牙科器材': {'牙科器材', '工具'},
     '植體配件': {'植體配件'},
     '設備配件': {'設備配件', '3D列印機配件'},

@@ -62,6 +62,7 @@ interface CatalogItem {
   price?: number      // 售價（products_catalog.json 靜態維護）
   salePrice?: number
   spec?: string
+  discontinued?: boolean
 }
 
 interface FamilySpec {
@@ -1931,7 +1932,14 @@ function SkuRow({
       <div className={`w-2 h-2 rounded-full shrink-0 ${hasImage ? 'bg-blue-400' : 'bg-gray-200'}`} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 truncate">{item.name}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm text-gray-800 truncate">{item.name}</p>
+          {item.discontinued && (
+            <span className="shrink-0 text-[10px] font-medium text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+              未販售
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-0.5">
           {item.brand && (
             <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded-full shrink-0">
@@ -2394,7 +2402,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
       fetch('/api/products/families').then((r) => r.json()),
       // Dedicated endpoint: returns raw { code, name, brand, … } format,
       // no 200-item cap, 5-min browser cache.
-      fetch('/api/products/catalog-raw').then((r) => r.json()),
+      fetch('/api/products/catalog-raw', { cache: 'no-store' }).then((r) => r.json()),
     ])
       .then(([fams, raw]) => {
         setFamilies(Array.isArray(fams) ? fams : [])
