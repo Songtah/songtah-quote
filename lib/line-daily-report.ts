@@ -85,8 +85,9 @@ export function parseDailyReport(text: string): DailyReport | null {
     // 跳過區段標記（[上午] [下午] 「上午] 等）
     if (/^[「\[【]?(上午|下午)[」\]】]?[：:]?$/.test(t)) continue
 
-    // 編號條目：1.名稱  或  1．名稱
-    const numMatch = t.match(/^(\d+)[\.．](.+)/)
+    // 編號條目：1.名稱 / 1．名稱 / 1、名稱 / 1)名稱 / 全形數字１２３
+    // 分隔符後可有空白；支援半形與全形數字，涵蓋各業務不同的編號寫法。
+    const numMatch = t.match(/^([0-9０-９]+)[\.．、)）:：]\s*(.+)/)
     if (numMatch) {
       flush()
       const rest = numMatch[2].trim()

@@ -310,6 +310,15 @@ export default function VisitsContent() {
   } | null>(null)
   const detectAbort = useRef(false)
 
+  // ── 刪除重複項目 state ─────────────────────────────────────────
+  const [dedupOpen,    setDedupOpen]    = useState(false)
+  const [dedupRunning, setDedupRunning] = useState(false)
+  const [dedupDone,    setDedupDone]    = useState(false)
+  const [dedupStats,   setDedupStats]   = useState<{
+    groups: number; duplicates: number; deleted: number
+    examples: { customerName: string; date: string; salesperson: string; count: number }[]
+  } | null>(null)
+
   const CACHE_KEY = 'bd-visits-v3'   // v3 = page size 10
   const CACHE_TTL = 2 * 60 * 1000
 
@@ -772,6 +781,39 @@ export default function VisitsContent() {
     }
   }
 
+  // ── 刪除重複項目 ───────────────────────────────────────────────
+  // dryRun=true 先預覽要刪幾筆；dryRun=false 實際刪除
+  const runDedup = async (dryRun: boolean) => {
+    setDedupRunning(true)
+    if (dryRun) { setDedupDone(false); setDedupStats(null) }
+    try {
+      const res = await fetch('/api/visits/dedup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setDedupStats({
+          groups: data.groups ?? 0,
+          duplicates: data.duplicates ?? 0,
+          deleted: data.deleted ?? 0,
+          examples: data.examples ?? [],
+        })
+        if (!dryRun) {
+          setDedupDone(true)
+          if ((data.deleted ?? 0) > 0) {
+            try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+            loadVisits({ silent: true })
+          }
+        }
+      }
+    } catch {
+      // 略過錯誤，UI 仍可關閉
+    }
+    setDedupRunning(false)
+  }
+
   return (
     <div>
       {/* Header */}
@@ -815,6 +857,13 @@ export default function VisitsContent() {
             title="掃描拜訪內文，自動偵測並填入競品欄位"
           >
             <span className="text-base leading-none">🔍</span> 偵測競品
+          </button>
+          <button
+            onClick={() => { setDedupOpen(true); setDedupDone(false); setDedupStats(null); runDedup(true) }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition"
+            title="找出同客戶+同日期+同業務的重複紀錄，保留最完整一筆、刪除其餘"
+          >
+            <span className="text-base leading-none">🧹</span> 刪除重複
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -1206,6 +1255,93 @@ export default function VisitsContent() {
                     className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
                   >
                     {autoLinkDone ? '關閉' : '取消'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* ── 刪除重複項目 Modal ───────────────────────────────── */}
+        {dedupOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => { if (!dedupRunning) setDedupOpen(false) }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">🧹 刪除重複項目</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    以「客戶＋日期＋業務」為同一次拜訪，同組保留內容最完整的一筆，刪除其餘重複。
+                  </p>
+                </div>
+
+                {/* 預覽掃描中 */}
+                {dedupRunning && !dedupDone && (
+                  <p className="text-sm text-blue-500 text-center animate-pulse py-4">
+                    {dedupStats ? '刪除中，請稍候…' : '掃描重複紀錄中…'}
+                  </p>
+                )}
+
+                {/* 預覽 / 結果 */}
+                {dedupStats && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl py-3">
+                        <div className="text-2xl font-bold text-amber-700">{dedupStats.groups}</div>
+                        <div className="text-xs text-amber-600 mt-0.5">重複組數</div>
+                      </div>
+                      <div className="bg-red-50 border border-red-200 rounded-xl py-3">
+                        <div className="text-2xl font-bold text-red-700">
+                          {dedupDone ? dedupStats.deleted : dedupStats.duplicates}
+                        </div>
+                        <div className="text-xs text-red-600 mt-0.5">{dedupDone ? '已刪除' : '可刪除'}</div>
+                      </div>
+                    </div>
+
+                    {dedupStats.examples.length > 0 && (
+                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 space-y-0.5 max-h-40 overflow-y-auto">
+                        <p className="font-medium text-gray-700">重複範例：</p>
+                        {dedupStats.examples.map((ex, i) => (
+                          <div key={i}>
+                            {ex.date}　{ex.customerName}　{ex.salesperson || '—'}
+                            <span className="text-red-500">×{ex.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {dedupDone && (
+                      <p className="text-sm text-emerald-600 text-center font-medium">✅ 完成！</p>
+                    )}
+                    {!dedupDone && dedupStats.duplicates === 0 && (
+                      <p className="text-sm text-emerald-600 text-center font-medium">沒有發現重複項目 🎉</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  {!dedupDone && dedupStats && dedupStats.duplicates > 0 && (
+                    <button
+                      onClick={() => runDedup(false)}
+                      disabled={dedupRunning}
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-40"
+                    >
+                      {dedupRunning ? '刪除中…' : `刪除 ${dedupStats.duplicates} 筆重複`}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { if (!dedupRunning) setDedupOpen(false) }}
+                    disabled={dedupRunning}
+                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                  >
+                    {dedupDone ? '關閉' : '取消'}
                   </button>
                 </div>
               </div>
