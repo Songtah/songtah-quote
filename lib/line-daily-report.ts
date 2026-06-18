@@ -51,10 +51,11 @@ export function parseDailyReport(text: string): DailyReport | null {
     if (m) date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
   }
 
-  // ── 職稱：只處理業務角色 ───────────────────────────────────────────────────
+  // ── 職稱：僅保留供顯示，不再用來過濾 ───────────────────────────────────────
+  // 角色過濾改由呼叫端以「發送人是否在業務名單」判斷（isKnownSalesperson），
+  // 避免業務職稱寫法不一（如未寫「業務」二字）導致整則日報被丟棄。
   const titleLine = lines.find((l) => /職稱[：:\s]/.test(l) || l.startsWith('職稱'))
   const title = titleLine?.replace(/職稱[：:\s]*/, '').trim() ?? ''
-  if (title && !title.includes('業務')) return null
 
   // ── 找行程回報區塊 ─────────────────────────────────────────────────────────
   const bodyIdx = lines.findIndex((l) => /行程回報/.test(l))

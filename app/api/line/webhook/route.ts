@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { waitUntil } from '@vercel/functions'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
-import { resolveSalesperson } from '@/lib/line-salesperson-map'
+import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
@@ -102,8 +102,14 @@ async function processEvents(events: any[]) {
       const groupId: string = event.source.groupId
       const userId: string = event.source.userId ?? ''
 
-      // 取得發送人顯示名稱，並透過對應表轉換為系統業務姓名
+      // 取得發送人顯示名稱
       const displayName = await getLineDisplayName(groupId, userId)
+
+      // 只抓取業務名單上的業務（非名單成員的訊息一律跳過）
+      if (!isKnownSalesperson(displayName)) {
+        console.log(`[LINE Webhook] skip (非業務名單): "${displayName}"`)
+        continue
+      }
       const salesperson = resolveSalesperson(displayName)
 
       // 取得系統表單選項

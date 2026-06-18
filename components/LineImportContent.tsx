@@ -19,6 +19,7 @@ export function LineImportContent() {
   const [fileName, setFileName] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [dateFrom, setDateFrom] = useState('')
   const abortRef = useRef(false)
 
   async function handleUpload(file: File) {
@@ -31,6 +32,7 @@ export function LineImportContent() {
     // ── 第一步：解析檔案 ─────────────────────────────────────────────────────
     const formData = new FormData()
     formData.append('file', file)
+    if (dateFrom) formData.append('dateFrom', dateFrom)
 
     let visits: ParsedVisitItem[]
     try {
@@ -112,6 +114,24 @@ export function LineImportContent() {
         </ol>
         <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           ⚠️ 只匯入「行程回報」區段，早上行程規劃自動跳過。已存在的紀錄（同客戶＋同日期）不重複建立。
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <label className="text-sm text-stone-600 shrink-0">起始日期（只補抓此日之後）</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="input-soft text-sm"
+          />
+          {dateFrom && (
+            <button
+              onClick={() => setDateFrom('')}
+              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              清除
+            </button>
+          )}
         </div>
       </div>
 

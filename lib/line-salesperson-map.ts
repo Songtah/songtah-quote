@@ -45,3 +45,18 @@ export function resolveSalesperson(displayName: string): string {
   // 找不到就用原名
   return displayName
 }
+
+/**
+ * 業務名單：對應表中所有系統業務姓名（含在職與離職）。
+ */
+const KNOWN_SALESPERSONS = new Set(Object.values(MAP))
+
+/**
+ * 判斷 LINE 顯示名稱是否對應到名單上的業務。
+ * LINE 客情自動抓取的唯一閘門：只有名單業務的日報才會被建立，
+ * 不再依賴「職稱含『業務』」這種字串判斷。
+ */
+export function isKnownSalesperson(displayName: string): boolean {
+  if (!displayName) return false
+  return KNOWN_SALESPERSONS.has(resolveSalesperson(displayName))
+}
