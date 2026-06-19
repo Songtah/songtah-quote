@@ -28,9 +28,9 @@ export type DailyReport = {
 // ── 判斷是否為行程回報訊息 ────────────────────────────────────────────────────
 
 export function isDailyReport(text: string): boolean {
-  const hasReport = /行程回報/.test(text)
-  const hasIdentifier = /職稱|每日報表/.test(text)
-  return hasReport && hasIdentifier
+  // 認得兩種開頭標記：「行程回報」(舊格式) 或「每日報表」(如 Eason 直接條列、無行程回報字樣)。
+  // 純晨間「行程規劃」會在 parseDailyReport 內被濾掉，這裡先寬鬆放行。
+  return /行程回報|每日報表/.test(text)
 }
 
 // ── 解析報表 ──────────────────────────────────────────────────────────────────
@@ -57,10 +57,20 @@ export function parseDailyReport(text: string): DailyReport | null {
   const titleLine = lines.find((l) => /職稱[：:\s]/.test(l) || l.startsWith('職稱'))
   const title = titleLine?.replace(/職稱[：:\s]*/, '').trim() ?? ''
 
-  // ── 找行程回報區塊 ─────────────────────────────────────────────────────────
+  // ── 找客戶清單區塊 ─────────────────────────────────────────────────────────
+  // 1) 有「行程回報」→ 從它之後開始（排除上方的晨間「行程規劃」）
+  // 2) 沒回報但有「行程規劃」→ 純晨間規劃，不匯入
+  // 3) 兩者皆無（如 Eason：每日報表→職稱→日期→條列）→ 整則皆為條目，
+  //    迴圈會自動略過 header 行（每日報表/職稱/日期/分隔線），從第一個編號條目開始
   const bodyIdx = lines.findIndex((l) => /行程回報/.test(l))
-  if (bodyIdx === -1) return null
-  const bodyLines = lines.slice(bodyIdx + 1)
+  let bodyLines: string[]
+  if (bodyIdx !== -1) {
+    bodyLines = lines.slice(bodyIdx + 1)
+  } else if (lines.some((l) => /行程規劃/.test(l))) {
+    return null
+  } else {
+    bodyLines = lines
+  }
 
   // ── 解析客戶條目 ──────────────────────────────────────────────────────────
   const visits: DailyReportVisit[] = []
