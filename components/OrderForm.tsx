@@ -641,6 +641,33 @@ function calcBuyNGetMGiftQty(orderQty: number, n: number, m: number): number {
   return Math.floor(orderQty / n) * m
 }
 
+// 系列級促銷類型：才允許用 seriesId 比對；其餘一律只認 skuCode（避免同系列誤觸發）
+const SERIES_CONDITION_TYPES = new Set(['series_discount', 'series_buy_n_get_m'])
+
+/**
+ * 類型感知的促銷比對：
+ * 1) 先用 skuCode 精準比對（所有類型）
+ * 2) seriesId 只比對「系列級」促銷（series_discount / series_buy_n_get_m）
+ *    → 修正「買A送B 等指定觸發商品的促銷，被同系列其他產品誤觸發」的 Bug
+ * skuCode 與 seriesId 皆空的促銷品項一律略過。
+ */
+function matchPromoItem(
+  item: { skuCode?: string; seriesId?: string },
+  promoItems: PromotionItem[]
+): PromotionItem | undefined {
+  if (item.skuCode) {
+    const bySku = promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode)
+    if (bySku) return bySku
+  }
+  if (item.seriesId) {
+    return promoItems.find(
+      (p) => p.seriesId && p.seriesId === item.seriesId &&
+             SERIES_CONDITION_TYPES.has(p.conditionType as string)
+    )
+  }
+  return undefined
+}
+
 /**
  * 對新加入的品項套用促銷條件，回傳：
  * - patches:   直接修改 newItem 的欄位（自動）
@@ -905,9 +932,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
     const updatedItems = currentItems.map((item) => {
       if (item.itemType === 'gift' || item.itemType === 'sample') return item
 
-      const promoItem =
-        promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
-        (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
+      const promoItem = matchPromoItem(item, promoItems)
 
       if (!promoItem?.conditionType) return item
 
@@ -932,9 +957,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
           const actualPrice = data?.rich?.price ?? 0
           if (!actualPrice) return
 
-          const promoItem =
-            promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
-            (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
+          const promoItem = matchPromoItem(item, promoItems)
 
           if (promoItem?.conditionType) {
             const baseItem2 = { ...item, unitPrice: actualPrice }
@@ -977,11 +1000,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       }
 
       // 找對應的已確認促銷品項（SKU 精確比對 → 系列 ID 比對）
-      const promoItem =
-        promoItems.find((p) => p.skuCode && p.skuCode === partial.skuCode) ??
-        (partial.seriesId
-          ? promoItems.find((p) => p.seriesId && p.seriesId === partial.seriesId)
-          : undefined)
+      const promoItem = matchPromoItem(partial, promoItems)
 
       // 套用促銷條件（無條件時 patches 為空）
       const { patches, giftRows, hintLabel } = promoItem?.conditionType
@@ -1074,9 +1093,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
     (item: OrderItem, newQty: number) => {
       updateItem(item.id, { quantity: newQty })
 
-      const promoItem =
-        promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode) ??
-        (item.seriesId ? promoItems.find((p) => p.seriesId && p.seriesId === item.seriesId) : undefined)
+      const promoItem = matchPromoItem(item, promoItems)
       if (!promoItem?.conditionType || !promoItem.conditionParams) return
 
       const p = promoItem.conditionParams as any
