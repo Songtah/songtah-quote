@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0   # 需完整歷史才能 rebase 後 push
 
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
@@ -46,6 +47,12 @@ jobs:
           git config user.name  "clinic-monitor[bot]"
           git config user.email "clinic-monitor@songtah"
           git add data/clinic-snapshot.json
-          # 若沒有變更就不 commit
-          git diff --cached --quiet || git commit -m "chore: update clinic snapshot $(date +%Y-%m)"
-          git push
+          # 若沒有變更就不 commit / push
+          if git diff --cached --quiet; then
+            echo "snapshot 無變更，略過 commit"
+          else
+            git commit -m "chore: update clinic snapshot $(date +%Y-%m)"
+            # main 在期間可能已被推進 → 先 rebase 再 push，避免 non-fast-forward 被拒
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
