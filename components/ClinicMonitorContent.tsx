@@ -86,6 +86,60 @@ function ChevronRight() {
   )
 }
 
+// ── 逐筆即時查衛福部（開業狀態 / 機構代碼 + 建議）──────────────────────────────
+function MohwLookupButton({ name, code, kind }: { name: string; code?: string; kind?: string }) {
+  const [loading, setLoading] = useState(false)
+  const [result, setResult]   = useState<any>(null)
+  const [err, setErr]         = useState('')
+
+  async function run() {
+    setLoading(true); setErr(''); setResult(null)
+    try {
+      const res = await fetch('/api/clinic-monitor/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, code, kind }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '查詢失敗'); return }
+      setResult(data)
+    } catch (e: any) {
+      setErr(e?.message ?? '查詢失敗')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={run} disabled={loading}
+        className="text-xs px-4 py-2 rounded-full bg-brand-500 text-white font-medium hover:bg-brand-600 shadow-sm shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50">
+        {loading ? '查詢衛福部中…' : '🔍 查衛福部機構代碼／開業狀態'}
+      </button>
+      {err && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+      {result && (
+        <div className="mt-2 rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs space-y-2">
+          {result.found ? (
+            <>
+              <div className="flex flex-wrap gap-x-5 gap-y-1">
+                <span>衛福部代碼：<code className="font-mono bg-white border border-stone-200 px-1.5 py-0.5 rounded">{result.mohwCode ?? '—'}</code></span>
+                <span>開業狀態：<span className={result.closed ? 'text-red-600 font-semibold' : 'text-emerald-600 font-semibold'}>{result.status || '—'}</span></span>
+              </div>
+              {result.mohwName && <div className="text-stone-500">{result.mohwName}　{result.address}</div>}
+            </>
+          ) : (
+            <div className="text-stone-500">衛福部查無此名稱</div>
+          )}
+          <div className="text-brand-700 bg-brand-50 rounded-lg px-2.5 py-2 leading-relaxed">💡 {result.suggestion}</div>
+          {result.candidates?.length > 1 && (
+            <div className="text-stone-400">其他候選：{result.candidates.slice(1, 5).map((c: any) => c.name).join('、')}</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Detail Modals ──────────────────────────────────────────────────────────────
 
 type DetailModalData =
@@ -139,6 +193,7 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
                 <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
               </div>
               <p className="text-xs text-gray-400">請查衛福部醫事查詢系統確認開業狀態；若為「停業／歇業」再至客戶頁面更新機構狀態。</p>
+              <MohwLookupButton name={it.customerName} code={it.institutionCode} />
             </>
           )})()}
 
@@ -172,6 +227,7 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
                 <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
                 <Row label="地址"     value={it.snapshotAddress} />
               </div>
+              <MohwLookupButton name={it.customerName} code={it.institutionCode} kind={it.snapshotKind === '牙體技術所' ? '2' : 'A'} />
             </>
           )})()}
         </div>
