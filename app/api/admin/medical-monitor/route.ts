@@ -190,12 +190,12 @@ function normalizeName(name: string): string {
  * 目前比對：名稱（正規化後無重疊）、縣市（臺/台 互換後不符）。
  */
 function detectDiffs(
-  customer: { name: string; city: string },
+  customer: { name: string; city: string; district: string },
   entry: SnapshotEntry
 ): Array<{ field: string; customerValue: string; snapshotValue: string }> {
   const diffs: Array<{ field: string; customerValue: string; snapshotValue: string }> = []
 
-  // 名稱：正規化後兩者完全無包含關係才算不一致
+  // 名稱：正規化後兩者完全無包含關係才算不一致（形態 3）
   const normC = normalizeName(customer.name)
   const normS = normalizeName(entry.name)
   if (normC.length >= 2 && normS.length >= 2) {
@@ -205,12 +205,22 @@ function detectDiffs(
     }
   }
 
-  // 縣市：臺/台 互換後，快照地址不包含客戶縣市
+  // 地址：臺/台 互換後比對（形態 4）
   const tw = (s: string) => s.replace(/臺/g, '台')
   const custCity = tw(customer.city)
+  const custDist = tw(customer.district ?? '')
   const snapAddr = tw(entry.address)
-  if (custCity && snapAddr && !snapAddr.includes(custCity)) {
+  const cityMatches = custCity && snapAddr.includes(custCity)
+  if (custCity && snapAddr && !cityMatches) {
+    // 縣市不符
     diffs.push({ field: '縣市', customerValue: customer.city, snapshotValue: snapAddr.slice(0, 6) })
+  } else if (cityMatches && custDist && !snapAddr.includes(custDist)) {
+    // 縣市相符但行政區不符（同代碼遷址或地址有誤）
+    diffs.push({
+      field: '地址（行政區）',
+      customerValue: `${customer.city}${customer.district}`,
+      snapshotValue: snapAddr.slice(0, 12),
+    })
   }
 
   return diffs
