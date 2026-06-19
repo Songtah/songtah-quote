@@ -27,11 +27,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '未授權' }, { status: 401 })
   }
 
-  let name = '', code = '', kind: string | undefined
+  let name = '', code = '', customerStatus = '', kind: string | undefined
   try {
     const body = await req.json()
     name = (body.name ?? '').toString().trim()
     code = (body.code ?? '').toString().trim()
+    customerStatus = (body.customerStatus ?? '').toString().trim()
     kind = body.kind ? String(body.kind) : undefined
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
@@ -41,22 +42,34 @@ export async function POST(req: NextRequest) {
   try {
     const r = await lookupInstitution({ name, kind })
 
-    // 產生建議
+    // 分類變更形態 + 建議（對齊形態表 6/7/8、5）
+    // form: closure(6 真歇業) / recode(7 換照換碼) / unknown(8 查無) / status_mismatch(5) / ok
+    let form: 'closure' | 'recode' | 'unknown' | 'status_mismatch' | 'ok'
     let suggestion: string
     if (!r.found) {
+      form = 'unknown'
       suggestion = '衛福部查無此名稱，可能已更名或歇業，建議人工至衛福部網站確認。'
     } else if (isClosedStatus(r.status)) {
+      form = 'closure'
       suggestion = `衛福部開業狀態為「${r.status}」→ 建議將客戶機構狀態更新為「歇業／停業」。`
     } else if (code && r.code && code !== r.code) {
-      suggestion = `衛福部機構代碼為 ${r.code}，與系統現值 ${code} 不同 → 建議將機構代碼更新為 ${r.code}。`
+      form = 'recode'
+      suggestion = `機構仍開業但代碼不同（衛福部 ${r.code} ／系統 ${code}）→ 可能換照換碼，建議更新機構代碼為 ${r.code}。`
     } else if (!code && r.code) {
+      form = 'recode'
       suggestion = `衛福部機構代碼為 ${r.code} → 建議補填至客戶機構代碼。`
+    } else if (customerStatus && isClosedStatus(customerStatus)) {
+      // 系統標記停業/歇業，但衛福部顯示開業 → 狀態不符（形態 5）
+      form = 'status_mismatch'
+      suggestion = `狀態不符：系統「${customerStatus}」、衛福部「${r.status || '開業'}」→ 機構實際仍開業，建議更新客戶機構狀態。`
     } else {
+      form = 'ok'
       suggestion = `衛福部開業狀態「${r.status || '—'}」、機構代碼 ${r.code || '—'} 與系統一致，無需變更。`
     }
 
     return NextResponse.json({
       found:     r.found,
+      form,
       mohwCode:  r.code,
       status:    r.status,
       closed:    isClosedStatus(r.status),

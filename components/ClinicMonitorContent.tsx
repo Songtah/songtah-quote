@@ -87,7 +87,16 @@ function ChevronRight() {
 }
 
 // ── 逐筆即時查衛福部（開業狀態 / 機構代碼 + 建議）──────────────────────────────
-function MohwLookupButton({ name, code, kind }: { name: string; code?: string; kind?: string }) {
+// 變更形態徽章樣式
+const FORM_BADGE: Record<string, { label: string; cls: string }> = {
+  closure:         { label: '真歇業/停業', cls: 'bg-red-50 text-red-700 border border-red-200' },
+  recode:          { label: '換照換碼',     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  unknown:         { label: '查無',         cls: 'bg-gray-100 text-gray-600 border border-gray-200' },
+  status_mismatch: { label: '狀態不符',     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  ok:              { label: '一致',         cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+}
+
+function MohwLookupButton({ name, code, kind, customerStatus }: { name: string; code?: string; kind?: string; customerStatus?: string }) {
   const [loading, setLoading] = useState(false)
   const [result, setResult]   = useState<any>(null)
   const [err, setErr]         = useState('')
@@ -98,7 +107,7 @@ function MohwLookupButton({ name, code, kind }: { name: string; code?: string; k
       const res = await fetch('/api/clinic-monitor/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, code, kind }),
+        body: JSON.stringify({ name, code, kind, customerStatus }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '查詢失敗'); return }
@@ -119,6 +128,11 @@ function MohwLookupButton({ name, code, kind }: { name: string; code?: string; k
       {err && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
       {result && (
         <div className="mt-2 rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs space-y-2">
+          {result.form && FORM_BADGE[result.form] && (
+            <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full ${FORM_BADGE[result.form].cls}`}>
+              {FORM_BADGE[result.form].label}
+            </span>
+          )}
           {result.found ? (
             <>
               <div className="flex flex-wrap gap-x-5 gap-y-1">
@@ -193,7 +207,7 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
                 <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
               </div>
               <p className="text-xs text-gray-400">請查衛福部醫事查詢系統確認開業狀態；若為「停業／歇業」再至客戶頁面更新機構狀態。</p>
-              <MohwLookupButton name={it.customerName} code={it.institutionCode} />
+              <MohwLookupButton name={it.customerName} code={it.institutionCode} customerStatus={it.customerStatus} />
             </>
           )})()}
 
@@ -227,7 +241,7 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
                 <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
                 <Row label="地址"     value={it.snapshotAddress} />
               </div>
-              <MohwLookupButton name={it.customerName} code={it.institutionCode} kind={it.snapshotKind === '牙體技術所' ? '2' : 'A'} />
+              <MohwLookupButton name={it.customerName} code={it.institutionCode} kind={it.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={it.customerStatus} />
             </>
           )})()}
         </div>
