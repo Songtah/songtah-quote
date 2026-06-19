@@ -201,10 +201,49 @@ function defaultParams(type: ConditionType): ConditionParams {
   }
 }
 
-function ConditionEditor({ conditionType, conditionParams, onChange }: {
+// 條件類型分群（設定頁分組選擇用）
+const CONDITION_GROUPS: { label: string; types: ConditionType[] }[] = [
+  { label: '折扣類', types: ['single_price', 'series_discount', 'qty_discount', 'fixed_set_price'] },
+  { label: '贈品類', types: ['buy_n_get_m', 'series_buy_n_get_m', 'buy_a_get_b'] },
+  { label: '加購組合', types: ['add_on', 'bundle'] },
+]
+// 系列級類型（只能設在「系列」品項上）
+const SERIES_ONLY_TYPES = new Set<string>(['series_discount', 'series_buy_n_get_m'])
+
+/**
+ * 儲存前防呆驗證：回傳錯誤訊息（null = 通過）。
+ * 杜絕「買A送B 未指定贈品」「系列類設在單品」等錯設定（正是訂貨頁誤帶贈品的源頭）。
+ */
+function validateCondition(type: ConditionType | null, params: any, isSeries: boolean): string | null {
+  if (!type) return null  // 不設定結構化條件，允許
+  if (isSeries !== SERIES_ONLY_TYPES.has(type)) {
+    return isSeries
+      ? '系列品項請選「系列類」促銷（全系列折扣 / 跨規格系列買N送M）'
+      : '「系列類」促銷只能設定在系列品項上，請改選單品適用的類型'
+  }
+  switch (type) {
+    case 'single_price':       return params?.price > 0 ? null : '請填特價金額'
+    case 'add_on':             return params?.addOnPrice > 0 ? null : '請填加購價'
+    case 'series_discount':    return params?.rate > 0 ? null : '請填折扣率'
+    case 'buy_n_get_m':        return params?.n > 0 && params?.m > 0 ? null : '請填「買N送M」的 N、M'
+    case 'series_buy_n_get_m': return params?.n > 0 && params?.m > 0 ? null : '請填系列「買N送M」的 N、M'
+    case 'buy_a_get_b':        return params?.giftSkuCode ? null : '「買A送B」請指定贈品（B）的商品'
+    case 'bundle':             return params?.partnerSkuCode ? null : '「商品組合」請指定搭配商品'
+    case 'qty_discount':
+      return params?.tiers?.length && params.tiers.every((t: any) => t.minQty > 0 && (t.rate > 0 || t.price > 0))
+        ? null : '請完整填寫「滿件折扣」的每個門檻'
+    case 'fixed_set_price':
+      return params?.tiers?.length && params.tiers.every((t: any) => t.qty > 0 && t.totalPrice > 0)
+        ? null : '請完整填寫「N件固定價」的每個方案'
+    default: return null
+  }
+}
+
+function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = false }: {
   conditionType:    ConditionType | null
   conditionParams:  ConditionParams | null
   onChange: (type: ConditionType | null, params: ConditionParams | null) => void
+  isSeries?: boolean
 }) {
   const p = conditionParams as any
 
@@ -247,10 +286,22 @@ function ConditionEditor({ conditionType, conditionParams, onChange }: {
           className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-700"
         >
           <option value="">— 不設定結構化條件 —</option>
-          {ALL_CONDITION_TYPES.map((t) => (
-            <option key={t} value={t}>{CONDITION_TYPE_LABEL[t]}</option>
-          ))}
+          {CONDITION_GROUPS.map((g) => {
+            // 系列品項只列系列類；單品只列非系列類
+            const types = g.types.filter((t) => SERIES_ONLY_TYPES.has(t) === isSeries)
+            if (types.length === 0) return null
+            return (
+              <optgroup key={g.label} label={g.label}>
+                {types.map((t) => (
+                  <option key={t} value={t}>{CONDITION_TYPE_LABEL[t]}</option>
+                ))}
+              </optgroup>
+            )
+          })}
         </select>
+        <p className="mt-1 text-[11px] text-gray-400">
+          {isSeries ? '此為「系列」品項，僅能套用系列類促銷' : '此為單品品項，可套用單品/贈品/加購類促銷'}
+        </p>
       </div>
 
       {/* Type-specific inputs */}
@@ -583,6 +634,9 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
   }
 
   const handleSave = async () => {
+    // 防呆：結構化條件必填驗證（杜絕買A送B 未指定贈品、系列類設在單品等錯設定）
+    const err = validateCondition(conditionType, conditionParams as any, !!item.seriesId)
+    if (err) { alert(err); return }
     setSaving(true)
     const priceNum = price !== '' ? parseFloat(price) : null
     const patch = {
@@ -681,6 +735,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
             conditionType={conditionType}
             conditionParams={conditionParams}
             onChange={handleConditionChange}
+            isSeries={!!item.seriesId}
           />
 
           {/* Free-text condition label */}
