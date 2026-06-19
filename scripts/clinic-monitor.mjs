@@ -596,6 +596,9 @@ async function main() {
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
       month, fetchedAt: today.toISOString(),
       totalClinics: clinics.size, totalLabs: labs.size,
+      // 上月總數 → 供前端顯示「較上月增減」
+      prevTotalClinics: prevSnapshot?.totalClinics,
+      prevTotalLabs:    prevSnapshot?.totalLabs,
       totalCustomers: customers.byCode.size,
       newCodes,   // 本月相較上月新增的機構代碼（真正新開業）
       codes,
