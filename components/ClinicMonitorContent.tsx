@@ -471,7 +471,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
   return (
     <div className="space-y-3">
       <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-        👤 狀況不明黑數：無機構代碼、人名／機構名稱混雜的客戶。<span className="text-gray-400">非每月更新重點，由業務手動回報現況；如需納入自動監控，請至客戶頁面填入正確機構代碼。</span>
+        👤 公司自建：無機構代碼、人名／機構名稱混雜的客戶。<span className="text-gray-400">非每月更新重點，由業務手動回報現況；如需納入自動監控，請至客戶頁面填入正確機構代碼。</span>
       </div>
       <div className="flex items-center gap-2">
         <input
@@ -679,7 +679,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     { id: 'normal',      label: '✅ 既有正常營業', count: result.normalOperating.length },
     { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
     { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
-    { id: 'selfmanaged', label: '👤 狀況不明黑數',  count: result.selfManagedCustomers.length },
+    { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
   ] as const) : []
 
   return (
