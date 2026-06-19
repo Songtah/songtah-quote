@@ -805,7 +805,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
               {stats.totalLabs > 0
-                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labDelta} sub="全台" />
+                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : '全台'} />
                 : (
                   <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
                     <span className="text-xs text-gray-400 font-medium">牙體技術所</span>

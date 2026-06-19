@@ -236,19 +236,13 @@ async function fetchDentalLabsOnce(deadline = Infinity) {
   const CONCURRENCY = 8
   const result = new Map()  // key = 機構代碼
   let fetched = 0, noCode = 0
+  let timedOut = false
 
   for (let i = 0; i < rawLabs.length; i += CONCURRENCY) {
-    // 時間預算到點：剩餘以名稱保留（不再抓碼），確保整支腳本不超時被取消
+    // 時間預算到點：標記未完成並中止（呼叫端會改沿用上月資料，不讓本月歸零/誤判）
     if (Date.now() > deadline) {
-      warn(`BAS 詳細頁已達時間上限，剩餘 ${rawLabs.length - i} 筆以名稱保留（不取機構代碼）`)
-      for (let k = i; k < rawLabs.length; k++) {
-        const lab = rawLabs[k]
-        result.set(`${lab.name}__${lab.city}__${lab.dist}`, {
-          source: 'bas', kind: '牙體技術所',
-          name: lab.name, address: `${lab.city}${lab.dist}`, specialty: '', termDate: '',
-        })
-        noCode++
-      }
+      warn(`BAS 詳細頁已達時間上限，本次視為未完整（剩 ${rawLabs.length - i} 筆未取）`)
+      timedOut = true
       break
     }
     const batch = rawLabs.slice(i, i + CONCURRENCY)
@@ -293,7 +287,7 @@ async function fetchDentalLabsOnce(deadline = Infinity) {
   }
 
   log(`  牙體技術所完成：${result.size - noCode} 間有機構代碼，${noCode} 間取碼失敗`)
-  return result
+  return { result, timedOut }
 }
 
 /** 最多重試 MAX_RETRY 次（每次重新取首頁 + CAPTCHA）；總時間以 deadline 控管，絕不讓 job 超時 */
@@ -302,22 +296,25 @@ async function fetchDentalLabs(maxRetry = 2) {
   const deadline = Date.now() + 18 * 60_000  // 18 分鐘硬上限（保留時間給 NHI/Notion/snapshot）
   for (let attempt = 1; attempt <= maxRetry; attempt++) {
     try {
-      return await fetchDentalLabsOnce(deadline)
+      const { result, timedOut } = await fetchDentalLabsOnce(deadline)
+      // 完整 = 沒逾時 且 抓到合理數量（避免把空/極少資料當完整）
+      const complete = !timedOut && result.size > 0
+      return { labs: result, complete }
     } catch (e) {
       if (Date.now() > deadline) {
-        warn('BAS 已逾時間預算，放棄重試（本月牙技所資料從缺）')
-        return new Map()
+        warn('BAS 已逾時間預算，放棄重試（將沿用上月牙技所資料）')
+        return { labs: new Map(), complete: false }
       }
       if (attempt < maxRetry) {
         warn(`BAS 第 ${attempt} 次失敗（${e.message}），5 秒後重試 …`)
         await sleep(5_000)
       } else {
-        warn(`BAS 最終失敗（${e.message}），本月牙技所資料從缺`)
-        return new Map()
+        warn(`BAS 最終失敗（${e.message}），將沿用上月牙技所資料`)
+        return { labs: new Map(), complete: false }
       }
     }
   }
-  return new Map()
+  return { labs: new Map(), complete: false }
 }
 
 // ── 3. 崧達客戶機構代碼 ────────────────────────────────────────────────────
@@ -533,14 +530,31 @@ async function main() {
   }
 
   // 2. 下載兩個資料來源（並行）
-  const [clinics, labs] = await Promise.all([
+  const [clinics, labsResult] = await Promise.all([
     fetchDentalClinics(),
-    fetchDentalLabs().catch(e => { warn('牙技所資料取得失敗：', e.message); return new Map() }),
+    fetchDentalLabs().catch(e => { warn('牙技所資料取得失敗：', e.message); return { labs: new Map(), complete: false } }),
   ])
 
-  // 合併（NHI key = 機構代碼，BAS key = BAS_SEQ）
+  // 牙技所抓取不完整時 → 沿用上月資料，避免本月歸零/全部誤判為歇業
+  let labs = labsResult.labs
+  let labsStale = false
+  if (!labsResult.complete) {
+    const prevLabs = new Map()
+    for (const [k, v] of Object.entries(prevSnapshot?.codes ?? {})) {
+      if (v?.source === 'bas') prevLabs.set(k, v)
+    }
+    if (prevLabs.size > 0) {
+      labs = prevLabs
+      labsStale = true
+      warn(`牙技所本次抓取不完整 → 沿用上月 ${prevLabs.size} 筆（標記為上月資料，避免歸零/誤判）`)
+    } else {
+      warn('牙技所本次抓取不完整且無上月資料可沿用，本月牙技所從缺')
+    }
+  }
+
+  // 合併（NHI key = 機構代碼，BAS key = 機構代碼或名稱備用 key）
   const currentData = new Map([...clinics, ...labs])
-  log(`\n合計：${clinics.size} 牙醫診所 ＋ ${labs.size} 牙技所 ＝ ${currentData.size} 筆`)
+  log(`\n合計：${clinics.size} 牙醫診所 ＋ ${labs.size} 牙技所${labsStale ? '（沿用上月）' : ''} ＝ ${currentData.size} 筆`)
 
   // 3. 崧達客戶
   const customers = await fetchSongtahCustomers().catch(e => {
@@ -616,6 +630,7 @@ async function main() {
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
       month, fetchedAt: today.toISOString(),
       totalClinics: clinics.size, totalLabs: labs.size,
+      labsStale,   // true = 本次牙技所抓取不完整、沿用上月資料
       // 上月總數 → 供前端顯示「較上月增減」
       prevTotalClinics: prevSnapshot?.totalClinics,
       prevTotalLabs:    prevSnapshot?.totalLabs,
