@@ -52,6 +52,11 @@ export function resolveSalesperson(displayName: string): string {
 const KNOWN_SALESPERSONS = new Set(Object.values(MAP))
 
 /**
+ * 業務名單（去重排序，供 UI 下拉選單用）。
+ */
+export const KNOWN_SALESPERSON_LIST = Array.from(KNOWN_SALESPERSONS).sort()
+
+/**
  * 判斷 LINE 顯示名稱是否對應到名單上的業務。
  * LINE 客情自動抓取的唯一閘門：只有名單業務的日報才會被建立，
  * 不再依賴「職稱含『業務』」這種字串判斷。

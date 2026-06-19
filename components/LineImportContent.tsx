@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { ParsedVisitItem } from '@/app/api/line/import/route'
+import { KNOWN_SALESPERSON_LIST } from '@/lib/line-salesperson-map'
 
 type Stage = 'idle' | 'parsing' | 'importing' | 'done' | 'error'
 
@@ -20,6 +21,7 @@ export function LineImportContent() {
   const [errorMsg, setErrorMsg] = useState('')
   const [progress, setProgress] = useState<Progress | null>(null)
   const [dateFrom, setDateFrom] = useState('')
+  const [salesperson, setSalesperson] = useState('')
   const abortRef = useRef(false)
 
   async function handleUpload(file: File) {
@@ -33,6 +35,7 @@ export function LineImportContent() {
     const formData = new FormData()
     formData.append('file', file)
     if (dateFrom) formData.append('dateFrom', dateFrom)
+    if (salesperson) formData.append('salesperson', salesperson)
 
     let visits: ParsedVisitItem[]
     try {
@@ -132,6 +135,20 @@ export function LineImportContent() {
               清除
             </button>
           )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-stone-600 shrink-0">篩選業務（只匯入此業務）</label>
+          <select
+            value={salesperson}
+            onChange={(e) => setSalesperson(e.target.value)}
+            className="select-soft text-sm"
+          >
+            <option value="">全部業務</option>
+            {KNOWN_SALESPERSON_LIST.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
 

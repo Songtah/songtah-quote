@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
   }
 
   let fileContent: string
-  let dateFrom = ''   // 只匯入此日期(含)以後的日報，留空 = 全部
+  let dateFrom = ''           // 只匯入此日期(含)以後的日報，留空 = 全部
+  let salespersonFilter = ''  // 只匯入此業務的日報，留空 = 全部名單業務
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
     }
     fileContent = await file.text()
     dateFrom = (formData.get('dateFrom') as string | null)?.trim() ?? ''
+    salespersonFilter = (formData.get('salesperson') as string | null)?.trim() ?? ''
   } catch {
     return NextResponse.json({ error: '無法讀取檔案' }, { status: 400 })
   }
@@ -60,11 +62,13 @@ export async function POST(req: NextRequest) {
   for (const msg of reportMessages) {
     // 只匯入業務名單上的業務（非名單成員的訊息一律跳過）
     if (!isKnownSalesperson(msg.sender)) continue
+    const salesperson = resolveSalesperson(msg.sender)
+    // 業務篩選：只匯入指定業務的日報
+    if (salespersonFilter && salesperson !== salespersonFilter) continue
     const report = parseDailyReport(msg.text)
     if (!report || report.visits.length === 0) continue
     // 起始日期篩選：只補抓指定日期之後的報表
     if (dateFrom && report.date < dateFrom) continue
-    const salesperson = resolveSalesperson(msg.sender)
     for (const v of report.visits) {
       visits.push({
         customerName: v.customerName,
