@@ -5,8 +5,9 @@
  *
  * 狀態 1 — normalOperating   ：客戶有代碼，快照查到，資料一致，正常營業
  * 狀態 2 — newOpenings       ：快照有機構代碼，但公司客戶 DB 無此代碼 → 新開業候選
- * 狀態 3 — suspectedClosures ：客戶有代碼，NHI 特約終止 → 疑似歇業/停業
- * 狀態 4 — codeNotFound      ：客戶有代碼，但快照完全查無 → 待確認（不等於歇業）
+ * 狀態 3 — suspectedClosures ：客戶有代碼，但最新醫事資料查無該代碼 → 歇業候選
+ *                              （不再用 NHI 特約終止判定；開業/歇業以衛福部開業狀態為準，
+ *                                由前端「查衛福部」即時確認後人工更新）
  * 狀態 5 — selfManagedCustomers：客戶無機構代碼 → 未納入醫事監控
  * 狀態 6 — inconsistentData  ：代碼相符，但名稱/縣市有差異 → 提供人工確認
  */
@@ -34,6 +35,8 @@ export interface Snapshot {
   fetchedAt:    string
   totalClinics: number
   totalLabs:    number
+  prevTotalClinics?: number   // 上月診所總數（供計算增減；由月排程寫入）
+  prevTotalLabs?:    number   // 上月技工所總數
   newCodes?:    string[]
   codes:        Record<string, SnapshotEntry>
 }
@@ -67,7 +70,7 @@ export interface NormalOperating {
   snapshotTermDate: string
 }
 
-/** 狀態 3：已歇業 — NHI 特約終止，或機構代碼已從醫事資料消失 */
+/** 狀態 3：歇業候選 — 機構代碼已從醫事資料消失，待查衛福部開業狀態確認 */
 export interface SuspectedClosure {
   customerId:       string
   customerName:     string
@@ -76,11 +79,7 @@ export interface SuspectedClosure {
   customerType:     string
   customerStatus:   string
   institutionCode:  string
-  reason:           'nhi_terminated' | 'code_vanished'
-  snapshotName?:    string
-  snapshotKind?:    string
-  snapshotAddress?: string
-  snapshotTermDate?:string
+  reason:           'code_vanished'
 }
 
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
@@ -124,6 +123,8 @@ export interface MonitorStats {
   totalClinics:   number
   totalLabs:      number
   totalHospitals: number
+  clinicDelta:    number | null   // 較上月增減（null = 無上月資料）
+  labDelta:       number | null
   customerWithCode:    number
   customerNoCode:      number
   normalOperating:     number
@@ -172,16 +173,6 @@ function parseAddress(address: string): { city: string; district: string } {
   const distMatch = address.replace(city, '').match(/^(.*?[區鄉鎮市])/)
   const district  = distMatch ? distMatch[1] : ''
   return { city, district }
-}
-
-/** NHI 特約終止日期（YYYYMMDD）是否已過期 */
-function isNhiTerminated(termDate: string): boolean {
-  if (!termDate || termDate === '0' || termDate.length < 8) return false
-  const y = parseInt(termDate.slice(0, 4))
-  const m = parseInt(termDate.slice(4, 6)) - 1
-  const d = parseInt(termDate.slice(6, 8))
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return false
-  return new Date(y, m, d) < new Date()
 }
 
 /** 名稱正規化（移除通用詞，方便比對） */
@@ -284,22 +275,12 @@ export async function GET(req: NextRequest) {
     const entry = snapshotByCode.get(code)
 
     if (!entry) {
-      // 狀態 3b：已歇業（機構代碼從醫事資料消失）
+      // 狀態 3：歇業候選（機構代碼從醫事資料消失）— 待查衛福部開業狀態確認
       suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
         institutionCode: code, reason: 'code_vanished',
-      })
-    } else if (isNhiTerminated(entry.termDate)) {
-      // 狀態 3a：已歇業（NHI 特約已終止）
-      suspectedClosures.push({
-        customerId: c.id, customerName: c.name,
-        customerCity: c.city, customerDistrict: c.district,
-        customerType: c.type, customerStatus: c.status,
-        institutionCode: code, reason: 'nhi_terminated',
-        snapshotName: entry.name, snapshotKind: entry.kind,
-        snapshotAddress: entry.address, snapshotTermDate: entry.termDate,
       })
     } else {
       const diffs = detectDiffs(c, entry)
@@ -357,6 +338,8 @@ export async function GET(req: NextRequest) {
     totalClinics:   snapshot.totalClinics,
     totalLabs:      snapshot.totalLabs,
     totalHospitals: 0,
+    clinicDelta: typeof snapshot.prevTotalClinics === 'number' ? snapshot.totalClinics - snapshot.prevTotalClinics : null,
+    labDelta:    typeof snapshot.prevTotalLabs    === 'number' ? snapshot.totalLabs    - snapshot.prevTotalLabs    : null,
     customerWithCode:    customersWithCode.length,
     customerNoCode:      customersNoCode.length,
     normalOperating:     normalOperating.length,

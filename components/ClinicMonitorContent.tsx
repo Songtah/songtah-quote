@@ -9,14 +9,22 @@ import type {
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, accent }: {
-  label: string; value: number | string; sub?: string; accent?: string
+function StatCard({ label, value, sub, accent, delta }: {
+  label: string; value: number | string; sub?: string; accent?: string; delta?: number | null
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col gap-1">
       <span className="text-xs text-gray-400 font-medium">{label}</span>
-      <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-gray-900'}`}>
-        {typeof value === 'number' ? value.toLocaleString() : value}
+      <span className="flex items-baseline gap-2">
+        <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-gray-900'}`}>
+          {typeof value === 'number' ? value.toLocaleString() : value}
+        </span>
+        {typeof delta === 'number' && delta !== 0 && (
+          <span className={`text-xs font-semibold tabular-nums ${delta > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
+          </span>
+        )}
+        {delta === 0 && <span className="text-xs text-gray-300">持平</span>}
       </span>
       {sub && <span className="text-xs text-gray-400">{sub}</span>}
     </div>
@@ -86,18 +94,9 @@ type DetailModalData =
   | { kind: 'inconsistent'; item: InconsistentData }
 
 function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => void }) {
-  const fmt = (td?: string) => {
-    if (!td || td.length < 8) return '—'
-    return `${td.slice(0,4)}/${td.slice(4,6)}/${td.slice(6,8)}`
-  }
-  const isExpired = (td?: string) => {
-    if (!td || td.length < 8) return false
-    return new Date(+td.slice(0,4), +td.slice(4,6)-1, +td.slice(6,8)) < new Date()
-  }
-
   const label =
     data.kind === 'normal'       ? '✅ 既有正常營業' :
-    data.kind === 'closure'      ? '⛔ 已歇業' :
+    data.kind === 'closure'      ? '⛔ 歇業候選' :
                                    '🔄 資料不一致'
   const base = data.item  // common fields exist on all types
 
@@ -127,30 +126,19 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
               <Row label="快照名稱" value={it.snapshotName} />
               <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
               <Row label="地址"     value={it.snapshotAddress} />
-              <Row label="NHI 特約終止" value={fmt(it.snapshotTermDate)} />
             </div>
           )})()}
 
-          {/* 狀態 3：已歇業 */}
+          {/* 狀態 3：歇業候選 */}
           {data.kind === 'closure' && (() => { const it = data.item; return (
             <>
-              {it.reason === 'code_vanished' ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 font-medium">
-                  ⛔ 機構代碼已從醫事資料中消失，診所可能已歇業
-                </div>
-              ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 font-medium">
-                  ⚠️ NHI 特約已終止，診所可能已停業或更換特約
-                </div>
-              )}
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 font-medium">
+                ⛔ 機構代碼已從醫事資料中消失，可能已歇業
+              </div>
               <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                 <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
-                {it.snapshotName    && <Row label="快照名稱" value={it.snapshotName} />}
-                {it.snapshotKind    && <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />}
-                {it.snapshotAddress && <Row label="地址"     value={it.snapshotAddress} />}
-                {it.snapshotTermDate && <Row label="特約終止日" value={<span className="text-red-600 font-semibold">{fmt(it.snapshotTermDate)} ✕</span>} />}
               </div>
-              <p className="text-xs text-gray-400">請至客戶頁面確認現況，並視情況更新機構狀態為「停業」或「歇業」</p>
+              <p className="text-xs text-gray-400">請查衛福部醫事查詢系統確認開業狀態；若為「停業／歇業」再至客戶頁面更新機構狀態。</p>
             </>
           )})()}
 
@@ -183,7 +171,6 @@ function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => 
                 <Row label="快照名稱" value={it.snapshotName} />
                 <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
                 <Row label="地址"     value={it.snapshotAddress} />
-                <Row label="NHI 特約終止" value={fmt(it.snapshotTermDate)} />
               </div>
             </>
           )})()}
@@ -434,64 +421,35 @@ function SuspectedClosuresTab({ items, onOpen }: {
   if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
-      <p>目前沒有已歇業的客戶機構</p>
+      <p>目前沒有歇業候選的客戶機構</p>
     </div>
   )
-
-  const nhiTerminated = items.filter(i => i.reason === 'nhi_terminated')
-  const codeVanished  = items.filter(i => i.reason === 'code_vanished')
 
   return (
     <div className="space-y-3">
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-        ⛔ 以下客戶原本在崧達客戶資料庫中且擁有機構代碼，但醫事資料顯示已停業或代碼已消失，請人工確認並更新。
+        ⛔ 以下客戶原本有機構代碼，但最新醫事資料已查無該代碼。請查衛福部確認開業狀態，若為停業／歇業再人工更新。
       </div>
-      {codeVanished.length > 0 && (
-        <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
-          <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-500">代碼從醫事資料消失（{codeVanished.length} 筆）</div>
-          {codeVanished.map(item => (
-            <button key={item.customerId} onClick={() => onOpen(item)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold">代碼消失</span>
-                </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                  {item.customerStatus && ` · ${item.customerStatus}`}
-                </div>
+      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+        {items.map(item => (
+          <button key={item.customerId} onClick={() => onOpen(item)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold">代碼消失</span>
               </div>
-              <ChevronRight />
-            </button>
-          ))}
-        </div>
-      )}
-      {nhiTerminated.length > 0 && (
-        <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
-          <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-500">NHI 特約已終止（{nhiTerminated.length} 筆）</div>
-          {nhiTerminated.map(item => (
-            <button key={item.customerId} onClick={() => onOpen(item)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                  {item.snapshotKind && <TypeChip kind={item.snapshotKind} />}
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold">特約終止</span>
-                </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                  {item.customerStatus && ` · ${item.customerStatus}`}
-                </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                {item.customerStatus && ` · ${item.customerStatus}`}
               </div>
-              <ChevronRight />
-            </button>
-          ))}
-        </div>
-      )}
+            </div>
+            <ChevronRight />
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -720,7 +678,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     { id: 'new',         label: '🆕 新開業候選',  count: result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length },
     { id: 'normal',      label: '✅ 既有正常營業', count: result.normalOperating.length },
     { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
-    { id: 'closure',     label: '⛔ 已歇業',       count: result.suspectedClosures.length },
+    { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
     { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
   ] as const) : []
 
@@ -787,11 +745,11 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {stats && (
         <>
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台醫事單位規模</p>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月增減）</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="牙醫診所"   value={stats.totalClinics}  sub="NHI 特約" />
+              <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
               {stats.totalLabs > 0
-                ? <StatCard label="牙體技術所" value={stats.totalLabs} sub="MOHW BAS" />
+                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labDelta} sub="全台" />
                 : (
                   <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
                     <span className="text-xs text-gray-400 font-medium">牙體技術所</span>
@@ -811,7 +769,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
                 sub={`診所 ${stats.newThisMonthClinics} ／牙技所 ${stats.newThisMonthLabs}`} accent="text-emerald-600" />
               <StatCard label="既有未開發"  value={(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}
                 sub="在醫事DB但從未成為客戶" accent="text-amber-600" />
-              <StatCard label="已歇業"      value={stats.suspectedClosures}  sub="已停業或代碼消失" accent="text-red-600" />
+              <StatCard label="歇業候選"    value={stats.suspectedClosures}  sub="代碼消失，待查衛福部" accent="text-red-600" />
               <StatCard label="資料不一致"  value={stats.inconsistentData}   sub="代碼符但資料有落差" accent="text-blue-600" />
             </div>
           </div>
