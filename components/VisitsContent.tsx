@@ -283,6 +283,11 @@ export default function VisitsContent() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // ── 多選批次處理 ───────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(false)
+
   // ── 一鍵批次 AI 分析 ─────────────────────────────────────────
   const [batchReactionOptions, setBatchReactionOptions] = useState<string[]>([])
   const [batchInteractionTypeOptions, setBatchInteractionTypeOptions] = useState<string[]>([])
@@ -814,6 +819,39 @@ export default function VisitsContent() {
     setDedupRunning(false)
   }
 
+  // ── 多選批次處理 helpers ───────────────────────────────────────
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const n = new Set(prev)
+      n.has(id) ? n.delete(id) : n.add(id)
+      return n
+    })
+  const allSelected = filteredVisits.length > 0 && filteredVisits.every((v) => selectedIds.has(v.id))
+  const toggleSelectAll = () =>
+    setSelectedIds(allSelected ? new Set() : new Set(filteredVisits.map((v) => v.id)))
+  const clearSelection = () => { setSelectedIds(new Set()); setBulkConfirm(false) }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    setBulkDeleting(true)
+    try {
+      const res = await fetch('/api/visits/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      })
+      const data = await res.json()
+      if (res.ok && (data.deleted ?? 0) > 0) {
+        try { sessionStorage.removeItem(CACHE_KEY) } catch {}
+        loadVisits({ silent: true })
+      }
+    } catch {
+      // 略過
+    }
+    setBulkDeleting(false)
+    clearSelection()
+  }
+
   return (
     <div>
       {/* Header */}
@@ -920,6 +958,34 @@ export default function VisitsContent() {
         </div>
       </div>
 
+      {/* 多選操作列 */}
+      {selectedIds.size > 0 && (
+        <div className="sticky top-0 z-20 mb-2 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-brand-50 border border-brand-200">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-brand-700">已選 {selectedIds.size} 筆</span>
+            <button onClick={toggleSelectAll} className="text-xs text-stone-500 hover:text-stone-700 transition-colors">
+              {allSelected ? '取消全選' : '全選本頁'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            {bulkConfirm ? (
+              <>
+                <span className="text-xs text-stone-600">確認刪除 {selectedIds.size} 筆？</span>
+                <button onClick={handleBulkDelete} disabled={bulkDeleting} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-600 text-white hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50">
+                  {bulkDeleting ? '刪除中…' : '確認刪除'}
+                </button>
+                <button onClick={() => setBulkConfirm(false)} disabled={bulkDeleting} className="px-3 py-1.5 rounded-full text-xs text-stone-500 hover:bg-stone-100 transition-colors disabled:opacity-50">取消</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setBulkConfirm(true)} className="px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 active:scale-95 transition-all">🗑 刪除選取</button>
+                <button onClick={clearSelection} className="px-3 py-1.5 rounded-full text-xs text-stone-500 hover:bg-stone-100 transition-colors">清除</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* List */}
       <div className="panel overflow-hidden">
         {loading ? (
@@ -962,9 +1028,17 @@ export default function VisitsContent() {
                 <div
                   key={v.id}
                   onClick={() => setViewingVisit(v)}
-                  className="px-4 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className={`px-4 py-4 transition-colors cursor-pointer ${selectedIds.has(v.id) ? 'bg-brand-50/60' : 'hover:bg-gray-50'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(v.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleSelect(v.id)}
+                      className="mt-1 w-4 h-4 shrink-0 accent-brand-500 cursor-pointer"
+                    />
                     {/* Left: main info */}
                     <div className="flex-1 min-w-0">
                       {/* Name + follow-up dot */}
@@ -1019,6 +1093,15 @@ export default function VisitsContent() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-gray-400 text-xs border-b border-gray-100">
                   <tr>
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 accent-brand-500 cursor-pointer align-middle"
+                        title="全選本頁"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left font-medium">日期</th>
                     <th className="px-4 py-3 text-left font-medium">客戶名稱</th>
                     <th className="px-4 py-3 text-left font-medium">縣市</th>
@@ -1031,7 +1114,15 @@ export default function VisitsContent() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredVisits.map((v) => (
-                    <tr key={v.id} onClick={() => setViewingVisit(v)} className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <tr key={v.id} onClick={() => setViewingVisit(v)} className={`transition-colors cursor-pointer group ${selectedIds.has(v.id) ? 'bg-brand-50/60' : 'hover:bg-gray-50'}`}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(v.id)}
+                          onChange={() => toggleSelect(v.id)}
+                          className="w-4 h-4 accent-brand-500 cursor-pointer align-middle"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(v.date)}</td>
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {v.customerName}
