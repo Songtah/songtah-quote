@@ -136,7 +136,7 @@ async function fetchLabCode(basSeq, zoneSeq, cookieStr) {
         'Cookie':  cookieStr,
         'Referer': MOHW_RESULTS,
       },
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) return null
     const html = decodeEntities(await res.text())
@@ -148,7 +148,7 @@ async function fetchLabCode(basSeq, zoneSeq, cookieStr) {
   }
 }
 
-async function fetchDentalLabsOnce() {
+async function fetchDentalLabsOnce(deadline = Infinity) {
   // Step 1: 取首頁，抓 CSRF token + CAPTCHA code（直接放在 img[data-code]）
   const pageRes = await fetch(MOHW_SEARCH, {
     headers: { ...BROWSER_HEADERS, 'Upgrade-Insecure-Requests': '1' },
@@ -233,11 +233,24 @@ async function fetchDentalLabsOnce() {
   log('  開始從詳細頁取機構代碼（每批 5 筆並行）…')
 
   // Step 4: 批次並行抓 BASBasicData，取得真正的「機構代碼」
-  const CONCURRENCY = 5
+  const CONCURRENCY = 8
   const result = new Map()  // key = 機構代碼
   let fetched = 0, noCode = 0
 
   for (let i = 0; i < rawLabs.length; i += CONCURRENCY) {
+    // 時間預算到點：剩餘以名稱保留（不再抓碼），確保整支腳本不超時被取消
+    if (Date.now() > deadline) {
+      warn(`BAS 詳細頁已達時間上限，剩餘 ${rawLabs.length - i} 筆以名稱保留（不取機構代碼）`)
+      for (let k = i; k < rawLabs.length; k++) {
+        const lab = rawLabs[k]
+        result.set(`${lab.name}__${lab.city}__${lab.dist}`, {
+          source: 'bas', kind: '牙體技術所',
+          name: lab.name, address: `${lab.city}${lab.dist}`, specialty: '', termDate: '',
+        })
+        noCode++
+      }
+      break
+    }
     const batch = rawLabs.slice(i, i + CONCURRENCY)
     const codes = await Promise.all(
       batch.map(lab => fetchLabCode(lab.basSeq, lab.zoneSeq, cookieStr))
@@ -283,21 +296,28 @@ async function fetchDentalLabsOnce() {
   return result
 }
 
-/** 最多重試 MAX_RETRY 次（每次重新取首頁 + CAPTCHA）*/
-async function fetchDentalLabs(maxRetry = 3) {
+/** 最多重試 MAX_RETRY 次（每次重新取首頁 + CAPTCHA）；總時間以 deadline 控管，絕不讓 job 超時 */
+async function fetchDentalLabs(maxRetry = 2) {
   log('【MOHW BAS】下載牙體技術所資料 …')
+  const deadline = Date.now() + 18 * 60_000  // 18 分鐘硬上限（保留時間給 NHI/Notion/snapshot）
   for (let attempt = 1; attempt <= maxRetry; attempt++) {
     try {
-      return await fetchDentalLabsOnce()
+      return await fetchDentalLabsOnce(deadline)
     } catch (e) {
+      if (Date.now() > deadline) {
+        warn('BAS 已逾時間預算，放棄重試（本月牙技所資料從缺）')
+        return new Map()
+      }
       if (attempt < maxRetry) {
         warn(`BAS 第 ${attempt} 次失敗（${e.message}），5 秒後重試 …`)
         await sleep(5_000)
       } else {
-        throw e
+        warn(`BAS 最終失敗（${e.message}），本月牙技所資料從缺`)
+        return new Map()
       }
     }
   }
+  return new Map()
 }
 
 // ── 3. 崧達客戶機構代碼 ────────────────────────────────────────────────────

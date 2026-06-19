@@ -19,7 +19,7 @@ permissions:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45   # 緩衝；腳本內 BAS 抓取另有 18 分鐘硬上限，不會跑滿
 
     steps:
       - name: Checkout repo
