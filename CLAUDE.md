@@ -65,3 +65,4 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。
 - Commit 訊息用中文，格式 `feat(scope): 描述`。
 - 部署 = push to main（Vercel 自動）。涉及費用的功能（API、簡訊、LINE push 等）動工前先告知用戶。
+- **每次修正都要部署**：任何修改完成（tsc 乾淨）後一律 commit 並 `git push` 到 main，不要只改不部署。多人／多 session 同時作業時，push 前先 `git pull --rebase` 避免互蓋。
