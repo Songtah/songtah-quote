@@ -150,7 +150,7 @@ export interface MonitorStats {
   newThisMonthClinics:   number
   newThisMonthLabs:      number
   newThisMonthHospitals: number
-  newOpeningExcludedExisting: number   // 名稱已是現有客戶而被排除的「新開業」數（多代碼診所）
+  newOpeningExcludedExisting: number   // 名稱＋地區已是現有客戶而被排除的「新開業」數
   suspectedClosures:   number
   codeNotFound:        number
   inconsistentData:    number
@@ -438,8 +438,9 @@ export async function GET(req: NextRequest) {
   }))
 
   // ── 狀態 2：新開業候選（快照有、客戶 DB 無）─────────────────────────────
-  // 排除「名稱＋縣市＋行政區已是現有客戶」的機構：同一家診所在 NHI 可能有多個機構代碼
-  // （含換照舊碼），客戶庫只填其一，其餘代碼不該被當成新開業機會（業務開發誤判）。
+  // 排除「名稱＋縣市＋行政區已是現有客戶」的機構。
+  // 這不是判定 NHI 同診所多碼，而是避免 CRM 代碼尚未同步、換照換碼、
+  // 或同名同區資料被誤列為新開業機會。
   const customerAreaSet = new Set(
     allCustomers.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
   )

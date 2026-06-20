@@ -1011,7 +1011,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <>
             {stats && stats.newOpeningExcludedExisting > 0 && (
               <div className="mb-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-                ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱已是現有客戶」的機構（同一診所在 NHI 有多個機構代碼，非新開業機會）。
+                ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構，可能是客戶代碼未同步、換照換碼或同名同區資料，暫不列入新開業機會。
               </div>
             )}
             <NewOpeningsTab
