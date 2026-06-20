@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import type {
   MonitorResult, NewOpening,
   NormalOperating, SuspectedClosure, CodeNotFound,
-  SelfManagedCustomer, InconsistentData, CodeChanged,
+  SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -661,14 +661,104 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v4'
-const CACHE_TAB_KEY = 'clinic-monitor-tab-v3'
+const CACHE_KEY     = 'clinic-monitor-result-v5'
+const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
 
 type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange'
+type MonitorResultPayload = Omit<MonitorResult, 'stats'> & { stats: MonitorStats | null }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value)
+}
+
+function readString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+function readBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function readNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function readNullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function parseMonitorStats(value: unknown): MonitorStats | null {
+  if (!isRecord(value)) return null
+  return {
+    totalClinics: readNumber(value.totalClinics),
+    totalLabs: readNumber(value.totalLabs),
+    totalHospitals: readNumber(value.totalHospitals),
+    clinicDelta: readNullableNumber(value.clinicDelta),
+    labDelta: readNullableNumber(value.labDelta),
+    labsStale: readBoolean(value.labsStale),
+    customerWithCode: readNumber(value.customerWithCode),
+    customerNoCode: readNumber(value.customerNoCode),
+    normalOperating: readNumber(value.normalOperating),
+    newOpeningClinics: readNumber(value.newOpeningClinics),
+    newOpeningLabs: readNumber(value.newOpeningLabs),
+    newOpeningHospitals: readNumber(value.newOpeningHospitals),
+    newThisMonthClinics: readNumber(value.newThisMonthClinics),
+    newThisMonthLabs: readNumber(value.newThisMonthLabs),
+    newThisMonthHospitals: readNumber(value.newThisMonthHospitals),
+    newOpeningExcludedExisting: readNumber(value.newOpeningExcludedExisting),
+    suspectedClosures: readNumber(value.suspectedClosures),
+    codeNotFound: readNumber(value.codeNotFound),
+    inconsistentData: readNumber(value.inconsistentData),
+    codeChanged: readNumber(value.codeChanged),
+  }
+}
+
+function parseMonitorResult(value: unknown): MonitorResultPayload | null {
+  if (!isRecord(value)) return null
+  if (!isRecord(value.newOpenings)) return null
+  if (!isArray(value.newOpenings.clinics) || !isArray(value.newOpenings.labs) || !isArray(value.newOpenings.hospitals)) {
+    return null
+  }
+  if (
+    !isArray(value.normalOperating) ||
+    !isArray(value.suspectedClosures) ||
+    !isArray(value.codeNotFound) ||
+    !isArray(value.selfManagedCustomers) ||
+    !isArray(value.inconsistentData) ||
+    !isArray(value.codeChanged)
+  ) {
+    return null
+  }
+
+  const stats = value.stats == null ? null : parseMonitorStats(value.stats)
+  if (readBoolean(value.hasSnapshot) && !stats) return null
+
+  return {
+    hasSnapshot: readBoolean(value.hasSnapshot),
+    stats,
+    newOpenings: {
+      clinics: value.newOpenings.clinics as NewOpening[],
+      labs: value.newOpenings.labs as NewOpening[],
+      hospitals: value.newOpenings.hospitals as NewOpening[],
+    },
+    normalOperating: value.normalOperating as NormalOperating[],
+    suspectedClosures: value.suspectedClosures as SuspectedClosure[],
+    codeNotFound: value.codeNotFound as CodeNotFound[],
+    selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
+    inconsistentData: value.inconsistentData as InconsistentData[],
+    codeChanged: value.codeChanged as CodeChanged[],
+    snapshotMonth: readString(value.snapshotMonth),
+    snapshotFetched: readString(value.snapshotFetched),
+  }
+}
 
 export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [tab, setTab]               = useState<MainTab>('new')
-  const [result, setResult]         = useState<MonitorResult | null>(null)
+  const [result, setResult]         = useState<MonitorResultPayload | null>(null)
   const [cachedAt, setCachedAt]     = useState<string | null>(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
@@ -689,10 +779,17 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     try {
       const raw = localStorage.getItem(CACHE_KEY)
       if (!raw) return
-      const { data, timestamp } = JSON.parse(raw) as { data: MonitorResult; timestamp: string }
-      setResult(data)
-      setCachedAt(timestamp)
-    } catch {}
+      const parsed = JSON.parse(raw) as { data?: unknown; timestamp?: unknown }
+      const restored = parseMonitorResult(parsed.data)
+      if (!restored) {
+        localStorage.removeItem(CACHE_KEY)
+        return
+      }
+      setResult(restored)
+      setCachedAt(readString(parsed.timestamp) || new Date().toISOString())
+    } catch {
+      try { localStorage.removeItem(CACHE_KEY) } catch {}
+    }
     try {
       const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
       const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange']
@@ -710,8 +807,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     setSelectedIds(new Set()); setImportResult('')
     try {
       const res  = await fetch('/api/admin/medical-monitor')
-      const data = await res.json()
-      if (!res.ok) { setError(data.error ?? '比對失敗'); return }
+      const payload = await res.json()
+      if (!res.ok) { setError(payload.error ?? '比對失敗'); return }
+      const data = parseMonitorResult(payload)
+      if (!data) {
+        setError('比對資料格式錯誤，請重新執行')
+        try { localStorage.removeItem(CACHE_KEY) } catch {}
+        return
+      }
       const now = new Date().toISOString()
       setResult(data)
       setCachedAt(now)
