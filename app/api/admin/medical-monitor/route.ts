@@ -444,7 +444,9 @@ export async function GET(req: NextRequest) {
     customerType: c.type, customerStatus: c.status,
   }))
 
-  // ── 狀態 2：新開業候選（快照有、客戶 DB 無）─────────────────────────────
+  // ── 狀態 2：新開業候選（本月新增代碼、客戶 DB 無）───────────────────────
+  // 只列入本月新出現在快照的代碼。歷史 NHI 資料可能殘留已歇業或非目標資料，
+  // 不應混入「新開業」候選清單。
   // 排除「名稱＋縣市＋行政區已是現有客戶」的機構。
   // 這不是判定 NHI 同診所多碼，而是避免 CRM 代碼尚未同步、換照換碼、
   // 或同名同區資料被誤列為新開業機會。
@@ -466,6 +468,7 @@ export async function GET(req: NextRequest) {
   let excludedExisting = 0
   for (const [code, entry] of Array.from(snapshotByCode)) {
     if (isExpired(entry.termDate)) continue
+    if (!newThisMonthSet.has(code)) continue
     if (customerByCode.has(code)) continue
     const { city, district } = parseAddress(entry.address)
     const nameKey = institutionNameKey(entry.name)

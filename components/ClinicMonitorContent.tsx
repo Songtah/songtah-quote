@@ -661,7 +661,7 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v7'
+const CACHE_KEY     = 'clinic-monitor-result-v8'
 const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
 
 type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange'
