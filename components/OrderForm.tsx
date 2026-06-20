@@ -55,9 +55,13 @@ const STATUS_COLOR: Record<StatusType, string> = {
 function ProductPicker({
   onAdd,
   onClose,
+  lockSeriesId,
+  lockSeriesName,
 }: {
   onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
   onClose: () => void
+  lockSeriesId?: string      // 鎖定只顯示此系列（選贈品用）
+  lockSeriesName?: string
 }) {
   const [search, setSearch] = useState('')
   const [filterBrand, setFilterBrand] = useState('')
@@ -128,10 +132,16 @@ function ProductPicker({
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [search, filterBrand, filterType, filterCategory])
 
-  const isSearching = search.trim().length > 0
+  const isSearching = !lockSeriesId && search.trim().length > 0
+
+  // 鎖定系列：載入後自動展開該系列規格表
+  useEffect(() => {
+    if (lockSeriesId && families.length > 0) setExpandedFamilyId(lockSeriesId)
+  }, [lockSeriesId, families])
 
   // 瀏覽模式：依品牌 / 類型篩選系列
   const filteredFamilies = useMemo(() => {
+    if (lockSeriesId) return families.filter((f) => f.id === lockSeriesId)
     if (!filterBrand && !filterType && !filterCategory) return families
     return families.filter((f) => {
       if (filterBrand && f.brand !== filterBrand) return false
@@ -139,7 +149,7 @@ function ProductPicker({
       if (filterCategory && f.category !== filterCategory) return false
       return true
     })
-  }, [families, filterBrand, filterType, filterCategory])
+  }, [families, filterBrand, filterType, filterCategory, lockSeriesId])
 
   // 搜尋模式：以關鍵字比對系列名稱 / 品牌 / 分類，同時套用 brand/type 篩選
   const familySearchResults = useMemo(() => {
@@ -237,7 +247,9 @@ function ProductPicker({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-900/[0.06]">
-          <h2 className="text-base font-bold text-stone-800 tracking-wide">選擇品項</h2>
+          <h2 className="text-base font-bold text-stone-800 tracking-wide">
+            {lockSeriesName ? `🎁 選擇贈品：${lockSeriesName}` : '選擇品項'}
+          </h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-lg leading-none transition-colors"
@@ -247,6 +259,7 @@ function ProductPicker({
         </div>
 
         {/* Filters */}
+        {!lockSeriesId && (
         <div className="px-5 py-3.5 border-b border-stone-900/[0.06] space-y-2.5 bg-white/60">
           <input
             type="text"
@@ -283,6 +296,7 @@ function ProductPicker({
             </select>
           </div>
         </div>
+        )}
 
         {/* Results */}
         <div className="flex-1 overflow-y-auto">
@@ -828,6 +842,10 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
   const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? [])
   const [showPicker, setShowPicker] = useState(false)
+  // 跨規格系列買N送M：開啟「選贈品」用的選品器（鎖定該系列）
+  const [giftPicker, setGiftPicker] = useState<{ seriesId: string; seriesName: string } | null>(null)
+  // 已自動跳出過選贈品的系列（避免重複自動彈出）
+  const autoGiftPromptedRef = useRef<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -864,6 +882,32 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
     }
     return result
   }, [items, promoItems])
+
+  // 以贈品身份加入品項（跨規格系列買N送M 自選贈品用）
+  const handleAddGift = useCallback((partial: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => {
+    setItems((prev) => [...prev, {
+      ...partial,
+      id:        `gift-${Date.now()}-${Math.random()}`,
+      quantity:  1,
+      unitPrice: 0,
+      itemType:  'gift',
+      note:      '[促銷贈品]',
+    } as OrderItem])
+  }, [])
+
+  // 達標自動跳出該系列選單選贈品（每個系列只自動彈一次；之後用 banner 按鈕重開）
+  useEffect(() => {
+    for (const [seriesId, s] of Object.entries(seriesBuyNGetMStatus)) {
+      if (s.freeQty <= 0 || autoGiftPromptedRef.current.has(seriesId)) continue
+      const giftCount = items
+        .filter((it) => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample'))
+        .reduce((sum, it) => sum + (it.quantity || 1), 0)
+      if (giftCount >= s.freeQty) continue
+      autoGiftPromptedRef.current.add(seriesId)
+      setGiftPicker({ seriesId, seriesName: s.seriesName })
+      break
+    }
+  }, [seriesBuyNGetMStatus, items])
 
   // 客戶資訊
   const [customer, setCustomer] = useState<SelectedCustomer>({
@@ -1420,12 +1464,15 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
         </div>
 
         {/* ── 跨規格系列買N送M 進度 banner ── */}
-        {Object.values(seriesBuyNGetMStatus).map(({ seriesName, n, m, totalQty, freeQty }) => {
-          const pct     = Math.min(100, Math.round((totalQty % n || (totalQty > 0 ? n : 0)) / n * 100))
+        {Object.entries(seriesBuyNGetMStatus).map(([seriesId, { seriesName, n, m, totalQty, freeQty }]) => {
           const reached = freeQty > 0
+          const giftCount = items
+            .filter(it => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample'))
+            .reduce((sum, it) => sum + (it.quantity || 1), 0)
+          const remaining = Math.max(0, freeQty - giftCount)
           return (
             <div
-              key={seriesName}
+              key={seriesId}
               className={`mx-4 sm:mx-5 my-3 rounded-xl border px-4 py-3 text-sm ${
                 reached
                   ? 'bg-teal-50 border-teal-200 text-teal-800'
@@ -1435,7 +1482,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
               <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                 <span className="font-medium">
                   {reached ? '🎁' : '🏷'} {seriesName}
-                  <span className="ml-2 font-normal text-xs opacity-70">買{n}送{m}（跨規格合計）</span>
+                  <span className="ml-2 font-normal text-xs opacity-70">買{n}送{m}（同系列跨規格合計）</span>
                 </span>
                 <span className={`text-xs font-semibold ${reached ? 'text-teal-700' : 'text-gray-500'}`}>
                   {totalQty} / {n} 件
@@ -1450,9 +1497,18 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                 />
               </div>
               {reached && (
-                <p className="mt-1.5 text-xs text-teal-600">
-                  ✓ 門檻已達，請在品項中手動加入贈品（類型選「贈品」）
-                </p>
+                <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                  <span className={`text-xs ${remaining > 0 ? 'text-amber-600 font-medium' : 'text-teal-600'}`}>
+                    {remaining > 0 ? `⚠ 尚未選滿贈品，還需 ${remaining} 件` : `✓ 已選 ${giftCount} 件贈品`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setGiftPicker({ seriesId, seriesName })}
+                    className="text-xs px-3 py-1.5 rounded-full bg-teal-600 text-white font-medium hover:bg-teal-700 active:scale-95 transition-all"
+                  >
+                    🎁 選擇贈品
+                  </button>
+                </div>
               )}
             </div>
           )
@@ -1891,6 +1947,14 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
           <ProductPicker
             onAdd={handleAddItem}
             onClose={() => setShowPicker(false)}
+          />
+        )}
+        {giftPicker && (
+          <ProductPicker
+            lockSeriesId={giftPicker.seriesId}
+            lockSeriesName={giftPicker.seriesName}
+            onAdd={(partial) => { handleAddGift(partial); setGiftPicker(null) }}
+            onClose={() => setGiftPicker(null)}
           />
         )}
       </AnimatePresence>
