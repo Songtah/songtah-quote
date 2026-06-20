@@ -1581,6 +1581,9 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                         ) : (
                           <span className="text-sm text-gray-700">{price > 0 ? price.toLocaleString() : '—'}</span>
                         )}
+                        {!isGift && price <= 0 && item.skuCode && (
+                          <span className="block text-[10px] text-amber-600 mt-0.5">⚠ 此商品尚未定價</span>
+                        )}
                       </div>
                       <div>
                         <label className="block text-[10px] font-medium text-gray-400 mb-1">小計</label>
@@ -1588,7 +1591,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                           ? <span className="text-sm text-green-500 font-medium">贈送</span>
                           : price > 0
                             ? <span className="text-sm font-bold tabular-nums text-gray-800">{lineAmt.toLocaleString()}</span>
-                            : <span className="text-sm text-gray-300">—</span>
+                            : <span className="text-sm text-amber-500">待定價</span>
                         }
                       </div>
                     </div>
@@ -1719,13 +1722,16 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
                               className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
                             />
                           )}
+                          {!isGift && price <= 0 && item.skuCode && (
+                            <span className="block text-right text-[10px] text-amber-600 mt-0.5">⚠ 尚未定價</span>
+                          )}
                         </td>
                         <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
                           {isGift
                             ? <span className="text-green-500 text-xs">贈送</span>
                             : price > 0
                               ? lineAmt.toLocaleString()
-                              : <span className="text-gray-300">—</span>}
+                              : <span className="text-amber-500 text-xs">待定價</span>}
                         </td>
                         <td className="px-3 py-2.5">
                           <input
