@@ -223,6 +223,11 @@ function areaKeyOf(name: string, city: string, district: string): string {
   return `${normalizeName(name)}|${tw(city)}|${tw(district)}`
 }
 
+/** 學校名稱 key：取校名（－/科系 之前），摺疊異體字、去空白 → 比對教育部名錄用 */
+function schoolNameKey(name: string): string {
+  return foldVariants(name).split(/[－—\-]/)[0].replace(/[（）()\s]/g, '').trim()
+}
+
 /** 完整機構名稱 key：保留「牙醫診所／牙體技術所」等詞，避免不同機構被過度合併 */
 function institutionNameKey(name: string): string {
   return foldVariants(name)
@@ -309,12 +314,16 @@ export async function GET(req: NextRequest) {
 
   // 1b. 載入學校靜態參照（教育部名錄）：學校客戶機構代碼＝4 碼學校代碼
   type SchoolRef = { name: string; city: string; address: string; kind: string }
-  const schoolByCode = new Map<string, SchoolRef>()
+  // 註：崧達客戶的學校代碼與「統計處名錄」代碼非同系統，故以「校名」比對，不靠代碼
+  const schoolByName = new Map<string, SchoolRef>()   // 校名 key → 名錄資料
   try {
     const sp = path.join(process.cwd(), 'data', 'schools.json')
     if (existsSync(sp)) {
       const s = JSON.parse(readFileSync(sp, 'utf8')) as { schools?: Record<string, SchoolRef> }
-      for (const [code, v] of Object.entries(s.schools ?? {})) schoolByCode.set(code, v)
+      for (const v of Object.values(s.schools ?? {})) {
+        const nk = schoolNameKey(v.name)
+        if (nk && !schoolByName.has(nk)) schoolByName.set(nk, v)
+      }
     }
   } catch { /* 無學校參照不影響其他比對 */ }
 
@@ -375,24 +384,18 @@ export async function GET(req: NextRequest) {
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
 
-    // 學校客戶：機構代碼＝教育部 4 碼學校代碼 → 比對名錄，正常即列入正常營業（學校）
-    const school = schoolByCode.get(code)
-    if (school) {
-      const schoolEntry: SnapshotEntry = {
-        source: 'nhi', kind: '學校', name: school.name,
-        address: school.address, specialty: '', termDate: '',
-      }
-      const diffs = detectDiffs(c, schoolEntry)
-      const base = {
+    // 學校客戶：以「校名」比對教育部名錄（崧達學校代碼與名錄代碼非同系統，故以名稱為準）
+    // 校名比中 → 視為正常營業（學校），不因代碼對不到而誤判歇業
+    const namedSchool = schoolByName.get(schoolNameKey(c.name))
+    if (namedSchool) {
+      normalOperating.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
         institutionCode: code,
-        snapshotName: school.name, snapshotKind: '學校',
-        snapshotAddress: school.address, snapshotTermDate: '',
-      }
-      if (diffs.length > 0) inconsistentData.push({ ...base, diffs })
-      else normalOperating.push(base)
+        snapshotName: namedSchool.name, snapshotKind: '學校',
+        snapshotAddress: namedSchool.address, snapshotTermDate: '',
+      })
       continue
     }
 
