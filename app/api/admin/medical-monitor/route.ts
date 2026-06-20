@@ -307,6 +307,17 @@ export async function GET(req: NextRequest) {
   const codes           = snapshot.codes ?? {}
   const newThisMonthSet = new Set(snapshot.newCodes ?? [])
 
+  // 1b. 載入學校靜態參照（教育部名錄）：學校客戶機構代碼＝4 碼學校代碼
+  type SchoolRef = { name: string; city: string; address: string; kind: string }
+  const schoolByCode = new Map<string, SchoolRef>()
+  try {
+    const sp = path.join(process.cwd(), 'data', 'schools.json')
+    if (existsSync(sp)) {
+      const s = JSON.parse(readFileSync(sp, 'utf8')) as { schools?: Record<string, SchoolRef> }
+      for (const [code, v] of Object.entries(s.schools ?? {})) schoolByCode.set(code, v)
+    }
+  } catch { /* 無學校參照不影響其他比對 */ }
+
   // 2. 載入崧達客戶（全部，含無代碼）
   const allCustomers = await getCustomersWithCodes()
 
@@ -363,6 +374,28 @@ export async function GET(req: NextRequest) {
 
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
+
+    // 學校客戶：機構代碼＝教育部 4 碼學校代碼 → 比對名錄，正常即列入正常營業（學校）
+    const school = schoolByCode.get(code)
+    if (school) {
+      const schoolEntry: SnapshotEntry = {
+        source: 'nhi', kind: '學校', name: school.name,
+        address: school.address, specialty: '', termDate: '',
+      }
+      const diffs = detectDiffs(c, schoolEntry)
+      const base = {
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        institutionCode: code,
+        snapshotName: school.name, snapshotKind: '學校',
+        snapshotAddress: school.address, snapshotTermDate: '',
+      }
+      if (diffs.length > 0) inconsistentData.push({ ...base, diffs })
+      else normalOperating.push(base)
+      continue
+    }
+
     const entry = snapshotByCode.get(code)
     const currentValid = entry && !isExpired(entry.termDate)
 
