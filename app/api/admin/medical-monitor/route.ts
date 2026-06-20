@@ -35,8 +35,10 @@ export interface Snapshot {
   fetchedAt:    string
   totalClinics: number
   totalLabs:    number
+  totalHospitals?:   number   // 有牙科的醫院總數
   prevTotalClinics?: number   // 上月診所總數（供計算增減；由月排程寫入）
   prevTotalLabs?:    number   // 上月技工所總數
+  prevTotalHospitals?: number // 上月有牙科醫院總數
   labsStale?:   boolean       // true = 本次牙技所抓取不完整、沿用上月資料
   newCodes?:    string[]
   codes:        Record<string, SnapshotEntry>
@@ -497,7 +499,7 @@ export async function GET(req: NextRequest) {
   const stats: MonitorStats = {
     totalClinics:   snapshot.totalClinics,
     totalLabs:      snapshot.totalLabs,
-    totalHospitals: 0,
+    totalHospitals: snapshot.totalHospitals ?? 0,
     clinicDelta: typeof snapshot.prevTotalClinics === 'number' ? snapshot.totalClinics - snapshot.prevTotalClinics : null,
     labDelta:    typeof snapshot.prevTotalLabs    === 'number' ? snapshot.totalLabs    - snapshot.prevTotalLabs    : null,
     labsStale:   snapshot.labsStale === true,

@@ -37,6 +37,15 @@ const MOHW_DETAIL    = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/BASBasicD
 
 const DENTAL_TYPES   = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所'])
 
+// 健保特約醫院（醫學中心 / 區域醫院 / 地區醫院）CSV — 用於納入「有牙科」的醫院
+const HOSPITAL_APIS = [
+  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21001-003', // 醫學中心
+  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21002-005', // 區域醫院
+  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21003-003', // 地區醫院
+]
+// 牙科相關科別（涵蓋所有牙科次專科：牙科/口腔顎面外科/齒顎矯正/牙周/牙髓…）
+const DENTAL_SPECIALTY = /牙|口腔|齒顎/
+
 // ── Logging ─────────────────────────────────────────────────────────────────
 
 const log  = (...a) => console.log('[clinic-monitor]', ...a)
@@ -97,6 +106,47 @@ function parseCSVLine(line) {
     else                         cur += ch
   }
   result.push(cur)
+  return result
+}
+
+// ── 1b. 有牙科的醫院（NHI 醫學中心/區域醫院/地區醫院 CSV）────────────────────
+async function fetchDentalHospitals() {
+  log('【NHI】下載有牙科的醫院（醫學中心/區域醫院/地區醫院）…')
+  const result = new Map()  // key = 機構代碼
+  for (const url of HOSPITAL_APIS) {
+    try {
+      const res = await fetch(url, { headers: { Accept: 'text/csv,*/*' }, signal: AbortSignal.timeout(60_000) })
+      if (!res.ok) { warn(`醫院 CSV → HTTP ${res.status}`); continue }
+      const lines = (await res.text()).split('\n').filter(l => l.trim())
+      if (lines.length < 2) continue
+      const h = parseCSVLine(lines[0])
+      const codeIdx = h.findIndex(x => x.includes('代碼'))
+      const nameIdx = h.findIndex(x => x.includes('名稱'))
+      const kindIdx = h.findIndex(x => x.includes('種類'))
+      const addrIdx = h.findIndex(x => x.includes('地址'))
+      const specIdx = h.findIndex(x => x.includes('科別'))
+      const termIdx = h.findIndex(x => x.includes('終止') || x.includes('歇業'))
+      if (codeIdx < 0 || nameIdx < 0 || specIdx < 0) continue
+      for (let i = 1; i < lines.length; i++) {
+        const c = parseCSVLine(lines[i])
+        const spec = specIdx >= 0 ? (c[specIdx] ?? '') : ''
+        if (!DENTAL_SPECIALTY.test(spec)) continue   // 只納有牙科的醫院
+        const code = c[codeIdx]?.trim()
+        if (!code) continue
+        result.set(code, {
+          source:   'nhi',
+          kind:     '醫院',
+          name:     c[nameIdx]?.trim() ?? '',
+          address:  addrIdx >= 0 ? c[addrIdx]?.trim() ?? '' : '',
+          specialty:'牙科',
+          termDate: termIdx >= 0 ? c[termIdx]?.trim() ?? '' : '',
+        })
+      }
+    } catch (e) {
+      warn('醫院 CSV 取得失敗：', e.message)
+    }
+  }
+  log(`  有牙科的醫院：${result.size} 間`)
   return result
 }
 
@@ -529,9 +579,10 @@ async function main() {
     log('無 snapshot，首次執行')
   }
 
-  // 2. 下載兩個資料來源（並行）
-  const [clinics, labsResult] = await Promise.all([
+  // 2. 下載資料來源（並行）：牙醫診所、有牙科的醫院、牙體技術所
+  const [clinics, hospitals, labsResult] = await Promise.all([
     fetchDentalClinics(),
+    fetchDentalHospitals().catch(e => { warn('醫院資料取得失敗：', e.message); return new Map() }),
     fetchDentalLabs().catch(e => { warn('牙技所資料取得失敗：', e.message); return { labs: new Map(), complete: false } }),
   ])
 
@@ -553,8 +604,8 @@ async function main() {
   }
 
   // 合併（NHI key = 機構代碼，BAS key = 機構代碼或名稱備用 key）
-  const currentData = new Map([...clinics, ...labs])
-  log(`\n合計：${clinics.size} 牙醫診所 ＋ ${labs.size} 牙技所${labsStale ? '（沿用上月）' : ''} ＝ ${currentData.size} 筆`)
+  const currentData = new Map([...clinics, ...hospitals, ...labs])
+  log(`\n合計：${clinics.size} 牙醫診所 ＋ ${hospitals.size} 有牙科醫院 ＋ ${labs.size} 牙技所${labsStale ? '（沿用上月）' : ''} ＝ ${currentData.size} 筆`)
 
   // 3. 崧達客戶
   const customers = await fetchSongtahCustomers().catch(e => {
@@ -629,11 +680,12 @@ async function main() {
     for (const [k, v] of currentData) codes[k] = v
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
       month, fetchedAt: today.toISOString(),
-      totalClinics: clinics.size, totalLabs: labs.size,
+      totalClinics: clinics.size, totalLabs: labs.size, totalHospitals: hospitals.size,
       labsStale,   // true = 本次牙技所抓取不完整、沿用上月資料
       // 上月總數 → 供前端顯示「較上月增減」
-      prevTotalClinics: prevSnapshot?.totalClinics,
-      prevTotalLabs:    prevSnapshot?.totalLabs,
+      prevTotalClinics:   prevSnapshot?.totalClinics,
+      prevTotalLabs:      prevSnapshot?.totalLabs,
+      prevTotalHospitals: prevSnapshot?.totalHospitals,
       totalCustomers: customers.byCode.size,
       newCodes,   // 本月相較上月新增的機構代碼（真正新開業）
       codes,
