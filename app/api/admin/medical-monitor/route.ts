@@ -5,7 +5,7 @@
  *
  * 狀態 1 — normalOperating   ：客戶有代碼，快照查到，資料一致，正常營業
  * 狀態 2 — newOpenings       ：快照有機構代碼，但公司客戶 DB 無此代碼 → 新開業候選
- * 狀態 3 — suspectedClosures ：客戶有代碼，但最新醫事資料查無該代碼 → 歇業候選
+ * 狀態 3 — suspectedClosures ：客戶有代碼，但最新醫事資料查無該代碼且快照也無同名同區資料 → 歇業候選
  *                              （不再用 NHI 特約終止判定；開業/歇業以衛福部開業狀態為準，
  *                                由前端「查衛福部」即時確認後人工更新）
  * 狀態 5 — selfManagedCustomers：客戶無機構代碼 → 未納入醫事監控
@@ -329,6 +329,17 @@ export async function GET(req: NextRequest) {
     arr.push({ code, entry, expired: isExpired(entry.termDate) })
     areaIndex.set(k, arr)
   }
+
+  // BAS 牙技所偶爾會抓到列表資料、但詳細頁取不到機構代碼；此時快照會用
+  // 「名稱__縣市__區」保留資料。若客戶同名同區仍在 BAS 列表中，不應列為歇業候選。
+  const fallbackByArea = new Map<string, SnapshotEntry>()
+  for (const [key, entry] of Object.entries(codes)) {
+    if (isValidCode(key)) continue
+    const { city, district } = parseAddress(entry.address)
+    const areaKey = areaKeyOf(entry.name, city, district)
+    fallbackByArea.set(areaKey, entry)
+  }
+
   // 同地區、不同代碼、且現行 → 換照後的新代碼
   const findReplacement = (name: string, city: string, district: string, excludeCode: string) =>
     (areaIndex.get(areaKeyOf(name, city, district)) ?? [])
@@ -367,6 +378,31 @@ export async function GET(req: NextRequest) {
           institutionCode: code,
           snapshotName: entry!.name, snapshotKind: entry!.kind,
           snapshotAddress: entry!.address, snapshotTermDate: entry!.termDate,
+        })
+      }
+      continue
+    }
+
+    const fallbackEntry = fallbackByArea.get(areaKeyOf(c.name, c.city, c.district))
+    if (fallbackEntry && !isExpired(fallbackEntry.termDate)) {
+      const diffs = detectDiffs(c, fallbackEntry)
+      if (diffs.length > 0) {
+        inconsistentData.push({
+          customerId: c.id, customerName: c.name,
+          customerCity: c.city, customerDistrict: c.district,
+          customerType: c.type, customerStatus: c.status,
+          institutionCode: code, diffs,
+          snapshotName: fallbackEntry.name, snapshotKind: fallbackEntry.kind,
+          snapshotAddress: fallbackEntry.address, snapshotTermDate: fallbackEntry.termDate,
+        })
+      } else {
+        normalOperating.push({
+          customerId: c.id, customerName: c.name,
+          customerCity: c.city, customerDistrict: c.district,
+          customerType: c.type, customerStatus: c.status,
+          institutionCode: code,
+          snapshotName: fallbackEntry.name, snapshotKind: fallbackEntry.kind,
+          snapshotAddress: fallbackEntry.address, snapshotTermDate: fallbackEntry.termDate,
         })
       }
       continue
