@@ -178,9 +178,20 @@ function parseAddress(address: string): { city: string; district: string } {
   return { city, district }
 }
 
-/** 名稱正規化（移除通用詞，方便比對） */
+// 常見異體字摺疊（同字異寫視為相同，避免名稱誤判不一致）
+// 例：峯=峰、臺=台、羣=群、裏=裡、卽=即、爲=為、衞=衛、刼=劫
+const VARIANT_MAP: Record<string, string> = {
+  '峯': '峰', '臺': '台', '羣': '群', '裏': '裡', '卽': '即',
+  '爲': '為', '衞': '衛', '甯': '寧', '喆': '哲', '昇': '升',
+  '陞': '升', '勛': '勳', '麪': '麵', '凴': '憑', '銹': '鏽',
+}
+function foldVariants(s: string): string {
+  return s.replace(/[峯臺羣裏卽爲衞甯喆昇陞勛麪凴銹]/g, (ch) => VARIANT_MAP[ch] ?? ch)
+}
+
+/** 名稱正規化（摺疊異體字 + 移除通用詞，方便比對） */
 function normalizeName(name: string): string {
-  return name
+  return foldVariants(name)
     .replace(/牙醫|牙科|診所|醫院|專科|一般|牙體技術所|牙體|技術所|技工所|聯合|聯診|口腔|植牙|美齒|牙齒/g, '')
     .replace(/[（）()\s\-_]/g, '')
     .trim()
