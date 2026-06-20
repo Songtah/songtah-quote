@@ -661,7 +661,7 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v8'
+const CACHE_KEY     = 'clinic-monitor-result-v9'
 const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
 
 type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange'
@@ -889,7 +889,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     { id: 'new',         label: '🆕 新開業候選',  count: result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length },
     { id: 'normal',      label: '✅ 既有正常營業', count: result.normalOperating.length },
     { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
-    { id: 'codechange',  label: '🔁 更換代碼',     count: result.codeChanged.length },
+    { id: 'codechange',  label: '🔁 更換代碼',     count: result.codeChanged?.length ?? 0 },
     { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
     { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
   ] as const) : []
@@ -1045,7 +1045,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             />
           )}
           {tab === 'codechange' && (
-            <CodeChangedTab items={result.codeChanged} />
+            <CodeChangedTab items={result.codeChanged ?? []} />
           )}
           {tab === 'selfmanaged' && (
             <SelfManagedTab items={result.selfManagedCustomers} />
