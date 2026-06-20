@@ -60,6 +60,16 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 3. **ERP 匯入新品後必跑** `python3 scripts/validate_categories.py`，分類錯誤先修再上線。
 4. **價格更新流程**：改 Excel 主檔 → `scripts/merge_catalog_prices.py` → git push 部署。價格表比對規則見桌面《價格表比對規則.docx》。
 
+## 促銷與訂貨鐵則
+
+1. **促銷比對類型感知**：訂貨頁套用促銷時，`skuCode` 精準比對優先；`seriesId` **只**用於系列級促銷（`series_discount`／`series_buy_n_get_m`）。買A送B／加價購／單品特價等一律只認 `skuCode`，避免同系列其他產品被誤觸發（曾導致沒訂的贈品 Detax 亂跳）。helper：`OrderForm` 的 `matchPromoItem`。
+2. **跨規格系列買N送M（同系列跨規格合計）**：
+   - 進度橫幅只在訂單**已有該系列品項**時顯示（`totalQty>0`）。
+   - **達標自動跳出該系列選單**讓使用者選贈品（`giftPicker` + `ProductPicker lockSeriesId`），每系列自動彈一次，banner 另有「選擇贈品」按鈕可重開。
+   - **未選滿贈品不可儲存**（`handleSave` 驗證 giftCount≥freeQty）。
+3. **促銷設定防呆**：促銷設定頁條件類型分組（折扣／贈品／加購組合），依品項是單品或系列只開放對的類型；儲存前必填驗證（買A送B 必填贈品、商品組合必填搭配品、系列類限系列品項）。源頭杜絕錯設定。
+4. **定價進行中降級**：產品尚未定價時，訂貨品項顯示「待定價／尚未定價」而非靜默 0。
+
 ## 工程慣例
 
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。
