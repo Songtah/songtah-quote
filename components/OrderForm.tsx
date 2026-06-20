@@ -852,6 +852,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       const totalQty = items
         .filter(it => it.seriesId === promo.seriesId && it.itemType !== 'gift' && it.itemType !== 'sample')
         .reduce((sum, it) => sum + (it.quantity || 1), 0)
+      // 訂單尚未有此系列品項 → 不顯示進度橫幅（避免沒訂卻跳出來）
+      if (totalQty <= 0) continue
       result[promo.seriesId] = {
         seriesName: promo.seriesName || promo.skuName || '系列優惠',
         n: params.n,
