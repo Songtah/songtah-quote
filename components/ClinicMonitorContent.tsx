@@ -866,6 +866,12 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           )}
 
           {tab === 'new' && (
+            <>
+            {stats && stats.newOpeningExcludedExisting > 0 && (
+              <div className="mb-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱已是現有客戶」的機構（同一診所在 NHI 有多個機構代碼，非新開業機會）。
+              </div>
+            )}
             <NewOpeningsTab
               clinics={result.newOpenings.clinics}
               labs={result.newOpenings.labs}
@@ -876,6 +882,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               onImport={() => selectedIds.size > 0 && setShowPreview(true)}
               importing={importing}
             />
+            </>
           )}
           {tab === 'normal' && (
             <NormalOperatingTab

@@ -136,6 +136,7 @@ export interface MonitorStats {
   newThisMonthClinics:   number
   newThisMonthLabs:      number
   newThisMonthHospitals: number
+  newOpeningExcludedExisting: number   // 名稱已是現有客戶而被排除的「新開業」數（多代碼診所）
   suspectedClosures:   number
   codeNotFound:        number
   inconsistentData:    number
@@ -328,17 +329,31 @@ export async function GET(req: NextRequest) {
   }))
 
   // ── 狀態 2：新開業候選（快照有、客戶 DB 無）─────────────────────────────
+  // 排除「名稱＋縣市已是現有客戶」的機構：同一家診所在 NHI 可能有多個機構代碼，
+  // 客戶庫只填其中一個，另一個代碼不該被當成新開業機會（業務開發誤判）。
+  const tw = (s: string) => (s ?? '').replace(/臺/g, '台')
+  const customerNameCitySet = new Set(
+    allCustomers
+      .filter((c) => c.name)
+      .map((c) => `${normalizeName(c.name)}|${tw(c.city)}`)
+  )
+
   const newOpenings: NewOpening[] = []
+  let excludedExisting = 0
   for (const [code, entry] of Array.from(snapshotByCode)) {
-    if (!customerByCode.has(code)) {
-      const { city, district } = parseAddress(entry.address)
-      newOpenings.push({
-        code, name: entry.name, kind: entry.kind,
-        category:  getCategory(entry.kind),
-        city, district, address: entry.address, specialty: entry.specialty,
-        isNewThisMonth: newThisMonthSet.has(code),
-      })
+    if (customerByCode.has(code)) continue
+    const { city, district } = parseAddress(entry.address)
+    // 名稱(正規化)＋縣市 已是現有客戶 → 視為已是客戶（其他代碼），不列入新開業
+    if (customerNameCitySet.has(`${normalizeName(entry.name)}|${tw(city)}`)) {
+      excludedExisting++
+      continue
     }
+    newOpenings.push({
+      code, name: entry.name, kind: entry.kind,
+      category:  getCategory(entry.kind),
+      city, district, address: entry.address, specialty: entry.specialty,
+      isNewThisMonth: newThisMonthSet.has(code),
+    })
   }
 
   // ── 分類統計 ───────────────────────────────────────────────────────────────
@@ -362,6 +377,7 @@ export async function GET(req: NextRequest) {
     newThisMonthClinics:   newClinic.filter(n => n.isNewThisMonth).length,
     newThisMonthLabs:      newLab.filter(n => n.isNewThisMonth).length,
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
+    newOpeningExcludedExisting: excludedExisting,
     suspectedClosures:   suspectedClosures.length,
     codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
