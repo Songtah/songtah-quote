@@ -83,6 +83,20 @@ export interface SuspectedClosure {
   reason:           'code_vanished'
 }
 
+/** 更換代碼：客戶持舊碼，同名+縣市+行政區 有不同的現行代碼（換照）→ 建議更新代碼 */
+export interface CodeChanged {
+  customerId:       string
+  customerName:     string
+  customerCity:     string
+  customerDistrict: string
+  customerType:     string
+  customerStatus:   string
+  oldCode:          string   // 客戶現有（舊）代碼
+  newCode:          string   // 醫事資料現行代碼
+  snapshotName:     string
+  snapshotAddress:  string
+}
+
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
@@ -140,6 +154,7 @@ export interface MonitorStats {
   suspectedClosures:   number
   codeNotFound:        number
   inconsistentData:    number
+  codeChanged:         number
 }
 
 export interface MonitorResult {
@@ -155,6 +170,7 @@ export interface MonitorResult {
   codeNotFound:          CodeNotFound[]
   selfManagedCustomers:  SelfManagedCustomer[]
   inconsistentData:      InconsistentData[]
+  codeChanged:           CodeChanged[]
   snapshotMonth:   string
   snapshotFetched: string
 }
@@ -187,6 +203,22 @@ const VARIANT_MAP: Record<string, string> = {
 }
 function foldVariants(s: string): string {
   return s.replace(/[峯臺羣裏卽爲衞甯喆昇陞勛麪凴銹]/g, (ch) => VARIANT_MAP[ch] ?? ch)
+}
+
+/** 臺/台 互換正規化 */
+const tw = (s: string) => (s ?? '').replace(/臺/g, '台')
+
+/** 特約終止/歇業日（YYYYMMDD）是否已過 → 該筆為舊（已終止）紀錄 */
+function isExpired(termDate?: string): boolean {
+  if (!termDate || termDate === '0' || termDate.length < 8) return false
+  const y = +termDate.slice(0, 4), m = +termDate.slice(4, 6) - 1, d = +termDate.slice(6, 8)
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return false
+  return new Date(y, m, d) < new Date()
+}
+
+/** 地區比對 key：名稱(正規化/摺疊異體字) + 縣市 + 行政區 */
+function areaKeyOf(name: string, city: string, district: string): string {
+  return `${normalizeName(name)}|${tw(city)}|${tw(district)}`
 }
 
 /** 名稱正規化（摺疊異體字 + 移除通用詞，方便比對） */
@@ -258,7 +290,7 @@ export async function GET(req: NextRequest) {
       stats: null,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
       normalOperating: [], suspectedClosures: [], codeNotFound: [],
-      selfManagedCustomers: [], inconsistentData: [],
+      selfManagedCustomers: [], inconsistentData: [], codeChanged: [],
       snapshotMonth: '', snapshotFetched: '',
     })
   }
@@ -288,47 +320,77 @@ export async function GET(req: NextRequest) {
     if (isValidCode(code)) snapshotByCode.set(code, { ...entry, code })
   }
 
-  // ── 狀態 1/3/4/6：逐一處理有代碼的客戶 ───────────────────────────────────
+  // 地區索引：areaKey → [{code, entry, expired}]（換照找新碼用）
+  const areaIndex = new Map<string, { code: string; entry: SnapshotEntry; expired: boolean }[]>()
+  for (const [code, entry] of Array.from(snapshotByCode)) {
+    const { city, district } = parseAddress(entry.address)
+    const k = areaKeyOf(entry.name, city, district)
+    const arr = areaIndex.get(k) ?? []
+    arr.push({ code, entry, expired: isExpired(entry.termDate) })
+    areaIndex.set(k, arr)
+  }
+  // 同地區、不同代碼、且現行 → 換照後的新代碼
+  const findReplacement = (name: string, city: string, district: string, excludeCode: string) =>
+    (areaIndex.get(areaKeyOf(name, city, district)) ?? [])
+      .find((x) => x.code !== excludeCode && !x.expired) ?? null
+
+  // ── 逐一處理有代碼的客戶 ───────────────────────────────────────────────
   const normalOperating:   NormalOperating[]   = []
   const suspectedClosures: SuspectedClosure[]  = []
   const codeNotFound:      CodeNotFound[]      = []
   const inconsistentData:  InconsistentData[]  = []
+  const codeChanged:       CodeChanged[]       = []
 
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
     const entry = snapshotByCode.get(code)
+    const currentValid = entry && !isExpired(entry.termDate)
 
-    if (!entry) {
-      // 狀態 3：歇業候選（機構代碼從醫事資料消失）— 待查衛福部開業狀態確認
+    if (currentValid) {
+      const diffs = detectDiffs(c, entry!)
+      if (diffs.length > 0) {
+        // 資料不一致（代碼相符但名稱/地址有落差）
+        inconsistentData.push({
+          customerId: c.id, customerName: c.name,
+          customerCity: c.city, customerDistrict: c.district,
+          customerType: c.type, customerStatus: c.status,
+          institutionCode: code, diffs,
+          snapshotName: entry!.name, snapshotKind: entry!.kind,
+          snapshotAddress: entry!.address, snapshotTermDate: entry!.termDate,
+        })
+      } else {
+        // 既有正常營業
+        normalOperating.push({
+          customerId: c.id, customerName: c.name,
+          customerCity: c.city, customerDistrict: c.district,
+          customerType: c.type, customerStatus: c.status,
+          institutionCode: code,
+          snapshotName: entry!.name, snapshotKind: entry!.kind,
+          snapshotAddress: entry!.address, snapshotTermDate: entry!.termDate,
+        })
+      }
+      continue
+    }
+
+    // 客戶碼查不到 或 已終止 → 先找換照新碼（同名+縣市+行政區、不同且現行）
+    const repl = findReplacement(c.name, c.city, c.district, code)
+    if (repl) {
+      // 更換代碼（換照）：建議更新為新碼，非歇業
+      codeChanged.push({
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        oldCode: code, newCode: repl.code,
+        snapshotName: repl.entry.name, snapshotAddress: repl.entry.address,
+      })
+    } else {
+      // 歇業候選（代碼消失且無同地區替代碼）
       suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
         institutionCode: code, reason: 'code_vanished',
       })
-    } else {
-      const diffs = detectDiffs(c, entry)
-      if (diffs.length > 0) {
-        // 狀態 6：資料不一致（代碼相符但名稱/縣市有落差）
-        inconsistentData.push({
-          customerId: c.id, customerName: c.name,
-          customerCity: c.city, customerDistrict: c.district,
-          customerType: c.type, customerStatus: c.status,
-          institutionCode: code, diffs,
-          snapshotName: entry.name, snapshotKind: entry.kind,
-          snapshotAddress: entry.address, snapshotTermDate: entry.termDate,
-        })
-      } else {
-        // 狀態 1：既有正常營業
-        normalOperating.push({
-          customerId: c.id, customerName: c.name,
-          customerCity: c.city, customerDistrict: c.district,
-          customerType: c.type, customerStatus: c.status,
-          institutionCode: code,
-          snapshotName: entry.name, snapshotKind: entry.kind,
-          snapshotAddress: entry.address, snapshotTermDate: entry.termDate,
-        })
-      }
     }
   }
 
@@ -340,13 +402,10 @@ export async function GET(req: NextRequest) {
   }))
 
   // ── 狀態 2：新開業候選（快照有、客戶 DB 無）─────────────────────────────
-  // 排除「名稱＋縣市已是現有客戶」的機構：同一家診所在 NHI 可能有多個機構代碼，
-  // 客戶庫只填其中一個，另一個代碼不該被當成新開業機會（業務開發誤判）。
-  const tw = (s: string) => (s ?? '').replace(/臺/g, '台')
-  const customerNameCitySet = new Set(
-    allCustomers
-      .filter((c) => c.name)
-      .map((c) => `${normalizeName(c.name)}|${tw(c.city)}`)
+  // 排除「名稱＋縣市＋行政區已是現有客戶」的機構：同一家診所在 NHI 可能有多個機構代碼
+  // （含換照舊碼），客戶庫只填其一，其餘代碼不該被當成新開業機會（業務開發誤判）。
+  const customerAreaSet = new Set(
+    allCustomers.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
   )
 
   const newOpenings: NewOpening[] = []
@@ -354,8 +413,8 @@ export async function GET(req: NextRequest) {
   for (const [code, entry] of Array.from(snapshotByCode)) {
     if (customerByCode.has(code)) continue
     const { city, district } = parseAddress(entry.address)
-    // 名稱(正規化)＋縣市 已是現有客戶 → 視為已是客戶（其他代碼），不列入新開業
-    if (customerNameCitySet.has(`${normalizeName(entry.name)}|${tw(city)}`)) {
+    // 名稱(正規化)＋縣市＋行政區 已是現有客戶 → 視為已是客戶的其他代碼，不列入新開業
+    if (customerAreaSet.has(areaKeyOf(entry.name, city, district))) {
       excludedExisting++
       continue
     }
@@ -392,6 +451,7 @@ export async function GET(req: NextRequest) {
     suspectedClosures:   suspectedClosures.length,
     codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
+    codeChanged:         codeChanged.length,
   }
 
   const result: MonitorResult = {
@@ -407,6 +467,7 @@ export async function GET(req: NextRequest) {
     codeNotFound:         [],
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
     inconsistentData,
+    codeChanged,
     snapshotMonth:   snapshot.month,
     snapshotFetched: snapshot.fetchedAt,
   }
