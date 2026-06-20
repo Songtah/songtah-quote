@@ -221,6 +221,13 @@ function areaKeyOf(name: string, city: string, district: string): string {
   return `${normalizeName(name)}|${tw(city)}|${tw(district)}`
 }
 
+/** 完整機構名稱 key：保留「牙醫診所／牙體技術所」等詞，避免不同機構被過度合併 */
+function institutionNameKey(name: string): string {
+  return foldVariants(name)
+    .replace(/[（）()\s\-_]/g, '')
+    .trim()
+}
+
 /** 名稱正規化（摺疊異體字 + 移除通用詞，方便比對） */
 function normalizeName(name: string): string {
   return foldVariants(name)
@@ -444,14 +451,30 @@ export async function GET(req: NextRequest) {
   const customerAreaSet = new Set(
     allCustomers.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
   )
+  const customerNameCitySet = new Set(
+    allCustomers
+      .filter((c) => c.name && c.city)
+      .map((c) => `${institutionNameKey(c.name)}|${tw(c.city)}`)
+  )
+  const customerLooseNameSet = new Set(
+    allCustomers
+      .filter((c) => c.name && (!c.city || !c.district))
+      .map((c) => institutionNameKey(c.name))
+  )
 
   const newOpenings: NewOpening[] = []
   let excludedExisting = 0
   for (const [code, entry] of Array.from(snapshotByCode)) {
+    if (isExpired(entry.termDate)) continue
     if (customerByCode.has(code)) continue
     const { city, district } = parseAddress(entry.address)
-    // 名稱(正規化)＋縣市＋行政區 已是現有客戶 → 視為已是客戶的其他代碼，不列入新開業
-    if (customerAreaSet.has(areaKeyOf(entry.name, city, district))) {
+    const nameKey = institutionNameKey(entry.name)
+    // 已是現有客戶 → 不列入新開業；補強 city/name 與資料缺漏情境，避免 CRM 代碼未同步時漏排。
+    const alreadyCustomer =
+      customerAreaSet.has(areaKeyOf(entry.name, city, district)) ||
+      (city && customerNameCitySet.has(`${nameKey}|${tw(city)}`)) ||
+      customerLooseNameSet.has(nameKey)
+    if (alreadyCustomer) {
       excludedExisting++
       continue
     }
