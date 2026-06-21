@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import type {
   MonitorResult, NewOpening,
   NormalOperating, SuspectedClosure, CodeNotFound,
-  SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats,
+  SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, Unmonitored,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -659,12 +659,69 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
   )
 }
 
+// ── 未納入歇業判定 Tab ──────────────────────────────────────────────────────────
+const UNMONITORED_REASON: Record<string, { label: string; note: string; cls: string }> = {
+  pending_hospital_data: { label: '醫院（待更新醫事資料）', note: '快照尚未納入醫院資料，請點「更新醫事資料」重跑後再比對', cls: 'bg-orange-50 text-orange-700' },
+  source_not_covered:    { label: '資料源未涵蓋',           note: '衛生所／鑲牙所等不在 NHI 牙醫開放資料集內，查無代碼≠歇業', cls: 'bg-gray-100 text-gray-600' },
+  invalid_code:          { label: '代碼未立案／格式不符',     note: '機構代碼非有效格式，無法自動比對，請至客戶頁補正', cls: 'bg-amber-50 text-amber-700' },
+}
+
+function UnmonitoredTab({ items }: { items: Unmonitored[] }) {
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-gray-400 text-sm">
+      <div className="text-3xl mb-3">✅</div>
+      <p>沒有未納入歇業判定的客戶</p>
+    </div>
+  )
+  const groups = ['pending_hospital_data', 'source_not_covered', 'invalid_code']
+    .map(r => ({ reason: r, list: items.filter(i => i.reason === r) }))
+    .filter(g => g.list.length > 0)
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+        🛈 以下客戶有機構代碼，但其機構類型不在目前快照資料源涵蓋範圍內——「查無」並不代表歇業，故不列入歇業候選。
+      </div>
+      {groups.map(g => {
+        const meta = UNMONITORED_REASON[g.reason]
+        return (
+          <CollapsibleSection key={g.reason} title={meta.label} count={g.list.length} color={meta.cls}>
+            <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-50">{meta.note}</div>
+            <div className="divide-y divide-gray-50">
+              {g.list.slice(0, 500).map(item => (
+                <a key={item.customerId} href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                      <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                      {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                      {item.customerStatus && ` · ${item.customerStatus}`}
+                    </div>
+                  </div>
+                  <ChevronRight />
+                </a>
+              ))}
+              {g.list.length > 500 && (
+                <div className="px-4 py-3 text-xs text-gray-400 text-center">顯示前 500 筆</div>
+              )}
+            </div>
+          </CollapsibleSection>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v9'
+const CACHE_KEY     = 'clinic-monitor-result-v10'
 const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
 
-type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange'
+type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange' | 'unmonitored'
 type MonitorResultPayload = Omit<MonitorResult, 'stats'> & { stats: MonitorStats | null }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -714,6 +771,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     codeNotFound: readNumber(value.codeNotFound),
     inconsistentData: readNumber(value.inconsistentData),
     codeChanged: readNumber(value.codeChanged),
+    unmonitored: readNumber(value.unmonitored),
   }
 }
 
@@ -733,6 +791,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
   ) {
     return null
   }
+  const unmonitored = isArray(value.unmonitored) ? (value.unmonitored as Unmonitored[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -751,6 +810,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
     inconsistentData: value.inconsistentData as InconsistentData[],
     codeChanged: value.codeChanged as CodeChanged[],
+    unmonitored,
     snapshotMonth: readString(value.snapshotMonth),
     snapshotFetched: readString(value.snapshotFetched),
   }
@@ -792,7 +852,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     }
     try {
       const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
-      const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange']
+      const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange', 'unmonitored']
       if (savedTab && validTabs.includes(savedTab)) setTab(savedTab)
     } catch {}
   }, [])
@@ -891,6 +951,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
     { id: 'codechange',  label: '🔁 更換代碼',     count: result.codeChanged?.length ?? 0 },
     { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
+    { id: 'unmonitored', label: '🛈 未納入判定',   count: result.unmonitored?.length ?? 0 },
     { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
   ] as const) : []
 
@@ -1049,6 +1110,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           )}
           {tab === 'codechange' && (
             <CodeChangedTab items={result.codeChanged ?? []} />
+          )}
+          {tab === 'unmonitored' && (
+            <UnmonitoredTab items={result.unmonitored ?? []} />
           )}
           {tab === 'selfmanaged' && (
             <SelfManagedTab items={result.selfManagedCustomers} />
