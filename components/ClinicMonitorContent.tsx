@@ -632,39 +632,100 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
 // ── 比對紀錄（每月趨勢，伺服器端持久）────────────────────────────────────────────
 interface HistoryEntry {
   month: string; computedAt: string
-  totalClinics: number; totalLabs: number; totalHospitals: number
+  totalClinics: number; totalLabs: number; totalHospitals: number; totalSchools: number
+  custClinics: number; custLabs: number; custHospitals: number; custSchools: number
   customerWithCode: number; inBasOpen: number; toDevelop: number
   suspectedClosures: number; hospitalUnverified: number; codeChanged: number; inconsistentData: number
 }
 
-function HistoryTrend({ history }: { history: HistoryEntry[] }) {
+const DELTA = (cur: number, prev?: number) =>
+  typeof prev === 'number' && prev !== cur
+    ? <span className={`ml-1 text-[10px] ${cur > prev ? 'text-emerald-600' : 'text-red-500'}`}>{cur > prev ? '▲' : '▼'}{Math.abs(cur - prev)}</span>
+    : null
+
+// 📊 數量儀表板：四類別(全台+客戶) + 近 6 個月 mini 長條
+function Dashboard({ history }: { history: HistoryEntry[] }) {
   if (history.length === 0) return null
-  const delta = (cur: number, prev?: number) =>
-    typeof prev === 'number' && prev !== cur
-      ? <span className={`ml-1 text-[10px] ${cur > prev ? 'text-emerald-600' : 'text-red-500'}`}>{cur > prev ? '▲' : '▼'}{Math.abs(cur - prev)}</span>
-      : null
+  const cur = history[0], prev = history[1]
+  const series = history.slice(0, 6).reverse()   // 舊→新
+  const CATS: { label: string; total: keyof HistoryEntry; cust: keyof HistoryEntry }[] = [
+    { label: '牙醫診所',   total: 'totalClinics',   cust: 'custClinics' },
+    { label: '牙體技術所', total: 'totalLabs',      cust: 'custLabs' },
+    { label: '醫院',       total: 'totalHospitals', cust: 'custHospitals' },
+    { label: '學校',       total: 'totalSchools',   cust: 'custSchools' },
+  ]
+  const N = (h: HistoryEntry, k: keyof HistoryEntry) => Number(h[k]) || 0
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">📊 比對紀錄（每月趨勢）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
-      <div className="flex gap-3 overflow-x-auto pb-1">
-        {history.map((h, i) => {
-          const prev = history[i + 1]   // 較舊一筆（history 為新到舊）
+      <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {CATS.map(cat => {
+          const vals = series.map(h => N(h, cat.total))
+          const max = Math.max(1, ...vals)
           return (
-            <div key={h.month} className="shrink-0 w-44 bg-white rounded-2xl border border-gray-200 p-3">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm font-bold text-stone-800">{h.month}</span>
-                <span className="text-[10px] text-gray-300">{new Date(h.computedAt).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}</span>
+            <div key={cat.label} className="bg-white rounded-2xl border border-gray-200 p-3">
+              <div className="text-xs text-gray-400 font-medium">{cat.label}</div>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-xl font-bold tabular-nums text-stone-800">{N(cur, cat.total).toLocaleString()}</span>
+                <span className="text-[10px] text-gray-400">全台</span>{DELTA(N(cur, cat.total), prev && N(prev, cat.total))}
               </div>
-              <div className="mt-2 space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400">在 BAS 開業</span><span className="tabular-nums text-emerald-600 font-semibold">{h.inBasOpen}{delta(h.inBasOpen, prev?.inBasOpen)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">待開發</span><span className="tabular-nums text-amber-600 font-semibold">{h.toDevelop}{delta(h.toDevelop, prev?.toDevelop)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">疑似歇業</span><span className="tabular-nums text-red-600 font-semibold">{h.suspectedClosures}{delta(h.suspectedClosures, prev?.suspectedClosures)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">醫院待確認</span><span className="tabular-nums text-orange-600 font-semibold">{h.hospitalUnverified}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">更換代碼</span><span className="tabular-nums text-stone-600">{h.codeChanged}</span></div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-semibold tabular-nums text-brand-600">{N(cur, cat.cust).toLocaleString()}</span>
+                <span className="text-[10px] text-gray-400">客戶</span>{DELTA(N(cur, cat.cust), prev && N(prev, cat.cust))}
+              </div>
+              <div className="mt-2 flex items-end gap-0.5 h-8">
+                {series.map((h, i) => (
+                  <div key={i} title={`${h.month}：全台 ${N(h, cat.total)}`} className="flex-1 bg-brand-200 rounded-sm" style={{ height: `${Math.max(6, (N(h, cat.total) / max) * 100)}%` }} />
+                ))}
               </div>
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// 📋 本月異動彈窗（讀「診所監控紀錄」DB）
+interface ChangeRow { type: string; name: string; code: string; address: string; customer: string; customerUrl: string }
+const CHANGE_BADGE: Record<string, string> = {
+  '新開業': 'bg-emerald-50 text-emerald-700', '新增停業': 'bg-red-50 text-red-700',
+  '停業': 'bg-gray-100 text-gray-600', '恢復開業': 'bg-blue-50 text-blue-700',
+}
+function ChangesModal({ month, changes, loading, onClose }: { month: string; changes: ChangeRow[]; loading: boolean; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
+          <h2 className="font-bold text-stone-800 text-lg">📋 本月異動（{month}）</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
+        </div>
+        <div className="p-5 overflow-y-auto">
+          {loading ? <div className="py-12 text-center text-gray-400 text-sm">載入中…</div>
+            : changes.length === 0 ? (
+              <div className="py-12 text-center text-gray-400 text-sm">
+                <div className="text-3xl mb-3">🗓️</div>
+                <p>本月尚無異動紀錄</p>
+                <p className="text-xs mt-1">需累積兩個月 BAS 快照才會產生月對月異動（下個月起自動出現）</p>
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+                {changes.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${CHANGE_BADGE[c.type] ?? 'bg-gray-100 text-gray-600'}`}>{c.type}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-900">{c.name || c.customer}</span>
+                        {c.code && <span className="text-[10px] font-mono text-gray-400">{c.code}</span>}
+                      </div>
+                      {c.address && <div className="text-xs text-gray-400 mt-0.5">{c.address}</div>}
+                    </div>
+                    {c.customerUrl && <a href={c.customerUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>}
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
       </div>
     </div>
   )
@@ -777,6 +838,13 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
   // 比對紀錄（每月趨勢）
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [saving, setSaving]   = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
+
+  // 本月異動
+  const [changes, setChanges]             = useState<ChangeRow[]>([])
+  const [changesLoading, setChangesLoading] = useState(false)
+  const [showChanges, setShowChanges]     = useState(false)
 
   // 點擊摘要卡開啟的類別彈窗
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
@@ -850,6 +918,28 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       const data = await res.json()
       if (Array.isArray(data.history)) setHistory(data.history as HistoryEntry[])
     } catch {}
+  }
+
+  async function saveRecord() {
+    setSaving(true); setSaveMsg('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/save', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setSaveMsg(`❌ ${data.error ?? '儲存失敗'}`); return }
+      setSaveMsg(`✅ 已儲存 ${data.month} 紀錄至 Notion`)
+      loadHistory()
+    } catch (e: any) { setSaveMsg(`❌ ${e.message}`) }
+    finally { setSaving(false) }
+  }
+
+  async function openChanges() {
+    setShowChanges(true); setChangesLoading(true)
+    try {
+      const res = await fetch('/api/admin/medical-monitor/changes')
+      const data = await res.json()
+      setChanges(Array.isArray(data.changes) ? data.changes : [])
+    } catch { setChanges([]) }
+    finally { setChangesLoading(false) }
   }
 
   async function triggerDataUpdate() {
@@ -936,6 +1026,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           }
           更新醫事資料
         </button>
+        <button onClick={saveRecord} disabled={saving || !result?.hasSnapshot}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 text-brand-700 text-sm hover:bg-brand-50 disabled:opacity-50 transition-colors">
+          {saving ? '儲存中…' : '💾 儲存比對紀錄'}
+        </button>
+        <button onClick={openChanges}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          📋 本月異動
+        </button>
         {cachedAt && (
           <span className="text-xs text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
@@ -1016,7 +1114,8 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       )}
 
       {/* 比對紀錄（每月趨勢，伺服器持久）*/}
-      {history.length > 0 && <HistoryTrend history={history} />}
+      {saveMsg && <div className="text-sm px-4 py-2 rounded-xl bg-stone-50 border border-stone-200 text-stone-700">{saveMsg}</div>}
+      {history.length > 0 && <Dashboard history={history} />}
 
       {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
       {result?.hasSnapshot && (
@@ -1071,6 +1170,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           result={result}
           onResolved={onStatusResolved}
           onClose={() => setActiveCategory(null)}
+        />
+      )}
+      {showChanges && (
+        <ChangesModal
+          month={new Date().toISOString().slice(0, 7)}
+          changes={changes}
+          loading={changesLoading}
+          onClose={() => setShowChanges(false)}
         />
       )}
     </div>

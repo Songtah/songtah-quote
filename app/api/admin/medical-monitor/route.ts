@@ -344,10 +344,12 @@ async function computeMonitor(): Promise<MonitorResult> {
   type SchoolRef = { name: string; city: string; address: string; kind: string }
   // 註：崧達客戶的學校代碼與「統計處名錄」代碼非同系統，故以「校名」比對，不靠代碼
   const schoolByName = new Map<string, SchoolRef>()   // 校名 key → 名錄資料
+  let totalSchools = 0                                  // 全台學校數（教育部名錄）
   try {
     const sp = path.join(process.cwd(), 'data', 'schools.json')
     if (existsSync(sp)) {
       const s = JSON.parse(readFileSync(sp, 'utf8')) as { schools?: Record<string, SchoolRef> }
+      totalSchools = Object.keys(s.schools ?? {}).length
       for (const v of Object.values(s.schools ?? {})) {
         const nk = schoolNameKey(v.name)
         if (nk && !schoolByName.has(nk)) schoolByName.set(nk, v)
@@ -625,10 +627,21 @@ async function computeMonitor(): Promise<MonitorResult> {
     computedAt:      new Date().toISOString(),
   }
 
+  // 崧達客戶各類型數量（供儀表板「客戶」線）
+  let custClinics = 0, custLabs = 0, custHospitals = 0, custSchools = 0
+  for (const c of allCustomers) {
+    const t = c.type || ''
+    if (t === '牙醫診所' || t === '衛生所')        custClinics++
+    else if (t === '牙體技術所' || t === '鑲牙所') custLabs++
+    else if (t === '醫院')                         custHospitals++
+    else if (t === '學術機構')                     custSchools++
+  }
+
   // 記一筆每月比對紀錄（依快照月份去重、伺服器端持久），供趨勢對照
   await pushMonitorHistory({
     month: snapshot.month, computedAt: result.computedAt,
-    totalClinics: stats.totalClinics, totalLabs: stats.totalLabs, totalHospitals: stats.totalHospitals,
+    totalClinics: stats.totalClinics, totalLabs: stats.totalLabs, totalHospitals: stats.totalHospitals, totalSchools,
+    custClinics, custLabs, custHospitals, custSchools,
     customerWithCode: stats.customerWithCode,
     inBasOpen: stats.normalOperating,
     toDevelop: newClinic.length + newLab.length + newHospital.length,

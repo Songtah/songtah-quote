@@ -31,6 +31,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 const NOTION_TOKEN       = process.env.NOTION_TOKEN
 const CLINIC_MONITOR_DB  = process.env.NOTION_CLINIC_MONITOR_DB
 const CUSTOMERS_DB       = process.env.NOTION_CUSTOMERS_SYSTEM_DB
+const TREND_DB           = process.env.NOTION_MEDICAL_TREND_DB || '386dcdaa-fb2a-818f-8c11-d24e88b111b3'
+const SCHOOLS_PATH       = 'data/schools.json'
 const DRY_RUN            = process.env.DRY_RUN === 'true'
 const SNAPSHOT_PATH      = 'data/clinic-snapshot.json'
 const CACHE_PATH         = 'data/bas-cache.json'
@@ -197,21 +199,28 @@ function classifyMedical(name) {
 // ── 崧達客戶 ───────────────────────────────────────────────────────────────────
 
 async function fetchSongtahCustomers() {
-  if (!CUSTOMERS_DB) { warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對'); return { byCode: new Map(), byName: new Map() } }
-  log('載入崧達客戶機構代碼 …')
+  if (!CUSTOMERS_DB) { warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對'); return { byCode: new Map(), byName: new Map(), counts: {} } }
+  log('載入崧達客戶 …')
   const byCode = new Map()
   const byName = new Map()
+  const counts = { custClinics: 0, custLabs: 0, custHospitals: 0, custSchools: 0 } // 各類型數量（含無代碼）
   let cursor
   do {
-    const body = { page_size: 100, filter: { property: '機構代碼', rich_text: { is_not_empty: true } } }
+    const body = { page_size: 100 }   // 不濾代碼，全部載入以統計各類型數量
     if (cursor) body.start_cursor = cursor
     const res = await notionPost(`/databases/${CUSTOMERS_DB}/query`, body)
     for (const page of res.results) {
-      const code = getText(page, '機構代碼').trim()
       const name =
         page.properties['名稱']?.title?.[0]?.plain_text      ??
         page.properties['客戶名稱']?.title?.[0]?.plain_text  ??
         page.properties['Name']?.title?.[0]?.plain_text      ?? ''
+      if (!name) continue
+      const type = page.properties['客戶類型']?.select?.name ?? ''
+      if (type === '牙醫診所' || type === '衛生所')        counts.custClinics++
+      else if (type === '牙體技術所' || type === '鑲牙所') counts.custLabs++
+      else if (type === '醫院')                            counts.custHospitals++
+      else if (type === '學術機構')                        counts.custSchools++
+      const code = getText(page, '機構代碼').trim()
       if (!code) continue
       const entry = { name, pageId: page.id, code }
       byCode.set(code, entry)
@@ -219,8 +228,8 @@ async function fetchSongtahCustomers() {
     }
     cursor = res.has_more ? res.next_cursor : null
   } while (cursor)
-  log(`  有機構代碼的客戶：${byCode.size} 筆`)
-  return { byCode, byName }
+  log(`  有機構代碼的客戶：${byCode.size} 筆；類型計數 ${JSON.stringify(counts)}`)
+  return { byCode, byName, counts }
 }
 
 /** 名稱正規化（去空格、去常見後綴）用於模糊比對 */
@@ -338,6 +347,34 @@ async function notionPost(path, body) {
 }
 
 const getText = (page, f) => page.properties[f]?.rich_text?.map(t => t.plain_text).join('') ?? ''
+
+async function notionPatch(path, body) {
+  const res = await fetch(`https://api.notion.com/v1${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body), signal: AbortSignal.timeout(30_000),
+  })
+  if (!res.ok) throw new Error(`Notion PATCH ${path} → ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  return res.json()
+}
+
+/** 寫入「醫事數量趨勢」DB（一月一列，依月份 upsert）。只寫有提供的數值欄（diff 指標屬比對頁，月排程留空）*/
+async function upsertTrendRow(rec) {
+  const props = {
+    '月份':     { title: [{ text: { content: rec.month } }] },
+    '紀錄時間': { date: { start: new Date().toISOString() } },
+  }
+  const map = {
+    '全台_牙醫診所': rec.totalClinics, '全台_牙體技術所': rec.totalLabs, '全台_醫院': rec.totalHospitals, '全台_學校': rec.totalSchools,
+    '客戶_牙醫診所': rec.custClinics, '客戶_牙體技術所': rec.custLabs, '客戶_醫院': rec.custHospitals, '客戶_學校': rec.custSchools,
+    '客戶有代碼': rec.customerWithCode, '在BAS開業': rec.inBasOpen, '待開發': rec.toDevelop,
+    '疑似歇業': rec.suspectedClosures, '醫院待確認': rec.hospitalUnverified, '更換代碼': rec.codeChanged, '資料不一致': rec.inconsistentData,
+  }
+  for (const [k, v] of Object.entries(map)) if (Number.isFinite(v)) props[k] = { number: v }
+  const q = await notionPost(`/databases/${TREND_DB}/query`, { page_size: 1, filter: { property: '月份', title: { equals: rec.month } } })
+  if (q.results?.[0]) await notionPatch(`/pages/${q.results[0].id}`, { properties: props })
+  else                await notionPost('/pages', { parent: { database_id: TREND_DB }, properties: props })
+}
 
 // ── 快取 ──────────────────────────────────────────────────────────────────────
 
@@ -501,6 +538,20 @@ async function main() {
     }, null, 2))
     writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 1))
     log(`Snapshot → ${SNAPSHOT_PATH}；Cache（${Object.keys(cache).length} 筆）→ ${CACHE_PATH}`)
+
+    // 寫一筆「醫事數量趨勢」永久紀錄（全台＋客戶各類；不影響快照成敗）
+    try {
+      let totalSchools = 0
+      if (existsSync(SCHOOLS_PATH)) {
+        try { totalSchools = Object.keys(JSON.parse(readFileSync(SCHOOLS_PATH, 'utf8')).schools ?? {}).length } catch {}
+      }
+      await upsertTrendRow({
+        month, totalClinics, totalLabs, totalHospitals, totalSchools,
+        ...customers.counts,
+        customerWithCode: customers.byCode.size,
+      })
+      log(`醫事數量趨勢 → 已寫入 ${month}`)
+    } catch (e) { warn('寫入數量趨勢失敗（不影響快照）：', e.message) }
   }
 
   log('✅ 完成')

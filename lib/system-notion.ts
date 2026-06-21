@@ -106,6 +106,12 @@ const DB = {
     process.env.NOTION_EQUIPMENT_SYSTEM_DB ??
     process.env.NOTION_EQUIPMENT_DB ??
     '285dcdaa-fb2a-812d-a5ab-eb34d8008d43',
+  // 醫事數量趨勢（每月一列；醫事監控儀表板的永久紀錄）
+  medicalTrend:
+    process.env.NOTION_MEDICAL_TREND_DB ??
+    '386dcdaa-fb2a-818f-8c11-d24e88b111b3',
+  // 診所監控紀錄（月排程寫入的逐筆異動：新開業/新增停業/停業/恢復開業）
+  monitor: process.env.NOTION_CLINIC_MONITOR_DB,
 } as const
 
 function normalizeDatabaseId(value?: string) {
@@ -1127,9 +1133,14 @@ const MONITOR_HISTORY_KEY = 'medical-monitor:history'
 export interface MonitorHistoryEntry {
   month:             string   // 快照月份 YYYY-MM（一個月一筆，重複比對會更新同月）
   computedAt:        string
-  totalClinics:      number
-  totalLabs:         number
-  totalHospitals:    number
+  totalClinics:      number   // 全台：診所+衛生所
+  totalLabs:         number   // 全台：牙技+鑲牙
+  totalHospitals:    number   // 全台：醫院
+  totalSchools:      number   // 全台：學校（教育部 schools.json）
+  custClinics:       number   // 崧達客戶：牙醫診所+衛生所
+  custLabs:          number   // 崧達客戶：牙體技術所+鑲牙所
+  custHospitals:     number   // 崧達客戶：醫院
+  custSchools:       number   // 崧達客戶：學術機構
   customerWithCode:  number
   inBasOpen:         number   // 客戶代碼比中 BAS 開業
   toDevelop:         number   // 待開發（BAS 有、非客戶）
@@ -1147,6 +1158,81 @@ export async function pushMonitorHistory(entry: MonitorHistoryEntry): Promise<vo
   if (idx >= 0) list[idx] = entry; else list.push(entry)
   list.sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0)) // 新到舊
   await setRedisValue(MONITOR_HISTORY_KEY, list.slice(0, 36), 400 * 24 * 60 * 60_000) // 約 13 個月
+}
+
+/** 讀「診所監控紀錄」DB 某月的逐筆異動（本月異動視圖用）*/
+export interface MonthlyChange {
+  type: string; name: string; code: string; address: string; customer: string; customerUrl: string
+}
+export async function getMonthlyMonitorChanges(month: string): Promise<MonthlyChange[]> {
+  if (!DB.monitor) return []
+  const dbId = normalizeDatabaseId(DB.monitor)
+  const WANT = new Set(['新開業', '新增停業', '停業', '恢復開業'])
+  const out: MonthlyChange[] = []
+  let cursor: string | undefined
+  try {
+    do {
+      const res: any = await notionCallWithRetry('getMonthlyMonitorChanges', () =>
+        notion.databases.query({
+          database_id: dbId, page_size: 100, ...(cursor ? { start_cursor: cursor } : {}),
+          filter: { property: '月份', date: { equals: `${month}-01` } },
+        })
+      )
+      for (const p of res.results ?? []) {
+        const type = p.properties?.['異動類型']?.select?.name ?? ''
+        if (!WANT.has(type)) continue
+        out.push({
+          type,
+          name:        getText(p, '健保名稱'),
+          code:        getText(p, '機構代碼'),
+          address:     getText(p, '地址'),
+          customer:    getText(p, '客戶名稱'),
+          customerUrl: p.properties?.['客戶頁面']?.url ?? '',
+        })
+      }
+      cursor = res.has_more ? res.next_cursor : undefined
+    } while (cursor)
+  } catch { /* 無紀錄回空 */ }
+  return out
+}
+
+/** 寫入「醫事數量趨勢」Notion DB（永久紀錄，一月一列；以月份 title upsert）*/
+export async function upsertMedicalTrend(e: MonitorHistoryEntry): Promise<void> {
+  if (!DB.medicalTrend) return
+  const dbId = normalizeDatabaseId(DB.medicalTrend)
+  const props: any = {
+    '月份':           { title: [{ text: { content: e.month } }] },
+    '紀錄時間':       { date: { start: e.computedAt } },
+    '全台_牙醫診所':  { number: e.totalClinics },
+    '全台_牙體技術所':{ number: e.totalLabs },
+    '全台_醫院':      { number: e.totalHospitals },
+    '全台_學校':      { number: e.totalSchools },
+    '客戶_牙醫診所':  { number: e.custClinics },
+    '客戶_牙體技術所':{ number: e.custLabs },
+    '客戶_醫院':      { number: e.custHospitals },
+    '客戶_學校':      { number: e.custSchools },
+    '客戶有代碼':     { number: e.customerWithCode },
+    '在BAS開業':      { number: e.inBasOpen },
+    '待開發':         { number: e.toDevelop },
+    '疑似歇業':       { number: e.suspectedClosures },
+    '醫院待確認':     { number: e.hospitalUnverified },
+    '更換代碼':       { number: e.codeChanged },
+    '資料不一致':     { number: e.inconsistentData },
+  }
+  // 以月份查詢既有列 → 有則更新、無則新增（一月一列）
+  const q: any = await notionCallWithRetry('upsertMedicalTrend:find', () =>
+    notion.databases.query({ database_id: dbId, filter: { property: '月份', title: { equals: e.month } }, page_size: 1 })
+  )
+  const existing = q.results?.[0]
+  if (existing) {
+    await notionCallWithRetry('upsertMedicalTrend:update', () =>
+      notion.pages.update({ page_id: existing.id, properties: props })
+    )
+  } else {
+    await notionCallWithRetry('upsertMedicalTrend:create', () =>
+      notion.pages.create({ parent: { database_id: dbId }, properties: props })
+    )
+  }
 }
 
 export async function getCustomerFilterOptions(): Promise<{
