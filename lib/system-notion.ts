@@ -1074,6 +1074,10 @@ export async function createSystemCustomer(data: {
   type:            string  // 客戶類型 select value
   status?:         string  // 機構狀態 select value, default '開業'
   note?:           string
+  nhiContract?:    boolean // 健保特約 checkbox
+  infoUrl?:        string  // 機構資料（衛福部機構基本資料頁）
+  personnelUrl?:   string  // 醫事人員連結
+  deptUrl?:        string  // 診療科別連結
 }): Promise<{ id: string }> {
   if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
   const page: any = await notionCallWithRetry('createSystemCustomer', () =>
@@ -1088,6 +1092,10 @@ export async function createSystemCustomer(data: {
         '客戶類型':  { select:    { name: data.type } },
         '機構狀態':  { select:    { name: data.status ?? '開業' } },
         ...(data.phone ? { '電話': { phone_number: data.phone } } : {}),
+        ...(typeof data.nhiContract === 'boolean' ? { '健保特約': { checkbox: data.nhiContract } } : {}),
+        ...(data.infoUrl      ? { '機構資料':     { url: data.infoUrl } }      : {}),
+        ...(data.personnelUrl ? { '醫事人員連結': { url: data.personnelUrl } } : {}),
+        ...(data.deptUrl      ? { '診療科別連結': { url: data.deptUrl } }      : {}),
       } as any,
     })
   )
