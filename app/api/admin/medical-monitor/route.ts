@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getCustomersWithCodes, getCachedMonitorResult, setCachedMonitorResult } from '@/lib/system-notion'
+import { getCustomersWithCodes, getCachedMonitorResult, setCachedMonitorResult, pushMonitorHistory } from '@/lib/system-notion'
 import { readFileSync, existsSync } from 'fs'
 import path from 'path'
 
@@ -624,6 +624,19 @@ async function computeMonitor(): Promise<MonitorResult> {
     snapshotFetched: snapshot.fetchedAt,
     computedAt:      new Date().toISOString(),
   }
+
+  // 記一筆每月比對紀錄（依快照月份去重、伺服器端持久），供趨勢對照
+  await pushMonitorHistory({
+    month: snapshot.month, computedAt: result.computedAt,
+    totalClinics: stats.totalClinics, totalLabs: stats.totalLabs, totalHospitals: stats.totalHospitals,
+    customerWithCode: stats.customerWithCode,
+    inBasOpen: stats.normalOperating,
+    toDevelop: newClinic.length + newLab.length + newHospital.length,
+    suspectedClosures: stats.suspectedClosures,
+    hospitalUnverified: stats.hospitalUnverified,
+    codeChanged: stats.codeChanged,
+    inconsistentData: stats.inconsistentData,
+  }).catch(() => {})
 
   return result
 }

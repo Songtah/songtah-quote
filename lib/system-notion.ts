@@ -1114,6 +1114,33 @@ export async function setCachedMonitorResult(value: unknown): Promise<void> {
   return setRedisValue(MONITOR_RESULT_KEY, value, 30 * 24 * 60 * 60_000) // 30 天
 }
 
+// ── 醫事監控：比對紀錄（每月摘要趨勢，供對照；伺服器端持久、刷新不消失）──────────
+const MONITOR_HISTORY_KEY = 'medical-monitor:history'
+export interface MonitorHistoryEntry {
+  month:             string   // 快照月份 YYYY-MM（一個月一筆，重複比對會更新同月）
+  computedAt:        string
+  totalClinics:      number
+  totalLabs:         number
+  totalHospitals:    number
+  customerWithCode:  number
+  inBasOpen:         number   // 客戶代碼比中 BAS 開業
+  toDevelop:         number   // 待開發（BAS 有、非客戶）
+  suspectedClosures: number
+  hospitalUnverified:number
+  codeChanged:       number
+  inconsistentData:  number
+}
+export async function getMonitorHistory(): Promise<MonitorHistoryEntry[]> {
+  return (await getRedisValue<MonitorHistoryEntry[]>(MONITOR_HISTORY_KEY)) ?? []
+}
+export async function pushMonitorHistory(entry: MonitorHistoryEntry): Promise<void> {
+  const list = (await getRedisValue<MonitorHistoryEntry[]>(MONITOR_HISTORY_KEY)) ?? []
+  const idx = list.findIndex(r => r.month === entry.month)
+  if (idx >= 0) list[idx] = entry; else list.push(entry)
+  list.sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0)) // 新到舊
+  await setRedisValue(MONITOR_HISTORY_KEY, list.slice(0, 36), 400 * 24 * 60 * 60_000) // 約 13 個月
+}
+
 export async function getCustomerFilterOptions(): Promise<{
   cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {

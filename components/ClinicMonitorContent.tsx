@@ -629,6 +629,47 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
   )
 }
 
+// ── 比對紀錄（每月趨勢，伺服器端持久）────────────────────────────────────────────
+interface HistoryEntry {
+  month: string; computedAt: string
+  totalClinics: number; totalLabs: number; totalHospitals: number
+  customerWithCode: number; inBasOpen: number; toDevelop: number
+  suspectedClosures: number; hospitalUnverified: number; codeChanged: number; inconsistentData: number
+}
+
+function HistoryTrend({ history }: { history: HistoryEntry[] }) {
+  if (history.length === 0) return null
+  const delta = (cur: number, prev?: number) =>
+    typeof prev === 'number' && prev !== cur
+      ? <span className={`ml-1 text-[10px] ${cur > prev ? 'text-emerald-600' : 'text-red-500'}`}>{cur > prev ? '▲' : '▼'}{Math.abs(cur - prev)}</span>
+      : null
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">📊 比對紀錄（每月趨勢）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {history.map((h, i) => {
+          const prev = history[i + 1]   // 較舊一筆（history 為新到舊）
+          return (
+            <div key={h.month} className="shrink-0 w-44 bg-white rounded-2xl border border-gray-200 p-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-bold text-stone-800">{h.month}</span>
+                <span className="text-[10px] text-gray-300">{new Date(h.computedAt).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })}</span>
+              </div>
+              <div className="mt-2 space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-gray-400">在 BAS 開業</span><span className="tabular-nums text-emerald-600 font-semibold">{h.inBasOpen}{delta(h.inBasOpen, prev?.inBasOpen)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">待開發</span><span className="tabular-nums text-amber-600 font-semibold">{h.toDevelop}{delta(h.toDevelop, prev?.toDevelop)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">疑似歇業</span><span className="tabular-nums text-red-600 font-semibold">{h.suspectedClosures}{delta(h.suspectedClosures, prev?.suspectedClosures)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">醫院待確認</span><span className="tabular-nums text-orange-600 font-semibold">{h.hospitalUnverified}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">更換代碼</span><span className="tabular-nums text-stone-600">{h.codeChanged}</span></div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 const CACHE_KEY     = 'clinic-monitor-result-v13'
@@ -734,6 +775,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [triggering, setTriggering] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState('')
 
+  // 比對紀錄（每月趨勢）
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+
   // 點擊摘要卡開啟的類別彈窗
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
   // 已在彈窗內編輯開業狀態而結案的客戶（樂觀移除）
@@ -753,6 +797,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // ── 開頁：先取伺服器端「最近一次比對結果」（共用、不受清快取影響）；無則 localStorage 備援 ──
   useEffect(() => {
     let cancelled = false
+    loadHistory()
     ;(async () => {
       try {
         const res = await fetch('/api/admin/medical-monitor')   // 不帶 refresh → 回上次結果
@@ -786,6 +831,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       const data = parseMonitorResult(payload)
       if (!data) { setError('比對資料格式錯誤，請重新執行'); return }
       applyResult(data, readString(payload.computedAt) || new Date().toISOString())
+      loadHistory()   // 比對後刷新趨勢紀錄
     } catch (e: any) {
       setError(e.message ?? '比對失敗，請重試')
     } finally {
@@ -795,6 +841,15 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
   function onStatusResolved(id: string) {
     setResolvedIds(prev => new Set(prev).add(id))
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/admin/medical-monitor/history')
+      if (!res.ok) return
+      const data = await res.json()
+      if (Array.isArray(data.history)) setHistory(data.history as HistoryEntry[])
+    } catch {}
   }
 
   async function triggerDataUpdate() {
@@ -959,6 +1014,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           </div>
         </>
       )}
+
+      {/* 比對紀錄（每月趨勢，伺服器持久）*/}
+      {history.length > 0 && <HistoryTrend history={history} />}
 
       {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
       {result?.hasSnapshot && (
