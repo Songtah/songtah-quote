@@ -988,6 +988,18 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="資料不一致"  value={stats.inconsistentData}   sub="代碼符但資料有落差" accent="text-blue-600" />
             </div>
           </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
+              <StatCard label="⛔ 疑似歇業"    value={stats.suspectedClosures} sub="代碼不在 BAS 開業清單" accent="text-red-600" />
+              <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" />
+              <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" />
+            </div>
+            <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植），逐筆「查衛福部」可確認明確開業狀態。
+            </p>
+          </div>
         </>
       )}
 

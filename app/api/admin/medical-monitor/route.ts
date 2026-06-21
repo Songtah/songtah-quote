@@ -350,14 +350,17 @@ export async function GET(req: NextRequest) {
     if (isValidCode(code)) snapshotByCode.set(code, { ...entry, code })
   }
 
-  // 地區索引：areaKey → [{code, entry, expired}]（換照找新碼用）
+  // 地區索引：areaKey（名稱|縣市|行政區）→ [{code, entry, expired}]（換照找新碼用）
+  // 另建縣市索引：cityKey（名稱|縣市）→ [...]，供「同名同縣市跨行政區」的換照偵測
   const areaIndex = new Map<string, { code: string; entry: SnapshotEntry; expired: boolean }[]>()
+  const cityIndex = new Map<string, { code: string; entry: SnapshotEntry; expired: boolean }[]>()
   for (const [code, entry] of Array.from(snapshotByCode)) {
     const { city, district } = parseAddress(entry.address)
-    const k = areaKeyOf(entry.name, city, district)
-    const arr = areaIndex.get(k) ?? []
-    arr.push({ code, entry, expired: isExpired(entry.termDate) })
-    areaIndex.set(k, arr)
+    const rec = { code, entry, expired: isExpired(entry.termDate) }
+    const ak = areaKeyOf(entry.name, city, district)
+    ;(areaIndex.get(ak) ?? areaIndex.set(ak, []).get(ak)!).push(rec)
+    const ck = `${normalizeName(entry.name)}|${tw(city)}`
+    ;(cityIndex.get(ck) ?? cityIndex.set(ck, []).get(ck)!).push(rec)
   }
 
   // BAS 牙技所偶爾會抓到列表資料、但詳細頁取不到機構代碼；此時快照會用
@@ -370,10 +373,16 @@ export async function GET(req: NextRequest) {
     fallbackByArea.set(areaKey, entry)
   }
 
-  // 同地區、不同代碼、且現行 → 換照後的新代碼
-  const findReplacement = (name: string, city: string, district: string, excludeCode: string) =>
-    (areaIndex.get(areaKeyOf(name, city, district)) ?? [])
-      .find((x) => x.code !== excludeCode && !x.expired) ?? null
+  // 換照找新碼：先比「同名＋縣市＋行政區」；找不到再放寬到「同名＋同縣市」（跨行政區遷址），
+  // 但同縣市需「唯一」一個現行同名碼才採信，避免菜市場名誤判。跨縣市不放寬（多為不同家）。
+  const findReplacement = (name: string, city: string, district: string, excludeCode: string) => {
+    const sameArea = (areaIndex.get(areaKeyOf(name, city, district)) ?? [])
+      .find((x) => x.code !== excludeCode && !x.expired)
+    if (sameArea) return sameArea
+    const ck = `${normalizeName(name)}|${tw(city)}`
+    const cands = (cityIndex.get(ck) ?? []).filter((x) => x.code !== excludeCode && !x.expired)
+    return cands.length === 1 ? cands[0] : null
+  }
 
   // ── 逐一處理有代碼的客戶 ───────────────────────────────────────────────
   const normalOperating:   NormalOperating[]   = []
