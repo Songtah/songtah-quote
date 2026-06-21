@@ -957,11 +957,11 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {stats && (
         <>
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月增減）</p>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
               {stats.totalLabs > 0
-                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : '全台'} />
+                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : (stats.labDelta === null ? '全台 · 首次建立基準' : '全台')} />
                 : (
                   <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
                     <span className="text-xs text-gray-400 font-medium">牙體技術所</span>
@@ -973,6 +973,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="客戶（有代碼）" value={stats.customerWithCode} />
               <StatCard label="客戶（無代碼）" value={stats.customerNoCode} sub="未納入監控" />
             </div>
+            <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+              ℹ️ 此處「淨增減」是全台院所總數較上月的變化（新增−歇業），與下方「新開業候選」不同——後者只列尚未成為崧達客戶的新機構，已是客戶者會被排除，故數字通常較小。
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">比對結果摘要</p>

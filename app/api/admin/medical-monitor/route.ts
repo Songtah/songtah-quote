@@ -536,8 +536,10 @@ export async function GET(req: NextRequest) {
     totalClinics:   snapshot.totalClinics,
     totalLabs:      snapshot.totalLabs,
     totalHospitals: snapshot.totalHospitals ?? 0,
-    clinicDelta: typeof snapshot.prevTotalClinics === 'number' ? snapshot.totalClinics - snapshot.prevTotalClinics : null,
-    labDelta:    typeof snapshot.prevTotalLabs    === 'number' ? snapshot.totalLabs    - snapshot.prevTotalLabs    : null,
+    // 差額只在「有有效上月基準」時計算。prev 為 0／undefined 代表上月根本沒抓到該類別
+    // （非真的歸零），此時顯示差額會把「全台總數」誤當成本月暴增（曾出現牙技所 ▲1093）。
+    clinicDelta: snapshot.prevTotalClinics ? snapshot.totalClinics - snapshot.prevTotalClinics : null,
+    labDelta:    snapshot.prevTotalLabs    ? snapshot.totalLabs    - snapshot.prevTotalLabs    : null,
     labsStale:   snapshot.labsStale === true,
     customerWithCode:    customersWithCode.length,
     customerNoCode:      customersNoCode.length,
