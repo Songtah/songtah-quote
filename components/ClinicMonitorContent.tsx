@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import type {
   MonitorResult, NewOpening,
   NormalOperating, SuspectedClosure, CodeNotFound,
-  SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats,
+  SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -659,12 +659,50 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
   )
 }
 
+// ── 醫院待確認 Tab ──────────────────────────────────────────────────────────────
+function HospitalUnverifiedTab({ items }: { items: HospitalUnverified[] }) {
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-gray-400 text-sm">
+      <div className="text-3xl mb-3">✅</div>
+      <p>沒有待確認的醫院</p>
+    </div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+        🏥 以下醫院客戶的機構代碼不在衛福部「牙醫一般科」開業清單中。醫院多半仍在營業，只是牙科未登記為牙醫一般科，故不列入歇業候選。請逐筆「查衛福部」確認牙科現況。
+      </div>
+      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+        {items.map(item => (
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 font-medium">醫院</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  {item.customerStatus && ` · ${item.customerStatus}`}
+                </div>
+              </div>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
+            </div>
+            <div className="mt-2"><MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} /></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v11'
+const CACHE_KEY     = 'clinic-monitor-result-v12'
 const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
 
-type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange'
+type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange' | 'hospital'
 type MonitorResultPayload = Omit<MonitorResult, 'stats'> & { stats: MonitorStats | null }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -714,6 +752,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     codeNotFound: readNumber(value.codeNotFound),
     inconsistentData: readNumber(value.inconsistentData),
     codeChanged: readNumber(value.codeChanged),
+    hospitalUnverified: readNumber(value.hospitalUnverified),
   }
 }
 
@@ -733,6 +772,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
   ) {
     return null
   }
+  const hospitalUnverified = isArray(value.hospitalUnverified) ? (value.hospitalUnverified as HospitalUnverified[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -751,6 +791,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
     inconsistentData: value.inconsistentData as InconsistentData[],
     codeChanged: value.codeChanged as CodeChanged[],
+    hospitalUnverified,
     snapshotMonth: readString(value.snapshotMonth),
     snapshotFetched: readString(value.snapshotFetched),
   }
@@ -792,7 +833,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     }
     try {
       const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
-      const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange']
+      const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange', 'hospital']
       if (savedTab && validTabs.includes(savedTab)) setTab(savedTab)
     } catch {}
   }, [])
@@ -891,6 +932,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
     { id: 'codechange',  label: '🔁 更換代碼',     count: result.codeChanged?.length ?? 0 },
     { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
+    { id: 'hospital',    label: '🏥 醫院待確認',   count: result.hospitalUnverified?.length ?? 0 },
     { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
   ] as const) : []
 
@@ -994,10 +1036,10 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
               <StatCard label="⛔ 疑似歇業"    value={stats.suspectedClosures} sub="代碼不在 BAS 開業清單" accent="text-red-600" />
               <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" />
-              <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" />
+              <StatCard label="🏥 醫院待確認"  value={stats.hospitalUnverified} sub="醫院在營業、牙科未登記" accent="text-orange-600" />
             </div>
             <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
-              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植），逐筆「查衛福部」可確認明確開業狀態。
+              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植），逐筆「查衛福部」可確認明確開業狀態。醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，另列「醫院待確認」。
             </p>
           </div>
         </>
@@ -1061,6 +1103,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           )}
           {tab === 'codechange' && (
             <CodeChangedTab items={result.codeChanged ?? []} />
+          )}
+          {tab === 'hospital' && (
+            <HospitalUnverifiedTab items={result.hospitalUnverified ?? []} />
           )}
           {tab === 'selfmanaged' && (
             <SelfManagedTab items={result.selfManagedCustomers} />

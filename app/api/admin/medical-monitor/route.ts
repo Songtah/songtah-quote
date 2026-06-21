@@ -100,6 +100,18 @@ export interface CodeChanged {
   snapshotAddress:  string
 }
 
+/** 醫院待確認：醫院類客戶代碼不在 BAS 開業清單。醫院多半仍營業，只是牙科未登記為
+ *  「牙醫一般科」而不在 A+51 清單 → 不當歇業候選，改提示逐筆查衛福部確認牙科現況。 */
+export interface HospitalUnverified {
+  customerId:       string
+  customerName:     string
+  customerCity:     string
+  customerDistrict: string
+  customerType:     string
+  customerStatus:   string
+  institutionCode:  string
+}
+
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
@@ -158,6 +170,7 @@ export interface MonitorStats {
   codeNotFound:        number
   inconsistentData:    number
   codeChanged:         number
+  hospitalUnverified:  number
 }
 
 export interface MonitorResult {
@@ -174,6 +187,7 @@ export interface MonitorResult {
   selfManagedCustomers:  SelfManagedCustomer[]
   inconsistentData:      InconsistentData[]
   codeChanged:           CodeChanged[]
+  hospitalUnverified:    HospitalUnverified[]
   snapshotMonth:   string
   snapshotFetched: string
 }
@@ -305,7 +319,7 @@ export async function GET(req: NextRequest) {
       stats: null,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
       normalOperating: [], suspectedClosures: [], codeNotFound: [],
-      selfManagedCustomers: [], inconsistentData: [], codeChanged: [],
+      selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '',
     })
   }
@@ -390,6 +404,8 @@ export async function GET(req: NextRequest) {
   const codeNotFound:      CodeNotFound[]      = []
   const inconsistentData:  InconsistentData[]  = []
   const codeChanged:       CodeChanged[]       = []
+  const hospitalUnverified: HospitalUnverified[] = []
+  const isHospital = (c: { type: string; name: string }) => c.type === '醫院' || /醫院/.test(c.name)
 
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
@@ -473,6 +489,15 @@ export async function GET(req: NextRequest) {
         customerType: c.type, customerStatus: c.status,
         oldCode: code, newCode: repl.code,
         snapshotName: repl.entry.name, snapshotAddress: repl.entry.address,
+      })
+    } else if (isHospital(c)) {
+      // 醫院待確認：醫院多半仍營業，只是牙科未登記為「牙醫一般科」而不在 BAS A+51 清單，
+      // 故不列歇業候選，改提示逐筆查衛福部確認牙科現況。
+      hospitalUnverified.push({
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        institutionCode: code,
       })
     } else {
       // 歇業候選（代碼消失且無同地區替代碼）
@@ -565,6 +590,7 @@ export async function GET(req: NextRequest) {
     codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
     codeChanged:         codeChanged.length,
+    hospitalUnverified:  hospitalUnverified.length,
   }
 
   const result: MonitorResult = {
@@ -581,6 +607,7 @@ export async function GET(req: NextRequest) {
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
     inconsistentData,
     codeChanged,
+    hospitalUnverified,
     snapshotMonth:   snapshot.month,
     snapshotFetched: snapshot.fetchedAt,
   }
