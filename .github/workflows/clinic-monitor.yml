@@ -1,4 +1,4 @@
-name: 診所監控 — 每月比對健保特約診所異動
+name: 醫事監控 — 每月比對衛福部牙科機構異動（BAS）
 
 on:
   # 每月 1 日早上 9:00 UTC（台灣時間 17:00）自動執行
@@ -46,7 +46,7 @@ jobs:
         run: |
           git config user.name  "clinic-monitor[bot]"
           git config user.email "clinic-monitor@songtah"
-          git add data/clinic-snapshot.json
+          git add data/clinic-snapshot.json data/bas-cache.json
           # 若沒有變更就不 commit / push
           if git diff --cached --quiet; then
             echo "snapshot 無變更，略過 commit"

@@ -1,23 +1,27 @@
 /**
  * scripts/clinic-monitor.mjs
  *
- * 每月比對全國牙科機構開業/停業，寫入 Notion「診所監控紀錄」。
+ * 每月比對全國牙科機構開業/停業，更新快照 data/clinic-snapshot.json 並寫入 Notion。
  *
- * ── 資料來源 ──────────────────────────────────────────────────────────────────
- * 1. NHI API  rId=A21030000I-D21004-009（CSV）— 健保特約牙醫診所（~7,653 間）
- *    篩選種類：牙醫一般診所、牙醫診所、牙醫專科診所
+ * ── 資料來源：衛福部醫事查詢系統（BAS, ma.mohw.gov.tw）─────────────────────────
+ *   BAS_KIND=A + DEP_DEPT_ID=51（牙醫一般科）→ 牙科醫療機構（診所/醫院/衛生所）
+ *   BAS_KIND=2                               → 牙體技術所
+ *   BAS_KIND=L                               → 鑲牙所
+ *   詳細頁 BASBasicData 給「機構代碼 + 開業狀態」。
+ *   CAPTCHA 答案直接放在首頁 img[data-code]，可直接讀取。
  *
- * 2. MOHW BAS — https://ma.mohw.gov.tw/Accessibility/BASSearch/MASearchBAS
- *    機構類別 BAS_KIND=2 → 牙體技術所（~1,089 間）
- *    CAPTCHA：答案直接放在 img[data-code] 屬性，可直接讀取
+ * ── 不失敗設計（最重要）──────────────────────────────────────────────────────
+ *   BAS 有 WAF/限流，全台 ~1 萬筆詳細頁無法一次抓完。故採「持久代碼快取 + 增量 +
+ *   帶走舊值 + 永不拋錯」：
+ *     - data/bas-cache.json：basSeq__zoneSeq → { code, status, name, address, kind }
+ *       跨次累積，避免每月重抓；只抓本次新出現、cache 還沒有 code 的機構。
+ *     - 時間預算內抓詳細頁，到點即停（其餘下次續抓）。
+ *     - 任一 BAS 步驟失敗 → 沿用上月/快取資料，不丟覆蓋、不 throw。
+ *     - 反覆按「更新醫事資料」即可逐步收斂到完整（cache pending=0）。
+ *   → snapshot 永遠有效，GitHub Action 永遠綠燈。
  *
- * ── 異動類型邏輯 ──────────────────────────────────────────────────────────────
- * 新增停業  → 上月有、本月沒有 + 是崧達客戶
- * 恢復開業  → 上月沒有、本月有 + 是崧達客戶
- * 新開業    → 上月沒有、本月有 + 不是崧達客戶（業務開發機會）
- * 停業      → 上月有、本月沒有 + 不是崧達客戶
- * 查無代碼  → 崧達客戶機構代碼在兩個資料庫都查不到
- * 月份摘要  → 每月一筆統計摘要
+ * ── 異動類型（寫入 Notion）────────────────────────────────────────────────────
+ *   新增停業 / 恢復開業 / 新開業 / 停業 / 查無代碼 / 月份摘要
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
@@ -29,136 +33,30 @@ const CLINIC_MONITOR_DB  = process.env.NOTION_CLINIC_MONITOR_DB
 const CUSTOMERS_DB       = process.env.NOTION_CUSTOMERS_SYSTEM_DB
 const DRY_RUN            = process.env.DRY_RUN === 'true'
 const SNAPSHOT_PATH      = 'data/clinic-snapshot.json'
+const CACHE_PATH         = 'data/bas-cache.json'
 
-const NHI_API        = 'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21004-009'
 const MOHW_SEARCH    = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/MASearchBAS'
 const MOHW_RESULTS   = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/BasResults'
 const MOHW_DETAIL    = 'https://ma.mohw.gov.tw/Accessibility/BASSearch/BASBasicData'
 
-const DENTAL_TYPES   = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所'])
-
-// 健保特約醫院（醫學中心 / 區域醫院 / 地區醫院）CSV — 用於納入「有牙科」的醫院
-const HOSPITAL_APIS = [
-  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21001-003', // 醫學中心
-  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21002-005', // 區域醫院
-  'https://info.nhi.gov.tw/api/iode0000s01/Dataset?rId=A21030000I-D21003-003', // 地區醫院
+// 要列舉的機構類別（一個 kind 一次全台列表查詢；Accessibility 版會一次回全部，無分頁）
+const KIND_CONFIGS = [
+  { kind: 'A', dep: '51',   label: '牙科醫療機構' },  // 診所/醫院/衛生所（牙醫一般科）
+  { kind: '2', dep: '全部', label: '牙體技術所' },
+  { kind: 'L', dep: '全部', label: '鑲牙所' },
 ]
-// 牙科相關科別（涵蓋所有牙科次專科：牙科/口腔顎面外科/齒顎矯正/牙周/牙髓…）
-const DENTAL_SPECIALTY = /牙|口腔|齒顎/
+
+const TOTAL_BUDGET_MS = (+process.env.BAS_BUDGET_MIN || 20) * 60_000   // 全程時間預算（含列表+詳細）；到點即停，下次續抓
+const CONCURRENCY     = 6             // 詳細頁並行數（對 WAF 禮貌）
 
 // ── Logging ─────────────────────────────────────────────────────────────────
 
 const log  = (...a) => console.log('[clinic-monitor]', ...a)
 const warn = (...a) => console.warn('[clinic-monitor] ⚠', ...a)
 
-// ── 1. 健保特約牙醫診所（NHI CSV API）──────────────────────────────────────
+const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
-async function fetchDentalClinics() {
-  log('【NHI】下載健保特約牙醫診所 CSV …')
-
-  const res = await fetch(NHI_API, {
-    headers: { Accept: 'text/csv,*/*' },
-    signal: AbortSignal.timeout(60_000),
-  })
-  if (!res.ok) throw new Error(`NHI API → HTTP ${res.status}`)
-
-  const raw   = await res.text()
-  const lines = raw.split('\n').filter(l => l.trim())
-  if (lines.length < 2) throw new Error('NHI API 回傳空資料')
-
-  const headers   = parseCSVLine(lines[0])
-  const codeIdx   = headers.findIndex(h => h.includes('代碼'))
-  const nameIdx   = headers.findIndex(h => h.includes('名稱'))
-  const kindIdx   = headers.findIndex(h => h.includes('種類'))
-  const addrIdx   = headers.findIndex(h => h.includes('地址'))
-  const specIdx   = headers.findIndex(h => h.includes('科別'))
-  const termIdx   = headers.findIndex(h => h.includes('終止') || h.includes('歇業'))
-
-  if (codeIdx < 0 || nameIdx < 0) throw new Error(`NHI 找不到必要欄位`)
-
-  const result = new Map()  // key = 機構代碼
-  for (let i = 1; i < lines.length; i++) {
-    const cols = parseCSVLine(lines[i])
-    if (cols.length < 3) continue
-    const kind = kindIdx >= 0 ? cols[kindIdx]?.trim() : ''
-    if (!DENTAL_TYPES.has(kind)) continue
-    const code = cols[codeIdx]?.trim()
-    if (!code) continue
-    result.set(code, {
-      source:   'nhi',
-      kind,
-      name:     cols[nameIdx]?.trim()  ?? '',
-      address:  addrIdx >= 0 ? cols[addrIdx]?.trim()  ?? '' : '',
-      specialty:specIdx >= 0 ? cols[specIdx]?.trim()  ?? '' : '',
-      termDate: termIdx >= 0 ? cols[termIdx]?.trim()  ?? '' : '',
-    })
-  }
-
-  log(`  牙醫診所：${result.size} 間`)
-  return result
-}
-
-function parseCSVLine(line) {
-  const result = []; let cur = '', inQ = false
-  for (const ch of line) {
-    if (ch === '"')              inQ = !inQ
-    else if (ch === ',' && !inQ) { result.push(cur); cur = '' }
-    else                         cur += ch
-  }
-  result.push(cur)
-  return result
-}
-
-// ── 1b. 有牙科的醫院（NHI 醫學中心/區域醫院/地區醫院 CSV）────────────────────
-async function fetchDentalHospitals() {
-  log('【NHI】下載有牙科的醫院（醫學中心/區域醫院/地區醫院）…')
-  const result = new Map()  // key = 機構代碼
-  for (const url of HOSPITAL_APIS) {
-    try {
-      const res = await fetch(url, { headers: { Accept: 'text/csv,*/*' }, signal: AbortSignal.timeout(60_000) })
-      if (!res.ok) { warn(`醫院 CSV → HTTP ${res.status}`); continue }
-      const lines = (await res.text()).split('\n').filter(l => l.trim())
-      if (lines.length < 2) continue
-      const h = parseCSVLine(lines[0])
-      const codeIdx = h.findIndex(x => x.includes('代碼'))
-      const nameIdx = h.findIndex(x => x.includes('名稱'))
-      const kindIdx = h.findIndex(x => x.includes('種類'))
-      const addrIdx = h.findIndex(x => x.includes('地址'))
-      const specIdx = h.findIndex(x => x.includes('科別'))
-      const termIdx = h.findIndex(x => x.includes('終止') || x.includes('歇業'))
-      if (codeIdx < 0 || nameIdx < 0 || specIdx < 0) continue
-      for (let i = 1; i < lines.length; i++) {
-        const c = parseCSVLine(lines[i])
-        const spec = specIdx >= 0 ? (c[specIdx] ?? '') : ''
-        if (!DENTAL_SPECIALTY.test(spec)) continue   // 只納有牙科的醫院
-        const code = c[codeIdx]?.trim()
-        if (!code) continue
-        result.set(code, {
-          source:   'nhi',
-          kind:     '醫院',
-          name:     c[nameIdx]?.trim() ?? '',
-          address:  addrIdx >= 0 ? c[addrIdx]?.trim() ?? '' : '',
-          specialty:'牙科',
-          termDate: termIdx >= 0 ? c[termIdx]?.trim() ?? '' : '',
-        })
-      }
-    } catch (e) {
-      warn('醫院 CSV 取得失敗：', e.message)
-    }
-  }
-  log(`  有牙科的醫院：${result.size} 間`)
-  return result
-}
-
-// ── 2. 牙體技術所（MOHW BAS 網頁）──────────────────────────────────────────
-
-// HTML entity decode（BAS 回傳的中文可能是 &#x...;（hex）或 &#...;（decimal））
-function decodeEntities(str) {
-  return str
-    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-}
+// ── BAS helpers ───────────────────────────────────────────────────────────────
 
 // 模擬瀏覽器的共用 headers（WAF 偵測用）
 const BROWSER_HEADERS = {
@@ -172,222 +70,142 @@ const BROWSER_HEADERS = {
   'sec-ch-ua-platform': '"macOS"',
 }
 
-/**
- * 從 BASBasicData 詳細頁取出機構代碼（10 位數字）。
- * basSeq / zoneSeq 傳入 HTML href 中取出的原始字串（保留 URL 編碼，直接拼接）。
- * cookieStr 為搜尋頁取得的 session cookie，避免 WAF 拒絕。
- */
-async function fetchLabCode(basSeq, zoneSeq, cookieStr) {
+// HTML entity decode（BAS 回傳的中文常是 &#x...;（hex）或 &#...;（decimal））
+function decodeEntities(str) {
+  return str
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+}
+
+/** 取首頁 → CSRF token、CAPTCHA 答案、session cookie（單一 session 不可重用於多次列表查詢，故每查詢重取）*/
+async function getSession() {
+  const res = await fetch(MOHW_SEARCH, {
+    headers: { ...BROWSER_HEADERS, 'Upgrade-Insecure-Requests': '1' },
+    signal: AbortSignal.timeout(120_000),
+  })
+  if (!res.ok) throw new Error(`MOHW 首頁 → HTTP ${res.status}`)
+  const html = await res.text()
+  const cookieStr = (res.headers.getSetCookie?.() ?? []).map(c => c.split(';')[0]).join('; ')
+  const csrf  = (html.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/) ??
+                 html.match(/value="(CfDJ[^"]+)"/))?.[1]
+  const vcode = html.match(/data-code="([^"]+)"/)?.[1]
+  if (!csrf || !vcode) throw new Error('無法取得 CSRF token 或 CAPTCHA code（WAF 或頁面改版）')
+  return { cookieStr, csrf, vcode }
+}
+
+/** POST 列表查詢（全台）→ [{ name, city, dist, basSeq, zoneSeq }]。失敗時 throw 由呼叫端決定沿用上月。*/
+async function fetchList({ kind, dep, session }) {
+  const params = new URLSearchParams({
+    __RequestVerificationToken: session.csrf,
+    BAS_KIND:       kind,
+    ZONE_AREA_CODE: '全部',
+    ZONE_ZIP_CODE:  '全部',
+    DEP_DEPT_ID:    dep,
+    BAS_NAME:       '',
+    txtVCode:       session.vcode,
+  })
+  const res = await fetch(MOHW_RESULTS, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: {
+      ...BROWSER_HEADERS,
+      'Content-Type':   'application/x-www-form-urlencoded',
+      'Cookie':         session.cookieStr,
+      'Referer':        MOHW_SEARCH,
+      'Origin':         'https://ma.mohw.gov.tw',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'same-origin',
+      'sec-fetch-user': '?1',
+      'Cache-Control':  'max-age=0',
+    },
+    body: params.toString(),
+    signal: AbortSignal.timeout(180_000),
+  })
+  if (!res.ok) throw new Error(`MOHW 列表 → HTTP ${res.status}`)
+  const html = await res.text()
+
+  const rows = []
+  for (const m of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
+    const cells = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c =>
+      decodeEntities(c[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim())
+    )
+    if (cells.length < 4) continue
+    const name = cells[1]?.trim()
+    if (!name || name === '機構名稱') continue
+    const basSeq = m[1].match(/BAS_SEQ=([^&"]+)/)?.[1]
+    if (!basSeq) continue
+    rows.push({
+      name,
+      city:    cells[2]?.trim() ?? '',
+      dist:    cells[3]?.trim() ?? '',
+      basSeq,
+      zoneSeq: m[1].match(/ZONE_SEQ=([^&"]+)/)?.[1] ?? '',
+    })
+  }
+  return rows
+}
+
+/** 列表查詢含重試（每次重取 session）；最終仍失敗則回 null（呼叫端沿用上月）*/
+async function fetchListWithRetry({ kind, dep, label }, deadline, maxRetry = 2) {
+  for (let attempt = 1; attempt <= maxRetry; attempt++) {
+    if (Date.now() > deadline) { warn(`${label} 列表：已逾時間預算，略過`); return null }
+    try {
+      const session = await getSession()
+      const rows = await fetchList({ kind, dep, session })
+      if (rows.length === 0) throw new Error('回傳 0 筆（疑似被 WAF 擋）')
+      log(`  ${label}：列表 ${rows.length} 筆`)
+      return { rows, session }
+    } catch (e) {
+      if (attempt < maxRetry) { warn(`${label} 列表第 ${attempt} 次失敗（${e.message}），5 秒後重試…`); await sleep(5_000) }
+      else                    { warn(`${label} 列表最終失敗（${e.message}），將沿用上月資料`); return null }
+    }
+  }
+  return null
+}
+
+/** 詳細頁 → { code, status }（機構代碼 + 開業狀態）*/
+async function fetchDetail(basSeq, zoneSeq, cookieStr) {
   const url = `${MOHW_DETAIL}?BAS_SEQ=${basSeq}&ZONE_SEQ=${zoneSeq}`
   try {
     const res = await fetch(url, {
-      headers: {
-        ...BROWSER_HEADERS,
-        'Cookie':  cookieStr,
-        'Referer': MOHW_RESULTS,
-      },
-      signal: AbortSignal.timeout(15_000),
+      headers: { ...BROWSER_HEADERS, 'Cookie': cookieStr, 'Referer': MOHW_RESULTS },
+      signal: AbortSignal.timeout(20_000),
     })
     if (!res.ok) return null
     const html = decodeEntities(await res.text())
-    // BAS 機構代碼為英數混合（如 2Y07110045），放在機構代碼標籤後的 col-7 span 中
-    const m = html.match(/機構代碼[\s\S]{0,400}?<span[^>]*>\s*([A-Za-z0-9]{5,20})\s*<\/span>/)
-    return m ? m[1] : null
+    const code   = html.match(/機構代碼[\s\S]{0,400}?<span[^>]*>\s*([A-Za-z0-9]{5,20})\s*<\/span>/)?.[1] ?? null
+    const status = html.match(/開業狀態[\s\S]{0,200}?<span[^>]*>\s*([^<]{1,20}?)\s*<\/span>/)?.[1]?.trim() ?? ''
+    if (!code) return null
+    return { code, status }
   } catch {
     return null
   }
 }
 
-async function fetchDentalLabsOnce(deadline = Infinity) {
-  // Step 1: 取首頁，抓 CSRF token + CAPTCHA code（直接放在 img[data-code]）
-  const pageRes = await fetch(MOHW_SEARCH, {
-    headers: { ...BROWSER_HEADERS, 'Upgrade-Insecure-Requests': '1' },
-    signal: AbortSignal.timeout(120_000),
-  })
-  if (!pageRes.ok) throw new Error(`MOHW 首頁 → HTTP ${pageRes.status}`)
+const isClosedStatus = (s) => /停業|歇業|撤銷|註銷|廢止/.test(s ?? '')
+const isOpenStatus   = (s) => !!s && !isClosedStatus(s)
 
-  const pageHtml = await pageRes.text()
-
-  // 正確解析 cookie：取 name=value，去除 Path/HttpOnly 等屬性
-  const rawCookies = pageRes.headers.getSetCookie?.() ?? []
-  const cookieStr  = rawCookies.map(c => c.split(';')[0]).join('; ')
-
-  const csrf  = (pageHtml.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/) ??
-                 pageHtml.match(/value="(CfDJ[^"]+)"/))?.[1]
-  const vcode = pageHtml.match(/data-code="([^"]+)"/)?.[1]
-
-  if (!csrf || !vcode) throw new Error('無法取得 CSRF token 或 CAPTCHA code')
-  log(`  CAPTCHA: ${vcode}`)
-
-  // Step 2: POST 搜尋（BAS_KIND=2 → 牙體技術所，全台）
-  const params = new URLSearchParams({
-    __RequestVerificationToken: csrf,
-    BAS_KIND:       '2',
-    ZONE_AREA_CODE: '全部',
-    ZONE_ZIP_CODE:  '全部',
-    DEP_DEPT_ID:    '全部',
-    BAS_NAME:       '',
-    txtVCode:       vcode,
-  })
-  const resHtml = await fetch(MOHW_RESULTS, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      ...BROWSER_HEADERS,
-      'Content-Type':    'application/x-www-form-urlencoded',
-      'Cookie':          cookieStr,
-      'Referer':         MOHW_SEARCH,
-      'Origin':          'https://ma.mohw.gov.tw',
-      'sec-fetch-dest':  'document',
-      'sec-fetch-mode':  'navigate',
-      'sec-fetch-site':  'same-origin',
-      'sec-fetch-user':  '?1',
-      'Cache-Control':   'max-age=0',
-    },
-    body: params.toString(),
-    signal: AbortSignal.timeout(180_000),
-  })
-  if (!resHtml.ok) throw new Error(`MOHW 搜尋結果 → HTTP ${resHtml.status}`)
-
-  const html = await resHtml.text()
-
-  // Step 3: 解析列表，收集 {name, city, dist, basSeq, zoneSeq}
-  const rawLabs = []
-  const rowRe   = /<tr[^>]*>([\s\S]*?)<\/tr>/g
-  let match
-  while ((match = rowRe.exec(html)) !== null) {
-    const row   = match[1]
-    const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m =>
-      decodeEntities(m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim())
-    )
-    if (cells.length < 4) continue
-
-    const name = cells[1]?.trim()
-    const city = cells[2]?.trim()
-    const dist = cells[3]?.trim()
-    if (!name || name === '機構名稱') continue
-
-    // 從連結取出 BAS_SEQ + ZONE_SEQ（保留原始 URL 編碼，直接拼接至詳細頁 URL）
-    const rawSeq  = row.match(/BAS_SEQ=([^&"]+)/)?.[1]
-    const rawZone = row.match(/ZONE_SEQ=([^&"]+)/)?.[1]
-    if (!rawSeq) continue
-
-    rawLabs.push({
-      name, city, dist,
-      basSeq:  rawSeq,
-      zoneSeq: rawZone ?? '',
-    })
-  }
-
-  log(`  列表解析完成：${rawLabs.length} 間牙體技術所`)
-  log('  開始從詳細頁取機構代碼（每批 5 筆並行）…')
-
-  // Step 4: 批次並行抓 BASBasicData，取得真正的「機構代碼」
-  const CONCURRENCY = 8
-  const result = new Map()  // key = 機構代碼
-  let fetched = 0, noCode = 0
-  let timedOut = false
-
-  for (let i = 0; i < rawLabs.length; i += CONCURRENCY) {
-    // 時間預算到點：標記未完成並中止（呼叫端會改沿用上月資料，不讓本月歸零/誤判）
-    if (Date.now() > deadline) {
-      warn(`BAS 詳細頁已達時間上限，本次視為未完整（剩 ${rawLabs.length - i} 筆未取）`)
-      timedOut = true
-      break
-    }
-    const batch = rawLabs.slice(i, i + CONCURRENCY)
-    const codes = await Promise.all(
-      batch.map(lab => fetchLabCode(lab.basSeq, lab.zoneSeq, cookieStr))
-    )
-
-    for (let j = 0; j < batch.length; j++) {
-      const lab  = batch[j]
-      const code = codes[j]
-      fetched++
-
-      if (code) {
-        result.set(code, {
-          source:    'bas',
-          kind:      '牙體技術所',
-          name:      lab.name,
-          address:   `${lab.city}${lab.dist}`,
-          specialty: '',
-          termDate:  '',
-        })
-      } else {
-        noCode++
-        // 取代碼失敗時以「名稱__縣市__區」當備用 key，讓快照不漏資料
-        // （但這個 key 不會和客戶代碼比對到，僅用來保留紀錄）
-        const fallback = `${lab.name}__${lab.city}__${lab.dist}`
-        result.set(fallback, {
-          source: 'bas', kind: '牙體技術所',
-          name: lab.name, address: `${lab.city}${lab.dist}`,
-          specialty: '', termDate: '',
-        })
-      }
-    }
-
-    // 每 100 筆 log 進度
-    if (fetched % 100 === 0 || fetched === rawLabs.length) {
-      log(`    進度：${fetched} / ${rawLabs.length}（失敗 ${noCode} 筆）`)
-    }
-
-    // 批次間短暫休息，避免對伺服器造成壓力
-    if (i + CONCURRENCY < rawLabs.length) await sleep(300)
-  }
-
-  log(`  牙體技術所完成：${result.size - noCode} 間有機構代碼，${noCode} 間取碼失敗`)
-  return { result, timedOut }
+/** 由醫療機構名稱推得顯示類別（A 類列表不分診所/醫院/衛生所，由名稱判斷）*/
+function classifyMedical(name) {
+  if (/醫院/.test(name))   return '醫院'
+  if (/衛生所/.test(name)) return '衛生所'
+  return '牙醫診所'
 }
 
-/** 最多重試 MAX_RETRY 次（每次重新取首頁 + CAPTCHA）；總時間以 deadline 控管，絕不讓 job 超時 */
-async function fetchDentalLabs(maxRetry = 2) {
-  log('【MOHW BAS】下載牙體技術所資料 …')
-  const deadline = Date.now() + 18 * 60_000  // 18 分鐘硬上限（保留時間給 NHI/Notion/snapshot）
-  for (let attempt = 1; attempt <= maxRetry; attempt++) {
-    try {
-      const { result, timedOut } = await fetchDentalLabsOnce(deadline)
-      // 完整 = 沒逾時 且 抓到合理數量（避免把空/極少資料當完整）
-      const complete = !timedOut && result.size > 0
-      return { labs: result, complete }
-    } catch (e) {
-      if (Date.now() > deadline) {
-        warn('BAS 已逾時間預算，放棄重試（將沿用上月牙技所資料）')
-        return { labs: new Map(), complete: false }
-      }
-      if (attempt < maxRetry) {
-        warn(`BAS 第 ${attempt} 次失敗（${e.message}），5 秒後重試 …`)
-        await sleep(5_000)
-      } else {
-        warn(`BAS 最終失敗（${e.message}），將沿用上月牙技所資料`)
-        return { labs: new Map(), complete: false }
-      }
-    }
-  }
-  return { labs: new Map(), complete: false }
-}
-
-// ── 3. 崧達客戶機構代碼 ────────────────────────────────────────────────────
+// ── 崧達客戶 ───────────────────────────────────────────────────────────────────
 
 async function fetchSongtahCustomers() {
-  if (!CUSTOMERS_DB) {
-    warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對')
-    return { byCode: new Map(), byName: new Map() }
-  }
+  if (!CUSTOMERS_DB) { warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對'); return { byCode: new Map(), byName: new Map() } }
   log('載入崧達客戶機構代碼 …')
-
-  const byCode = new Map()  // 機構代碼 → { name, pageId }
-  const byName = new Map()  // 機構名稱（正規化）→ { name, pageId, code }
+  const byCode = new Map()
+  const byName = new Map()
   let cursor
-
   do {
-    const body = {
-      page_size: 100,
-      filter: { property: '機構代碼', rich_text: { is_not_empty: true } },
-    }
+    const body = { page_size: 100, filter: { property: '機構代碼', rich_text: { is_not_empty: true } } }
     if (cursor) body.start_cursor = cursor
     const res = await notionPost(`/databases/${CUSTOMERS_DB}/query`, body)
-
     for (const page of res.results) {
       const code = getText(page, '機構代碼').trim()
       const name =
@@ -401,26 +219,23 @@ async function fetchSongtahCustomers() {
     }
     cursor = res.has_more ? res.next_cursor : null
   } while (cursor)
-
   log(`  有機構代碼的客戶：${byCode.size} 筆`)
   return { byCode, byName }
 }
 
-/** 名稱正規化（去空格、去常見後綴）用於模糊比對牙技所 */
+/** 名稱正規化（去空格、去常見後綴）用於模糊比對 */
 function normalizeName(name) {
   return name.replace(/\s+/g, '').replace(/有限公司|股份有限公司|診所|技術所|牙醫|牙體/g, '')
 }
 
-// ── 4. 比對 ─────────────────────────────────────────────────────────────────
+// ── 比對 ─────────────────────────────────────────────────────────────────────
 
 function buildChanges({ currentData, prevCodes, customers, month }) {
   const changes = []
   if (!prevCodes) { log('第一次執行，只建快照'); return changes }
-
   const prevSet    = new Set(Object.keys(prevCodes))
   const currentSet = new Set(currentData.keys())
 
-  // 上月有、本月沒有 → 停業
   for (const key of prevSet) {
     if (currentSet.has(key)) continue
     const prev = prevCodes[key]
@@ -428,62 +243,39 @@ function buildChanges({ currentData, prevCodes, customers, month }) {
     changes.push({
       type: cust ? '新增停業' : '停業',
       month, key,
-      name:     prev.name,
-      address:  prev.address ?? '',
-      specialty:prev.specialty ?? '',
-      kind:     prev.kind ?? '',
-      termDate: prev.termDate ?? '',
-      source:   prev.source ?? '',
-      customer:    cust?.name  ?? '',
-      customerUrl: cust ? custUrl(cust.pageId) : '',
+      name: prev.name, address: prev.address ?? '', specialty: prev.specialty ?? '',
+      kind: prev.kind ?? '', termDate: prev.termDate ?? '', source: prev.source ?? '',
+      customer: cust?.name ?? '', customerUrl: cust ? custUrl(cust.pageId) : '',
     })
   }
-
-  // 本月有、上月沒有 → 新開業 / 恢復開業
   for (const [key, info] of currentData) {
     if (prevSet.has(key)) continue
     const cust = matchCustomer(customers, key, info)
     changes.push({
       type: cust ? '恢復開業' : '新開業',
       month, key,
-      name:     info.name,
-      address:  info.address,
-      specialty:info.specialty,
-      kind:     info.kind,
-      termDate: info.termDate,
-      source:   info.source,
-      customer:    cust?.name  ?? '',
-      customerUrl: cust ? custUrl(cust.pageId) : '',
+      name: info.name, address: info.address, specialty: info.specialty,
+      kind: info.kind, termDate: info.termDate, source: info.source,
+      customer: cust?.name ?? '', customerUrl: cust ? custUrl(cust.pageId) : '',
     })
   }
-
   return changes
 }
 
-/**
- * 比對客戶：
- * - NHI 牙醫診所：用機構代碼（key）比對 byCode
- * - MOHW 牙技所：key 是 BAS_SEQ，改用名稱模糊比對 byName
- */
 function matchCustomer(customers, key, info) {
   const { byCode, byName } = customers
-  // 先試代碼比對（NHI 資料的 key 就是機構代碼）
   if (byCode.has(key)) return byCode.get(key)
-  // 再試名稱比對（牙技所用）
   const norm = normalizeName(info.name ?? '')
   if (norm && byName.has(norm)) return byName.get(norm)
   return null
 }
 
 function buildNotFoundList({ currentData, customers, prevCodes }) {
-  // 第一次執行（無 snapshot）時跳過，避免把所有不在 NHI 的客戶都誤報為查無代碼
   if (!prevCodes) return []
-
   const result = []
   for (const [code, cust] of customers.byCode) {
     if (!currentData.has(code)) {
-      // 上月也查不到 → 已知問題，不重複寫入
-      if (code in prevCodes) continue
+      if (code in prevCodes) continue   // 上月也查不到 → 不重複寫入
       result.push({ type: '查無代碼', code, customer: cust.name, customerUrl: custUrl(cust.pageId) })
     }
   }
@@ -492,15 +284,13 @@ function buildNotFoundList({ currentData, customers, prevCodes }) {
 
 const custUrl = id => `https://songtah-quote.vercel.app/customers/${id}`
 
-// ── 5. 寫入 Notion ───────────────────────────────────────────────────────────
+// ── Notion ────────────────────────────────────────────────────────────────────
 
 const DELAY_MS = 340
-
-async function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+const richText = t => [{ type: 'text', text: { content: String(t ?? '').slice(0, 2000) } }]
 
 async function writeRecord(rec) {
   if (DRY_RUN) { log(`  [DRY] ${rec.type} | ${rec.name || rec.customer}`); return }
-
   const title = {
     '新增停業': `🚨 ${rec.name}（${rec.customer}）`,
     '恢復開業': `✅ ${rec.name}（${rec.customer}）`,
@@ -510,32 +300,24 @@ async function writeRecord(rec) {
     '月份摘要': rec.name,
   }[rec.type] ?? `${rec.type}｜${rec.name}`
 
-  const kindLabel = rec.kind === '牙體技術所' ? '牙體技術所' : (rec.kind || '')
   const props = {
     '標題':    { title:  richText(title) },
     '異動類型':{ select: { name: rec.type } },
   }
   if (rec.month)       props['月份']     = { date: { start: rec.month + '-01' } }
-  if (rec.key || rec.code)
-                       props['機構代碼'] = { rich_text: richText(rec.key || rec.code || '') }
+  if (rec.key || rec.code) props['機構代碼'] = { rich_text: richText(rec.key || rec.code || '') }
   if (rec.name)        props['健保名稱'] = { rich_text: richText(rec.name) }
   if (rec.customer)    props['客戶名稱'] = { rich_text: richText(rec.customer) }
   if (rec.address)     props['地址']     = { rich_text: richText(rec.address) }
-  if (rec.specialty || kindLabel)
-                       props['診療科別'] = { rich_text: richText(rec.specialty || kindLabel) }
+  if (rec.specialty || rec.kind) props['診療科別'] = { rich_text: richText(rec.specialty || rec.kind) }
   if (rec.customerUrl) props['客戶頁面'] = { url: rec.customerUrl }
   if (rec.termDate && /^\d{8}$/.test(rec.termDate)) {
     const d = rec.termDate
     props['終止日期'] = { date: { start: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` } }
   }
-
   await notionPost('/pages', { parent: { database_id: CLINIC_MONITOR_DB }, properties: props })
   await sleep(DELAY_MS)
 }
-
-// ── 6. Notion helpers ────────────────────────────────────────────────────────
-
-const richText = t => [{ type: 'text', text: { content: String(t ?? '').slice(0, 2000) } }]
 
 async function notionPost(path, body) {
   const res = await fetch(`https://api.notion.com/v1${path}`, {
@@ -555,8 +337,15 @@ async function notionPost(path, body) {
   return res.json()
 }
 
-const getText = (page, f) =>
-  page.properties[f]?.rich_text?.map(t => t.plain_text).join('') ?? ''
+const getText = (page, f) => page.properties[f]?.rich_text?.map(t => t.plain_text).join('') ?? ''
+
+// ── 快取 ──────────────────────────────────────────────────────────────────────
+
+function loadCache() {
+  if (!existsSync(CACHE_PATH)) return {}
+  try { return JSON.parse(readFileSync(CACHE_PATH, 'utf8')) } catch { warn('解析 bas-cache 失敗，視為空'); return {} }
+}
+const cacheKeyOf = (basSeq, zoneSeq) => `${basSeq}__${zoneSeq}`
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
@@ -564,136 +353,164 @@ async function main() {
   if (!NOTION_TOKEN)      throw new Error('缺少 NOTION_TOKEN')
   if (!CLINIC_MONITOR_DB) throw new Error('缺少 NOTION_CLINIC_MONITOR_DB')
 
+  const startedAt = Date.now()
+  const deadline  = startedAt + TOTAL_BUDGET_MS
   const today = new Date()
   const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
-  log(`月份：${month}${DRY_RUN ? '（DRY RUN）' : ''}`)
+  log(`月份：${month}${DRY_RUN ? '（DRY RUN）' : ''}　來源：衛福部醫事查詢系統(BAS)`)
 
-  // 1. 上月 snapshot
+  // 1. 上月快照 + 持久代碼快取
   let prevSnapshot = null
   if (existsSync(SNAPSHOT_PATH)) {
-    try {
-      prevSnapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8'))
-      log(`上月快照：${Object.keys(prevSnapshot.codes ?? {}).length} 筆（${prevSnapshot.month}）`)
-    } catch (e) { warn('解析 snapshot 失敗，視為首次執行') }
-  } else {
-    log('無 snapshot，首次執行')
+    try { prevSnapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8')); log(`上月快照：${Object.keys(prevSnapshot.codes ?? {}).length} 筆（${prevSnapshot.month}）`) }
+    catch { warn('解析 snapshot 失敗，視為首次執行') }
+  } else { log('無 snapshot，首次執行') }
+  // 只有「上月也是 BAS 來源」才做月對月異動比對；換來源（如舊 NHI 快照）時 diff 無意義，
+  // 視為建立 BAS 基準（不寫一堆假停業/新開業到 Notion、不計增減）。
+  const prevComparable = prevSnapshot?.source === 'mohw-bas' ? prevSnapshot : null
+  if (prevSnapshot && !prevComparable) log('上月快照非 BAS 來源 → 本次建立 BAS 基準（不做異動比對）')
+  const cache = loadCache()
+  log(`代碼快取：${Object.keys(cache).length} 筆`)
+
+  // 2. 列表階段：每類別一次全台查詢（失敗 → 沿用上月該類別）
+  const lists = {}                 // kind label → { rows[], session }
+  const kindStale = {}             // label → true 表示本次列表失敗、沿用上月
+  for (const cfg of KIND_CONFIGS) {
+    const r = await fetchListWithRetry(cfg, deadline)
+    if (r) lists[cfg.label] = r
+    else   kindStale[cfg.label] = true
   }
 
-  // 2. 下載資料來源（並行）：牙醫診所、有牙科的醫院、牙體技術所
-  const [clinics, hospitals, labsResult] = await Promise.all([
-    fetchDentalClinics(),
-    fetchDentalHospitals().catch(e => { warn('醫院資料取得失敗：', e.message); return new Map() }),
-    fetchDentalLabs().catch(e => { warn('牙技所資料取得失敗：', e.message); return { labs: new Map(), complete: false } }),
-  ])
-
-  // 牙技所抓取不完整時 → 沿用上月資料，避免本月歸零/全部誤判為歇業
-  let labs = labsResult.labs
-  let labsStale = false
-  if (!labsResult.complete) {
-    const prevLabs = new Map()
-    for (const [k, v] of Object.entries(prevSnapshot?.codes ?? {})) {
-      if (v?.source === 'bas') prevLabs.set(k, v)
+  // 3. 詳細階段：抓「本次列表出現、但快取還沒有 code」的機構（時間預算內）
+  const pending = []
+  for (const cfg of KIND_CONFIGS) {
+    const r = lists[cfg.label]; if (!r) continue
+    for (const row of r.rows) {
+      const ck = cacheKeyOf(row.basSeq, row.zoneSeq)
+      if (!cache[ck]?.code) pending.push({ ...row, ck, cfg, cookieStr: r.session.cookieStr })
     }
-    if (prevLabs.size > 0) {
-      labs = prevLabs
-      labsStale = true
-      warn(`牙技所本次抓取不完整 → 沿用上月 ${prevLabs.size} 筆（標記為上月資料，避免歸零/誤判）`)
-    } else {
-      warn('牙技所本次抓取不完整且無上月資料可沿用，本月牙技所從缺')
+  }
+  log(`待抓詳細頁：${pending.length} 筆（快取已有則略過）`)
+
+  let fetched = 0, resolved = 0, timedOut = false
+  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    if (Date.now() > deadline) { warn(`詳細頁已達時間預算，本次剩 ${pending.length - i} 筆未抓（下次續抓）`); timedOut = true; break }
+    const batch = pending.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(batch.map(p => fetchDetail(p.basSeq, p.zoneSeq, p.cookieStr)))
+    for (let j = 0; j < batch.length; j++) {
+      const p = batch[j], d = results[j]
+      fetched++
+      const kind = p.cfg.kind === 'A' ? classifyMedical(p.name) : p.cfg.label
+      if (d?.code) {
+        cache[p.ck] = { code: d.code, status: d.status, name: p.name, address: `${p.city}${p.dist}`, kind, fetchedAt: today.toISOString() }
+        resolved++
+      }
+      // 抓不到 code 的不寫 cache → 下次再試
+    }
+    if (fetched % 200 === 0) log(`    詳細頁進度：${fetched} / ${pending.length}（解析 ${resolved}）`)
+    if (i + CONCURRENCY < pending.length) await sleep(300)
+  }
+  log(`詳細頁完成：本次解析 ${resolved} 筆${timedOut ? '（時間預算到，未完整）' : ''}`)
+
+  // 4. 建快照：以「本次列表集合」為準，從 cache 取 code；只收開業者。
+  //    列表失敗的類別 → 沿用上月該類別 codes。未解析者 → fallback key 保留。
+  const codes = {}
+  let pendingRemaining = 0
+  for (const cfg of KIND_CONFIGS) {
+    const r = lists[cfg.label]
+    if (!r) {
+      // 沿用上月該類別
+      for (const [code, e] of Object.entries(prevSnapshot?.codes ?? {})) {
+        if (categoryLabelMatches(e.kind, cfg)) codes[code] = e
+      }
+      continue
+    }
+    for (const row of r.rows) {
+      const ck = cacheKeyOf(row.basSeq, row.zoneSeq)
+      const ce = cache[ck]
+      const kind = cfg.kind === 'A' ? classifyMedical(row.name) : cfg.label
+      const addr = `${row.city}${row.dist}`
+      if (ce?.code) {
+        if (isOpenStatus(ce.status)) {
+          codes[ce.code] = { source: 'mohw', kind, name: row.name, address: addr, specialty: '', termDate: '', status: ce.status }
+        }
+        // 非開業 → 不收（代碼不在 snapshot ⇒ 觸發歇業候選），等同舊 termDate 機制
+      } else {
+        // 尚未解析到 code → 用名稱備用 key 保留（不會與客戶代碼比中），下次續抓
+        pendingRemaining++
+        codes[`${row.name}__${row.city}__${row.dist}`] = { source: 'mohw', kind, name: row.name, address: addr, specialty: '', termDate: '', status: '' }
+      }
     }
   }
 
-  // 合併（NHI key = 機構代碼，BAS key = 機構代碼或名稱備用 key）
-  const currentData = new Map([...clinics, ...hospitals, ...labs])
-  log(`\n合計：${clinics.size} 牙醫診所 ＋ ${hospitals.size} 有牙科醫院 ＋ ${labs.size} 牙技所${labsStale ? '（沿用上月）' : ''} ＝ ${currentData.size} 筆`)
+  // 各類別總數（供前端統計卡 / 較上月增減）
+  const totalClinics   = Object.values(codes).filter(e => e.kind === '牙醫診所' || e.kind === '衛生所').length
+  const totalHospitals = Object.values(codes).filter(e => e.kind === '醫院').length
+  const totalLabs      = Object.values(codes).filter(e => e.kind === '牙體技術所').length
+  const labsStale      = kindStale['牙體技術所'] === true
+  log(`\n快照：診所/衛生所 ${totalClinics}、醫院 ${totalHospitals}、牙技所 ${totalLabs}、合計 ${Object.keys(codes).length} 筆（未解析保留 ${pendingRemaining}）`)
 
-  // 3. 崧達客戶
-  const customers = await fetchSongtahCustomers().catch(e => {
-    warn('載入崧達客戶失敗：', e.message, '— 繼續執行（無客戶比對）')
-    return { byCode: new Map(), byName: new Map() }
-  })
+  // 5. 崧達客戶 + 比對
+  const customers = await fetchSongtahCustomers().catch(e => { warn('載入崧達客戶失敗：', e.message); return { byCode: new Map(), byName: new Map() } })
+  const currentData = new Map(Object.entries(codes))
+  const changes  = buildChanges({ currentData, prevCodes: prevComparable?.codes ?? null, customers, month })
+  const notFound = buildNotFoundList({ currentData, customers, prevCodes: prevComparable?.codes ?? null })
 
-  // 4. 比對
-  const changes  = buildChanges({ currentData, prevCodes: prevSnapshot?.codes ?? null, customers, month })
-  const notFound = buildNotFoundList({ currentData, customers, prevCodes: prevSnapshot?.codes ?? null })
+  const stopped  = changes.filter(c => c.type === '新增停業')
+  const restored = changes.filter(c => c.type === '恢復開業')
+  const newOpen  = changes.filter(c => c.type === '新開業')
+  const closed   = changes.filter(c => c.type === '停業')
+  log(`比對：新增停業 ${stopped.length}、恢復開業 ${restored.length}、新開業 ${newOpen.length}、停業 ${closed.length}、查無代碼 ${notFound.length}`)
 
-  const stopped       = changes.filter(c => c.type === '新增停業')
-  const restored      = changes.filter(c => c.type === '恢復開業')
-  const newOpen       = changes.filter(c => c.type === '新開業')
-  const closedNonCust = changes.filter(c => c.type === '停業')
-
-  const newOpenClinics = newOpen.filter(c => c.kind !== '牙體技術所')
-  const newOpenLabs    = newOpen.filter(c => c.kind === '牙體技術所')
-
-  log(`\n比對結果：`)
-  log(`  新增停業（客戶）：${stopped.length}`)
-  log(`  恢復開業（客戶）：${restored.length}`)
-  log(`  新開業（業務機會）：${newOpen.length}（牙醫診所 ${newOpenClinics.length}、牙技所 ${newOpenLabs.length}）`)
-  log(`  停業（非客戶）：${closedNonCust.length}`)
-  log(`  查無代碼：${notFound.length}`)
-
-  // 5. 寫入 Notion
-  if (CLINIC_MONITOR_DB) {
-    log('\n寫入 Notion …')
-
-    // 月份摘要
+  // 6. 寫入 Notion（失敗不影響快照寫出）
+  try {
+    log('寫入 Notion …')
     await writeRecord({
-      type: '月份摘要', month,
-      name: `${month} 月份摘要`,
+      type: '月份摘要', month, name: `${month} 月份摘要`,
       address: [
-        `牙醫診所：${clinics.size}`,
-        `牙體技術所：${labs.size}`,
-        `崧達客戶：${customers.byCode.size}`,
-        `客戶停業：${stopped.length}`,
-        `客戶恢復：${restored.length}`,
-        `新診所（業務）：${newOpenClinics.length}`,
-        `新牙技所（業務）：${newOpenLabs.length}`,
-        `停業（非客戶）：${closedNonCust.length}`,
-        `查無代碼：${notFound.length}`,
+        `診所/衛生所：${totalClinics}`, `醫院：${totalHospitals}`, `牙技所：${totalLabs}`,
+        `客戶：${customers.byCode.size}`, `客戶停業：${stopped.length}`, `客戶恢復：${restored.length}`,
+        `新開業：${newOpen.length}`, `停業：${closed.length}`, `查無代碼：${notFound.length}`,
+        timedOut || pendingRemaining ? `（未解析 ${pendingRemaining}，請再按更新醫事資料續抓）` : '（資料完整）',
       ].join('｜'),
       key: '', customer: '', customerUrl: '',
     })
-
-    // 客戶異動（優先）
     for (const c of [...stopped, ...restored]) await writeRecord(c)
-    // 業務開發新診所
     for (const c of newOpen) await writeRecord(c)
-    // 查無代碼
     for (const c of notFound) await writeRecord(c)
-
-    log(`寫入完成：${1 + stopped.length + restored.length + newOpen.length + notFound.length} 筆`)
+  } catch (e) {
+    warn('寫入 Notion 失敗（不影響快照）：', e.message)
   }
 
-  // 6. 更新 snapshot
+  // 7. 寫出快照 + 快取（永遠寫，確保 Action 綠燈且可續跑）
   if (!DRY_RUN) {
-    mkdirSync('data', { recursive: true })   // 確保目錄存在（首次執行時）
-
-    // 計算本月相較上月新增的代碼（真正新開業）
-    // 若無上月快照（首次執行）則 newCodes 為空陣列
-    const prevCodeSet = prevSnapshot?.codes ? new Set(Object.keys(prevSnapshot.codes)) : null
-    const newCodes = prevCodeSet
-      ? [...currentData.keys()].filter(k => !prevCodeSet.has(k))
-      : []
-    log(`本月新增代碼：${newCodes.length} 筆（vs 上月 ${prevCodeSet?.size ?? 0} 筆）`)
-
-    const codes = {}
-    for (const [k, v] of currentData) codes[k] = v
+    mkdirSync('data', { recursive: true })
+    const prevCodeSet = prevComparable?.codes ? new Set(Object.keys(prevComparable.codes)) : null
+    const newCodes = prevCodeSet ? [...currentData.keys()].filter(k => !prevCodeSet.has(k)) : []
     writeFileSync(SNAPSHOT_PATH, JSON.stringify({
-      month, fetchedAt: today.toISOString(),
-      totalClinics: clinics.size, totalLabs: labs.size, totalHospitals: hospitals.size,
-      labsStale,   // true = 本次牙技所抓取不完整、沿用上月資料
-      // 上月總數 → 供前端顯示「較上月增減」
-      prevTotalClinics:   prevSnapshot?.totalClinics,
-      prevTotalLabs:      prevSnapshot?.totalLabs,
-      prevTotalHospitals: prevSnapshot?.totalHospitals,
+      month, fetchedAt: today.toISOString(), source: 'mohw-bas',
+      totalClinics, totalLabs, totalHospitals,
+      labsStale,
+      pendingRemaining,                       // >0 表示尚未抓完，按更新醫事資料可續抓
+      prevTotalClinics:   prevComparable?.totalClinics,
+      prevTotalLabs:      prevComparable?.totalLabs,
+      prevTotalHospitals: prevComparable?.totalHospitals,
       totalCustomers: customers.byCode.size,
-      newCodes,   // 本月相較上月新增的機構代碼（真正新開業）
+      newCodes,
       codes,
     }, null, 2))
-    log(`\nSnapshot 更新：${currentData.size} 筆 → ${SNAPSHOT_PATH}`)
+    writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 1))
+    log(`Snapshot → ${SNAPSHOT_PATH}；Cache（${Object.keys(cache).length} 筆）→ ${CACHE_PATH}`)
   }
 
-  log('\n✅ 完成')
+  log('✅ 完成')
 }
 
-main().catch(err => { console.error('[clinic-monitor]', err); process.exit(1) })
+// 沿用上月時，判斷上月某 entry 是否屬於某 kind config 的類別
+function categoryLabelMatches(kind, cfg) {
+  if (cfg.kind === '2') return kind === '牙體技術所'
+  if (cfg.kind === 'L') return kind === '鑲牙所'
+  return kind === '牙醫診所' || kind === '醫院' || kind === '衛生所'  // A
+}
+
+main().catch(err => { console.error('[clinic-monitor] 致命錯誤：', err); process.exit(1) })

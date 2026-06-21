@@ -22,12 +22,13 @@ import path from 'path'
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface SnapshotEntry {
-  source:    'nhi' | 'bas'
+  source:    'nhi' | 'bas' | 'mohw'
   kind:      string
   name:      string
   address:   string
   specialty: string
   termDate:  string
+  status?:   string   // BAS 開業狀態（開業/停業/歇業…）；snapshot 只收開業者
 }
 
 export interface Snapshot {
@@ -99,20 +100,6 @@ export interface CodeChanged {
   snapshotAddress:  string
 }
 
-/** 未納入歇業判定：客戶有代碼但其機構「類型」不在快照資料源涵蓋範圍內
- *  （醫院快照尚未產生、衛生所/鑲牙所不在牙醫開放資料、或代碼未立案）→ 查無≠歇業 */
-export type UnmonitoredReason = 'pending_hospital_data' | 'source_not_covered' | 'invalid_code'
-export interface Unmonitored {
-  customerId:       string
-  customerName:     string
-  customerCity:     string
-  customerDistrict: string
-  customerType:     string
-  customerStatus:   string
-  institutionCode:  string
-  reason:           UnmonitoredReason
-}
-
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
@@ -171,7 +158,6 @@ export interface MonitorStats {
   codeNotFound:        number
   inconsistentData:    number
   codeChanged:         number
-  unmonitored:         number
 }
 
 export interface MonitorResult {
@@ -188,30 +174,19 @@ export interface MonitorResult {
   selfManagedCustomers:  SelfManagedCustomer[]
   inconsistentData:      InconsistentData[]
   codeChanged:           CodeChanged[]
-  unmonitored:           Unmonitored[]
   snapshotMonth:   string
   snapshotFetched: string
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const CLINIC_KINDS     = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所'])
-const LAB_KINDS        = new Set(['牙體技術所'])
+const CLINIC_KINDS     = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所', '衛生所'])
+const LAB_KINDS        = new Set(['牙體技術所', '鑲牙所'])
 
 function getCategory(kind: string): InstitutionCategory {
   if (LAB_KINDS.has(kind))    return 'lab'
   if (CLINIC_KINDS.has(kind)) return 'clinic'
   return 'hospital'
-}
-
-/** 由客戶「類型／名稱」推得其機構分類；用來判斷快照資料源是否涵蓋此類客戶。
- *  'other' = 衛生所／鑲牙所／同業等不在醫事開放資料涵蓋範圍的類型 */
-function customerCategoryOf(type: string, name: string): InstitutionCategory | 'other' {
-  const t = type || ''
-  if (/技術所|技工所/.test(t) || (!t && /技術所|技工所/.test(name))) return 'lab'
-  if (t === '醫院' || (!t && /醫院/.test(name)))                      return 'hospital'
-  if (/診所/.test(t))                                                 return 'clinic'
-  return 'other'
 }
 
 function parseAddress(address: string): { city: string; district: string } {
@@ -330,7 +305,7 @@ export async function GET(req: NextRequest) {
       stats: null,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
       normalOperating: [], suspectedClosures: [], codeNotFound: [],
-      selfManagedCustomers: [], inconsistentData: [], codeChanged: [], unmonitored: [],
+      selfManagedCustomers: [], inconsistentData: [], codeChanged: [],
       snapshotMonth: '', snapshotFetched: '',
     })
   }
@@ -375,11 +350,6 @@ export async function GET(req: NextRequest) {
     if (isValidCode(code)) snapshotByCode.set(code, { ...entry, code })
   }
 
-  // 快照「實際涵蓋的機構分類」：用來判斷某客戶類型查無代碼時，是「真的可能歇業」還是
-  // 「這個資料源根本不收這種機構」。目前快照只有 診所＋牙技所；醫院須重跑「更新醫事資料」才會納入。
-  const coveredCategories = new Set<InstitutionCategory>()
-  for (const entry of Object.values(codes)) coveredCategories.add(getCategory(entry.kind))
-
   // 地區索引：areaKey → [{code, entry, expired}]（換照找新碼用）
   const areaIndex = new Map<string, { code: string; entry: SnapshotEntry; expired: boolean }[]>()
   for (const [code, entry] of Array.from(snapshotByCode)) {
@@ -411,7 +381,6 @@ export async function GET(req: NextRequest) {
   const codeNotFound:      CodeNotFound[]      = []
   const inconsistentData:  InconsistentData[]  = []
   const codeChanged:       CodeChanged[]       = []
-  const unmonitored:       Unmonitored[]       = []
 
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
@@ -496,33 +465,15 @@ export async function GET(req: NextRequest) {
         oldCode: code, newCode: repl.code,
         snapshotName: repl.entry.name, snapshotAddress: repl.entry.address,
       })
-      continue
-    }
-
-    // 歇業候選前置守門：只有「快照資料源涵蓋的機構類型」且「代碼格式合法」時，
-    // 查無代碼才視為可能歇業。否則（醫院快照未產生、衛生所/鑲牙所不在牙醫開放資料、
-    // 代碼未立案）改歸「未納入歇業判定」，避免把仍在營業的單位誤報歇業。
-    const cat = customerCategoryOf(c.type, c.name)
-    if (!isValidCode(code) || cat === 'other' || !coveredCategories.has(cat)) {
-      unmonitored.push({
+    } else {
+      // 歇業候選（代碼消失且無同地區替代碼）
+      suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
-        institutionCode: code,
-        reason: !isValidCode(code) ? 'invalid_code'
-              : cat === 'hospital'  ? 'pending_hospital_data'
-              :                       'source_not_covered',
+        institutionCode: code, reason: 'code_vanished',
       })
-      continue
     }
-
-    // 歇業候選（涵蓋類型 + 合法代碼，但代碼從醫事資料消失且無同地區替代碼）
-    suspectedClosures.push({
-      customerId: c.id, customerName: c.name,
-      customerCity: c.city, customerDistrict: c.district,
-      customerType: c.type, customerStatus: c.status,
-      institutionCode: code, reason: 'code_vanished',
-    })
   }
 
   // ── 狀態 5：公司自建客戶（無機構代碼）────────────────────────────────────
@@ -605,7 +556,6 @@ export async function GET(req: NextRequest) {
     codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
     codeChanged:         codeChanged.length,
-    unmonitored:         unmonitored.length,
   }
 
   const result: MonitorResult = {
@@ -622,7 +572,6 @@ export async function GET(req: NextRequest) {
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
     inconsistentData,
     codeChanged,
-    unmonitored,
     snapshotMonth:   snapshot.month,
     snapshotFetched: snapshot.fetchedAt,
   }
