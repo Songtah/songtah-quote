@@ -1096,6 +1096,24 @@ export async function createSystemCustomer(data: {
   return { id: page.id }
 }
 
+// ── 醫事監控用：更新客戶「機構狀態」（開業/停業/已歇業/撤銷/狀況不明）──────────
+export async function updateCustomerStatus(id: string, status: string): Promise<void> {
+  await notionCallWithRetry('updateCustomerStatus', () =>
+    notion.pages.update({ page_id: id, properties: { '機構狀態': { select: { name: status } } } as any })
+  )
+  // 失效客戶快取，使下次比對讀到新狀態
+  deleteRedisValue('customers-with-codes-v1')
+}
+
+// ── 醫事監控：最近一次比對結果（伺服器端共用，跨裝置/不受清快取影響）──────────
+const MONITOR_RESULT_KEY = 'medical-monitor:last-result'
+export async function getCachedMonitorResult<T = unknown>(): Promise<T | null> {
+  return getRedisValue<T>(MONITOR_RESULT_KEY)
+}
+export async function setCachedMonitorResult(value: unknown): Promise<void> {
+  return setRedisValue(MONITOR_RESULT_KEY, value, 30 * 24 * 60 * 60_000) // 30 天
+}
+
 export async function getCustomerFilterOptions(): Promise<{
   cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {

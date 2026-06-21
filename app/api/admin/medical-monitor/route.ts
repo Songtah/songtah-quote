@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getCustomersWithCodes } from '@/lib/system-notion'
+import { getCustomersWithCodes, getCachedMonitorResult, setCachedMonitorResult } from '@/lib/system-notion'
 import { readFileSync, existsSync } from 'fs'
 import path from 'path'
 
@@ -181,7 +181,6 @@ export interface MonitorResult {
     labs:      NewOpening[]
     hospitals: NewOpening[]
   }
-  normalOperating:       NormalOperating[]
   suspectedClosures:     SuspectedClosure[]
   codeNotFound:          CodeNotFound[]
   selfManagedCustomers:  SelfManagedCustomer[]
@@ -190,6 +189,7 @@ export interface MonitorResult {
   hospitalUnverified:    HospitalUnverified[]
   snapshotMonth:   string
   snapshotFetched: string
+  computedAt:      string   // 本結果計算時間（ISO）；供「上次比對」顯示，伺服器端共用
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -305,6 +305,19 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
+  // 開頁（無 refresh）→ 直接回上次比對結果（伺服器端共用，跨裝置/不受清快取影響）。
+  const refresh = req.nextUrl.searchParams.get('refresh') === '1'
+  if (!refresh) {
+    const cached = await getCachedMonitorResult()
+    if (cached) return NextResponse.json(cached)
+  }
+
+  const result = await computeMonitor()
+  await setCachedMonitorResult(result)   // 「執行比對」或首次計算 → 存起來供下次開頁顯示
+  return NextResponse.json(result)
+}
+
+async function computeMonitor(): Promise<MonitorResult> {
   // 1. 讀快照
   const snapshotPath = path.join(process.cwd(), 'data', 'clinic-snapshot.json')
   let snapshot: Snapshot | null = null
@@ -314,14 +327,14 @@ export async function GET(req: NextRequest) {
   }
 
   if (!snapshot) {
-    return NextResponse.json({
+    return {
       hasSnapshot: false,
-      stats: null,
+      stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      normalOperating: [], suspectedClosures: [], codeNotFound: [],
+      suspectedClosures: [], codeNotFound: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
-      snapshotMonth: '', snapshotFetched: '',
-    })
+      snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
+    }
   }
 
   const codes           = snapshot.codes ?? {}
@@ -490,6 +503,9 @@ export async function GET(req: NextRequest) {
         oldCode: code, newCode: repl.code,
         snapshotName: repl.entry.name, snapshotAddress: repl.entry.address,
       })
+    } else if (/停業|歇業|撤銷/.test(c.status)) {
+      // 已人工確認結案（機構狀態已標停業/已歇業/撤銷）→ 不再列為候選
+      continue
     } else if (isHospital(c)) {
       // 醫院待確認：醫院多半仍營業，只是牙科未登記為「牙醫一般科」而不在 BAS A+51 清單，
       // 故不列歇業候選，改提示逐筆查衛福部確認牙科現況。
@@ -601,7 +617,6 @@ export async function GET(req: NextRequest) {
       labs:      newLab.slice(0, 200),
       hospitals: newHospital.slice(0, 100),
     },
-    normalOperating:      normalOperating.slice(0, 3000),
     suspectedClosures,
     codeNotFound:         [],
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
@@ -610,7 +625,8 @@ export async function GET(req: NextRequest) {
     hospitalUnverified,
     snapshotMonth:   snapshot.month,
     snapshotFetched: snapshot.fetchedAt,
+    computedAt:      new Date().toISOString(),
   }
 
-  return NextResponse.json(result)
+  return result
 }

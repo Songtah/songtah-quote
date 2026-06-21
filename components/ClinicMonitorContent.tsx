@@ -3,18 +3,21 @@
 import { useState, useMemo, useEffect } from 'react'
 import type {
   MonitorResult, NewOpening,
-  NormalOperating, SuspectedClosure, CodeNotFound,
+  SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, accent, delta }: {
-  label: string; value: number | string; sub?: string; accent?: string; delta?: number | null
+function StatCard({ label, value, sub, accent, delta, onClick }: {
+  label: string; value: number | string; sub?: string; accent?: string; delta?: number | null; onClick?: () => void
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col gap-1">
-      <span className="text-xs text-gray-400 font-medium">{label}</span>
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-2xl border border-gray-200 p-4 flex flex-col gap-1 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-brand-300 active:scale-[0.98] transition-all' : ''}`}
+    >
+      <span className="text-xs text-gray-400 font-medium flex items-center gap-1">{label}{onClick && <span className="text-stone-300">›</span>}</span>
       <span className="flex items-baseline gap-2">
         <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-gray-900'}`}>
           {typeof value === 'number' ? value.toLocaleString() : value}
@@ -154,103 +157,74 @@ function MohwLookupButton({ name, code, kind, customerStatus }: { name: string; 
   )
 }
 
-// ── Detail Modals ──────────────────────────────────────────────────────────────
+// ── 開業狀態編輯（連動 Notion「機構狀態」）────────────────────────────────────────
+const STATUS_OPTIONS = ['開業', '停業', '已歇業', '撤銷', '狀況不明']
 
-type DetailModalData =
-  | { kind: 'normal';       item: NormalOperating }
-  | { kind: 'closure';      item: SuspectedClosure }
-  | { kind: 'inconsistent'; item: InconsistentData }
+function StatusEditor({ customerId, current, onResolved }: {
+  customerId: string; current?: string; onResolved?: (id: string, status: string) => void
+}) {
+  const [val, setVal]       = useState(current || '')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg]       = useState('')
 
-function DetailModal({ data, onClose }: { data: DetailModalData; onClose: () => void }) {
-  const label =
-    data.kind === 'normal'       ? '✅ 既有正常營業' :
-    data.kind === 'closure'      ? '⛔ 歇業候選' :
-                                   '🔄 資料不一致'
-  const base = data.item  // common fields exist on all types
+  async function save(next: string) {
+    setVal(next); setSaving(true); setMsg('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, status: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMsg(data.error ?? '更新失敗'); return }
+      setMsg('✓ 已更新')
+      onResolved?.(customerId, next)
+    } catch (e: any) { setMsg(e?.message ?? '更新失敗') }
+    finally { setSaving(false) }
+  }
 
   return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[11px] text-stone-400">開業狀態</span>
+      <select value={val} onChange={e => save(e.target.value)} disabled={saving}
+        className="select-soft text-xs py-1.5 px-3 rounded-full disabled:opacity-50">
+        <option value="" disabled>選擇…</option>
+        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+      </select>
+      {saving && <span className="text-[11px] text-stone-400">儲存中…</span>}
+      {msg && <span className={`text-[11px] ${msg.startsWith('✓') ? 'text-emerald-600' : 'text-red-500'}`}>{msg}</span>}
+    </div>
+  )
+}
+
+// ── 類別彈窗（摘要卡點擊 → 卡片視窗顯示該類清單）──────────────────────────────────
+type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged'
+const CATEGORY_TITLE: Record<CategoryKey, string> = {
+  closure: '⛔ 疑似歇業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
+  inconsistent: '🔄 資料不一致', selfmanaged: '👤 公司自建',
+}
+
+function CategoryModal({ category, closureItems, hospitalItems, result, onClose, onResolved }: {
+  category: CategoryKey
+  closureItems: SuspectedClosure[]
+  hospitalItems: HospitalUnverified[]
+  result: MonitorResultPayload
+  onClose: () => void
+  onResolved: (id: string, status: string) => void
+}) {
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">{label}</p>
-            <h2 className="font-bold text-gray-900 text-lg leading-tight">{base.customerName}</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {base.customerCity}{base.customerDistrict && ` ${base.customerDistrict}`}
-              {base.customerType && ` · ${base.customerType}`}
-              {base.customerStatus && ` · ${base.customerStatus}`}
-            </p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">✕</button>
+      <div className="bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
+          <h2 className="font-bold text-stone-800 text-lg">{CATEGORY_TITLE[category]}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
         </div>
-
-        <div className="p-5 space-y-4">
-
-          {/* 狀態 1：既有正常營業 */}
-          {data.kind === 'normal' && (() => { const it = data.item; return (
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-              <p className="text-xs font-semibold text-gray-400 mb-2">醫事快照資訊</p>
-              <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
-              <Row label="快照名稱" value={it.snapshotName} />
-              <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
-              <Row label="地址"     value={it.snapshotAddress} />
-            </div>
-          )})()}
-
-          {/* 狀態 3：歇業候選 */}
-          {data.kind === 'closure' && (() => { const it = data.item; return (
-            <>
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 font-medium">
-                ⛔ 機構代碼已從醫事資料中消失，可能已歇業
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
-              </div>
-              <p className="text-xs text-gray-400">請查衛福部醫事查詢系統確認開業狀態；若為「停業／歇業」再至客戶頁面更新機構狀態。</p>
-              <MohwLookupButton name={it.customerName} code={it.institutionCode} customerStatus={it.customerStatus} />
-            </>
-          )})()}
-
-          {/* 狀態 6：資料不一致 */}
-          {data.kind === 'inconsistent' && (() => { const it = data.item; return (
-            <>
-              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800">
-                🔄 機構代碼相符，但以下欄位與醫事快照有落差，請確認是否需要同步
-              </div>
-              <div className="space-y-2">
-                {it.diffs.map((d: { field: string; customerValue: string; snapshotValue: string }) => (
-                  <div key={d.field} className="rounded-xl border border-gray-200 p-3">
-                    <p className="text-xs font-semibold text-gray-400 mb-1.5">{d.field}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-[10px] text-gray-400 mb-0.5">公司資料</p>
-                        <p className="text-sm text-gray-900 font-medium">{d.customerValue}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-gray-400 mb-0.5">醫事快照</p>
-                        <p className="text-sm text-gray-600">{d.snapshotValue}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                <p className="text-xs font-semibold text-gray-400 mb-2">完整快照資料</p>
-                <Row label="機構代碼" value={<code className="font-mono text-xs bg-white border border-gray-200 px-1.5 py-0.5 rounded">{it.institutionCode}</code>} />
-                <Row label="快照名稱" value={it.snapshotName} />
-                <Row label="類型"     value={<TypeChip kind={it.snapshotKind} />} />
-                <Row label="地址"     value={it.snapshotAddress} />
-              </div>
-              <MohwLookupButton name={it.customerName} code={it.institutionCode} kind={it.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={it.customerStatus} />
-            </>
-          )})()}
-        </div>
-
-        <div className="px-5 pb-5 flex justify-end">
-          <a href={`/customers/${base.customerId}`} target="_blank" rel="noreferrer"
-            className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700">
-            前往客戶頁面 →
-          </a>
+        <div className="p-5 overflow-y-auto">
+          {category === 'closure'      && <SuspectedClosuresTab items={closureItems} onResolved={onResolved} />}
+          {category === 'hospital'     && <HospitalUnverifiedTab items={hospitalItems} onResolved={onResolved} />}
+          {category === 'codechange'   && <CodeChangedTab items={result.codeChanged ?? []} />}
+          {category === 'inconsistent' && <InconsistentDataTab items={result.inconsistentData} />}
+          {category === 'selfmanaged'  && <SelfManagedTab items={result.selfManagedCustomers} />}
         </div>
       </div>
     </div>
@@ -428,65 +402,11 @@ function NewOpeningRow({ inst, selected, onToggle }: {
   )
 }
 
-// ── 狀態 1：既有正常營業 Tab ───────────────────────────────────────────────────
-
-function NormalOperatingTab({ items, onOpen }: {
-  items: NormalOperating[]
-  onOpen: (item: NormalOperating) => void
-}) {
-  const [search, setSearch] = useState('')
-  const filtered = search.trim()
-    ? items.filter(i => i.customerName.includes(search) || i.institutionCode.includes(search) || i.customerCity.includes(search))
-    : items
-
-  if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
-      <div className="text-3xl mb-3">📋</div>
-      <p>尚無代碼對應到快照的客戶</p>
-    </div>
-  )
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="搜尋客戶名稱 / 代碼 / 縣市…"
-          className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <span className="text-xs text-gray-400 shrink-0">{filtered.length} / {items.length} 筆</span>
-      </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
-        {filtered.slice(0, 300).map(item => (
-          <button key={item.customerId} onClick={() => onOpen(item)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                <TypeChip kind={item.snapshotKind} />
-              </div>
-              <div className="text-xs text-gray-400 mt-0.5">
-                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                {item.snapshotAddress && ` · ${item.snapshotAddress}`}
-              </div>
-            </div>
-            <ChevronRight />
-          </button>
-        ))}
-        {filtered.length > 300 && (
-          <div className="px-4 py-3 text-xs text-gray-400 text-center">顯示前 300 筆，請搜尋縮小範圍</div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── 狀態 3：已歇業 Tab ─────────────────────────────────────────────────────────
 
-function SuspectedClosuresTab({ items, onOpen }: {
+function SuspectedClosuresTab({ items, onResolved }: {
   items: SuspectedClosure[]
-  onOpen: (item: SuspectedClosure) => void
+  onResolved?: (id: string, status: string) => void
 }) {
   if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
@@ -498,26 +418,30 @@ function SuspectedClosuresTab({ items, onOpen }: {
   return (
     <div className="space-y-3">
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-        ⛔ 以下客戶原本有機構代碼，但最新醫事資料已查無該代碼。請查衛福部確認開業狀態，若為停業／歇業再人工更新。
+        ⛔ 以下客戶有機構代碼，但不在衛福部開業清單中。可「查衛福部」確認，並直接編輯開業狀態（會寫回 Notion 機構狀態；標停業／已歇業／撤銷後此筆即結案移除）。
       </div>
       <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
         {items.map(item => (
-          <button key={item.customerId} onClick={() => onOpen(item)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold">代碼消失</span>
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  {item.customerStatus && ` · 目前：${item.customerStatus}`}
+                </div>
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">
-                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                {item.customerStatus && ` · ${item.customerStatus}`}
-              </div>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
             </div>
-            <ChevronRight />
-          </button>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -578,10 +502,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
 
 // ── 狀態 6：資料不一致 Tab ─────────────────────────────────────────────────────
 
-function InconsistentDataTab({ items, onOpen }: {
-  items: InconsistentData[]
-  onOpen: (item: InconsistentData) => void
-}) {
+function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
   if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -591,30 +512,38 @@ function InconsistentDataTab({ items, onOpen }: {
   return (
     <div className="space-y-3">
       <div className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
-        🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請點擊查看差異並確認是否需要更新。
+        🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請確認是否需要更新。
       </div>
       <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
         {items.map(item => (
-          <button key={item.customerId} onClick={() => onOpen(item)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                <TypeChip kind={item.snapshotKind} />
-                {item.diffs.map(d => (
-                  <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">
-                    {d.field}不符
-                  </span>
-                ))}
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                  <TypeChip kind={item.snapshotKind} />
+                  {item.diffs.map(d => (
+                    <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">{d.field}不符</span>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  {' · 快照：'}<span className="text-gray-600">{item.snapshotName}</span>
+                </div>
+                <div className="mt-1.5 space-y-1">
+                  {item.diffs.map(d => (
+                    <div key={d.field} className="text-[11px] text-gray-500">
+                      <span className="text-gray-400">{d.field}：</span>
+                      公司「<span className="text-gray-800">{d.customerValue}</span>」／快照「<span className="text-gray-600">{d.snapshotValue}</span>」
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">
-                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                {' · 快照：'}<span className="text-gray-600">{item.snapshotName}</span>
-              </div>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
             </div>
-            <ChevronRight />
-          </button>
+            <div className="mt-2"><MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} /></div>
+          </div>
         ))}
       </div>
     </div>
@@ -660,7 +589,7 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 }
 
 // ── 醫院待確認 Tab ──────────────────────────────────────────────────────────────
-function HospitalUnverifiedTab({ items }: { items: HospitalUnverified[] }) {
+function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverified[]; onResolved?: (id: string, status: string) => void }) {
   if (items.length === 0) return (
     <div className="py-12 text-center text-gray-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -689,7 +618,10 @@ function HospitalUnverifiedTab({ items }: { items: HospitalUnverified[] }) {
               </div>
               <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
             </div>
-            <div className="mt-2"><MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} /></div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} />
+            </div>
           </div>
         ))}
       </div>
@@ -699,10 +631,8 @@ function HospitalUnverifiedTab({ items }: { items: HospitalUnverified[] }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const CACHE_KEY     = 'clinic-monitor-result-v12'
-const CACHE_TAB_KEY = 'clinic-monitor-tab-v4'
+const CACHE_KEY     = 'clinic-monitor-result-v13'
 
-type MainTab = 'new' | 'normal' | 'closure' | 'selfmanaged' | 'inconsistent' | 'codechange' | 'hospital'
 type MonitorResultPayload = Omit<MonitorResult, 'stats'> & { stats: MonitorStats | null }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -763,7 +693,6 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     return null
   }
   if (
-    !isArray(value.normalOperating) ||
     !isArray(value.suspectedClosures) ||
     !isArray(value.codeNotFound) ||
     !isArray(value.selfManagedCustomers) ||
@@ -785,7 +714,6 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
       labs: value.newOpenings.labs as NewOpening[],
       hospitals: value.newOpenings.hospitals as NewOpening[],
     },
-    normalOperating: value.normalOperating as NormalOperating[],
     suspectedClosures: value.suspectedClosures as SuspectedClosure[],
     codeNotFound: value.codeNotFound as CodeNotFound[],
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
@@ -794,11 +722,11 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     hospitalUnverified,
     snapshotMonth: readString(value.snapshotMonth),
     snapshotFetched: readString(value.snapshotFetched),
+    computedAt: readString(value.computedAt),
   }
 }
 
 export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
-  const [tab, setTab]               = useState<MainTab>('new')
   const [result, setResult]         = useState<MonitorResultPayload | null>(null)
   const [cachedAt, setCachedAt]     = useState<string | null>(null)
   const [loading, setLoading]       = useState(false)
@@ -806,65 +734,67 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [triggering, setTriggering] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState('')
 
+  // 點擊摘要卡開啟的類別彈窗
+  const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
+  // 已在彈窗內編輯開業狀態而結案的客戶（樂觀移除）
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
+
   // 新開業 匯入
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [showPreview, setShowPreview]   = useState(false)
   const [importing, setImporting]       = useState(false)
   const [importResult, setImportResult] = useState('')
 
-  // Detail modal
-  const [detailModal, setDetailModal] = useState<DetailModalData | null>(null)
+  function applyResult(data: MonitorResultPayload, when: string) {
+    setResult(data); setCachedAt(when); setResolvedIds(new Set())
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: when })) } catch {}
+  }
 
-  // ── 還原 localStorage ─────────────────────────────────────────────────────────
+  // ── 開頁：先取伺服器端「最近一次比對結果」（共用、不受清快取影響）；無則 localStorage 備援 ──
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CACHE_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw) as { data?: unknown; timestamp?: unknown }
-      const restored = parseMonitorResult(parsed.data)
-      if (!restored) {
-        localStorage.removeItem(CACHE_KEY)
-        return
-      }
-      setResult(restored)
-      setCachedAt(readString(parsed.timestamp) || new Date().toISOString())
-    } catch {
-      try { localStorage.removeItem(CACHE_KEY) } catch {}
-    }
-    try {
-      const savedTab = localStorage.getItem(CACHE_TAB_KEY) as MainTab | null
-      const validTabs: MainTab[] = ['new', 'normal', 'closure', 'selfmanaged', 'inconsistent', 'codechange', 'hospital']
-      if (savedTab && validTabs.includes(savedTab)) setTab(savedTab)
-    } catch {}
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/medical-monitor')   // 不帶 refresh → 回上次結果
+        if (res.ok) {
+          const payload = await res.json()
+          const data = parseMonitorResult(payload)
+          if (data && !cancelled) { applyResult(data, readString(payload.computedAt) || new Date().toISOString()); return }
+        }
+      } catch {}
+      // 備援：localStorage
+      try {
+        const raw = localStorage.getItem(CACHE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw) as { data?: unknown; timestamp?: unknown }
+        const restored = parseMonitorResult(parsed.data)
+        if (restored && !cancelled) { setResult(restored); setCachedAt(readString(parsed.timestamp) || new Date().toISOString()) }
+        else localStorage.removeItem(CACHE_KEY)
+      } catch { try { localStorage.removeItem(CACHE_KEY) } catch {} }
+    })()
+    return () => { cancelled = true }
   }, [])
 
-  useEffect(() => {
-    try { localStorage.setItem(CACHE_TAB_KEY, tab) } catch {}
-  }, [tab])
-
-  // ── API calls ─────────────────────────────────────────────────────────────────
+  // ── 執行比對：強制重算（伺服器會同時存起來供下次開頁）──────────────────────────
   async function loadComparison() {
     setLoading(true); setError('')
     setSelectedIds(new Set()); setImportResult('')
     try {
-      const res  = await fetch('/api/admin/medical-monitor')
+      const res  = await fetch('/api/admin/medical-monitor?refresh=1')
       const payload = await res.json()
       if (!res.ok) { setError(payload.error ?? '比對失敗'); return }
       const data = parseMonitorResult(payload)
-      if (!data) {
-        setError('比對資料格式錯誤，請重新執行')
-        try { localStorage.removeItem(CACHE_KEY) } catch {}
-        return
-      }
-      const now = new Date().toISOString()
-      setResult(data)
-      setCachedAt(now)
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: now })) } catch {}
+      if (!data) { setError('比對資料格式錯誤，請重新執行'); return }
+      applyResult(data, readString(payload.computedAt) || new Date().toISOString())
     } catch (e: any) {
       setError(e.message ?? '比對失敗，請重試')
     } finally {
       setLoading(false)
     }
+  }
+
+  function onStatusResolved(id: string) {
+    setResolvedIds(prev => new Set(prev).add(id))
   }
 
   async function triggerDataUpdate() {
@@ -926,15 +856,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // ── Render ────────────────────────────────────────────────────────────────────
   const stats = result?.stats
 
-  const tabDefs = result ? ([
-    { id: 'new',         label: '🆕 新開業候選',  count: result.newOpenings.clinics.length + result.newOpenings.labs.length + result.newOpenings.hospitals.length },
-    { id: 'normal',      label: '✅ 既有正常營業', count: result.normalOperating.length },
-    { id: 'inconsistent',label: '🔄 資料不一致',  count: result.inconsistentData.length },
-    { id: 'codechange',  label: '🔁 更換代碼',     count: result.codeChanged?.length ?? 0 },
-    { id: 'closure',     label: '⛔ 歇業候選',     count: result.suspectedClosures.length },
-    { id: 'hospital',    label: '🏥 醫院待確認',   count: result.hospitalUnverified?.length ?? 0 },
-    { id: 'selfmanaged', label: '👤 公司自建',     count: result.selfManagedCustomers.length },
-  ] as const) : []
+  // 樂觀移除已在彈窗編輯結案者
+  const closureItems  = (result?.suspectedClosures ?? []).filter(i => !resolvedIds.has(i.customerId))
+  const hospitalItems = (result?.hospitalUnverified ?? []).filter(i => !resolvedIds.has(i.customerId))
 
   return (
     <div className="space-y-5">
@@ -963,7 +887,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             上次比對：{new Date(cachedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             <button
               onClick={() => {
-                try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TAB_KEY) } catch {}
+                try { localStorage.removeItem(CACHE_KEY) } catch {}
                 setResult(null); setCachedAt(null)
               }}
               className="ml-1 text-gray-300 hover:text-gray-500"
@@ -1020,97 +944,56 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">比對結果摘要</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="本月新開業"  value={stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}
-                sub={`診所 ${stats.newThisMonthClinics} ／牙技所 ${stats.newThisMonthLabs}`} accent="text-emerald-600" />
-              <StatCard label="既有未開發"  value={(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}
-                sub="在醫事DB但從未成為客戶" accent="text-amber-600" />
-              <StatCard label="歇業候選"    value={stats.suspectedClosures}  sub="代碼消失，待查衛福部" accent="text-red-600" />
-              <StatCard label="資料不一致"  value={stats.inconsistentData}   sub="代碼符但資料有落差" accent="text-blue-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS)</p>
+            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS) <span className="normal-case font-normal text-stone-300">— 點卡片看清單</span></p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
-              <StatCard label="⛔ 疑似歇業"    value={stats.suspectedClosures} sub="代碼不在 BAS 開業清單" accent="text-red-600" />
-              <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" />
-              <StatCard label="🏥 醫院待確認"  value={stats.hospitalUnverified} sub="醫院在營業、牙科未登記" accent="text-orange-600" />
+              <StatCard label="⛔ 疑似歇業"    value={closureItems.length} sub="點擊編輯開業狀態" accent="text-red-600" onClick={() => setActiveCategory('closure')} />
+              <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
+              <StatCard label="🏥 醫院待確認"  value={hospitalItems.length} sub="醫院在營業、牙科未登記" accent="text-orange-600" onClick={() => setActiveCategory('hospital')} />
+              <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" onClick={() => setActiveCategory('inconsistent')} />
+              <StatCard label="👤 公司自建"    value={stats.customerNoCode} sub="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
             </div>
             <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
-              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植），逐筆「查衛福部」可確認明確開業狀態。醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，另列「醫院待確認」。
+              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，另列「醫院待確認」。
             </p>
           </div>
         </>
       )}
 
-      {/* Tabs */}
+      {/* 新開業候選（主要清單，inline）*/}
       {result?.hasSnapshot && (
-        <>
-          <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 gap-1">
-            {tabDefs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id as MainTab)}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                {t.label}
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${tab === t.id ? 'bg-gray-100 text-gray-700' : 'bg-white text-gray-500'}`}>{t.count}</span>
-              </button>
-            ))}
+        <div>
+          <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">🆕 新開業候選</p>
+            {stats && (
+              <span className="text-[11px] text-gray-400">
+                本月新開業 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong>
+                ｜既有未開發 <strong className="text-amber-600">{(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}</strong>
+              </span>
+            )}
           </div>
 
           {importResult && (
-            <div className={`text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+            <div className={`mb-3 text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
               {importResult}
             </div>
           )}
-
-          {tab === 'new' && (
-            <>
-            {stats && stats.newOpeningExcludedExisting > 0 && (
-              <div className="mb-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-                ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構，可能是客戶代碼未同步、換照換碼或同名同區資料，暫不列入新開業機會。
-              </div>
-            )}
-            <NewOpeningsTab
-              clinics={result.newOpenings.clinics}
-              labs={result.newOpenings.labs}
-              hospitals={result.newOpenings.hospitals}
-              selectedIds={selectedIds}
-              onToggle={toggleId}
-              onToggleAll={toggleAll}
-              onImport={() => selectedIds.size > 0 && setShowPreview(true)}
-              importing={importing}
-            />
-            </>
+          {stats && stats.newOpeningExcludedExisting > 0 && (
+            <div className="mb-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+              ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構，可能是客戶代碼未同步、換照換碼或同名同區資料，暫不列入新開業機會。
+            </div>
           )}
-          {tab === 'normal' && (
-            <NormalOperatingTab
-              items={result.normalOperating}
-              onOpen={item => setDetailModal({ kind: 'normal', item })}
-            />
-          )}
-          {tab === 'inconsistent' && (
-            <InconsistentDataTab
-              items={result.inconsistentData}
-              onOpen={item => setDetailModal({ kind: 'inconsistent', item })}
-            />
-          )}
-          {tab === 'closure' && (
-            <SuspectedClosuresTab
-              items={result.suspectedClosures}
-              onOpen={item => setDetailModal({ kind: 'closure', item })}
-            />
-          )}
-          {tab === 'codechange' && (
-            <CodeChangedTab items={result.codeChanged ?? []} />
-          )}
-          {tab === 'hospital' && (
-            <HospitalUnverifiedTab items={result.hospitalUnverified ?? []} />
-          )}
-          {tab === 'selfmanaged' && (
-            <SelfManagedTab items={result.selfManagedCustomers} />
-          )}
-        </>
+          <NewOpeningsTab
+            clinics={result.newOpenings.clinics}
+            labs={result.newOpenings.labs}
+            hospitals={result.newOpenings.hospitals}
+            selectedIds={selectedIds}
+            onToggle={toggleId}
+            onToggleAll={toggleAll}
+            onImport={() => selectedIds.size > 0 && setShowPreview(true)}
+            importing={importing}
+          />
+        </div>
       )}
 
       {/* Modals */}
@@ -1121,8 +1004,15 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           onClose={() => setShowPreview(false)}
         />
       )}
-      {detailModal && (
-        <DetailModal data={detailModal} onClose={() => setDetailModal(null)} />
+      {activeCategory && result && (
+        <CategoryModal
+          category={activeCategory}
+          closureItems={closureItems}
+          hospitalItems={hospitalItems}
+          result={result}
+          onResolved={onStatusResolved}
+          onClose={() => setActiveCategory(null)}
+        />
       )}
     </div>
   )
