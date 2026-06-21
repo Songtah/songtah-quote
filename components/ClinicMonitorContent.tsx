@@ -960,15 +960,16 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         </>
       )}
 
-      {/* 新開業候選（主要清單，inline）*/}
+      {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
       {result?.hasSnapshot && (
         <div>
           <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">🆕 新開業候選</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">🆕 待開發機構（BAS 有、非客戶）</p>
             {stats && (
               <span className="text-[11px] text-gray-400">
-                本月新開業 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong>
+                本月新增 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong>
                 ｜既有未開發 <strong className="text-amber-600">{(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}</strong>
+                ｜可勾選下方項目匯入客戶資料庫
               </span>
             )}
           </div>

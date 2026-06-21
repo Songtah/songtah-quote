@@ -533,12 +533,10 @@ async function computeMonitor(): Promise<MonitorResult> {
     customerType: c.type, customerStatus: c.status,
   }))
 
-  // ── 狀態 2：新開業候選（本月新增代碼、客戶 DB 無）───────────────────────
-  // 只列入本月新出現在快照的代碼。歷史 NHI 資料可能殘留已歇業或非目標資料，
-  // 不應混入「新開業」候選清單。
-  // 排除「名稱＋縣市＋行政區已是現有客戶」的機構。
-  // 這不是判定 NHI 同診所多碼，而是避免 CRM 代碼尚未同步、換照換碼、
-  // 或同名同區資料被誤列為新開業機會。
+  // ── 狀態 2：待開發機構（BAS 有、崧達客戶 DB 無）─────────────────────────
+  // 列出「BAS 開業清單中、但還不是崧達客戶」的全部機構＝客戶 DB 與 BAS 的差異/開發機會。
+  // 每筆標 isNewThisMonth（本月相較上月 BAS 快照新出現者），前端可切「全部／本月新增／既有未開發」。
+  // 排除「代碼已是客戶」與「名稱＋縣市＋行政區已是現有客戶」者（避免 CRM 代碼未同步/換照/同名同區誤列）。
   const customerAreaSet = new Set(
     allCustomers.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
   )
@@ -557,7 +555,6 @@ async function computeMonitor(): Promise<MonitorResult> {
   let excludedExisting = 0
   for (const [code, entry] of Array.from(snapshotByCode)) {
     if (isExpired(entry.termDate)) continue
-    if (!newThisMonthSet.has(code)) continue
     if (customerByCode.has(code)) continue
     const { city, district } = parseAddress(entry.address)
     const nameKey = institutionNameKey(entry.name)
