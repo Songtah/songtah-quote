@@ -93,6 +93,16 @@ async function processEvents(events: any[]) {
         continue
       }
 
+      // ── 只在「業務回報窗：17:00～隔日 03:00（台北）」內擷取 ───────────────────
+      // 03:00～17:00 之間發送的訊息一律忽略（避免誤抓日間非回報時段的資料）。
+      const ts = typeof event.timestamp === 'number' ? event.timestamp : Date.now()
+      const twHour = new Date(ts + 8 * 3600_000).getUTCHours()
+      const inReportWindow = twHour >= 17 || twHour < 3
+      if (!inReportWindow) {
+        console.log(`[LINE Webhook] skip (非回報窗：台北 ${String(twHour).padStart(2, '0')}:xx，只收 17:00–03:00)`)
+        continue
+      }
+
       const report = parseDailyReport(text)
       if (!report || report.visits.length === 0) {
         console.log('[LINE Webhook] skip: parsed report has no visits')
