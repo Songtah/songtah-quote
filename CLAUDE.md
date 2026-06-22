@@ -78,6 +78,11 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 4. **比對結果與紀錄存伺服器端 Redis（刷新不可消失）**：最近結果＝`medical-monitor:last-result`（開頁回此、`?refresh=1` 才重算並覆寫）；每月趨勢紀錄＝`medical-monitor:history`（依快照月份去重、保留 36 筆）。**不可改回只存 localStorage**——跨裝置共用且要耐清快取。helper 在 `lib/system-notion.ts`（`get/setCachedMonitorResult`、`get/pushMonitorHistory`）。
 5. **快照建置永不讓 Action 失敗**：`scripts/clinic-monitor.mjs` 對 BAS（有 WAF/限流）採持久快取＋時間預算＋帶走舊值＋永不 throw；換來源（prev.source≠'mohw-bas'）時跳過月對月 diff，避免假異動灌爆 Notion 監控紀錄。
 
+## 客情拜訪鐵則
+
+1. **回報窗 17:00～隔日 03:00（台北）**：客情紀錄由 `app/api/line/webhook` 解析 LINE 每日報表建檔。**只在回報窗內擷取**——依 `event.timestamp` 換算台北時 `hour>=17 || hour<3` 才建檔，03:00–17:00 的訊息一律略過（避免誤抓日間非回報資料）。
+2. **業務日 03:00 換日**：`businessDayTW()`（`lib/ceo-stats.ts`）= now−3h 取日期；報表日期解析（`lib/line-daily-report.ts`）同樣 03:00 前算前一天。拜訪 `日期` 為 date-only（無時間），時間資訊只在 `created_time`（且多為批次匯入時間，不代表實際拜訪時刻）。
+
 ## 工程慣例
 
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。
