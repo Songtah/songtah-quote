@@ -1,13 +1,16 @@
 {
   "month": "2026-06",
-  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "fetchedAt": "2026-06-22T04:04:26.536Z",
   "source": "mohw-bas",
   "totalClinics": 7156,
   "totalLabs": 1093,
   "totalHospitals": 187,
   "labsStale": false,
-  "pendingRemaining": 6,
-  "totalCustomers": 8436,
+  "pendingRemaining": 0,
+  "prevTotalClinics": 7156,
+  "prevTotalLabs": 1093,
+  "prevTotalHospitals": 187,
+  "totalCustomers": 8153,
   "newCodes": [],
   "codes": {
     "1101010012": {
