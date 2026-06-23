@@ -63,6 +63,7 @@ interface CatalogItem {
   salePrice?: number
   spec?: string
   discontinued?: boolean
+  status?: string   // 已停售／未販售
 }
 
 interface FamilySpec {
@@ -1936,7 +1937,7 @@ function SkuRow({
           <p className="text-sm text-gray-800 truncate">{item.name}</p>
           {item.discontinued && (
             <span className="shrink-0 text-[10px] font-medium text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
-              未販售
+              {item.status || '未販售'}
             </span>
           )}
         </div>

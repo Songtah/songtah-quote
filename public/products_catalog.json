@@ -5476,7 +5476,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H12-A3",
@@ -5485,7 +5486,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H12-A3.5",
@@ -5494,7 +5496,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H12-A4",
@@ -5503,7 +5506,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H14-A1",
@@ -5989,7 +5993,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H20-A3",
@@ -5998,7 +6003,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H20-A3.5",
@@ -6007,7 +6013,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-95H22-A1",
@@ -6106,7 +6113,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H12-A3",
@@ -6115,7 +6123,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H12-A3.5",
@@ -6124,7 +6133,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H14-A1",
@@ -6619,7 +6629,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H20-A2",
@@ -6628,7 +6639,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H20-A3",
@@ -6637,7 +6649,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H20-A3.5",
@@ -6646,7 +6659,8 @@
   "productType": "材料",
   "category": "氧化鋯塊",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "BS-STML-98H22-A1",
@@ -21883,7 +21897,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-02-20",
@@ -21892,7 +21907,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-03-20",
@@ -21901,7 +21917,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-04-20",
@@ -21910,7 +21927,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-05-20",
@@ -21919,7 +21937,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-09-20",
@@ -21928,7 +21947,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-10-20",
@@ -21937,7 +21957,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-11-20",
@@ -21946,7 +21967,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-12-20",
@@ -21955,7 +21977,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-13-20",
@@ -21964,7 +21987,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-14-20",
@@ -21973,7 +21997,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-15-20",
@@ -21982,7 +22007,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-16-20",
@@ -21991,7 +22017,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-21-20",
@@ -22000,7 +22027,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-22-20",
@@ -22009,7 +22037,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-23-20",
@@ -22018,7 +22047,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-24-20",
@@ -22027,7 +22057,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-24-50",
@@ -22036,7 +22067,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-25-20",
@@ -22045,7 +22077,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-26-20",
@@ -22054,7 +22087,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-27-20",
@@ -22063,7 +22097,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-28-20",
@@ -22072,7 +22107,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-29-20",
@@ -22081,7 +22117,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-30-20",
@@ -22090,7 +22127,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-31-20",
@@ -22099,7 +22137,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC01-20",
@@ -22108,7 +22147,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC01-200",
@@ -22117,7 +22157,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC01-50",
@@ -22126,7 +22167,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC02-20",
@@ -22135,7 +22177,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC02-200",
@@ -22144,7 +22187,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-ACC-TC02-50",
@@ -22153,7 +22197,8 @@
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
   "mainCategory": "材料",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YM-CM-1",
@@ -22241,7 +22286,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA0-50",
@@ -22258,7 +22305,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA1-200",
@@ -22282,7 +22331,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA2-200",
@@ -22306,7 +22357,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA3-200",
@@ -22330,7 +22383,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA3.5-200",
@@ -22354,7 +22409,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DA4-200",
@@ -22378,7 +22435,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DB1-20",
@@ -22386,7 +22445,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DB1-50",
@@ -22402,7 +22463,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DB2-200",
@@ -22426,7 +22489,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DB3-200",
@@ -22450,7 +22515,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DB4-50",
@@ -22466,7 +22533,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DC1-50",
@@ -22482,7 +22551,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DC2-50",
@@ -22498,7 +22569,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DC3-50",
@@ -22514,7 +22587,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DC4-50",
@@ -22530,7 +22605,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DD2-50",
@@ -22546,7 +22623,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DD3-200",
@@ -22570,7 +22649,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-DD4-50",
@@ -22586,7 +22667,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-E1-50",
@@ -22602,7 +22685,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-E2-200",
@@ -22626,7 +22711,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-E3-200",
@@ -22650,7 +22737,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-E4-50",
@@ -23124,7 +23213,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-A2",
@@ -23132,7 +23222,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-A3",
@@ -23140,7 +23231,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-A3.5",
@@ -23148,7 +23240,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-A4",
@@ -23156,7 +23249,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-B0",
@@ -23164,7 +23258,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-B1",
@@ -23172,7 +23267,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-B2",
@@ -23180,7 +23276,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-B3",
@@ -23188,7 +23285,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-B4",
@@ -23196,7 +23294,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-C1",
@@ -23204,7 +23303,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-C2",
@@ -23212,7 +23312,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-C3",
@@ -23220,7 +23321,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-C4",
@@ -23228,7 +23330,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-D2",
@@ -23236,7 +23339,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-D3",
@@ -23244,7 +23348,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-D4",
@@ -23252,7 +23357,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-OPQ-VOA1-50",
@@ -23260,7 +23366,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOA2-50",
@@ -23268,7 +23375,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOA3-50",
@@ -23276,7 +23384,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOA3.5-50",
@@ -23284,7 +23393,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOA4-50",
@@ -23292,7 +23402,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOB1-50",
@@ -23300,7 +23411,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOB2-50",
@@ -23308,7 +23420,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOB3-50",
@@ -23316,7 +23429,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOB4-50",
@@ -23324,7 +23438,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOC1-50",
@@ -23332,7 +23447,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOC2-50",
@@ -23340,7 +23456,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOC3-50",
@@ -23348,7 +23465,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOC4-50",
@@ -23356,7 +23474,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOD2-50",
@@ -23364,7 +23483,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOD3-50",
@@ -23372,7 +23492,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-OPQ-VOD4-50",
@@ -23380,7 +23501,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1250
  },
  {
   "code": "YM-STAIN-01",
@@ -23397,7 +23519,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-03",
@@ -23405,7 +23528,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-04",
@@ -23413,7 +23537,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-05",
@@ -23421,7 +23546,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-06",
@@ -23429,7 +23555,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-07",
@@ -23437,7 +23564,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-08",
@@ -23445,7 +23573,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-09",
@@ -23453,7 +23582,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-10",
@@ -23461,7 +23591,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-11",
@@ -23469,7 +23600,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-12",
@@ -23477,7 +23609,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-13",
@@ -23485,7 +23618,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-14",
@@ -23493,7 +23627,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-15",
@@ -23501,7 +23636,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-16",
@@ -23509,7 +23645,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-17",
@@ -23517,7 +23654,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-STAIN-18",
@@ -23525,7 +23663,8 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 600
  },
  {
   "code": "YM-SUP-D",
@@ -23560,7 +23699,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA1-50",
@@ -23568,7 +23709,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA2-20",
@@ -23576,7 +23719,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA2-200",
@@ -23584,7 +23729,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA2-50",
@@ -23592,7 +23739,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3-20",
@@ -23600,7 +23749,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3-200",
@@ -23608,7 +23759,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3-50",
@@ -23616,7 +23769,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3.5-20",
@@ -23624,7 +23779,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3.5-200",
@@ -23632,7 +23789,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA3.5-50",
@@ -23640,7 +23799,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA4-20",
@@ -23648,7 +23809,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VDA4-50",
@@ -23656,7 +23819,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VSP",
@@ -23664,7 +23829,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YM-VSP-50",
@@ -23672,7 +23839,9 @@
   "brand": "YAMAKIN",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-01",
@@ -24173,7 +24342,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "蠟 / 壓鑄材",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YMH-31",
@@ -24298,7 +24469,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "瓷粉 / 陶瓷",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "YMH-34-25",
@@ -32409,7 +32582,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-2",
@@ -32417,7 +32592,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-3",
@@ -32425,7 +32602,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-28L",
@@ -32433,7 +32612,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-28U",
@@ -32441,7 +32622,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-30L",
@@ -32449,7 +32632,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-30U",
@@ -32457,7 +32642,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-32L",
@@ -32465,7 +32652,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T12-A2-32U",
@@ -32473,7 +32662,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-1",
@@ -32481,7 +32672,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-2",
@@ -32489,7 +32682,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-3",
@@ -32497,7 +32692,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-28L",
@@ -32505,7 +32702,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-28U",
@@ -32513,7 +32712,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-30L",
@@ -32521,7 +32722,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-30U",
@@ -32529,7 +32732,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-32L",
@@ -32537,7 +32742,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T13-A3-32U",
@@ -32545,7 +32752,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-1",
@@ -32553,7 +32762,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-2",
@@ -32561,7 +32772,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-3",
@@ -32569,7 +32782,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-28L",
@@ -32577,7 +32792,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-28U",
@@ -32585,7 +32802,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-30L",
@@ -32593,7 +32812,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-30U",
@@ -32601,7 +32822,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-32L",
@@ -32609,7 +32832,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T14-A3.5-32U",
@@ -32617,7 +32842,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-1",
@@ -32625,7 +32852,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-2",
@@ -32633,7 +32862,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-3",
@@ -32641,7 +32872,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-28L",
@@ -32649,7 +32882,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-28U",
@@ -32657,7 +32892,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-30L",
@@ -32665,7 +32902,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-30U",
@@ -32673,7 +32912,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-32L",
@@ -32681,7 +32922,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T15-A4-32U",
@@ -32689,7 +32932,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T16-1",
@@ -32697,7 +32942,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T16-2",
@@ -32705,7 +32952,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T16-3",
@@ -32713,7 +32962,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T17-1",
@@ -32721,7 +32972,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T17-2",
@@ -32729,7 +32982,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T17-3",
@@ -32737,7 +32992,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T18-1",
@@ -32745,7 +33002,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T18-2",
@@ -32753,7 +33012,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T18-3",
@@ -32761,7 +33022,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T19-1",
@@ -32769,7 +33032,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T19-2",
@@ -32777,7 +33042,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T19-3",
@@ -32785,7 +33052,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T20-1",
@@ -34604,7 +34873,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T37-2",
@@ -34612,7 +34883,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T37-3",
@@ -34620,7 +34893,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T37-4",
@@ -34628,7 +34903,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T38-1",
@@ -34636,7 +34913,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T38-2",
@@ -34644,7 +34923,9 @@
   "brand": "YAMAHACHI",
   "productType": "材料",
   "category": "塑鋼牙",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "discontinued": true,
+  "status": "已停售"
  },
  {
   "code": "YMH-T38-3",
@@ -39352,7 +39633,9 @@
   "brand": "Zirkonzahn",
   "productType": "材料",
   "category": "染液 - 內染",
-  "mainCategory": "染液色料"
+  "mainCategory": "染液色料",
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "ZZ-63-D4",
@@ -48581,7 +48864,8 @@
   "brand": "Zirkonzahn",
   "productType": "材料",
   "category": "氧化鋯塊",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 8000
  },
  {
   "code": "ZZ-ZROC80410M2",
@@ -48589,7 +48873,8 @@
   "brand": "Zirkonzahn",
   "productType": "材料",
   "category": "氧化鋯塊",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 8000
  },
  {
   "code": "ZZ-ZROC8041A01",
@@ -48831,7 +49116,8 @@
   "brand": "Zirkonzahn",
   "productType": "材料",
   "category": "氧化鋯塊",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 10000
  },
  {
   "code": "ZZ-ZROC8101A01",
@@ -49027,7 +49313,7 @@
   "productType": "材料",
   "category": "包埋 / 石膏",
   "mainCategory": "材料",
-  "price": 1700
+  "price": 1900
  },
  {
   "code": "WM-330008",
@@ -49035,7 +49321,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1900
  },
  {
   "code": "WM-330012",
@@ -49043,7 +49330,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 2400
  },
  {
   "code": "WM-330013",
@@ -49051,7 +49339,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 2400
  },
  {
   "code": "WM-330014",
@@ -49059,7 +49348,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 2400
  },
  {
   "code": "WM-330015",
@@ -49067,7 +49357,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 2400
  },
  {
   "code": "WM-330023",
@@ -49075,7 +49366,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1700
  },
  {
   "code": "WM-330026",
@@ -49083,7 +49375,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1700
  },
  {
   "code": "WM-330027",
@@ -49091,7 +49384,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1700
  },
  {
   "code": "WM-330028",
@@ -49099,7 +49393,8 @@
   "brand": "WHIP MIX",
   "productType": "材料",
   "category": "包埋 / 石膏",
-  "mainCategory": "材料"
+  "mainCategory": "材料",
+  "price": 1700
  },
  {
   "code": "WM-330040",
@@ -49108,7 +49403,7 @@
   "productType": "材料",
   "category": "包埋 / 石膏",
   "mainCategory": "材料",
-  "price": 2400
+  "price": 2650
  },
  {
   "code": "WM-330041",
@@ -50102,7 +50397,8 @@
   "productType": "配件",
   "category": "設備配件",
   "mainCategory": "耗材",
-  "discontinued": true
+  "discontinued": true,
+  "status": "未販售"
  },
  {
   "code": "SY-03141",

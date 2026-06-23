@@ -21,7 +21,8 @@ export interface CatalogProduct {
   price?: number      // 售價（由產品價格主檔.xlsx 維護）
   salePrice?: number  // 優惠價
   spec?: string       // 技術規格摘要
-  discontinued?: boolean
+  discontinued?: boolean  // 已停售／未販售 → 訂貨/報價選品器不顯示
+  status?: string         // 銷售狀態：已停售／未販售（discontinued 為 true 時的細分）
 }
 
 export interface SpecDefinition {
@@ -81,7 +82,8 @@ export function searchCatalog(opts: CatalogSearchOptions = {}): CatalogProduct[]
   const { q = '', brand, productType, category, limit = 50 } = opts
   const keyword = q.trim().toLowerCase()
 
-  let results = getCatalog()
+  // 訂貨/報價選品器不顯示已停售／未販售品項（管理頁仍可見，走 getCatalog）
+  let results = getCatalog().filter((p) => !p.discontinued)
 
   if (keyword) {
     results = results.filter(
