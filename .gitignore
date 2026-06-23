@@ -39,3 +39,6 @@ next-env.d.ts
 .claude/
 .env*.local
 .env*
+
+# graphify 知識圖譜產物（本機生成，不進 repo）
+graphify-out/
