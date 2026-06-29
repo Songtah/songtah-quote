@@ -14,19 +14,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/permissions'
+import { withApiAuth } from '@/lib/api-auth'
 import { lookupInstitution, isClosedStatus } from '@/lib/mohw-bas.mjs'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-export async function POST(req: NextRequest) {
-  try {
-    await requireAdmin()
-  } catch {
-    return NextResponse.json({ error: '未授權' }, { status: 401 })
-  }
-
+export const POST = withApiAuth('admin', async (req: NextRequest) => {
   let name = '', code = '', customerStatus = '', kind: string | undefined
   try {
     const body = await req.json()
@@ -84,4 +78,4 @@ export async function POST(req: NextRequest) {
       { status: 502 }
     )
   }
-}
+})

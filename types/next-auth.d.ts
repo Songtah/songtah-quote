@@ -9,12 +9,14 @@ declare module 'next-auth' {
       email?: string | null
       image?: string | null
       role?: string
+      accountType?: string
       permissions?: UserPermissions
     }
   }
 
   interface User {
     role?: string
+    accountType?: string
     permissions?: UserPermissions
   }
 }
@@ -22,6 +24,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     role?: string
+    accountType?: string
     permissions?: UserPermissions
   }
 }

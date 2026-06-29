@@ -9,8 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/system-notion'
 import type { ParsedVisitItem } from '@/app/api/line/import/route'
 
@@ -18,13 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const BATCH_SIZE = 30
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '禁止存取' }, { status: 403 })
-  }
-
+export const POST = withApiAuth('admin', async (req: NextRequest) => {
   let visits: ParsedVisitItem[]
   let offset: number
 
@@ -94,4 +87,4 @@ export async function POST(req: NextRequest) {
   const hasMore = nextOffset < visits.length
 
   return NextResponse.json({ imported, skipped, errors, hasMore, nextOffset })
-}
+})

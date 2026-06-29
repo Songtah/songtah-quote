@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getCEOStats } from '@/lib/ceo-stats'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
-  const role        = (session.user as any)?.role        as string | undefined
-  const accountType = (session.user as any)?.accountType as string | undefined
-  const isAuthorized = role === 'admin' || accountType === '行政' || accountType === '中央管理' || accountType === '總經理'
-  if (!isAuthorized) return NextResponse.json({ error: '僅管理層可查看經營儀表板' }, { status: 403 })
-
+export const GET = withApiAuth({ roles: ['行政', '中央管理', '總經理'] }, async () => {
   try {
     const result = await Promise.race<Awaited<ReturnType<typeof getCEOStats>> | null>([
       getCEOStats(),
@@ -29,4 +20,4 @@ export async function GET() {
     console.error('CEO dashboard error:', error)
     return NextResponse.json({ error: '無法取得資料' }, { status: 500 })
   }
-}
+})

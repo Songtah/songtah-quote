@@ -13,8 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getCustomersWithCodes, getCachedMonitorResult, setCachedMonitorResult, pushMonitorHistory } from '@/lib/system-notion'
 import { readFileSync, existsSync } from 'fs'
 import path from 'path'
@@ -301,13 +300,7 @@ function detectDiffs(
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '僅管理員可查看醫事監控' }, { status: 403 })
-  }
-
+export const GET = withApiAuth('admin', async (req: NextRequest) => {
   // 開頁（無 refresh）→ 直接回上次比對結果（伺服器端共用，跨裝置/不受清快取影響）。
   const refresh = req.nextUrl.searchParams.get('refresh') === '1'
   if (!refresh) {
@@ -318,7 +311,7 @@ export async function GET(req: NextRequest) {
   const result = await computeMonitor()
   await setCachedMonitorResult(result)   // 「執行比對」或首次計算 → 存起來供下次開頁顯示
   return NextResponse.json(result)
-}
+})
 
 async function computeMonitor(): Promise<MonitorResult> {
   // 1. 讀快照

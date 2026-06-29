@@ -4,19 +4,12 @@
  * 更新客戶「機構狀態」（連動 Notion 牙科單位資料）。供歇業候選/醫院待確認逐筆編輯開業狀態用。
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { updateCustomerStatus } from '@/lib/system-notion'
 
 const VALID = ['開業', '停業', '已歇業', '撤銷', '狀況不明']
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '僅管理員可變更機構狀態' }, { status: 403 })
-  }
-
+export const POST = withApiAuth('admin', async (req: NextRequest) => {
   let body: { customerId?: string; status?: string }
   try { body = await req.json() } catch { return NextResponse.json({ error: '格式錯誤' }, { status: 400 }) }
 
@@ -31,4 +24,4 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? '更新失敗' }, { status: 500 })
   }
-}
+})

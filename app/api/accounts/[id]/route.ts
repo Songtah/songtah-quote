@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { updateSystemUser, deleteSystemUser, getSystemUserById } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '僅管理員可管理帳號' }, { status: 403 })
-  }
-
+export const PATCH = withApiAuth('admin', async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
     const before = await getSystemUserById(params.id).catch(() => null)
@@ -42,15 +35,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.error('update account error:', error)
     return NextResponse.json({ error: '更新帳號失敗' }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '僅管理員可管理帳號' }, { status: 403 })
-  }
-
+export const DELETE = withApiAuth('admin', async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   const before = await getSystemUserById(params.id).catch(() => null)
   await deleteSystemUser(params.id)
 
@@ -67,4 +54,4 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }).catch((error) => console.error('audit deleteSystemUser error:', error))
 
   return NextResponse.json({ ok: true })
-}
+})

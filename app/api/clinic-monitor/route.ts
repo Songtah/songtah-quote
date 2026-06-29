@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/permissions'
+import { withApiAuth } from '@/lib/api-auth'
 import { getClinicMonitorRecords } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 
 // GET — 取得監控紀錄
-export async function GET(req: Request) {
-  try {
-    await requireAdmin()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const GET = withApiAuth('admin', async (req: Request) => {
   const { searchParams } = new URL(req.url)
   const months = Number(searchParams.get('months') ?? 3)
   const records = await getClinicMonitorRecords(Math.min(months, 12))
   return NextResponse.json({ records })
-}
+})
 
 // POST — 手動觸發 GitHub Actions workflow_dispatch
-export async function POST(req: Request) {
-  try {
-    await requireAdmin()
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export const POST = withApiAuth('admin', async (req: Request) => {
   const body = await req.json().catch(() => ({}))
   const dryRun = body.dry_run === true
 
@@ -58,4 +46,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true, dry_run: dryRun })
-}
+})

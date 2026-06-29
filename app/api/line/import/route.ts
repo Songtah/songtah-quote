@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { parseLineTxt } from '@/lib/line-txt-parser'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
@@ -23,13 +22,7 @@ export type ParsedVisitItem = {
   needsFollowUp: boolean
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if ((session.user as any)?.role !== 'admin') {
-    return NextResponse.json({ error: '僅限管理員使用' }, { status: 403 })
-  }
-
+export const POST = withApiAuth('admin', async (req: NextRequest) => {
   let fileContent: string
   let dateFrom = ''           // 只匯入此日期(含)以後的日報，留空 = 全部
   let salespersonFilter = ''  // 只匯入此業務的日報，留空 = 全部名單業務
@@ -87,4 +80,4 @@ export async function POST(req: NextRequest) {
     total: visits.length,
     visits,
   })
-}
+})

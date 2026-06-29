@@ -86,7 +86,7 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 
 ## 安全鐵則（2026 資安稽核後建立）
 
-1. **API route 一律要檢查角色/模組權限，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。寫入類 API（POST/PATCH/DELETE）一律要加 `canEdit(session, module)`（`lib/permissions.ts`）或角色檢查；`accounts`／`admin` 前綴路由（帳號管理、醫事監控主檔寫入）一律要求 `role==='admin'`。新增 route 時參考 `app/api/orders/route.ts`、`app/api/tickets/route.ts` 的寫法。
+1. **API route 一律用 `withApiAuth` 宣告授權規則，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。統一閘道在 `lib/api-auth.ts`——`export const POST = withApiAuth(rule, async (req, ctx, session) => {...})`，規則為 `'session'`（只需登入）／`'admin'`（role==='admin'）／`{ roles: [...] }`（accountType 任一）／`{ module, action:'view'|'edit' }`（沿用 `lib/permissions` 的 canView/canEdit）。**新增任何 route 一律走 withApiAuth**。例外只有雙重驗證的 `daily-report`（cron secret）與 `line/webhook`（HMAC），這兩個維持手動驗證。高權限路由（accounts、admin/medical-monitor、clinic-monitor、line/import、dashboard/ceo）已全數採用;其餘 module-edit 寫入路由仍有正確的 inline `canEdit` 檢查（安全），可漸進改用 withApiAuth。
 2. **密碼一律雜湊，禁止明文比對／儲存**：`lib/system-notion.ts` 的 `hashPassword`/`verifyPassword`（bcrypt）是唯一允許的密碼存取路徑；新增任何帳號相關欄位寫入都要走這兩個 helper，不可直接 `properties['密碼'] = richText(plainPassword)`。
 3. **共用密鑰比對一律 timing-safe**：LINE webhook 簽章、`DAILY_REPORT_SECRET` 等共用密鑰比對禁止用 `===`，要用 `crypto.timingSafeEqual`；密鑰未設定時必須「失效關閉」（拒絕請求），不可「失效開放」。
 4. **訂單金額/數量伺服器端必須驗證**：`lib/orders-notion.ts` 的 `validateOrderItems` 是訂貨單的最後防線（數量正整數、單價非負、贈品/樣品貨號須存在、贈品數量不可超過一般購買數量）——任何新增訂貨/報價寫入路徑都要套用同等驗證，不可只信任前端算好的金額。
