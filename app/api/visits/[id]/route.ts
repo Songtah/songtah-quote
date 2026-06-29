@@ -3,10 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { deleteVisit, getVisitById, updateVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { canEdit } from '@/lib/permissions'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'crm')) {
+    return NextResponse.json({ error: '無編輯客情紀錄權限' }, { status: 403 })
+  }
 
   try {
     const body = await req.json()
@@ -48,6 +52,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'crm')) {
+    return NextResponse.json({ error: '無刪除客情紀錄權限' }, { status: 403 })
+  }
 
   try {
     const before = await getVisitById(params.id).catch(() => null)

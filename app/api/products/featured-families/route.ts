@@ -6,6 +6,9 @@ import { getFeaturedFamilyIds, setFeaturedFamilyIds } from '@/lib/products-setti
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+
   const familyIds = await getFeaturedFamilyIds()
   return NextResponse.json({ familyIds })
 }

@@ -27,11 +27,15 @@ export const maxDuration = 60  // Vercel function 最長 60 秒
 function verifyLineSignature(rawBody: string, signature: string): boolean {
   const secret = process.env.LINE_CHANNEL_SECRET
   if (!secret) {
-    console.warn('[LINE Webhook] LINE_CHANNEL_SECRET 未設定，跳過驗證')
-    return true
+    // 失效必須關閉（fail closed）：密鑰未設定時拒絕所有請求，不可預設放行。
+    console.error('[LINE Webhook] LINE_CHANNEL_SECRET 未設定，拒絕所有請求')
+    return false
   }
   const hash = crypto.createHmac('SHA256', secret).update(rawBody).digest('base64')
-  return hash === signature
+  const a = Buffer.from(hash)
+  const b = Buffer.from(signature ?? '')
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(a, b)
 }
 
 // ── 取得 LINE 顯示名稱 ────────────────────────────────────────────────────────

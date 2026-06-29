@@ -11,6 +11,7 @@ import { put } from '@vercel/blob'
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const safePath = ['originals', 'compressed'].includes(folder) ? folder : 'originals'
   const ext      = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const blobPath = `assets/${safePath}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const blobPath = `assets/${safePath}/${Date.now()}-${crypto.randomUUID()}.${ext}`
 
   try {
     const blob = await put(blobPath, file, { access: 'public', allowOverwrite: true })

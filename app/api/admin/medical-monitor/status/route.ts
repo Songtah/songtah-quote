@@ -13,6 +13,9 @@ const VALID = ['開業', '停業', '已歇業', '撤銷', '狀況不明']
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可變更機構狀態' }, { status: 403 })
+  }
 
   let body: { customerId?: string; status?: string }
   try { body = await req.json() } catch { return NextResponse.json({ error: '格式錯誤' }, { status: 400 }) }

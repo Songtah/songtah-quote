@@ -45,8 +45,17 @@ export async function POST(req: NextRequest) {
       customerAddress, customerPhone, contactPerson, customerTaxId,
     })
     return NextResponse.json(order, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('createOrder error:', error)
-    return NextResponse.json({ error: '建立訂單失敗' }, { status: 500 })
+    const isValidationError = typeof error?.message === 'string' && (
+      error.message.includes('數量須為正整數') ||
+      error.message.includes('單價不可為負數') ||
+      error.message.includes('不存在於產品目錄') ||
+      error.message.includes('贈品／樣品總數量')
+    )
+    return NextResponse.json(
+      { error: isValidationError ? error.message : '建立訂單失敗' },
+      { status: isValidationError ? 400 : 500 }
+    )
   }
 }

@@ -1,4 +1,5 @@
 import { Client } from '@notionhq/client'
+import { getCatalogProduct } from './products-catalog'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const ORDERS_DB      = process.env.NOTION_ORDERS_DB!
@@ -149,6 +150,38 @@ export interface Order {
   customerTaxId: string
   promotionId?:   string
   promotionName?: string
+}
+
+/**
+ * Server-side 防呆：在價格/促銷引擎尚未完整搬到後端前，先擋掉最直接的金額竄改手法。
+ * 1. 數量必須是正整數、單價不可為負——擋負數/零的金額操弄。
+ * 2. 贈品/樣品的貨號必須真實存在於產品目錄——擋憑空捏造貨號。
+ * 3. 贈品/樣品的總數量不可超過一般品項的總數量——任何真實促銷（買N送M／買A送B）都要求
+ *    先有實際購買才換贈品，這個比例上限可擋「整單只下贈品、沒有任何實際購買」的核心手法，
+ *    且不需要在後端重建完整促銷比對邏輯（系列/條件型促銷仍由前端 OrderForm 計算）。
+ */
+function validateOrderItems(items: OrderItem[]): void {
+  let normalQty = 0
+  let giftQty = 0
+  for (const it of items) {
+    if (!Number.isInteger(it.quantity) || it.quantity <= 0) {
+      throw new Error(`品項「${it.skuName || it.skuCode}」數量須為正整數`)
+    }
+    if (typeof it.unitPrice === 'number' && it.unitPrice < 0) {
+      throw new Error(`品項「${it.skuName || it.skuCode}」單價不可為負數`)
+    }
+    if (it.itemType === 'gift' || it.itemType === 'sample') {
+      giftQty += it.quantity
+      if (it.skuCode && !getCatalogProduct(it.skuCode)) {
+        throw new Error(`贈品/樣品貨號「${it.skuCode}」不存在於產品目錄`)
+      }
+    } else {
+      normalQty += it.quantity
+    }
+  }
+  if (giftQty > normalQty) {
+    throw new Error('贈品／樣品總數量不可超過一般購買品項總數量，請確認促銷條件是否符合')
+  }
 }
 
 /** Sum only 一般 items; gifts/samples are excluded from the financial total */
@@ -352,6 +385,7 @@ export async function createOrder(data: {
   promotionId?:   string
   promotionName?: string
 }): Promise<Order> {
+  validateOrderItems(data.items)
   await ensureOrderFields()
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
@@ -431,6 +465,7 @@ export async function updateOrder(id: string, data: {
   if (data.promotionName !== undefined)    props['促銷活動名稱'] = { rich_text: richText(data.promotionName ?? '') }
 
   if (data.items) {
+    validateOrderItems(data.items)
     // Replace all item pages
     await deleteOrderItems(formatted)
     await createOrderItems(formatted, data.items)

@@ -2,6 +2,7 @@ import { put } from '@vercel/blob'
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   // Sanitise filename
   const ext      = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const safeName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const safeName = `products/${Date.now()}-${crypto.randomUUID()}.${ext}`
 
   try {
     const blob = await put(safeName, file, { access: 'public', allowOverwrite: true })

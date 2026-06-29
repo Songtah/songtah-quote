@@ -84,6 +84,15 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 1. **回報窗 17:00～隔日 03:00（台北）**：客情紀錄由 `app/api/line/webhook` 解析 LINE 每日報表建檔。**只在回報窗內擷取**——依 `event.timestamp` 換算台北時 `hour>=17 || hour<3` 才建檔，03:00–17:00 的訊息一律略過（避免誤抓日間非回報資料）。
 2. **業務日 03:00 換日**：`businessDayTW()`（`lib/ceo-stats.ts`）= now−3h 取日期；報表日期解析（`lib/line-daily-report.ts`）同樣 03:00 前算前一天。拜訪 `日期` 為 date-only（無時間），時間資訊只在 `created_time`（且多為批次匯入時間，不代表實際拜訪時刻）。
 
+## 安全鐵則（2026 資安稽核後建立）
+
+1. **API route 一律要檢查角色/模組權限，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。寫入類 API（POST/PATCH/DELETE）一律要加 `canEdit(session, module)`（`lib/permissions.ts`）或角色檢查；`accounts`／`admin` 前綴路由（帳號管理、醫事監控主檔寫入）一律要求 `role==='admin'`。新增 route 時參考 `app/api/orders/route.ts`、`app/api/tickets/route.ts` 的寫法。
+2. **密碼一律雜湊，禁止明文比對／儲存**：`lib/system-notion.ts` 的 `hashPassword`/`verifyPassword`（bcrypt）是唯一允許的密碼存取路徑；新增任何帳號相關欄位寫入都要走這兩個 helper，不可直接 `properties['密碼'] = richText(plainPassword)`。
+3. **共用密鑰比對一律 timing-safe**：LINE webhook 簽章、`DAILY_REPORT_SECRET` 等共用密鑰比對禁止用 `===`，要用 `crypto.timingSafeEqual`；密鑰未設定時必須「失效關閉」（拒絕請求），不可「失效開放」。
+4. **訂單金額/數量伺服器端必須驗證**：`lib/orders-notion.ts` 的 `validateOrderItems` 是訂貨單的最後防線（數量正整數、單價非負、贈品/樣品貨號須存在、贈品數量不可超過一般購買數量）——任何新增訂貨/報價寫入路徑都要套用同等驗證，不可只信任前端算好的金額。
+5. **報價單狀態機**：`app/api/quotes/[id]/approve/route.ts` 的 `TRANSITIONS` 表是唯一允許的狀態轉換來源，新增簽核動作要先在這張表加規則，不可繞過直接呼叫 `updateQuoteStatus`。
+6. **對外代理／外部圖片一律驗證網域**：`app/api/notion-image/route.ts` 的 `isUrlSafeToProxy` 是唯一允許代理的網址檢查，新增任何「伺服器端 fetch 使用者可控 URL」的功能都要套用同等的 host allowlist + 私網位址檢查，避免 SSRF。
+
 ## 工程慣例
 
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。

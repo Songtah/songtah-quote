@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { createTicket, listSystemTickets } from '@/lib/system-notion'
 import type { CreateTicketPayload } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { canEdit } from '@/lib/permissions'
 
 function isRateLimited(error: unknown) {
   if (!error || typeof error !== 'object') return false
@@ -41,6 +42,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'rma')) {
+    return NextResponse.json({ error: '無建立工單權限' }, { status: 403 })
+  }
 
   try {
     const body = (await req.json()) as CreateTicketPayload

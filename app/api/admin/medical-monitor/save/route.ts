@@ -11,6 +11,9 @@ import { getMonitorHistory, upsertMedicalTrend } from '@/lib/system-notion'
 export async function POST() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可儲存比對紀錄' }, { status: 403 })
+  }
   const history = await getMonitorHistory()
   if (!history.length) return NextResponse.json({ error: '尚無比對結果，請先「執行比對」' }, { status: 400 })
   try {

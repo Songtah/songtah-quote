@@ -1,5 +1,6 @@
 import { Client } from '@notionhq/client'
 import { Redis } from '@upstash/redis'
+import bcrypt from 'bcryptjs'
 import type { CreateTicketPayload, Equipment, Ticket } from '@/types'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 
@@ -1112,6 +1113,15 @@ export async function createSystemCustomer(data: {
 
 // ── 醫事監控用：更新客戶「機構狀態」（開業/停業/已歇業/撤銷/狀況不明）──────────
 export async function updateCustomerStatus(id: string, status: string): Promise<void> {
+  // 防止任意 page_id 寫入：限定目標頁面必須屬於客戶主檔 DB
+  const page = await notionCallWithRetry('updateCustomerStatus:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  ) as any
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const customersDb = (DB.customers ?? '').replace(/-/g, '')
+  if (!targetDb || targetDb !== customersDb) {
+    throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+  }
   await notionCallWithRetry('updateCustomerStatus', () =>
     notion.pages.update({ page_id: id, properties: { '機構狀態': { select: { name: status } } } as any })
   )
@@ -2197,15 +2207,21 @@ function getCheckbox(page: any, field: string): boolean {
   return prop.checkbox === true
 }
 
+// 帳號管理／後台行政這兩個模組一旦預設開放就等同提權（accounts 可建立/改其他帳號，
+// admin 可動到主檔高風險操作），欄位缺失時必須預設「false」，不可沿用其他模組的開放預設。
+const DEFAULT_DENY_MODULES = new Set<ModuleKey>(['accounts', 'admin'])
+
 function mapUserPermissions(page: any): UserPermissions {
   const result = {} as UserPermissions
   for (const [mod, fields] of Object.entries(MODULE_NOTION_FIELDS)) {
-    // 若 Notion 資料庫尚未建立該欄位，預設為 true（避免在新增模組初期意外封鎖所有人）
+    // 若 Notion 資料庫尚未建立該欄位，一般模組預設為 true（避免在新增模組初期意外封鎖所有人）；
+    // 高風險模組（accounts/admin）預設為 false，欄位缺失時一律視為未授權。
+    const denyDefault = DEFAULT_DENY_MODULES.has(mod as ModuleKey)
     const viewProp = getProp(page, fields.view)
     const editProp = getProp(page, fields.edit)
     result[mod as ModuleKey] = {
-      view: viewProp ? viewProp.checkbox === true : true,
-      edit: editProp ? editProp.checkbox === true : true,
+      view: viewProp ? viewProp.checkbox === true : !denyDefault,
+      edit: editProp ? editProp.checkbox === true : !denyDefault,
     }
   }
   return result
@@ -2269,6 +2285,23 @@ export async function getSystemUsers(): Promise<SystemUser[]> {
   return items
 }
 
+// ── 密碼雜湊（bcrypt，含舊版明文資料的登入時遷移）─────────────────────────────
+// bcrypt hash 一律以 $2a$/$2b$/$2y$ 開頭；用這個前綴判斷舊資料是否仍為明文。
+const BCRYPT_HASH_RE = /^\$2[aby]\$/
+const BCRYPT_ROUNDS = 10
+
+async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, BCRYPT_ROUNDS)
+}
+
+async function verifyPassword(stored: string, supplied: string): Promise<boolean> {
+  if (BCRYPT_HASH_RE.test(stored)) {
+    return bcrypt.compare(supplied, stored)
+  }
+  // 舊版明文密碼：仍可比對登入，但比對後應立即於呼叫端改寫成雜湊（見 getSystemUserByCredentials）
+  return stored === supplied
+}
+
 export async function getSystemUserByCredentials(
   username: string,
   password: string
@@ -2282,9 +2315,19 @@ export async function getSystemUserByCredentials(
   )
   for (const page of response.results ?? []) {
     const storedPw = getText(page, '密碼')
-    if (storedPw === password) {
+    const matches = await verifyPassword(storedPw, password)
+    if (matches) {
       const status = getSelect(page, '狀態')
       if (status === '停用') return null   // 已停用帳號，拒絕登入
+
+      // 舊版明文密碼登入成功時，當場改寫成雜湊（migrate-on-login），下次起不再是明文。
+      if (!BCRYPT_HASH_RE.test(storedPw)) {
+        const newHash = await hashPassword(password)
+        await notionCallWithRetry('migratePasswordHash', () =>
+          notion.pages.update({ page_id: page.id, properties: { 密碼: { rich_text: richText(newHash) } } as any })
+        ).catch((e) => console.error('migratePasswordHash error:', e))
+      }
+
       return {
         id: page.id,
         name: getTitle(page, '帳號名稱'),
@@ -2314,13 +2357,14 @@ export async function createSystemUser(data: {
     permProps[fields.view] = { checkbox: p.view }
     permProps[fields.edit] = { checkbox: p.edit }
   }
+  const hashedPassword = await hashPassword(data.password)
   const response: any = await notionCallWithRetry('createSystemUser', () =>
     notion.pages.create({
       parent: { database_id: normalizeDatabaseId(DB.users) },
       properties: {
         帳號名稱: { title: richText(data.name) },
         帳號代碼: { rich_text: richText(data.username) },
-        密碼: { rich_text: richText(data.password) },
+        密碼: { rich_text: richText(hashedPassword) },
         ...(data.accountType ? { 帳號類型: { select: { name: data.accountType } } } : {}),
         ...(data.status ? { 狀態: { status: { name: data.status } } } : {}),
         ...permProps,
@@ -2367,7 +2411,7 @@ export async function updateSystemUser(
 ): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.name !== undefined) properties['帳號名稱'] = { title: richText(data.name) }
-  if (data.password !== undefined) properties['密碼'] = { rich_text: richText(data.password) }
+  if (data.password !== undefined) properties['密碼'] = { rich_text: richText(await hashPassword(data.password)) }
   if (data.accountType !== undefined) properties['帳號類型'] = { select: { name: data.accountType } }
   if (data.status !== undefined) properties['狀態'] = { status: { name: data.status } }
   if (data.permissions !== undefined) {

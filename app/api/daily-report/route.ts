@@ -15,18 +15,26 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import crypto from 'crypto'
 import { authOptions } from '@/lib/auth'
 import { buildDailyReportData, formatDailyReport, todayTW, businessDayTW } from '@/lib/ceo-stats'
 import { sendDailyReport } from '@/lib/line-push'
 
 export const dynamic = 'force-dynamic'
 
+function timingSafeSecretMatch(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  return crypto.timingSafeEqual(bufA, bufB)
+}
+
 export async function POST(req: NextRequest) {
   // ── Auth: session 或 cron secret ────────────────────────────
   const cronSecret   = process.env.DAILY_REPORT_SECRET
-  const headerSecret = req.headers.get('x-cron-secret')
+  const headerSecret = req.headers.get('x-cron-secret') ?? ''
 
-  if (cronSecret && headerSecret === cronSecret) {
+  if (cronSecret && headerSecret && timingSafeSecretMatch(headerSecret, cronSecret)) {
     // Cron job — 允許
   } else {
     const session = await getServerSession(authOptions)

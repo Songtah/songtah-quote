@@ -9,6 +9,11 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
 
+  const role        = (session.user as any)?.role        as string | undefined
+  const accountType = (session.user as any)?.accountType as string | undefined
+  const isAuthorized = role === 'admin' || accountType === '行政' || accountType === '中央管理' || accountType === '總經理'
+  if (!isAuthorized) return NextResponse.json({ error: '僅管理層可查看經營儀表板' }, { status: 403 })
+
   try {
     const result = await Promise.race<Awaited<ReturnType<typeof getCEOStats>> | null>([
       getCEOStats(),

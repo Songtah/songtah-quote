@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listEvents, createEvent } from '@/lib/system-notion'
+import { canEdit } from '@/lib/permissions'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -17,6 +18,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'events')) {
+    return NextResponse.json({ error: '無建立活動權限' }, { status: 403 })
+  }
 
   const body = await req.json()
   const { name, date, endDate, location, type, deadline, status, description } = body

@@ -304,6 +304,9 @@ function detectDiffs(
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可查看醫事監控' }, { status: 403 })
+  }
 
   // 開頁（無 refresh）→ 直接回上次比對結果（伺服器端共用，跨裝置/不受清快取影響）。
   const refresh = req.nextUrl.searchParams.get('refresh') === '1'

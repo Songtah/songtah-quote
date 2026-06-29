@@ -11,6 +11,9 @@ import { getMonthlyMonitorChanges } from '@/lib/system-notion'
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可查看醫事監控' }, { status: 403 })
+  }
   const month = req.nextUrl.searchParams.get('month') || new Date().toISOString().slice(0, 7)
   const changes = await getMonthlyMonitorChanges(month)
   return NextResponse.json({ month, changes })

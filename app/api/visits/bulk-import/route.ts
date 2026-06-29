@@ -17,10 +17,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { canEdit } from '@/lib/permissions'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'bd')) {
+    return NextResponse.json({ error: '無批次匯入客情紀錄權限' }, { status: 403 })
+  }
 
   try {
     const body = await req.json()

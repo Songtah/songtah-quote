@@ -43,6 +43,9 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可匯入客戶資料' }, { status: 403 })
+  }
 
   const body = await req.json()
   const institutions: NewOpening[] = Array.isArray(body.institutions) ? body.institutions : []

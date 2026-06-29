@@ -7,6 +7,9 @@ import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audi
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可管理帳號' }, { status: 403 })
+  }
 
   try {
     const body = await req.json()
@@ -44,6 +47,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if ((session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: '僅管理員可管理帳號' }, { status: 403 })
+  }
 
   const before = await getSystemUserById(params.id).catch(() => null)
   await deleteSystemUser(params.id)

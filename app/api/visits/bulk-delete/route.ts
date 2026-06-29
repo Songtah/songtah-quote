@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { deleteVisit } from '@/lib/system-notion'
+import { canEdit } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,6 +22,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'crm')) {
+    return NextResponse.json({ error: '無批次刪除客情紀錄權限' }, { status: 403 })
+  }
 
   let ids: string[] = []
   try {

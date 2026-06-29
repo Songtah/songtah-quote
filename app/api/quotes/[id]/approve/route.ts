@@ -30,28 +30,45 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { action, note = '' } = body
 
-  // ── Resolve new status ──────────────────────────────────────
-  let newStatus: string
-
-  if (action === 'approve') {
-    newStatus = '已核准'
-  } else if (action === 'escalate') {
-    // Only admin / 行政 may escalate
-    if (!isAdmin && !isStaff) {
-      return NextResponse.json({ error: '無權限呈總經理' }, { status: 403 })
-    }
-    newStatus = '待總經理審核'
-  } else if (action === 'reject') {
-    newStatus = '已退回'
-  } else if (action === 'resubmit') {
-    // Sales / owner can re-submit a rejected quote back to pending
-    newStatus = '待行政審核'
-  } else {
-    return NextResponse.json({ error: '無效動作' }, { status: 400 })
-  }
-
   const quote = await getQuote(params.id).catch(() => null)
   if (!quote) return NextResponse.json({ error: '找不到報價單' }, { status: 404 })
+
+  // ── 狀態機：依目前狀態決定合法的下一步，避免跳過總經理審核層級 ──────────────
+  // 注意：每個 action 的目標狀態與允許角色都綁定「目前狀態」，不是只看 action 本身。
+  type Transition = { to: string; roles: Array<'admin' | '行政' | '總經理'> }
+  const TRANSITIONS: Record<string, Record<string, Transition>> = {
+    '待行政審核': {
+      approve:  { to: '已核准',     roles: ['admin', '行政'] },
+      escalate: { to: '待總經理審核', roles: ['admin', '行政'] },
+      reject:   { to: '已退回',     roles: ['admin', '行政', '總經理'] },
+    },
+    '待總經理審核': {
+      // 已呈總經理者，只有總經理（或 admin）可核准——行政不可代為核准，避免繞過審核層級。
+      approve: { to: '已核准', roles: ['admin', '總經理'] },
+      reject:  { to: '已退回', roles: ['admin', '行政', '總經理'] },
+    },
+    '已退回': {
+      resubmit: { to: '待行政審核', roles: ['admin', '行政', '總經理'] },
+    },
+    '已核准': {
+      // 允許管理員撤銷誤核准的報價單，但不可由此狀態再「approve」（已是終態）。
+      reject: { to: '已退回', roles: ['admin'] },
+    },
+  }
+
+  const transition = TRANSITIONS[quote.status]?.[action]
+  if (!transition) {
+    return NextResponse.json(
+      { error: `報價單目前狀態為「${quote.status}」，無法執行「${action}」` },
+      { status: 400 }
+    )
+  }
+  const actorRole = isAdmin ? 'admin' : isStaff ? '行政' : isGM ? '總經理' : ''
+  if (!transition.roles.includes(actorRole as any)) {
+    return NextResponse.json({ error: '無權限執行此簽核動作' }, { status: 403 })
+  }
+
+  const newStatus = transition.to
 
   await updateQuoteStatus(params.id, newStatus, note || undefined)
 

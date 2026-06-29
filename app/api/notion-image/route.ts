@@ -44,8 +44,28 @@ function extractFileOrExternalUrl(obj: any): string {
   return ''
 }
 
+// 僅允許代理 Notion 自家檔案儲存（file 類型一定落在這些網域）；external 類型可能是任意網址，
+// 拒絕代理避免成為開放代理 / SSRF 跳板（攻擊者可透過 Notion 編輯權限把圖片網址指向內部服務）。
+const ALLOWED_IMAGE_HOSTS = [/\.amazonaws\.com$/i, /(^|\.)notion\.so$/i, /(^|\.)notion-static\.com$/i]
+const PRIVATE_HOST_PATTERNS = [
+  /^localhost$/i, /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./,
+  /^169\.254\./, /^0\.0\.0\.0$/, /^\[?::1\]?$/, /^\[?fc[0-9a-f]{2}:/i, /^\[?fe80:/i,
+]
+
+function isUrlSafeToProxy(rawUrl: string): boolean {
+  let parsed: URL
+  try { parsed = new URL(rawUrl) } catch { return false }
+  if (parsed.protocol !== 'https:') return false
+  const host = parsed.hostname
+  if (PRIVATE_HOST_PATTERNS.some((re) => re.test(host))) return false
+  return ALLOWED_IMAGE_HOSTS.some((re) => re.test(host))
+}
+
 /** Stream the image from the given URL back to the client. */
 async function streamImage(url: string): Promise<NextResponse> {
+  if (!isUrlSafeToProxy(url)) {
+    return new NextResponse('Image source not allowed', { status: 400 })
+  }
   const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
   if (!res.ok) return new NextResponse('Upstream fetch failed', { status: 502 })
   const contentType = res.headers.get('content-type') ?? 'image/jpeg'

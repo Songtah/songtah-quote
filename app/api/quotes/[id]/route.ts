@@ -3,8 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getQuote, deleteQuote } from '@/lib/notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { canEdit } from '@/lib/permissions'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+
   try {
     const quote = await getQuote(params.id)
     if (!quote) return NextResponse.json({ error: '找不到報價單' }, { status: 404 })
@@ -18,6 +22,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+  if (!canEdit(session as any, 'quote')) {
+    return NextResponse.json({ error: '無刪除報價單權限' }, { status: 403 })
+  }
 
   try {
     const before = await getQuote(params.id).catch(() => null)
