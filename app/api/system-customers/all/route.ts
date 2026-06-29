@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { listSystemCustomersPaginated } from '@/lib/system-notion'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
     const p = req.nextUrl.searchParams
     const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
@@ -16,4 +13,4 @@ export async function GET(req: NextRequest) {
     console.error('listSystemCustomersPaginated error:', error)
     return NextResponse.json({ items: [], hasMore: false, nextCursor: null }, { status: 200 }) // graceful fallback
   }
-}
+})

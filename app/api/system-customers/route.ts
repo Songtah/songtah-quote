@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   const q = req.nextUrl.searchParams.get('q') ?? ''
   const city = req.nextUrl.searchParams.get('city') || undefined
   const district = req.nextUrl.searchParams.get('district') || undefined
@@ -20,4 +16,4 @@ export async function GET(req: NextRequest) {
     console.error('searchSystemCustomers error:', error)
     return NextResponse.json({ error: '無法搜尋客戶' }, { status: 500 })
   }
-}
+})

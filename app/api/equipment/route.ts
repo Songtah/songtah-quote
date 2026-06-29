@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { searchEquipment } from '@/lib/system-notion'
 
 function isRateLimited(error: unknown) {
@@ -13,10 +12,7 @@ function isRateLimited(error: unknown) {
   )
 }
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   const q = req.nextUrl.searchParams.get('q') ?? ''
 
   try {
@@ -33,4 +29,4 @@ export async function GET(req: NextRequest) {
       { status: isRateLimited(error) ? 429 : 500 }
     )
   }
-}
+})

@@ -5,16 +5,12 @@
  * 只包含 id + name，快取 10 分鐘。
  */
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getAllSystemCustomers } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async () => {
   try {
     const all = await getAllSystemCustomers()
     const index = all.map((c) => ({
@@ -33,4 +29,4 @@ export async function GET() {
     console.error('customer names index error:', error)
     return NextResponse.json({ error: '無法取得客戶名稱索引' }, { status: 500 })
   }
-}
+})
