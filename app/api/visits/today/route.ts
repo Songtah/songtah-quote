@@ -6,16 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { fetchTodayVisits, todayTW } from '@/lib/ceo-stats'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   const date = req.nextUrl.searchParams.get('date') ?? todayTW()
 
   try {
@@ -40,4 +36,4 @@ export async function GET(req: NextRequest) {
     console.error('visits/today error:', error)
     return NextResponse.json({ error: error?.message ?? '讀取失敗' }, { status: 500 })
   }
-}
+})

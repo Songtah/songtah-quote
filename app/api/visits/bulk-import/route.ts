@@ -13,19 +13,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { createVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
-import { canEdit } from '@/lib/permissions'
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if (!canEdit(session as any, 'bd')) {
-    return NextResponse.json({ error: '無批次匯入客情紀錄權限' }, { status: 403 })
-  }
-
+export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const visits: Array<{ customerName: string; content: string; date: string; salesperson: string; customerId?: string; customerReaction?: string; city?: string; district?: string }> =
@@ -89,4 +81,4 @@ export async function POST(req: NextRequest) {
     console.error('bulk-import error:', error)
     return NextResponse.json({ error: error?.message ?? '批次匯入失敗' }, { status: 500 })
   }
-}
+})

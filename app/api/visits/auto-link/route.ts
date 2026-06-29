@@ -17,8 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
@@ -29,10 +28,7 @@ function normId(id: string) {
   return id.replace(/-/g, '')
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest) => {
   try {
     const body = await req.json().catch(() => ({}))
     const cursor   = body.cursor   as string | undefined
@@ -134,4 +130,4 @@ export async function POST(req: NextRequest) {
     console.error('auto-link error:', error)
     return NextResponse.json({ error: error?.message ?? '自動關聯失敗' }, { status: 500 })
   }
-}
+})

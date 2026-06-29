@@ -13,8 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
 
 export const dynamic = 'force-dynamic'
@@ -41,10 +40,7 @@ function readRow(page: any): Row {
 
 const norm = (s: string) => (s ?? '').toLowerCase().trim()
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest) => {
   try {
     const body = await req.json().catch(() => ({}))
     const dryRun = Boolean(body.dryRun)
@@ -119,4 +115,4 @@ export async function POST(req: NextRequest) {
       : (error?.message ?? '刪除重複失敗')
     return NextResponse.json({ error: msg }, { status: error?.status === 429 ? 429 : 500 })
   }
-}
+})

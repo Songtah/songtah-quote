@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { createTicket, listSystemTickets } from '@/lib/system-notion'
 import type { CreateTicketPayload } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
-import { canEdit } from '@/lib/permissions'
 
 function isRateLimited(error: unknown) {
   if (!error || typeof error !== 'object') return false
@@ -16,10 +14,7 @@ function isRateLimited(error: unknown) {
   )
 }
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
     const p = req.nextUrl.searchParams
     const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
@@ -37,15 +32,9 @@ export async function GET(req: NextRequest) {
       { status: isRateLimited(error) ? 429 : 500 }
     )
   }
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if (!canEdit(session as any, 'rma')) {
-    return NextResponse.json({ error: '無建立工單權限' }, { status: 403 })
-  }
-
+export const POST = withApiAuth({ module: 'rma', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = (await req.json()) as CreateTicketPayload
 
@@ -86,4 +75,4 @@ export async function POST(req: NextRequest) {
       { status: isRateLimited(error) ? 429 : 500 }
     )
   }
-}
+})

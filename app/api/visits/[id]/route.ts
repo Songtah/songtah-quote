@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { deleteVisit, getVisitById, updateVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
-import { canEdit } from '@/lib/permissions'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if (!canEdit(session as any, 'crm')) {
-    return NextResponse.json({ error: '無編輯客情紀錄權限' }, { status: 403 })
-  }
-
+export const PATCH = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
     const before = await getVisitById(params.id).catch(() => null)
@@ -47,15 +39,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       { status: 500 }
     )
   }
-}
+})
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if (!canEdit(session as any, 'crm')) {
-    return NextResponse.json({ error: '無刪除客情紀錄權限' }, { status: 403 })
-  }
-
+export const DELETE = withApiAuth({ module: 'crm', action: 'edit' }, async (_req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const before = await getVisitById(params.id).catch(() => null)
     await deleteVisit(params.id)
@@ -76,4 +62,4 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     console.error('deleteVisit error:', error)
     return NextResponse.json({ error: '刪除客情紀錄失敗' }, { status: 500 })
   }
-}
+})

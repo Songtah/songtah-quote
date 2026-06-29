@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { listVisits, createVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
     const p = req.nextUrl.searchParams
     const customerName = p.get('customerName') ?? undefined
@@ -21,12 +17,9 @@ export async function GET(req: NextRequest) {
     console.error('listVisits error:', error)
     return NextResponse.json({ error: '讀取客情紀錄失敗' }, { status: 500 })
   }
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const {
@@ -75,4 +68,4 @@ export async function POST(req: NextRequest) {
     console.error('createVisit error:', error)
     return NextResponse.json({ error: '建立客情紀錄失敗' }, { status: 500 })
   }
-}
+})
