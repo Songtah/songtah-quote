@@ -221,3 +221,17 @@ export function getCachedValue<T>(key: string) {
 export function setCachedValue<T>(key: string, value: T, ttlMs: number) {
   transientCache.set(key, { value, expiresAt: Date.now() + ttlMs })
 }
+
+/** 取單一 DB 第一頁（供摘要/輕量列表用）。客戶與儀表板彙總共用，故置於 shared。 */
+export async function querySummary(databaseId: string | undefined, pageSize = 100): Promise<{ rows: any[]; total: number; hasMore: boolean }> {
+  if (!databaseId) return { rows: [], total: 0, hasMore: false }
+  const firstPage: any = await notionCallWithRetry('querySummary', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(databaseId),
+      page_size: pageSize,
+    })
+  )
+  const rows = firstPage.results ?? []
+  const hasMore = firstPage.has_more ?? false
+  return { rows, total: rows.length, hasMore }
+}

@@ -93,6 +93,16 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 5. **報價單狀態機**：`app/api/quotes/[id]/approve/route.ts` 的 `TRANSITIONS` 表是唯一允許的狀態轉換來源，新增簽核動作要先在這張表加規則，不可繞過直接呼叫 `updateQuoteStatus`。
 6. **對外代理／外部圖片一律驗證網域**：`app/api/notion-image/route.ts` 的 `isUrlSafeToProxy` 是唯一允許代理的網址檢查，新增任何「伺服器端 fetch 使用者可控 URL」的功能都要套用同等的 host allowlist + 私網位址檢查，避免 SSRF。
 
+## Notion 資料層架構原則（拆 god module 的長期防線）
+
+目標：避免 `system-notion.ts` 那種「什麼都包」的 god module 復發。`lib/notion/` 分兩層：
+
+1. **基礎層 `lib/notion/shared.ts`**：Notion client、雙層快取、DB id 對照、property helper、限流重試。**leaf，不可 import 任何領域檔**。
+2. **葉領域 `lib/notion/<domain>.ts`**（customers／equipment／visits／tickets／events／course-costs／medical-monitor／accounts…）：各自擁有自己的 Notion DB 與查詢，**包含「依某客戶查」這類查詢**（例：`listCustomerEquipment` 歸 equipment、`listCustomerEvents` 歸 events——「某客戶的 X」歸 X，不歸客戶）。**葉領域彼此不互相 import**。
+3. **組合層 `lib/notion/dashboard.ts`（及客戶 360 等彙總）**：跨領域彙總/組合**只能放這裡**，它 import 多個葉領域，自己不直接碰 DB 細節。
+
+**鐵律：葉領域不互依；任何「跨多個領域的彙總邏輯」一律放組合層或上層 route，不准滲回葉領域。** 這條一旦守住，再長的彙總都不會把某個領域檔養成新的 god module。`system-notion.ts` 過渡期維持 barrel re-export 以相容既有 import；領域逐一抽出後它會收斂成薄轉發層。
+
 ## 工程慣例
 
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。
