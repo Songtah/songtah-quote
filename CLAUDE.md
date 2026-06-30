@@ -101,7 +101,9 @@ className="text-[11px] font-bold uppercase tracking-widest text-stone-400"
 2. **葉領域 `lib/notion/<domain>.ts`**（customers／equipment／visits／tickets／events／course-costs／medical-monitor／accounts…）：各自擁有自己的 Notion DB 與查詢，**包含「依某客戶查」這類查詢**（例：`listCustomerEquipment` 歸 equipment、`listCustomerEvents` 歸 events——「某客戶的 X」歸 X，不歸客戶）。**葉領域彼此不互相 import**。
 3. **組合層 `lib/notion/dashboard.ts`（及客戶 360 等彙總）**：跨領域彙總/組合**只能放這裡**，它 import 多個葉領域，自己不直接碰 DB 細節。
 
-**鐵律：葉領域不互依；任何「跨多個領域的彙總邏輯」一律放組合層或上層 route，不准滲回葉領域。** 這條一旦守住，再長的彙總都不會把某個領域檔養成新的 god module。`system-notion.ts` 過渡期維持 barrel re-export 以相容既有 import；領域逐一抽出後它會收斂成薄轉發層。
+**鐵律：葉領域不互依；任何「跨多個領域的彙總邏輯」一律放組合層或上層 route，不准滲回葉領域。** 這條一旦守住，再長的彙總都不會把某個領域檔養成新的 god module。
+
+**現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**（2883 → ~72 行），所有實作在 `lib/notion/*`：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `dashboard`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
 
 ## 工程慣例
 
