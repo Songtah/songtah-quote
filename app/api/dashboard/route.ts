@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getDashboardSummary } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async () => {
   try {
     const result = await Promise.race<Awaited<ReturnType<typeof getDashboardSummary>> | null>([
       getDashboardSummary(),
@@ -27,4 +23,4 @@ export async function GET() {
     console.error('dashboard summary error:', error)
     return NextResponse.json({ error: '無法取得資料' }, { status: 500 })
   }
-}
+})
