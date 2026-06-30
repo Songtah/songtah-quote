@@ -1,6 +1,6 @@
 import 'next-auth'
 import 'next-auth/jwt'
-import type { UserPermissions } from '@/lib/system-notion'
+import type { UserPermissions } from '@/lib/notion/permissions-model'
 
 declare module 'next-auth' {
   interface Session {

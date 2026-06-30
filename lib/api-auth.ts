@@ -20,7 +20,7 @@ import type { Session } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { canView, canEdit } from '@/lib/permissions'
-import type { ModuleKey } from '@/lib/system-notion'
+import type { ModuleKey } from '@/lib/notion/permissions-model'
 
 export type ApiAuthRule =
   | 'session'

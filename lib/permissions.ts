@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { authOptions } from './auth'
-import type { ModuleKey, UserPermissions } from './system-notion'
+import type { ModuleKey, UserPermissions } from './notion/permissions-model'
 
 export async function requireSession() {
   const session = await getServerSession(authOptions)
