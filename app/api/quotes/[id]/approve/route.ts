@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getQuote, updateQuoteStatus } from '@/lib/notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+// 簽核權限：admin / 行政 / 總經理（withApiAuth 先擋入口，內部再依目前狀態做轉換層級判斷）
+export const POST = withApiAuth({ roles: ['行政', '總經理'] }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   const user = session.user as any
   const role: string        = user?.role ?? ''
   const accountType: string = user?.accountType ?? ''
@@ -15,11 +12,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const isAdmin    = role === 'admin'
   const isStaff    = accountType === '行政'
   const isGM       = accountType === '總經理'
-  const canApprove = isAdmin || isStaff || isGM
-
-  if (!canApprove) {
-    return NextResponse.json({ error: '無簽核權限' }, { status: 403 })
-  }
 
   let body: { action: string; note?: string }
   try {
@@ -86,4 +78,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }).catch((e) => console.error('audit approve error:', e))
 
   return NextResponse.json({ ok: true, status: newStatus })
-}
+})

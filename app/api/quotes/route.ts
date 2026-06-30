@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { createQuote, listQuotes } from '@/lib/notion'
 import type { QuoteItem } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
     const p = req.nextUrl.searchParams
     const limit = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
@@ -19,12 +15,9 @@ export async function GET(req: NextRequest) {
     console.error('listQuotes error:', err)
     return NextResponse.json({ error: '無法取得報價單列表' }, { status: 500 })
   }
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const POST = withApiAuth({ module: 'quote', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const {
@@ -87,4 +80,4 @@ export async function POST(req: NextRequest) {
     console.error('createQuote error:', err)
     return NextResponse.json({ error: '建立報價單失敗' }, { status: 500 })
   }
-}
+})

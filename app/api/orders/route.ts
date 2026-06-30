@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { listOrders, createOrder } from '@/lib/orders-notion'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async () => {
   try {
     const orders = await listOrders()
     return NextResponse.json(orders)
@@ -14,19 +10,9 @@ export async function GET() {
     console.error('listOrders error:', error)
     return NextResponse.json({ error: '讀取訂單失敗' }, { status: 500 })
   }
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
-  // 需要 orders.edit 權限（admin / env 帳號 / 明確授權）
-  const user = session.user as any
-  const role = user?.role as string | undefined
-  const perms = user?.permissions as Record<string, { view: boolean; edit: boolean }> | undefined
-  const hasEdit = role === 'admin' || !perms || (perms?.orders?.edit ?? false)
-  if (!hasEdit) return NextResponse.json({ error: '無建立訂單權限' }, { status: 403 })
-
+export const POST = withApiAuth({ module: 'orders', action: 'edit' }, async (req: NextRequest) => {
   try {
     const body = await req.json()
     const {
@@ -58,4 +44,4 @@ export async function POST(req: NextRequest) {
       { status: isValidationError ? 400 : 500 }
     )
   }
-}
+})

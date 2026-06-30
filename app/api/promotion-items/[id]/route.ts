@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { updatePromotionItem, deletePromotionItem } from '@/lib/promotion-items-notion'
 import type { ItemStatus } from '@/lib/promotion-items-notion'
 
@@ -8,11 +7,8 @@ export const dynamic = 'force-dynamic'
 
 type Ctx = { params: { id: string } }
 
-// PATCH /api/promotion-items/[id]
-export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+// PATCH /api/promotion-items/[id] — 僅行政帳號可修改
+export const PATCH = withApiAuth({ roles: ['行政', '中央管理'] }, async (req: NextRequest, { params }: Ctx) => {
   let body: any
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -32,17 +28,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   } catch (err: any) {
     return NextResponse.json({ error: '更新失敗：' + (err?.message ?? '') }, { status: 500 })
   }
-}
+})
 
-// DELETE /api/promotion-items/[id]
-export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+// DELETE /api/promotion-items/[id] — 僅行政帳號可刪除
+export const DELETE = withApiAuth({ roles: ['行政', '中央管理'] }, async (_req: NextRequest, { params }: Ctx) => {
   try {
     await deletePromotionItem(params.id)
     return NextResponse.json({ ok: true })
   } catch (err: any) {
     return NextResponse.json({ error: '刪除失敗：' + (err?.message ?? '') }, { status: 500 })
   }
-}
+})

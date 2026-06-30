@@ -1,35 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getOrderById, updateOrder, updateOrderStatus, archiveOrder } from '@/lib/orders-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (_req: NextRequest, { params }: { params: { id: string } }) => {
   const order = await getOrderById(params.id)
   if (!order) return NextResponse.json({ error: '找不到訂單' }, { status: 404 })
   return NextResponse.json(order)
-}
+})
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
-  const user        = session.user as any
-  const role        = user?.role        as string | undefined
-  const accountType = user?.accountType as string | undefined
-  const perms       = user?.permissions as Record<string, { view: boolean; edit: boolean }> | undefined
-  const hasEdit     = role === 'admin' || accountType === '行政' || accountType === '中央管理' || !perms || (perms?.orders?.edit ?? false)
-  if (!hasEdit) return NextResponse.json({ error: '無刪除訂單權限' }, { status: 403 })
-
+export const DELETE = withApiAuth({ module: 'orders', action: 'edit' }, async (_req: NextRequest, { params }: { params: { id: string } }) => {
   try {
     await archiveOrder(params.id)
     return NextResponse.json({ ok: true })
@@ -37,15 +17,9 @@ export async function DELETE(
     console.error('deleteOrder error:', error)
     return NextResponse.json({ error: '刪除訂單失敗' }, { status: 500 })
   }
-}
+})
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-
+export const PATCH = withApiAuth({ module: 'orders', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   const user        = session.user as any
   const role        = user?.role        as string | undefined
   const accountType = user?.accountType as string | undefined
@@ -111,4 +85,4 @@ export async function PATCH(
       { status: isValidationError ? 400 : 500 }
     )
   }
-}
+})
