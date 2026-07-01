@@ -1,7 +1,38 @@
 import { Client } from '@notionhq/client'
 import { getCatalogProduct } from './products-catalog'
+import { listItemsByPromotion } from './promotion-items-notion'
+import { validateOrderPromotions, type PromoRule } from './order-pricing'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
+
+/**
+ * 伺服器端促銷把關：依訂單綁定的 promotionId 重抓「已確認」促銷品項，
+ * 用共用引擎驗證前端宣稱的促銷帶價與免費贈品是否成立。不符則 throw（路由映射 400）。
+ * 目錄價作為 rate 型折扣的權威折前基準，防止灌高基準。
+ */
+async function assertPromotionValid(promotionId: string | undefined, items: OrderItem[]): Promise<void> {
+  if (!promotionId) return
+  let rules: PromoRule[]
+  try {
+    const promoItems = await listItemsByPromotion(promotionId)
+    rules = promoItems
+      .filter((p) => p.status === '已確認')
+      .map((p) => ({ skuCode: p.skuCode, seriesId: p.seriesId, conditionType: p.conditionType, conditionParams: p.conditionParams }))
+  } catch {
+    // 促銷查詢失敗不阻擋建單（避免 Notion 抖動誤殺），但也不放行未驗的免費品——
+    // 交由 validateOrderItems 的贈品量比例防線兜底。
+    return
+  }
+  const violations = validateOrderPromotions(
+    items,
+    rules,
+    (sku) => getCatalogProduct(sku)?.price ?? null,
+  )
+  if (violations.length > 0) {
+    const detail = violations.map((v) => `「${v.skuCode}」${v.reason}`).join('；')
+    throw new Error(`促銷驗證未通過：${detail}`)
+  }
+}
 const ORDERS_DB      = process.env.NOTION_ORDERS_DB!
 const ORDER_ITEMS_DB = process.env.NOTION_ORDER_ITEMS_DB!
 
@@ -386,6 +417,7 @@ export async function createOrder(data: {
   promotionName?: string
 }): Promise<Order> {
   validateOrderItems(data.items)
+  await assertPromotionValid(data.promotionId, data.items)
   await ensureOrderFields()
   const orderNumber = await generateOrderNumber()
   const total = calcTotal(data.items)
@@ -466,6 +498,9 @@ export async function updateOrder(id: string, data: {
 
   if (data.items) {
     validateOrderItems(data.items)
+    // 促銷把關：promotionId 未隨更新帶入時，回查既有訂單綁定的促銷再驗
+    const effectivePromotionId = data.promotionId ?? (await getOrderById(id))?.promotionId
+    await assertPromotionValid(effectivePromotionId, data.items)
     // Replace all item pages
     await deleteOrderItems(formatted)
     await createOrderItems(formatted, data.items)

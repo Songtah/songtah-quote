@@ -37,7 +37,8 @@ export const POST = withApiAuth({ module: 'orders', action: 'edit' }, async (req
       error.message.includes('數量須為正整數') ||
       error.message.includes('單價不可為負數') ||
       error.message.includes('不存在於產品目錄') ||
-      error.message.includes('贈品／樣品總數量')
+      error.message.includes('贈品／樣品總數量') ||
+      error.message.includes('促銷驗證未通過')
     )
     return NextResponse.json(
       { error: isValidationError ? error.message : '建立訂單失敗' },
