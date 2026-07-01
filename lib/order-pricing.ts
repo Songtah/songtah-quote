@@ -40,7 +40,7 @@ export interface PromoViolation {
 }
 
 // 系列級促銷：才允許用 seriesId 比對；其餘一律只認 skuCode（避免同系列其他產品被誤觸發）
-const SERIES_CONDITION_TYPES = new Set(['series_discount', 'series_buy_n_get_m'])
+export const SERIES_CONDITION_TYPES = new Set(['series_discount', 'series_buy_n_get_m'])
 
 function isGift(it: PricingLine): boolean {
   return it.itemType === 'gift' || it.itemType === 'sample'

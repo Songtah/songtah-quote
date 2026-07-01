@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OrderItem, ItemType } from '@/lib/orders-notion'
 import type { PromotionItem } from '@/lib/promotion-items-notion'
+import { matchPromoRule, buyNGetMGiftQty, SERIES_CONDITION_TYPES } from '@/lib/order-pricing'
 import { ProductFamily, YMHToothGridPanel, FamilySpecPanel } from '@/components/FamilySpecPicker'
 
 interface ActivePromotion { id: string; name: string; type: string; startDate: string; endDate: string }
@@ -647,39 +648,15 @@ function CustomerNameInput({
 
 // ── Promotion condition helpers ───────────────────────────────
 
-/**
- * 計算買N送M的贈品數量（可重複觸發）
- * 買10送2（買5送1）→ floor(10/5)*1 = 2
- */
-function calcBuyNGetMGiftQty(orderQty: number, n: number, m: number): number {
-  return Math.floor(orderQty / n) * m
-}
+// 計算/比對邏輯改用共用引擎 lib/order-pricing（與後端促銷驗證同一份真實來源，避免飄移）。
+// 以下為薄委派，保留原名稱與型別以免呼叫端變動。
+const calcBuyNGetMGiftQty = buyNGetMGiftQty
 
-// 系列級促銷類型：才允許用 seriesId 比對；其餘一律只認 skuCode（避免同系列誤觸發）
-const SERIES_CONDITION_TYPES = new Set(['series_discount', 'series_buy_n_get_m'])
-
-/**
- * 類型感知的促銷比對：
- * 1) 先用 skuCode 精準比對（所有類型）
- * 2) seriesId 只比對「系列級」促銷（series_discount / series_buy_n_get_m）
- *    → 修正「買A送B 等指定觸發商品的促銷，被同系列其他產品誤觸發」的 Bug
- * skuCode 與 seriesId 皆空的促銷品項一律略過。
- */
 function matchPromoItem(
   item: { skuCode?: string; seriesId?: string },
   promoItems: PromotionItem[]
 ): PromotionItem | undefined {
-  if (item.skuCode) {
-    const bySku = promoItems.find((p) => p.skuCode && p.skuCode === item.skuCode)
-    if (bySku) return bySku
-  }
-  if (item.seriesId) {
-    return promoItems.find(
-      (p) => p.seriesId && p.seriesId === item.seriesId &&
-             SERIES_CONDITION_TYPES.has(p.conditionType as string)
-    )
-  }
-  return undefined
+  return matchPromoRule(item, promoItems) as PromotionItem | undefined
 }
 
 /**
