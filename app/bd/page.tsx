@@ -4,6 +4,7 @@ import { AppShell } from '@/components/AppShell'
 import VisitsContent from '@/components/VisitsContent'
 import DailyReportPanel from '@/components/DailyReportPanel'
 import { LineImportContent } from '@/components/LineImportContent'
+import PipelineContent from '@/components/PipelineContent'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 
@@ -23,23 +24,28 @@ export default async function BdPage({
 
   const tab = searchParams.tab === 'report'
     ? 'report'
-    : searchParams.tab === 'line-import' && isAdmin
-      ? 'line-import'
-      : 'visits'
+    : searchParams.tab === 'pipeline'
+      ? 'pipeline'
+      : searchParams.tab === 'line-import' && isAdmin
+        ? 'line-import'
+        : 'visits'
 
   const TAB_ITEMS = [
     { id: 'visits',      href: '/bd',                   label: '📋 客情紀錄', adminOnly: false },
+    { id: 'pipeline',    href: '/bd?tab=pipeline',      label: '🎯 開發漏斗', adminOnly: false },
     { id: 'report',      href: '/bd?tab=report',        label: '📤 業務日報', adminOnly: false },
     { id: 'line-import', href: '/bd?tab=line-import',   label: '📥 LINE 匯入', adminOnly: true },
   ] as const
 
   return (
     <AppShell
-      title={tab === 'report' ? '業務日報' : '業務開發・客情紀錄'}
+      title={tab === 'report' ? '業務日報' : tab === 'pipeline' ? '開發漏斗' : '業務開發・客情紀錄'}
       description={
         tab === 'report'
           ? '日報產生、LINE 推播，以及將業務日報批次匯入客情紀錄。'
-          : '記錄每日客戶拜訪情況，掌握各地區業務動態。'
+          : tab === 'pipeline'
+            ? '陌生開發管線：BAS 新開業自動入池，認領、推進階段、追蹤到成交。'
+            : '記錄每日客戶拜訪情況，掌握各地區業務動態。'
       }
     >
       {/* Sub-tab bar */}
@@ -61,6 +67,8 @@ export default async function BdPage({
 
       {tab === 'visits' ? (
         <VisitsContent />
+      ) : tab === 'pipeline' ? (
+        <PipelineContent currentUser={session?.user?.name ?? undefined} />
       ) : tab === 'report' ? (
         <DailyReportPanel isAdmin={isAdmin} />
       ) : (
