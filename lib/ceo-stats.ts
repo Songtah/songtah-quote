@@ -151,6 +151,7 @@ async function fetchOrderStats(from: string, to: string): Promise<OrderStat[]> {
 // ══════════════════════════════════════════════════════════════
 
 export interface VisitStat {
+  id: string
   date: string
   salesperson: string
   customerName: string
@@ -166,6 +167,7 @@ export interface VisitStat {
 
 function mapVisitPage(p: any): VisitStat {
   return {
+    id:                 p.id,
     date:               getDate(p, '日期'),
     salesperson:        getSelect(p, '業務人員') || getText(p, '業務人員'),
     customerName:       getTitle(p, '單位名稱'),
@@ -191,6 +193,20 @@ async function fetchVisitsFull(from: string, to: string): Promise<VisitStat[]> {
     and: [
       { property: '日期', date: { on_or_after: from } },
       { property: '日期', date: { on_or_before: to  } },
+    ],
+  })
+  return pages.map(mapVisitPage)
+}
+
+/**
+ * 跨月「未結案待追蹤」（是否需追蹤=true 且 追蹤已結案=false）。
+ * 修復舊版只看本月、月初整批消失的缺陷。
+ */
+async function fetchOpenFollowUps(): Promise<VisitStat[]> {
+  const pages = await queryPaged(VISITS_DB, {
+    and: [
+      { property: '是否需追蹤', checkbox: { equals: true } },
+      { property: '追蹤已結案', checkbox: { equals: false } },
     ],
   })
   return pages.map(mapVisitPage)
@@ -326,10 +342,11 @@ export async function getCEOStats(): Promise<CEOStats> {
   // ④ 各月 visits 筆數（趨勢圖用，每月最多 5 頁，6 月平行）
   //    → ④ 用 Promise.all 同時發出 6 個查詢，壁鐘時間 ≈ 單月最慢者
 
-  const [allOrders, allQuotes, thisMonthVisits, ...visitCounts] = await Promise.all([
+  const [allOrders, allQuotes, thisMonthVisits, openFollowUps, ...visitCounts] = await Promise.all([
     safe(() => fetchOrderStats(months[0].from, curMonth.to), []),
     safe(() => fetchQuoteStats(months[0].from, curMonth.to), []),
     safe(() => fetchVisitsFull(curMonth.from, curMonth.to), []),
+    safe(() => fetchOpenFollowUps(), []),
     // 6 個月的 visit count 平行查詢
     ...months.map((m) =>
       safe(() => fetchVisitCount(m.from, m.to), 0)
@@ -358,10 +375,13 @@ export async function getCEOStats(): Promise<CEOStats> {
     const name = v.salesperson || '（未填）'
     if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0, followUpItems: [] }
     spMap[name].visits++
-    if (v.needsFollowUp) {
-      spMap[name].followUps++
-      spMap[name].followUpItems.push(v)
-    }
+  }
+  // 各業務的待追蹤＝跨月未結案（與總覽同一資料源，不再只看本月）
+  for (const v of openFollowUps as VisitStat[]) {
+    const name = v.salesperson || '（未填）'
+    if (!spMap[name]) spMap[name] = { name, visits: 0, orders: 0, amount: 0, followUps: 0, followUpItems: [] }
+    spMap[name].followUps++
+    spMap[name].followUpItems.push(v)
   }
   for (const o of thisMonthOrders) {
     const name = o.salesperson || '（未填）'
@@ -404,9 +424,8 @@ export async function getCEOStats(): Promise<CEOStats> {
     ? Math.round((thisMonthOrders.length / sentQuotes) * 100)
     : 0
 
-  // ── 待追蹤（從本月資料計算，不另發 API）──────────────────────
-  const pendingFollowUpItems = (thisMonthVisits as VisitStat[])
-    .filter((v) => v.needsFollowUp)
+  // ── 待追蹤（跨月未結案清單，不再只看本月）─────────────────────
+  const pendingFollowUpItems = (openFollowUps as VisitStat[])
     .sort((a, b) => {
       // 有指定追蹤日的排前面，按日期升冪；無日期的排後面
       if (a.nextFollowUpDate && !b.nextFollowUpDate) return -1

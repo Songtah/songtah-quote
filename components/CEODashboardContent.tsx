@@ -108,6 +108,27 @@ function FollowUpModal({
   onClose: () => void
   title?: string
 }) {
+  // 已結案者從清單移除（樂觀更新；後端勾 追蹤已結案 checkbox，可逆）
+  const [closedIds, setClosedIds] = useState<Set<string>>(new Set())
+  const [closingId, setClosingId] = useState<string | null>(null)
+
+  async function handleCloseFollowUp(id: string) {
+    if (!id || closingId) return
+    setClosingId(id)
+    try {
+      const res = await fetch('/api/visits/follow-ups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) setClosedIds((prev) => new Set(prev).add(id))
+    } finally {
+      setClosingId(null)
+    }
+  }
+
+  const visibleItems = items.filter((v) => !closedIds.has(v.id))
+
   function formatDate(d: string) {
     if (!d) return ''
     return d.slice(0, 10).replace(/-/g, '/')
@@ -133,10 +154,10 @@ function FollowUpModal({
           {/* Header */}
           <div className="px-5 py-4 border-b border-red-100/60 bg-red-50/40 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-red-400">本月待追蹤</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-red-400">待追蹤（跨月未結案）</p>
               <h3 className="text-base font-bold text-gray-900 mt-0.5">
                 {title ?? '⚠️ 客情追蹤清單'}
-                <span className="ml-2 text-sm font-medium text-red-500">（{items.length} 筆）</span>
+                <span className="ml-2 text-sm font-medium text-red-500">（{visibleItems.length} 筆）</span>
               </h3>
             </div>
             <button
@@ -146,12 +167,12 @@ function FollowUpModal({
           </div>
           {/* List */}
           <div className="divide-y divide-gray-50 max-h-[65vh] overflow-y-auto">
-            {items.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">本月無待追蹤客情</div>
-            ) : items.map((v, i) => {
+            {visibleItems.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-gray-400">無待追蹤客情</div>
+            ) : visibleItems.map((v, i) => {
               const overdue = isOverdue(v.nextFollowUpDate)
               return (
-                <div key={i} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                <div key={v.id || i} className="px-5 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {/* 客戶名 + 業務 */}
@@ -180,8 +201,8 @@ function FollowUpModal({
                         )}
                       </div>
                     </div>
-                    {/* 追蹤日 */}
-                    <div className="shrink-0 text-right">
+                    {/* 追蹤日 + 結案 */}
+                    <div className="shrink-0 flex flex-col items-end gap-1.5">
                       {v.nextFollowUpDate ? (
                         <span className={`text-xs font-medium px-2 py-1 rounded-lg ${
                           overdue
@@ -192,6 +213,15 @@ function FollowUpModal({
                         </span>
                       ) : (
                         <span className="text-xs text-gray-300">未排期</span>
+                      )}
+                      {v.id && (
+                        <button
+                          onClick={() => handleCloseFollowUp(v.id)}
+                          disabled={closingId === v.id}
+                          className="text-xs px-2.5 py-1 rounded-full border border-stone-200 bg-white text-stone-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {closingId === v.id ? '結案中…' : '✓ 結案'}
+                        </button>
                       )}
                     </div>
                   </div>

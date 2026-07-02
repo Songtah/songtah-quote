@@ -30,6 +30,7 @@ export type Visit = {
   followUpAction: string       // 後續動作
   needsFollowUp: boolean       // 是否需追蹤
   nextFollowUpDate: string     // 下次追蹤日
+  followUpDone: boolean        // 追蹤已結案（勾了才從待追蹤清單消失，跨月不遺失）
 }
 
 export type VisitListResult = {
@@ -182,6 +183,7 @@ function mapVisitPageRaw(page: any) {
     followUpAction: getText(page, '後續動作'),
     needsFollowUp: getProp(page, '是否需追蹤')?.checkbox ?? false,
     nextFollowUpDate: getDate(page, '下次追蹤日'),
+    followUpDone: getProp(page, '追蹤已結案')?.checkbox ?? false,
   }
 }
 
@@ -417,7 +419,50 @@ export async function createVisit(data: {
     followUpAction: data.followUpAction ?? '',
     needsFollowUp: data.needsFollowUp ?? false,
     nextFollowUpDate: data.nextFollowUpDate ?? '',
+    followUpDone: false,
   }
+}
+
+/**
+ * 跨月列出所有「未結案」的待追蹤拜訪（是否需追蹤=true 且 追蹤已結案=false）。
+ * 修復舊版只算本月、月初整批消失的缺陷。有追蹤日者在前（升冪），無日期者在後。
+ */
+export async function listOpenFollowUps(): Promise<Visit[]> {
+  const allResults: any[] = []
+  let cur: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('listOpenFollowUps', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        filter: {
+          and: [
+            { property: '是否需追蹤', checkbox: { equals: true } },
+            { property: '追蹤已結案', checkbox: { equals: false } },
+          ],
+        },
+        sorts: [{ property: '日期', direction: 'descending' }],
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    allResults.push(...(response.results ?? []))
+    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cur)
+
+  const items = await buildVisitItems(allResults.map(mapVisitPageRaw))
+  return items.sort((a, b) => {
+    if (a.nextFollowUpDate && !b.nextFollowUpDate) return -1
+    if (!a.nextFollowUpDate && b.nextFollowUpDate) return 1
+    return (a.nextFollowUpDate ?? '').localeCompare(b.nextFollowUpDate ?? '')
+  })
+}
+
+/** 結案一筆追蹤（可逆：Notion 勾選框取消即可復原，無資料遺失） */
+export async function closeFollowUp(id: string): Promise<void> {
+  invalidateVisitsCache()
+  await notionCallWithRetry('closeFollowUp', () =>
+    notion.pages.update({ page_id: id, properties: { '追蹤已結案': { checkbox: true } } as any })
+  )
 }
 
 export async function updateVisit(id: string, data: {
@@ -439,6 +484,7 @@ export async function updateVisit(id: string, data: {
   followUpAction?: string
   needsFollowUp?: boolean
   nextFollowUpDate?: string
+  followUpDone?: boolean
 }): Promise<void> {
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
@@ -467,6 +513,7 @@ export async function updateVisit(id: string, data: {
   if (data.followUpAction !== undefined) properties['後續動作'] = { rich_text: richText(data.followUpAction) }
   if (data.needsFollowUp !== undefined) properties['是否需追蹤'] = { checkbox: data.needsFollowUp }
   if (data.nextFollowUpDate !== undefined) properties['下次追蹤日'] = data.nextFollowUpDate ? { date: { start: data.nextFollowUpDate } } : { date: null }
+  if (data.followUpDone !== undefined) properties['追蹤已結案'] = { checkbox: data.followUpDone }
 
   invalidateVisitsCache()
   await notionCallWithRetry('updateVisit', () =>
