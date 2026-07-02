@@ -74,6 +74,8 @@ export const POST = withApiAuth('admin', async (req: NextRequest, _ctx, session)
         infoUrl:         full?.infoUrl,
         personnelUrl:    full?.personnelUrl,
         deptUrl:         full?.deptUrl,
+        devStage:        '線索',        // 自動入開發漏斗：BAS 新開業＝未認領線索
+        devSource:       'BAS新開業',
       })
 
       await logAuditEvent({

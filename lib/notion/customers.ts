@@ -275,6 +275,96 @@ export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
   return items
 }
 
+// ── 業務開發：開發階段（漏斗）────────────────────────────────────────────
+// 機構狀態＝營業狀態（醫事監控領域專用）；開發階段＝業務關係狀態（業務領域專用）。
+// 兩者嚴格分離，禁止把「潛在客戶」之類的業務語意塞回機構狀態。
+export const DEV_STAGES = ['線索', '已接觸', '試用中', '報價中', '已成交', '流失'] as const
+export type DevStage = (typeof DEV_STAGES)[number]
+
+export interface PipelineCustomer {
+  id:          string
+  name:        string
+  city:        string
+  district:    string
+  type:        string
+  status:      string   // 機構狀態（營業狀態）
+  salesperson: string   // 負責業務（＝認領人）
+  devStage:    string
+  devSource:   string
+  lastEdited:  string   // 最後編輯時間（判斷停滯天數用）
+}
+
+/** 列出所有在開發漏斗中的客戶（開發階段非空） */
+export async function listPipelineCustomers(): Promise<PipelineCustomer[]> {
+  if (!DB.customers) return []
+  const cacheKey = 'pipeline-customers-v1'
+  const cached = getCachedValue<PipelineCustomer[]>(cacheKey)
+  if (cached) return cached
+
+  const items: PipelineCustomer[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listPipelineCustomers', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.customers!),
+        page_size: 100,
+        filter: { property: '開發階段', select: { is_not_empty: true } },
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) {
+      const name = getTitle(page, '客戶名稱')
+      if (!name) continue
+      items.push({
+        id:          page.id,
+        name,
+        city:        getSelect(page, '縣市'),
+        district:    getSelect(page, '行政區') || getText(page, '行政區'),
+        type:        getSelect(page, '客戶類型'),
+        status:      getSelect(page, '機構狀態'),
+        salesperson: getSelect(page, '負責業務'),
+        devStage:    getSelect(page, '開發階段'),
+        devSource:   getSelect(page, '開發來源'),
+        lastEdited:  page.last_edited_time ?? '',
+      })
+    }
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+
+  setCachedValue(cacheKey, items, 60_000) // 1 min（看板要即時感）
+  return items
+}
+
+/** 更新客戶的開發階段/來源/負責業務（認領）。stage 傳 null 表示移出漏斗。 */
+export async function updateCustomerDevStage(
+  id: string,
+  data: { devStage?: string | null; devSource?: string; salesperson?: string }
+): Promise<void> {
+  // 防止任意 page_id 寫入：限定目標頁面必須屬於客戶主檔 DB
+  const page = await notionCallWithRetry('updateCustomerDevStage:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  ) as any
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const customersDb = (DB.customers ?? '').replace(/-/g, '')
+  if (!targetDb || targetDb !== customersDb) {
+    throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+  }
+  if (data.devStage !== undefined && data.devStage !== null && !DEV_STAGES.includes(data.devStage as DevStage)) {
+    throw new Error(`無效的開發階段：${data.devStage}`)
+  }
+  const properties: any = {}
+  if (data.devStage !== undefined) {
+    properties['開發階段'] = data.devStage ? { select: { name: data.devStage } } : { select: null }
+  }
+  if (data.devSource)    properties['開發來源'] = { select: { name: data.devSource } }
+  if (data.salesperson)  properties['負責業務'] = { select: { name: data.salesperson } }
+  if (Object.keys(properties).length === 0) return
+  await notionCallWithRetry('updateCustomerDevStage', () =>
+    notion.pages.update({ page_id: id, properties })
+  )
+  setCachedValue('pipeline-customers-v1', null as any, 1) // 失效看板快取
+}
+
 // ── 醫事監控用：建立新客戶 ───────────────────────────────────────────────
 export async function createSystemCustomer(data: {
   name:            string
@@ -290,6 +380,8 @@ export async function createSystemCustomer(data: {
   infoUrl?:        string  // 機構資料（衛福部機構基本資料頁）
   personnelUrl?:   string  // 醫事人員連結
   deptUrl?:        string  // 診療科別連結
+  devStage?:       string  // 開發階段（業務開發漏斗；醫事監控匯入預設 '線索'）
+  devSource?:      string  // 開發來源
 }): Promise<{ id: string }> {
   if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
   const page: any = await notionCallWithRetry('createSystemCustomer', () =>
@@ -308,6 +400,8 @@ export async function createSystemCustomer(data: {
         ...(data.infoUrl      ? { '機構資料':     { url: data.infoUrl } }      : {}),
         ...(data.personnelUrl ? { '醫事人員連結': { url: data.personnelUrl } } : {}),
         ...(data.deptUrl      ? { '診療科別連結': { url: data.deptUrl } }      : {}),
+        ...(data.devStage     ? { '開發階段':     { select: { name: data.devStage } } }  : {}),
+        ...(data.devSource    ? { '開發來源':     { select: { name: data.devSource } } } : {}),
       } as any,
     })
   )
