@@ -1,18 +1,20 @@
 {
   "month": "2026-07",
-  "fetchedAt": "2026-07-06T07:37:42.033Z",
+  "fetchedAt": "2026-07-06T17:14:35.113Z",
   "source": "mohw-bas",
-  "totalClinics": 7146,
+  "totalClinics": 7147,
   "totalLabs": 1094,
-  "totalHospitals": 187,
+  "totalHospitals": 186,
   "labsStale": false,
   "pendingRemaining": 0,
   "prevTotalClinics": 7146,
   "prevTotalLabs": 1094,
   "prevTotalHospitals": 187,
-  "totalCustomers": 8153,
+  "totalCustomers": 8157,
   "newCodes": [
-    "2Y45050128"
+    "3701029444",
+    "3701092661",
+    "3731015529"
   ],
   "codes": {
     "1101010012": {
@@ -897,15 +899,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "1542020129": {
-      "source": "mohw",
-      "kind": "醫院",
-      "name": "樂安醫院",
-      "address": "高雄市岡山區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "1542050056": {
       "source": "mohw",
       "kind": "醫院",
@@ -1136,15 +1129,6 @@
       "kind": "牙醫診所",
       "name": "國軍台北門診中心附設民眾診療服務處",
       "address": "臺北市中正區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "2502090013": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "國軍高雄門診中心附設民眾診療服務處",
-      "address": "高雄市前鎮區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
@@ -5064,6 +5048,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3701029444": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "敦化一日誠臻牙醫診所",
+      "address": "臺北市大安區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3701090014": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -5590,6 +5583,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "倫敦美學牙醫診所",
+      "address": "臺北市大同區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3701092661": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "琢耀牙醫診所",
       "address": "臺北市大同區",
       "specialty": "",
       "termDate": "",
@@ -34404,15 +34406,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3731014782": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "康祐臻品牙醫診所",
-      "address": "新北市板橋區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3731014791": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -34876,6 +34869,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "康祐牙醫診所",
+      "address": "新北市板橋區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3731015529": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "康祐臻品牙醫診所",
       "address": "新北市板橋區",
       "specialty": "",
       "termDate": "",

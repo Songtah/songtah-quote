@@ -67750,5 +67750,29 @@
   "address": "花蓮縣吉安鄉",
   "kind": "牙體技術所",
   "fetchedAt": "2026-07-06T07:37:42.033Z"
+ },
+ "v2aDaQKkKWhrYVjvekYupg%253D%253D__2UvmLx7xeOpOJHZpQhRnRw%253D%253D": {
+  "code": "3731015529",
+  "status": "開業",
+  "name": "康祐臻品牙醫診所",
+  "address": "新北市板橋區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-06T17:14:35.113Z"
+ },
+ "tpibY3ijEhiPu90prRB5lw%253D%253D__BH45O%252F%252B%252FG4GFrmpsIFM5yA%253D%253D": {
+  "code": "3701029444",
+  "status": "開業",
+  "name": "敦化一日誠臻牙醫診所",
+  "address": "臺北市大安區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-06T17:14:35.113Z"
+ },
+ "VVA9C%252FYF%252B2Hp4cvhYazCDQ%253D%253D__sSyTb0N1sKR14TD49zfHYQ%253D%253D": {
+  "code": "3701092661",
+  "status": "開業",
+  "name": "琢耀牙醫診所",
+  "address": "臺北市大同區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-06T17:14:35.113Z"
  }
 }
