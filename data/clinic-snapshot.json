@@ -1,29 +1,18 @@
 {
   "month": "2026-07",
-  "fetchedAt": "2026-07-01T12:11:46.805Z",
+  "fetchedAt": "2026-07-06T07:37:42.033Z",
   "source": "mohw-bas",
   "totalClinics": 7146,
   "totalLabs": 1094,
   "totalHospitals": 187,
   "labsStale": false,
   "pendingRemaining": 0,
-  "prevTotalClinics": 7156,
-  "prevTotalLabs": 1093,
+  "prevTotalClinics": 7146,
+  "prevTotalLabs": 1094,
   "prevTotalHospitals": 187,
   "totalCustomers": 8153,
   "newCodes": [
-    "3701092652",
-    "3703280669",
-    "3703280687",
-    "3721040627",
-    "3721050605",
-    "3722010383",
-    "3731052308",
-    "3732014679",
-    "3734021421",
-    "3736190036",
-    "3737181102",
-    "2Y01090204"
+    "2Y45050128"
   ],
   "codes": {
     "1101010012": {
@@ -70118,6 +70107,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "2Y45050128": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "品信牙體技術所",
+      "address": "花蓮縣吉安鄉",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "2Y07320265": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -73741,15 +73739,6 @@
       "kind": "牙體技術所",
       "name": "高仕牙體技術所",
       "address": "臺北市北投區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "2Y45050100": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "品信牙體技術所",
-      "address": "花蓮縣吉安鄉",
       "specialty": "",
       "termDate": "",
       "status": "開業"
