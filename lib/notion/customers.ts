@@ -9,6 +9,39 @@ import {
 } from './shared'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 
+// ── 全庫掃描(分區版)──────────────────────────────────────────────────────
+// ⚠️ Notion API 無過濾的 databases.query 分頁在 10,000 筆處「靜默截斷」
+// (has_more 直接變 false,2026-07-06 實測:全掃回 10,000、分區加總實為 10,655)。
+// 因此任何「掃全客戶庫」一律用本函式:依「縣市」select 選項逐區查詢+縣市空白一批,
+// 每區遠小於 1 萬筆,加總即完整。禁止再寫無過濾的全庫分頁掃描。
+async function scanAllCustomerPages(onPage: (page: any) => void): Promise<void> {
+  if (!DB.customers) return
+  const dbMeta: any = await notionCallWithRetry('scanAllCustomerPages:schema', () =>
+    notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) })
+  )
+  const cities: string[] = (dbMeta.properties?.['縣市']?.select?.options ?? [])
+    .map((o: any) => o.name).filter(Boolean)
+  const partitions: any[] = [
+    ...cities.map((c) => ({ property: '縣市', select: { equals: c } })),
+    { property: '縣市', select: { is_empty: true } },
+  ]
+  for (const filter of partitions) {
+    let cursor: string | undefined
+    do {
+      const res: any = await notionCallWithRetry('scanAllCustomerPages', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.customers!),
+          page_size: 100,
+          filter,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        })
+      )
+      for (const page of res.results ?? []) onPage(page)
+      cursor = res.has_more ? res.next_cursor : undefined
+    } while (cursor)
+  }
+}
+
 export async function listAllSystemCustomers(): Promise<{ id: string; name: string; city: string; type: string }[]> {
   if (!DB.customers) return []
   const cacheKey = 'all-system-customers'
@@ -154,36 +187,25 @@ export type CustomerListItem = {
  */
 export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   if (!DB.customers) return []
-  const cacheKey = 'all-system-customers-v1'
+  const cacheKey = 'all-system-customers-v2' // v2=分區掃描修正 10k 截斷
   const cached = getCachedValue<CustomerListItem[]>(cacheKey)
   if (cached) return cached
 
   const items: CustomerListItem[] = []
-  let cursor: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('getAllSystemCustomers', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.customers!),
-        page_size: 100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-        sorts: [{ property: '客戶名稱', direction: 'ascending' }],
-      })
-    )
-    for (const page of response.results ?? []) {
-      const name = getTitle(page, '客戶名稱')
-      if (!name) continue
-      items.push({
-        id: page.id,
-        name,
-        city:        getSelect(page, '縣市'),
-        district:    getSelect(page, '行政區') || getText(page, '行政區'),
-        type:        getSelect(page, '客戶類型'),
-        salesperson: getSelect(page, '負責業務'),
-        status:      getSelect(page, '機構狀態'),
-      })
-    }
-    cursor = response.has_more ? response.next_cursor : undefined
-  } while (cursor)
+  await scanAllCustomerPages((page) => {
+    const name = getTitle(page, '客戶名稱')
+    if (!name) return
+    items.push({
+      id: page.id,
+      name,
+      city:        getSelect(page, '縣市'),
+      district:    getSelect(page, '行政區') || getText(page, '行政區'),
+      type:        getSelect(page, '客戶類型'),
+      salesperson: getSelect(page, '負責業務'),
+      status:      getSelect(page, '機構狀態'),
+    })
+  })
+  items.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
 
   setCachedValue(cacheKey, items, 300_000) // 5 min
   return items
@@ -241,35 +263,24 @@ export interface CustomerWithCode {
 
 export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
   if (!DB.customers) return []
-  const cacheKey = 'customers-with-codes-v1'
+  const cacheKey = 'customers-with-codes-v2' // v2=分區掃描修正 10k 截斷(v1 曾漏 655 筆致誤判待開發)
   const cached = await getRedisValue<CustomerWithCode[]>(cacheKey)
   if (cached) return cached
 
   const items: CustomerWithCode[] = []
-  let cursor: string | undefined
-  do {
-    const res: any = await notionCallWithRetry('getCustomersWithCodes', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.customers!),
-        page_size:   100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    for (const page of res.results ?? []) {
-      const name = getTitle(page, '客戶名稱')
-      if (!name) continue
-      items.push({
-        id:              page.id,
-        name,
-        city:            getSelect(page, '縣市'),
-        district:        getSelect(page, '行政區') || getText(page, '行政區'),
-        type:            getSelect(page, '客戶類型'),
-        status:          getSelect(page, '機構狀態'),
-        institutionCode: getText(page, '機構代碼'),
-      })
-    }
-    cursor = res.has_more ? res.next_cursor : undefined
-  } while (cursor)
+  await scanAllCustomerPages((page) => {
+    const name = getTitle(page, '客戶名稱')
+    if (!name) return
+    items.push({
+      id:              page.id,
+      name,
+      city:            getSelect(page, '縣市'),
+      district:        getSelect(page, '行政區') || getText(page, '行政區'),
+      type:            getSelect(page, '客戶類型'),
+      status:          getSelect(page, '機構狀態'),
+      institutionCode: getText(page, '機構代碼'),
+    })
+  })
 
   await setRedisValue(cacheKey, items, 60 * 60_000) // 1 hr
   return items
@@ -288,7 +299,7 @@ export interface RegionStatRow {
   count:       number
 }
 
-const REGION_STATS_CACHE_KEY = 'region-stats-rows-v1'
+const REGION_STATS_CACHE_KEY = 'region-stats-rows-v2' // v2=分區掃描修正 10k 截斷
 
 export async function getRegionStatsRows(forceRefresh = false): Promise<{ rows: RegionStatRow[]; updatedAt: string }> {
   if (!DB.customers) return { rows: [], updatedAt: '' }
@@ -298,32 +309,21 @@ export async function getRegionStatsRows(forceRefresh = false): Promise<{ rows: 
   }
 
   const counter = new Map<string, RegionStatRow>()
-  let cursor: string | undefined
-  do {
-    const res: any = await notionCallWithRetry('getRegionStatsRows', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.customers!),
-        page_size: 100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    for (const page of res.results ?? []) {
-      if (!getTitle(page, '客戶名稱')) continue
-      const row = {
-        city:        getSelect(page, '縣市') || '(未填縣市)',
-        district:    (getSelect(page, '行政區') || getText(page, '行政區')) || '(未填行政區)',
-        type:        getSelect(page, '客戶類型') || '(未分類)',
-        status:      getSelect(page, '機構狀態') || '(空白)',
-        salesperson: getSelect(page, '負責業務') || '',
-        devStage:    getSelect(page, '開發階段') || '',
-      }
-      const key = [row.city, row.district, row.type, row.status, row.salesperson, row.devStage].join('|')
-      const hit = counter.get(key)
-      if (hit) hit.count++
-      else counter.set(key, { ...row, count: 1 })
+  await scanAllCustomerPages((page) => {
+    if (!getTitle(page, '客戶名稱')) return
+    const row = {
+      city:        getSelect(page, '縣市') || '(未填縣市)',
+      district:    (getSelect(page, '行政區') || getText(page, '行政區')) || '(未填行政區)',
+      type:        getSelect(page, '客戶類型') || '(未分類)',
+      status:      getSelect(page, '機構狀態') || '(空白)',
+      salesperson: getSelect(page, '負責業務') || '',
+      devStage:    getSelect(page, '開發階段') || '',
     }
-    cursor = res.has_more ? res.next_cursor : undefined
-  } while (cursor)
+    const key = [row.city, row.district, row.type, row.status, row.salesperson, row.devStage].join('|')
+    const hit = counter.get(key)
+    if (hit) hit.count++
+    else counter.set(key, { ...row, count: 1 })
+  })
 
   const result = { rows: Array.from(counter.values()), updatedAt: new Date().toISOString() }
   await setRedisValue(REGION_STATS_CACHE_KEY, result, 60 * 60_000) // 1 hr
@@ -461,7 +461,7 @@ export async function createSystemCustomer(data: {
     })
   )
   // invalidate cache
-  try { await setRedisValue('customers-with-codes-v1', null, 1) } catch {}
+  try { await setRedisValue('customers-with-codes-v2', null, 1) } catch {}
   return { id: page.id }
 }
 
@@ -480,7 +480,7 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
     notion.pages.update({ page_id: id, properties: { '機構狀態': { select: { name: status } } } as any })
   )
   // 失效客戶快取，使下次比對讀到新狀態
-  deleteRedisValue('customers-with-codes-v1')
+  deleteRedisValue('customers-with-codes-v2')
 }
 
 export async function getCustomerFilterOptions(): Promise<{
@@ -506,28 +506,17 @@ export async function getCustomerFilterOptions(): Promise<{
     types       = opts('客戶類型')
   } catch { /* return what we have */ }
 
-  // ── Step 2: query records to build city → districts[] map ──
+  // ── Step 2: 分區掃描建 city → districts[] 對照(修正 10k 截斷)──
   const districtsByCity: Record<string, string[]> = {}
   try {
-    let cursor: string | undefined
-    do {
-      const response: any = await notionCallWithRetry('getCustomerFilterOptions:pages', () =>
-        notion.databases.query({
-          database_id: normalizeDatabaseId(DB.customers!),
-          page_size: 100,
-          ...(cursor ? { start_cursor: cursor } : {}),
-        })
-      )
-      for (const page of response.results ?? []) {
-        const city     = getSelect(page, '縣市')
-        const district = getText(page, '行政區')
-        if (city && district) {
-          if (!districtsByCity[city]) districtsByCity[city] = []
-          if (!districtsByCity[city].includes(district)) districtsByCity[city].push(district)
-        }
+    await scanAllCustomerPages((page) => {
+      const city     = getSelect(page, '縣市')
+      const district = getText(page, '行政區')
+      if (city && district) {
+        if (!districtsByCity[city]) districtsByCity[city] = []
+        if (!districtsByCity[city].includes(district)) districtsByCity[city].push(district)
       }
-      cursor = response.has_more ? response.next_cursor : undefined
-    } while (cursor)
+    })
     Object.values(districtsByCity).forEach((arr) => arr.sort())
   } catch { /* districtsByCity stays partial — that's OK */ }
 
