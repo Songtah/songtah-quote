@@ -275,6 +275,61 @@ export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
   return items
 }
 
+// ── 區域客戶儀表板：全庫輕量彙總 ─────────────────────────────────────────
+// 以 (縣市, 行政區, 類型, 機構狀態, 負責業務, 開發階段) 分組計數。
+// 組合數遠小於總筆數,前端拿到後可自由交叉篩選,不用每換一個條件就重掃 Notion。
+export interface RegionStatRow {
+  city:        string
+  district:    string
+  type:        string   // 客戶類型;空值 → '(未分類)'
+  status:      string   // 機構狀態;空值 → '(空白)'
+  salesperson: string   // 負責業務;空值 → ''(未指派)
+  devStage:    string   // 開發階段;空值 → ''
+  count:       number
+}
+
+const REGION_STATS_CACHE_KEY = 'region-stats-rows-v1'
+
+export async function getRegionStatsRows(forceRefresh = false): Promise<{ rows: RegionStatRow[]; updatedAt: string }> {
+  if (!DB.customers) return { rows: [], updatedAt: '' }
+  if (!forceRefresh) {
+    const cached = await getRedisValue<{ rows: RegionStatRow[]; updatedAt: string }>(REGION_STATS_CACHE_KEY)
+    if (cached) return cached
+  }
+
+  const counter = new Map<string, RegionStatRow>()
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('getRegionStatsRows', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.customers!),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) {
+      if (!getTitle(page, '客戶名稱')) continue
+      const row = {
+        city:        getSelect(page, '縣市') || '(未填縣市)',
+        district:    (getSelect(page, '行政區') || getText(page, '行政區')) || '(未填行政區)',
+        type:        getSelect(page, '客戶類型') || '(未分類)',
+        status:      getSelect(page, '機構狀態') || '(空白)',
+        salesperson: getSelect(page, '負責業務') || '',
+        devStage:    getSelect(page, '開發階段') || '',
+      }
+      const key = [row.city, row.district, row.type, row.status, row.salesperson, row.devStage].join('|')
+      const hit = counter.get(key)
+      if (hit) hit.count++
+      else counter.set(key, { ...row, count: 1 })
+    }
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+
+  const result = { rows: Array.from(counter.values()), updatedAt: new Date().toISOString() }
+  await setRedisValue(REGION_STATS_CACHE_KEY, result, 60 * 60_000) // 1 hr
+  return result
+}
+
 // ── 業務開發：開發階段（漏斗）────────────────────────────────────────────
 // 機構狀態＝營業狀態（醫事監控領域專用）；開發階段＝業務關係狀態（業務領域專用）。
 // 兩者嚴格分離，禁止把「潛在客戶」之類的業務語意塞回機構狀態。
