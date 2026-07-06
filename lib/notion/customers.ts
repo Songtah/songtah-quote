@@ -299,12 +299,25 @@ export interface RegionStatRow {
   count:       number
 }
 
-const REGION_STATS_CACHE_KEY = 'region-stats-rows-v2' // v2=分區掃描修正 10k 截斷
+export type RegionStatsResult = { rows: RegionStatRow[]; updatedAt: string }
 
-export async function getRegionStatsRows(forceRefresh = false): Promise<{ rows: RegionStatRow[]; updatedAt: string }> {
+const REGION_STATS_CACHE_KEY = 'region-stats-rows-v2' // v2=分區掃描修正 10k 截斷
+const REGION_STATS_TTL = 24 * 60 * 60_000 // 24 hr:配合每晚 cron 重算,使用者開頁永遠讀到 warm 快取
+
+/** 只讀快取、絕不觸發全庫掃描(供頁面 SSR 即時注入;cache miss 回 null,由前端補抓)。 */
+export async function peekRegionStatsRows(): Promise<RegionStatsResult | null> {
+  if (!DB.customers) return null
+  return (await getRedisValue<RegionStatsResult>(REGION_STATS_CACHE_KEY)) ?? null
+}
+
+/**
+ * 區域統計:預設讀快取,無快取才全庫掃描並寫回。forceRefresh 強制重算(cron/手動用)。
+ * 全庫掃描約 55–60s,故正常路徑一律走快取——由每晚 cron 保持新鮮。
+ */
+export async function getRegionStatsRows(forceRefresh = false): Promise<RegionStatsResult> {
   if (!DB.customers) return { rows: [], updatedAt: '' }
   if (!forceRefresh) {
-    const cached = await getRedisValue<{ rows: RegionStatRow[]; updatedAt: string }>(REGION_STATS_CACHE_KEY)
+    const cached = await peekRegionStatsRows()
     if (cached) return cached
   }
 
@@ -326,7 +339,7 @@ export async function getRegionStatsRows(forceRefresh = false): Promise<{ rows: 
   })
 
   const result = { rows: Array.from(counter.values()), updatedAt: new Date().toISOString() }
-  await setRedisValue(REGION_STATS_CACHE_KEY, result, 60 * 60_000) // 1 hr
+  await setRedisValue(REGION_STATS_CACHE_KEY, result, REGION_STATS_TTL)
   return result
 }
 

@@ -1,0 +1,23 @@
+name: 區域客戶統計 — 每晚重算保持快取新鮮
+
+on:
+  # 每天 21:00 UTC(台灣時間 05:00)重算,上班前快取已 warm
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:   # 允許手動觸發
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 觸發正式站重算端點
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/refresh-region-stats" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp.json
+          test "$code" = "200"
