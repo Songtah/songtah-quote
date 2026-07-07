@@ -445,6 +445,25 @@ const STAGE_BADGE: Record<string, string> = {
   報價中: 'bg-amber-50 text-amber-600', 已成交: 'bg-emerald-50 text-emerald-600', 流失: 'bg-stone-100 text-stone-500',
 }
 
+/** 純數字/+ 的可撥號字串;非法回 null(不顯示撥號連結) */
+function telHref(phone: string): string | null {
+  const cleaned = (phone || '').replace(/[^0-9+#*,;]/g, '')
+  return cleaned.replace(/[^0-9]/g, '').length >= 6 ? cleaned : null
+}
+
+function exportCsv(rows: AreaCustomer[], filename: string) {
+  const headers = ['客戶名稱', '類型', '機構狀態', '開發階段', '負責業務', '機構代碼', '地址', '電話']
+  const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`
+  const lines = rows.map((c) => [c.name, c.type, c.status, c.devStage, c.salesperson, c.institutionCode, c.address, c.phone].map(esc).join(','))
+  // 加 BOM 讓 Excel 正確辨識 UTF-8 中文
+  const blob = new Blob(['﻿' + headers.join(',') + '\n' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename
+  document.body.appendChild(a); a.click(); a.remove()
+  URL.revokeObjectURL(url)
+}
+
 function CustomerModal({ city, district, salesperson, onClose }: { city: string; district: string; salesperson: string; onClose: () => void }) {
   const [items, setItems] = useState<AreaCustomer[] | null>(null)
   const [error, setError] = useState('')
@@ -475,7 +494,15 @@ function CustomerModal({ city, district, salesperson, onClose }: { city: string;
               {items && <span className="ml-2 text-sm font-medium text-stone-400">{items.length} 家</span>}
             </h3>
           </div>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-all text-lg">✕</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => items && items.length && exportCsv(items, `${city}${district}_${salesperson}_客戶.csv`)}
+              disabled={!items || items.length === 0}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40 disabled:shadow-none">
+              ⤓ 匯出 CSV
+            </button>
+            <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-all text-lg">✕</button>
+          </div>
         </div>
         <div className="max-h-[65vh] overflow-y-auto divide-y divide-stone-900/[0.05]">
           {error && <p className="px-6 py-10 text-center text-sm text-rose-500">{error}</p>}
@@ -486,26 +513,36 @@ function CustomerModal({ city, district, salesperson, onClose }: { city: string;
             </div>
           )}
           {items && items.length === 0 && <p className="px-6 py-10 text-center text-sm text-stone-400">沒有符合的客戶</p>}
-          {items?.map((c) => (
-            <a key={c.id} href={`/customers/${c.id}`} target="_blank" rel="noopener noreferrer"
-              className="block px-6 py-3.5 hover:bg-brand-50/50 transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-stone-800">{c.name}</span>
-                    {c.type && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">{c.type}</span>}
-                    {c.status && c.status !== '開業' && <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_BADGE[c.status] ?? 'bg-stone-100 text-stone-500'}`}>{c.status}</span>}
-                    {c.devStage && <span className={`text-xs px-2 py-0.5 rounded-full ${STAGE_BADGE[c.devStage] ?? 'bg-stone-100 text-stone-500'}`}>{c.devStage}</span>}
+          {items?.map((c) => {
+            const tel = telHref(c.phone)
+            return (
+              <div key={c.id} className="px-6 py-3.5 hover:bg-brand-50/50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <a href={`/customers/${c.id}`} target="_blank" rel="noopener noreferrer" className="min-w-0 group">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-stone-800 group-hover:text-brand-700">{c.name}</span>
+                      {c.type && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">{c.type}</span>}
+                      {c.status && c.status !== '開業' && <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_BADGE[c.status] ?? 'bg-stone-100 text-stone-500'}`}>{c.status}</span>}
+                      {c.devStage && <span className={`text-xs px-2 py-0.5 rounded-full ${STAGE_BADGE[c.devStage] ?? 'bg-stone-100 text-stone-500'}`}>{c.devStage}</span>}
+                    </div>
+                    {c.address && <p className="mt-1 text-xs text-stone-400 truncate">{c.address}</p>}
+                  </a>
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    {tel ? (
+                      <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:scale-95 transition-all whitespace-nowrap">
+                        📞 {c.phone}
+                      </a>
+                    ) : c.phone ? (
+                      <span className="text-xs text-stone-400">{c.phone}</span>
+                    ) : (
+                      <span className="text-xs text-stone-300">無電話</span>
+                    )}
+                    <a href={`/customers/${c.id}`} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700">開啟詳情 →</a>
                   </div>
-                  {c.address && <p className="mt-1 text-xs text-stone-400 truncate">{c.address}</p>}
-                </div>
-                <div className="shrink-0 text-right">
-                  {c.phone && <p className="text-xs text-stone-500">{c.phone}</p>}
-                  <span className="text-xs text-brand-600">開啟 →</span>
                 </div>
               </div>
-            </a>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
