@@ -63,6 +63,8 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
   const [expanded, setExpanded] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'total', dir: 'desc' })
   const [openPop, setOpenPop] = useState<string>('') // 開啟中的下拉
+  // 客戶清單彈窗:點某區某業務時開啟
+  const [modal, setModal] = useState<{ city: string; district: string; salesperson: string } | null>(null)
 
   const fetchData = useCallback(async (refresh: boolean) => {
     refresh ? setRefreshing(true) : setLoading(true)
@@ -397,12 +399,16 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                           ) : (
                             <div className="mt-3 flex flex-wrap gap-2">
                               {spEntries.map(([sp, n]) => (
-                                <span key={sp} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white ring-1 ring-stone-900/[0.08] text-sm">
-                                  <span className="font-medium text-stone-700">{sp}</span><span className="font-bold text-brand-600">{n}</span>
-                                </span>
+                                <button key={sp} onClick={() => setModal({ city: d.city, district: d.district, salesperson: sp })}
+                                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white ring-1 ring-stone-900/[0.08] text-sm hover:bg-brand-50 hover:ring-brand-300 active:scale-95 transition-all">
+                                  <span className="font-medium text-stone-700">{sp}</span>
+                                  <span className="font-bold text-brand-600">{n}</span>
+                                  <span className="text-stone-300 text-xs">→</span>
+                                </button>
                               ))}
                             </div>
                           )}
+                          <p className="mt-2 text-[11px] text-stone-300">點業務按鈕查看該業務在本區的客戶清單</p>
                         </td>
                       </tr>
                     )}
@@ -417,6 +423,89 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
         </div>
         <div className="px-5 py-3 border-t border-stone-900/[0.06] text-xs text-stone-400">
           共 {districts.length} 個行政區・點任一列展開各業務轄區客戶數・點欄位標題可排序
+        </div>
+      </div>
+
+      {modal && <CustomerModal {...modal} onClose={() => setModal(null)} />}
+    </div>
+  )
+}
+
+// ── 客戶清單彈窗 ────────────────────────────────────────────────────────────
+type AreaCustomer = {
+  id: string; name: string; type: string; status: string
+  address: string; phone: string; salesperson: string; devStage: string; institutionCode: string
+}
+const STATUS_BADGE: Record<string, string> = {
+  開業: 'bg-emerald-50 text-emerald-600', 狀況不明: 'bg-amber-50 text-amber-600',
+  停業: 'bg-rose-50 text-rose-500', 已歇業: 'bg-stone-100 text-stone-500', 撤銷: 'bg-stone-100 text-stone-500',
+}
+const STAGE_BADGE: Record<string, string> = {
+  線索: 'bg-sky-50 text-sky-600', 已接觸: 'bg-brand-50 text-brand-600', 試用中: 'bg-violet-50 text-violet-600',
+  報價中: 'bg-amber-50 text-amber-600', 已成交: 'bg-emerald-50 text-emerald-600', 流失: 'bg-stone-100 text-stone-500',
+}
+
+function CustomerModal({ city, district, salesperson, onClose }: { city: string; district: string; salesperson: string; onClose: () => void }) {
+  const [items, setItems] = useState<AreaCustomer[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const qs = new URLSearchParams({ city, district, salesperson }).toString()
+    fetch('/api/customers/by-area?' + qs)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('讀取失敗')))
+      .then((d) => setItems(d.items ?? []))
+      .catch((e) => setError(e.message))
+  }, [city, district, salesperson])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
+      <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-stone-900/[0.06]">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{city}{district}</p>
+            <h3 className="text-lg font-bold text-stone-800 mt-0.5">
+              {salesperson} 的客戶
+              {items && <span className="ml-2 text-sm font-medium text-stone-400">{items.length} 家</span>}
+            </h3>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-all text-lg">✕</button>
+        </div>
+        <div className="max-h-[65vh] overflow-y-auto divide-y divide-stone-900/[0.05]">
+          {error && <p className="px-6 py-10 text-center text-sm text-rose-500">{error}</p>}
+          {!items && !error && (
+            <div className="px-6 py-14 text-center">
+              <div className="inline-block w-5 h-5 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
+              <p className="mt-2 text-sm text-stone-400">載入客戶中…</p>
+            </div>
+          )}
+          {items && items.length === 0 && <p className="px-6 py-10 text-center text-sm text-stone-400">沒有符合的客戶</p>}
+          {items?.map((c) => (
+            <a key={c.id} href={`/customers/${c.id}`} target="_blank" rel="noopener noreferrer"
+              className="block px-6 py-3.5 hover:bg-brand-50/50 transition-colors">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-stone-800">{c.name}</span>
+                    {c.type && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">{c.type}</span>}
+                    {c.status && c.status !== '開業' && <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_BADGE[c.status] ?? 'bg-stone-100 text-stone-500'}`}>{c.status}</span>}
+                    {c.devStage && <span className={`text-xs px-2 py-0.5 rounded-full ${STAGE_BADGE[c.devStage] ?? 'bg-stone-100 text-stone-500'}`}>{c.devStage}</span>}
+                  </div>
+                  {c.address && <p className="mt-1 text-xs text-stone-400 truncate">{c.address}</p>}
+                </div>
+                <div className="shrink-0 text-right">
+                  {c.phone && <p className="text-xs text-stone-500">{c.phone}</p>}
+                  <span className="text-xs text-brand-600">開啟 →</span>
+                </div>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
     </div>
