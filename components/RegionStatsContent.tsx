@@ -135,23 +135,38 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       .sort((a, b) => a.city.localeCompare(b.city, 'zh-TW') || b.count - a.count)
   }, [rows, cities])
 
-  const filtered = useMemo(() => rows.filter((r) =>
-    (cities.size === 0 || cities.has(r.city)) &&
-    (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
-    (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
-    (!statusFilter || r.status === statusFilter) &&
-    (!spFilter || r.salesperson === spFilter) &&
-    (!excludeClosed || r.status !== '已歇業')
-  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, spFilter, excludeClosed])
+  /**
+   * scope:目前納入統計的列 + 「我方」定義。
+   * - 未選業務:我方=任何有負責業務者;範圍=所有符合篩選的機構(市場滲透率)。
+   * - 選了業務:切「業務轄區視角」——範圍=該業務有客戶的行政區(轄區)內的所有機構;
+   *   我方=該業務自己的客戶。覆蓋率 = 該業務客戶 ÷ 轄區市場總數。
+   *   (若不這樣做,單純用業務篩掉別人的列會讓分母=分子、覆蓋率永遠 100%,失去意義。)
+   */
+  const scope = useMemo(() => {
+    const nonSp = rows.filter((r) =>
+      (cities.size === 0 || cities.has(r.city)) &&
+      (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
+      (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
+      (!statusFilter || r.status === statusFilter) &&
+      (!excludeClosed || r.status !== '已歇業')
+    )
+    if (!spFilter) return { rows: nonSp, mine: isExisting, spMode: false, territoryCount: 0 }
+    const terr = new Set(nonSp.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
+    const inTerr = nonSp.filter((r) => terr.has(r.city + '|' + r.district))
+    return { rows: inTerr, mine: (r: Row) => r.salesperson === spFilter, spMode: true, territoryCount: terr.size }
+  }, [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed, spFilter])
+
+  const filtered = scope.rows
+  const mine = scope.mine
 
   const summary = useMemo(() => {
     const base = filtered
     const sum = (p: (r: Row) => boolean) => base.filter(p).reduce((s, r) => s + r.count, 0)
-    const total = sum(() => true), existing = sum(isExisting)
-    // 各類型覆蓋率(既有 ÷ 該類型總機構)——牙醫/牙技所/醫院分開看,避免合併失真
+    const total = sum(() => true), existing = sum(mine)
+    // 各類型覆蓋率(我方 ÷ 該類型總機構)——牙醫/牙技所/醫院分開看,避免合併失真
     const typeCov = (t: string) => {
       const tot = sum((r) => r.type === t)
-      const exi = sum((r) => r.type === t && isExisting(r))
+      const exi = sum((r) => r.type === t && mine(r))
       return { total: tot, existing: exi, pct: tot ? Math.round((exi / tot) * 100) : 0 }
     }
     return {
@@ -161,7 +176,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       coverage: total ? Math.round((existing / total) * 100) : 0,
       clinicCov: typeCov('牙醫診所'), labCov: typeCov('牙體技術所'), hospCov: typeCov('醫院'),
     }
-  }, [filtered])
+  }, [filtered, mine])
 
   type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; leads: number; bySp: Record<string, number> }
   const districts = useMemo(() => {
@@ -176,7 +191,8 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       else if (r.type === '醫院') d.hospitals += r.count
       else d.others += r.count
       if (r.status === '狀況不明') d.unknown += r.count
-      if (isExisting(r)) { d.existing += r.count; d.bySp[r.salesperson] = (d.bySp[r.salesperson] ?? 0) + r.count }
+      if (mine(r)) d.existing += r.count // 覆蓋率分子:未選業務=全部既有;選了業務=該業務客戶
+      if (isExisting(r)) d.bySp[r.salesperson] = (d.bySp[r.salesperson] ?? 0) + r.count // 展開列仍顯示所有業務
       if (r.devStage === '線索') d.leads += r.count
     }
     const cov = (d: Agg) => d.total ? d.existing / d.total : 0
@@ -186,7 +202,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       const cmp = typeof va === 'string' ? va.localeCompare(vb as string, 'zh-TW') : (va as number) - (vb as number)
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [filtered, sort])
+  }, [filtered, mine, sort])
 
   // ── 篩選操作 ──
   const setRegion = (regionCities: string[]) => { setCities(new Set(regionCities)); setDistrictSel(new Set()) }
@@ -198,6 +214,12 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
   const toggleDistrict = (k: string) => setDistrictSel((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
   const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'district' ? 'asc' : 'desc' })
   const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter(''); setExcludeClosed(false) }
+  const selectSalesperson = (sp: string) => {
+    setSpFilter(sp)
+    setCities(new Set())
+    setDistrictSel(new Set())
+    setOpenPop('')
+  }
 
   // 縣市按鈕摘要文字
   const cityLabel = useMemo(() => {
@@ -332,7 +354,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
           <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
             <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
             {allSalespersons.map((sp) => (
-              <button key={sp} onClick={() => { setSpFilter(sp); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
+              <button key={sp} onClick={() => selectSalesperson(sp)} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
             ))}
           </Pop>
 
@@ -349,10 +371,25 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
         </div>
       </div>
 
+      {/* 業務視角橫幅 */}
+      {scope.spMode && (
+        <div className="card-soft p-4 flex items-center justify-between flex-wrap gap-3 bg-brand-50/45">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">業務轄區覆蓋率模式</p>
+            <p className="mt-1 text-sm text-stone-600">
+              <span className="font-bold text-stone-800">{spFilter}</span>
+              ・轄區 <span className="font-semibold text-brand-600">{scope.territoryCount}</span> 個行政區
+              ・覆蓋率＝<span className="text-brand-600">{spFilter} 客戶</span> ÷ 轄區市場總數
+            </p>
+          </div>
+          <button onClick={() => setSpFilter('')} className="text-xs px-3 py-1.5 rounded-full border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 active:scale-95 transition-all">← 回全公司視角</button>
+        </div>
+      )}
+
       {/* 摘要 */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card-soft p-5">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">市場規模(依篩選)</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{scope.spMode ? `${spFilter} 轄區市場` : '市場規模(依篩選)'}</p>
           <div className="grid grid-cols-4 gap-2 text-center">
             {[['總機構', summary.total], ['牙醫', summary.clinics], ['牙技所', summary.labs], ['醫院', summary.hospitals]].map(([l, n]) => (
               <div key={l as string}><p className="text-2xl font-bold text-stone-800">{(n as number).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">{l}</p></div>
@@ -360,7 +397,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
           </div>
         </div>
         <div className="card-soft p-5">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">我方覆蓋(依類型)</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{scope.spMode ? `${spFilter} 覆蓋(依類型)` : '我方覆蓋(依類型)'}</p>
           <div className="space-y-2">
             <CovRow label="牙醫診所" c={summary.clinicCov} />
             <CovRow label="牙體技術所" c={summary.labCov} />
@@ -390,7 +427,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                 <SortHead k="hospitals" label="醫院" className="text-right" />
                 <th className="px-3 py-3 font-medium text-right">其他</th>
                 <SortHead k="unknown" label="狀況不明" className="text-right !text-amber-500" />
-                <SortHead k="existing" label="既有客戶" className="text-right !text-emerald-600" />
+                <SortHead k="existing" label={scope.spMode ? `${spFilter} 客戶` : '既有客戶'} className="text-right !text-emerald-600" />
                 <SortHead k="leads" label="線索" className="text-right !text-sky-600" />
                 <SortHead k="coverage" label="覆蓋率" className="text-right" />
               </tr>
