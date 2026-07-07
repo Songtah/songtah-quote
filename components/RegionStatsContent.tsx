@@ -48,6 +48,20 @@ function fmtTime(iso: string) {
   return `${d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}(${rel})`
 }
 
+// 覆蓋率單列(標籤 + 進度條 + % + 既有/總)
+function CovRow({ label, c, bold }: { label: string; c: { total: number; existing: number; pct: number }; bold?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className={`w-20 shrink-0 text-sm ${bold ? 'font-bold text-stone-800' : 'text-stone-600'}`}>{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
+        <div className="h-full rounded-full bg-brand-500" style={{ width: `${Math.min(c.pct, 100)}%` }} />
+      </div>
+      <span className={`w-11 shrink-0 text-right text-sm ${bold ? 'font-bold text-brand-600' : 'font-semibold text-stone-700'}`}>{c.pct}%</span>
+      <span className="w-24 shrink-0 text-right text-xs text-stone-400">{c.existing.toLocaleString()} / {c.total.toLocaleString()}</span>
+    </div>
+  )
+}
+
 export default function RegionStatsContent({ initialData }: { initialData: Data | null }) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [updatedAt, setUpdatedAt] = useState(initialData?.updatedAt ?? '')
@@ -60,6 +74,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [spFilter, setSpFilter] = useState('')
+  const [excludeClosed, setExcludeClosed] = useState(false) // 排除已歇業
   const [expanded, setExpanded] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'total', dir: 'desc' })
   const [openPop, setOpenPop] = useState<string>('') // 開啟中的下拉
@@ -125,18 +140,26 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
     (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
     (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
     (!statusFilter || r.status === statusFilter) &&
-    (!spFilter || r.salesperson === spFilter)
-  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, spFilter])
+    (!spFilter || r.salesperson === spFilter) &&
+    (!excludeClosed || r.status !== '已歇業')
+  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, spFilter, excludeClosed])
 
   const summary = useMemo(() => {
     const base = filtered
     const sum = (p: (r: Row) => boolean) => base.filter(p).reduce((s, r) => s + r.count, 0)
     const total = sum(() => true), existing = sum(isExisting)
+    // 各類型覆蓋率(既有 ÷ 該類型總機構)——牙醫/牙技所/醫院分開看,避免合併失真
+    const typeCov = (t: string) => {
+      const tot = sum((r) => r.type === t)
+      const exi = sum((r) => r.type === t && isExisting(r))
+      return { total: tot, existing: exi, pct: tot ? Math.round((exi / tot) * 100) : 0 }
+    }
     return {
       total, clinics: sum((r) => r.type === '牙醫診所'), labs: sum((r) => r.type === '牙體技術所'),
       hospitals: sum((r) => r.type === '醫院'), unknown: sum((r) => r.status === '狀況不明'),
       existing, leads: sum((r) => r.devStage === '線索'),
       coverage: total ? Math.round((existing / total) * 100) : 0,
+      clinicCov: typeCov('牙醫診所'), labCov: typeCov('牙體技術所'), hospCov: typeCov('醫院'),
     }
   }, [filtered])
 
@@ -174,7 +197,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
   })
   const toggleDistrict = (k: string) => setDistrictSel((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
   const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'district' ? 'asc' : 'desc' })
-  const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter('') }
+  const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter(''); setExcludeClosed(false) }
 
   // 縣市按鈕摘要文字
   const cityLabel = useMemo(() => {
@@ -243,6 +266,10 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
             const active = q.cities.length === cities.size && q.cities.every((c) => cities.has(c))
             return <button key={q.key} className={pillBtn(active)} onClick={() => setRegion(q.cities)}>{q.label}</button>
           })}
+          <span className="w-px self-stretch bg-stone-900/[0.06] mx-1" />
+          <button className={pillBtn(excludeClosed)} onClick={() => setExcludeClosed((v) => !v)}>
+            {excludeClosed ? '✓ ' : ''}排除已歇業
+          </button>
         </div>
 
         {/* 下拉列 */}
@@ -333,13 +360,20 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
           </div>
         </div>
         <div className="card-soft p-5">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">我方覆蓋</p>
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div><p className="text-2xl font-bold text-emerald-600">{summary.existing.toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">既有客戶</p></div>
-            <div><p className="text-2xl font-bold text-brand-600">{summary.coverage}%</p><p className="mt-0.5 text-xs text-stone-400">覆蓋率</p></div>
-            <div><p className="text-2xl font-bold text-sky-600">{summary.leads.toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">待開發線索</p></div>
-            <div><p className="text-2xl font-bold text-amber-600">{summary.unknown.toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">狀況不明</p></div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">我方覆蓋(依類型)</p>
+          <div className="space-y-2">
+            <CovRow label="牙醫診所" c={summary.clinicCov} />
+            <CovRow label="牙體技術所" c={summary.labCov} />
+            <CovRow label="醫院" c={summary.hospCov} />
+            <div className="pt-2 mt-1 border-t border-stone-900/[0.06]">
+              <CovRow label="整體" c={{ total: summary.total, existing: summary.existing, pct: summary.coverage }} bold />
+            </div>
           </div>
+          <p className="mt-3 text-[11px] text-stone-400">
+            既有客戶合計 <span className="font-semibold text-emerald-600">{summary.existing.toLocaleString()}</span>
+            ・待開發線索 <span className="font-semibold text-sky-600">{summary.leads.toLocaleString()}</span>
+            ・狀況不明 <span className="font-semibold text-amber-600">{summary.unknown.toLocaleString()}</span>
+          </p>
         </div>
       </div>
 
