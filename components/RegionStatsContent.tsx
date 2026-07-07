@@ -4,7 +4,9 @@
  *
  * 資料源:頁面 SSR 以 peekRegionStatsRows 注入 initialData(開頁即有,不轉圈);
  * 無快取時才 client fetch 一次。手動「重新統計」走 ?refresh=1(全庫重掃)。
- * 「既有客戶」=負責業務非空;要改定義只動 isExisting。
+ *
+ * 篩選:地區快選(北/中/南/東/離島)→ 縣市多選 → 行政區多選(可篩到單一區);
+ * 類型/機構狀態/負責業務皆為下拉。「既有客戶」=負責業務非空(改定義只動 isExisting)。
  */
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -14,11 +16,27 @@ type Row = {
 }
 type Data = { rows: Row[]; updatedAt: string }
 
-const NORTH_CITIES = ['臺北市', '新北市', '基隆市', '桃園市', '新竹縣', '新竹市', '宜蘭縣']
+// 地區分組(依台灣地理;資料裡未列到的縣市自動歸「其他」)
+const REGION_GROUPS: { label: string; cities: string[] }[] = [
+  { label: '北部', cities: ['臺北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '宜蘭縣'] },
+  { label: '中部', cities: ['苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣'] },
+  { label: '南部', cities: ['嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣'] },
+  { label: '東部', cities: ['花蓮縣', '臺東縣'] },
+  { label: '離島', cities: ['澎湖縣', '金門縣', '連江縣'] },
+  { label: '海外/其他', cities: ['香港', '上海', '(未填縣市)'] },
+]
+const QUICK = [
+  { key: '北', label: '北區', cities: REGION_GROUPS[0].cities },
+  { key: '中', label: '中區', cities: REGION_GROUPS[1].cities },
+  { key: '南', label: '南區', cities: REGION_GROUPS[2].cities },
+  { key: '東', label: '東部', cities: REGION_GROUPS[3].cities },
+  { key: '離島', label: '離島', cities: REGION_GROUPS[4].cities },
+]
 const MAIN_TYPES = ['牙醫診所', '牙體技術所', '醫院'] as const
-const STATUS_OPTIONS = ['開業', '狀況不明', '停業', '已歇業', '撤銷', '(空白)'] as const
+const TYPE_OPTIONS = [...MAIN_TYPES, '其他']
+const STATUS_OPTIONS = ['開業', '狀況不明', '停業', '已歇業', '撤銷', '(空白)']
 
-const isExisting = (r: Row) => !!r.salesperson  // 既有客戶=有負責業務
+const isExisting = (r: Row) => !!r.salesperson
 
 type SortKey = 'district' | 'total' | 'clinics' | 'labs' | 'hospitals' | 'unknown' | 'existing' | 'leads' | 'coverage'
 
@@ -33,16 +51,18 @@ function fmtTime(iso: string) {
 export default function RegionStatsContent({ initialData }: { initialData: Data | null }) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [updatedAt, setUpdatedAt] = useState(initialData?.updatedAt ?? '')
-  const [loading, setLoading] = useState(!initialData)   // 有 SSR 資料就不轉圈
+  const [loading, setLoading] = useState(!initialData)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
 
-  const [cities, setCities] = useState<Set<string>>(new Set(NORTH_CITIES))
+  const [cities, setCities] = useState<Set<string>>(new Set(REGION_GROUPS[0].cities))
+  const [districtSel, setDistrictSel] = useState<Set<string>>(new Set()) // key = city|district;空=全部
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [spFilter, setSpFilter] = useState('')
   const [expanded, setExpanded] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'total', dir: 'desc' })
+  const [openPop, setOpenPop] = useState<string>('') // 開啟中的下拉
 
   const fetchData = useCallback(async (refresh: boolean) => {
     refresh ? setRefreshing(true) : setLoading(true)
@@ -51,53 +71,74 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       const res = await fetch('/api/customers/region-stats' + (refresh ? '?refresh=1' : ''))
       if (!res.ok) throw new Error((await res.json()).error ?? '讀取失敗')
       const data = await res.json()
-      setRows(data.rows ?? [])
-      setUpdatedAt(data.updatedAt ?? '')
+      setRows(data.rows ?? []); setUpdatedAt(data.updatedAt ?? '')
     } catch (e: any) {
       setError(e?.message ?? '讀取區域統計失敗')
-    } finally {
-      setLoading(false); setRefreshing(false)
-    }
+    } finally { setLoading(false); setRefreshing(false) }
   }, [])
 
-  // 只有 SSR 沒帶資料(冷啟動)才在掛載時補抓一次
   useEffect(() => { if (!initialData) fetchData(false) }, [initialData, fetchData])
 
-  const allCities = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.city))).sort((a, b) => a.localeCompare(b, 'zh-TW')),
-    [rows])
+  // 資料實際出現的縣市,依地理分組(未歸類者進「其他」)
+  const groupedCities = useMemo(() => {
+    const present = new Set(rows.map((r) => r.city))
+    const known = new Set(REGION_GROUPS.flatMap((g) => g.cities))
+    const groups = REGION_GROUPS.map((g) => ({ label: g.label, cities: g.cities.filter((c) => present.has(c)) }))
+      .filter((g) => g.cities.length > 0)
+    const others = Array.from(present).filter((c) => !known.has(c)).sort()
+    if (others.length) groups.push({ label: '其他', cities: others })
+    return groups
+  }, [rows])
+
   const allSalespersons = useMemo(
     () => Array.from(new Set(rows.filter((r) => r.salesperson).map((r) => r.salesperson))).sort(),
     [rows])
 
+  // 有效的行政區選擇:剔除已不在所選縣市裡的(避免換縣市後殘留把表格篩空)
+  const effDistrictSel = useMemo(() => {
+    if (districtSel.size === 0) return null // null = 全部
+    const valid = new Set<string>()
+    Array.from(districtSel).forEach((k) => {
+      const city = k.split('|')[0]
+      if (cities.size === 0 || cities.has(city)) valid.add(k)
+    })
+    return valid.size ? valid : null
+  }, [districtSel, cities])
+
+  // 目前所選縣市底下的行政區清單(供行政區下拉)
+  const districtOptions = useMemo(() => {
+    const m = new Map<string, number>() // city|district → count
+    for (const r of rows) {
+      if (cities.size > 0 && !cities.has(r.city)) continue
+      const k = r.city + '|' + r.district
+      m.set(k, (m.get(k) ?? 0) + r.count)
+    }
+    return Array.from(m.entries())
+      .map(([k, n]) => ({ key: k, city: k.split('|')[0], district: k.split('|')[1], count: n }))
+      .sort((a, b) => a.city.localeCompare(b.city, 'zh-TW') || b.count - a.count)
+  }, [rows, cities])
+
   const filtered = useMemo(() => rows.filter((r) =>
     (cities.size === 0 || cities.has(r.city)) &&
+    (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
     (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
     (!statusFilter || r.status === statusFilter) &&
     (!spFilter || r.salesperson === spFilter)
-  ), [rows, cities, typeFilter, statusFilter, spFilter])
+  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, spFilter])
 
   const summary = useMemo(() => {
-    const base = rows.filter((r) =>
-      (cities.size === 0 || cities.has(r.city)) &&
-      (!statusFilter || r.status === statusFilter) &&
-      (!spFilter || r.salesperson === spFilter))
+    const base = filtered
     const sum = (p: (r: Row) => boolean) => base.filter(p).reduce((s, r) => s + r.count, 0)
-    const total = sum(() => true)
-    const existing = sum(isExisting)
+    const total = sum(() => true), existing = sum(isExisting)
     return {
       total, clinics: sum((r) => r.type === '牙醫診所'), labs: sum((r) => r.type === '牙體技術所'),
       hospitals: sum((r) => r.type === '醫院'), unknown: sum((r) => r.status === '狀況不明'),
       existing, leads: sum((r) => r.devStage === '線索'),
       coverage: total ? Math.round((existing / total) * 100) : 0,
     }
-  }, [rows, cities, statusFilter, spFilter])
+  }, [filtered])
 
-  type Agg = {
-    city: string; district: string; total: number
-    clinics: number; labs: number; hospitals: number; others: number
-    unknown: number; existing: number; leads: number; bySp: Record<string, number>
-  }
+  type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; leads: number; bySp: Record<string, number> }
   const districts = useMemo(() => {
     const map = new Map<string, Agg>()
     for (const r of filtered) {
@@ -114,8 +155,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       if (r.devStage === '線索') d.leads += r.count
     }
     const cov = (d: Agg) => d.total ? d.existing / d.total : 0
-    const val = (d: Agg): number | string => sort.key === 'district' ? d.city + d.district
-      : sort.key === 'coverage' ? cov(d) : (d as any)[sort.key]
+    const val = (d: Agg): number | string => sort.key === 'district' ? d.city + d.district : sort.key === 'coverage' ? cov(d) : (d as any)[sort.key]
     return Array.from(map.values()).sort((a, b) => {
       const va = val(a), vb = val(b)
       const cmp = typeof va === 'string' ? va.localeCompare(vb as string, 'zh-TW') : (va as number) - (vb as number)
@@ -123,14 +163,27 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
     })
   }, [filtered, sort])
 
-  const toggleCity = (c: string) => setCities((prev) => {
-    const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n
+  // ── 篩選操作 ──
+  const setRegion = (regionCities: string[]) => { setCities(new Set(regionCities)); setDistrictSel(new Set()) }
+  const toggleCity = (c: string) => setCities((prev) => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n })
+  const toggleGroup = (gc: string[]) => setCities((prev) => {
+    const all = gc.every((c) => prev.has(c)); const n = new Set(prev)
+    gc.forEach((c) => all ? n.delete(c) : n.add(c)); return n
   })
-  const toggleSort = (key: SortKey) => setSort((s) =>
-    s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'district' ? 'asc' : 'desc' })
+  const toggleDistrict = (k: string) => setDistrictSel((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
+  const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'district' ? 'asc' : 'desc' })
+  const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter('') }
 
-  const chip = (active: boolean) => active ? 'chip-active' : 'chip'
-  const isNorthAll = NORTH_CITIES.every((c) => cities.has(c)) && cities.size === NORTH_CITIES.length
+  // 縣市按鈕摘要文字
+  const cityLabel = useMemo(() => {
+    if (cities.size === 0) return '全台'
+    const match = QUICK.find((q) => q.cities.length === cities.size && q.cities.every((c) => cities.has(c)))
+    if (match) return match.label
+    if (cities.size === 1) return Array.from(cities)[0]
+    return `${cities.size} 縣市`
+  }, [cities])
+  const districtLabel = effDistrictSel === null ? '全部'
+    : effDistrictSel.size === 1 ? Array.from(effDistrictSel)[0].split('|')[1] : `${effDistrictSel.size} 區`
 
   if (loading) {
     return (
@@ -149,52 +202,116 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
     )
   }
 
+  const pillBtn = (active: boolean) =>
+    `inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all active:scale-95 ${
+      active ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300'}`
+
   const SortHead = ({ k, label, className = '' }: { k: SortKey; label: string; className?: string }) => (
     <th className={`px-3 py-3 font-medium whitespace-nowrap cursor-pointer select-none hover:text-stone-600 ${className}`} onClick={() => toggleSort(k)}>
       {label}<span className="ml-0.5 text-stone-300">{sort.key === k ? (sort.dir === 'asc' ? '↑' : '↓') : ''}</span>
     </th>
   )
 
+  // 下拉容器
+  const Pop = ({ id, label, value, width = 'w-72', children }: { id: string; label: string; value: string; width?: string; children: React.ReactNode }) => (
+    <div className="relative">
+      <button type="button" onClick={() => setOpenPop(openPop === id ? '' : id)} className={pillBtn(openPop === id)}>
+        <span className="text-stone-400 text-xs">{label}</span>
+        <span className="font-semibold">{value}</span>
+        <span className="text-stone-300 text-xs">▾</span>
+      </button>
+      {openPop === id && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpenPop('')} />
+          <div className={`absolute z-40 mt-2 ${width} max-h-80 overflow-auto bg-[#fcfbf8] rounded-2xl shadow-2xl ring-1 ring-stone-900/[0.08] p-3`}>{children}</div>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <div className="space-y-5">
-      {/* 篩選列 */}
+      {/* 篩選 */}
       <div className="card-soft p-5 space-y-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">縣市(可複選)</p>
-          <div className="flex flex-wrap gap-2">
-            <button className={chip(isNorthAll)} onClick={() => setCities(new Set(NORTH_CITIES))}>北區</button>
-            <button className={chip(cities.size === 0)} onClick={() => setCities(new Set())}>全台</button>
-            <span className="w-px self-stretch bg-stone-900/[0.06] mx-1" />
-            {allCities.map((c) => <button key={c} className={chip(cities.has(c))} onClick={() => toggleCity(c)}>{c}</button>)}
-          </div>
+        {/* 地區快選 */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mr-1">快速選區</span>
+          <button className={pillBtn(cities.size === 0)} onClick={() => setRegion([])}>全台</button>
+          {QUICK.map((q) => {
+            const active = q.cities.length === cities.size && q.cities.every((c) => cities.has(c))
+            return <button key={q.key} className={pillBtn(active)} onClick={() => setRegion(q.cities)}>{q.label}</button>
+          })}
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">類型</p>
-            <div className="flex flex-wrap gap-2">
-              <button className={chip(!typeFilter)} onClick={() => setTypeFilter('')}>全部</button>
-              {[...MAIN_TYPES, '其他'].map((t) => <button key={t} className={chip(typeFilter === t)} onClick={() => setTypeFilter(typeFilter === t ? '' : t)}>{t}</button>)}
+
+        {/* 下拉列 */}
+        <div className="flex flex-wrap gap-2">
+          <Pop id="city" label="縣市" value={cityLabel} width="w-80">
+            <div className="flex items-center justify-between px-1 pb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">選擇縣市</p>
+              <button className="text-xs text-brand-600 hover:text-brand-700" onClick={() => setCities(new Set())}>全台</button>
             </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">機構狀態</p>
-            <div className="flex flex-wrap gap-2">
-              <button className={chip(!statusFilter)} onClick={() => setStatusFilter('')}>全部</button>
-              {STATUS_OPTIONS.map((s) => <button key={s} className={chip(statusFilter === s)} onClick={() => setStatusFilter(statusFilter === s ? '' : s)}>{s}</button>)}
+            {groupedCities.map((g) => (
+              <div key={g.label} className="mb-2">
+                <div className="flex items-center gap-2 px-1">
+                  <button className="text-[11px] font-semibold text-stone-500 hover:text-brand-600" onClick={() => toggleGroup(g.cities)}>{g.label}</button>
+                  <span className="text-[10px] text-stone-300">({g.cities.length})</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {g.cities.map((c) => (
+                    <button key={c} onClick={() => toggleCity(c)}
+                      className={`px-2.5 py-1 rounded-full text-xs transition-all ${cities.has(c) ? 'bg-brand-500 text-white' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-600 hover:bg-stone-50'}`}>{c}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </Pop>
+
+          <Pop id="district" label="行政區" value={districtLabel} width="w-72">
+            <div className="flex items-center justify-between px-1 pb-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">行政區({districtOptions.length})</p>
+              {effDistrictSel && <button className="text-xs text-brand-600 hover:text-brand-700" onClick={() => setDistrictSel(new Set())}>清除</button>}
             </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">負責業務</p>
-            <select className="select-soft text-sm w-full" value={spFilter} onChange={(e) => setSpFilter(e.target.value)}>
-              <option value="">全部業務</option>
-              {allSalespersons.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
-            </select>
-          </div>
+            <div className="flex flex-wrap gap-1.5">
+              {districtOptions.length === 0 && <p className="text-xs text-stone-400 px-1 py-2">先選縣市</p>}
+              {districtOptions.map((d) => {
+                const on = districtSel.has(d.key)
+                return (
+                  <button key={d.key} onClick={() => toggleDistrict(d.key)}
+                    className={`px-2.5 py-1 rounded-full text-xs transition-all ${on ? 'bg-brand-500 text-white' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-600 hover:bg-stone-50'}`}>
+                    {cities.size > 1 && <span className="opacity-60 mr-1">{d.city.replace(/[市縣]$/, '')}</span>}{d.district}
+                    <span className={`ml-1 ${on ? 'opacity-80' : 'text-stone-300'}`}>{d.count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </Pop>
+
+          <Pop id="type" label="類型" value={typeFilter || '全部'} width="w-52">
+            <button onClick={() => { setTypeFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!typeFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部</button>
+            {TYPE_OPTIONS.map((t) => (
+              <button key={t} onClick={() => { setTypeFilter(t); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${typeFilter === t ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{t}</button>
+            ))}
+          </Pop>
+
+          <Pop id="status" label="機構狀態" value={statusFilter || '全部'} width="w-52">
+            <button onClick={() => { setStatusFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!statusFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部</button>
+            {STATUS_OPTIONS.map((s) => (
+              <button key={s} onClick={() => { setStatusFilter(s); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${statusFilter === s ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{s}</button>
+            ))}
+          </Pop>
+
+          <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
+            <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
+            {allSalespersons.map((sp) => (
+              <button key={sp} onClick={() => { setSpFilter(sp); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
+            ))}
+          </Pop>
+
+          <button onClick={resetAll} className="px-3 py-2 rounded-full text-sm text-stone-400 hover:text-stone-600 transition-colors">清除全部</button>
         </div>
+
         <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-stone-900/[0.06]">
-          <p className="text-[11px] text-stone-400">
-            資料時間:{fmtTime(updatedAt)}・「既有客戶」=有負責業務;「線索」=開發階段為線索
-          </p>
+          <p className="text-[11px] text-stone-400">資料時間:{fmtTime(updatedAt)}・「既有客戶」=有負責業務;「線索」=開發階段為線索</p>
           <button onClick={() => fetchData(true)} disabled={refreshing}
             className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all disabled:opacity-50">
             {refreshing && <span className="w-3 h-3 border-2 border-stone-300 border-t-brand-500 rounded-full animate-spin" />}
@@ -203,7 +320,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
         </div>
       </div>
 
-      {/* 摘要:市場規模 / 我方覆蓋 兩組 */}
+      {/* 摘要 */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card-soft p-5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">市場規模(依篩選)</p>
@@ -224,7 +341,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
         </div>
       </div>
 
-      {/* 行政區明細表 */}
+      {/* 明細表 */}
       <div className="card-soft overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -281,8 +398,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                             <div className="mt-3 flex flex-wrap gap-2">
                               {spEntries.map(([sp, n]) => (
                                 <span key={sp} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white ring-1 ring-stone-900/[0.08] text-sm">
-                                  <span className="font-medium text-stone-700">{sp}</span>
-                                  <span className="font-bold text-brand-600">{n}</span>
+                                  <span className="font-medium text-stone-700">{sp}</span><span className="font-bold text-brand-600">{n}</span>
                                 </span>
                               ))}
                             </div>
