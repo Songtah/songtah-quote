@@ -93,6 +93,13 @@ export const DB = {
     '386dcdaa-fb2a-818f-8c11-d24e88b111b3',
   // 診所監控紀錄（月排程寫入的逐筆異動：新開業/新增停業/停業/恢復開業）
   monitor: process.env.NOTION_CLINIC_MONITOR_DB,
+  // 追蹤名單（商品×客戶的派工追蹤；2026-07 建立，見 lib/notion/campaigns.ts）
+  campaigns:
+    process.env.NOTION_CAMPAIGNS_DB ??
+    '396dcdaa-fb2a-81fb-b842-c24ebd46d113',
+  campaignMembers:
+    process.env.NOTION_CAMPAIGN_MEMBERS_DB ??
+    '396dcdaa-fb2a-81b4-a63b-f8872ae3cf13',
 } as const
 
 export function normalizeDatabaseId(value?: string) {

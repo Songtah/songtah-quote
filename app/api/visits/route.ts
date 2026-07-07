@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listVisits, createVisit } from '@/lib/system-notion'
+import { bumpContactedByCustomer } from '@/lib/notion/campaigns'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const GET = withApiAuth('session', async (req: NextRequest) => {
@@ -50,6 +51,11 @@ export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: N
       needsFollowUp: typeof needsFollowUp === 'boolean' ? needsFollowUp : false,
       nextFollowUpDate: nextFollowUpDate ?? '',
     })
+
+    // 追蹤名單連動:此客戶在進行中名單裡的「未聯絡」→「已聯絡」(fire-and-forget,不影響建檔)
+    if (customerId) {
+      bumpContactedByCustomer(customerId).catch((e) => console.warn('campaign bump error:', e))
+    }
 
     await logAuditEvent({
       module: 'bd',
