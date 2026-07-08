@@ -241,8 +241,6 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter(''); setExcludeClosed(false); setExcludePersonal(false) }
   const selectSalesperson = (sp: string) => {
     setSpFilter(sp)
-    setCities(new Set())
-    setDistrictSel(new Set())
     setOpenPop('')
   }
   const enterAssignMode = () => { setAssignMode(true); setOpenPop('') }
