@@ -137,29 +137,32 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       .sort((a, b) => a.city.localeCompare(b.city, 'zh-TW') || b.count - a.count)
   }, [rows, cities])
 
+  // 基礎篩選結果:只套用地區/行政區/類型/狀態/排除已歇業。
+  // 分派模式必須使用這份資料,避免被「負責業務轄區視角」縮小分派池。
+  const baseFiltered = useMemo(() => rows.filter((r) =>
+    (cities.size === 0 || cities.has(r.city)) &&
+    (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
+    (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
+    (!statusFilter || r.status === statusFilter) &&
+    (!excludeClosed || r.status !== '已歇業')
+  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed])
+
   /**
-   * scope:目前納入統計的列 + 「我方」定義。
+   * scope:檢視模式納入統計的列 + 「我方」定義。
    * - 未選業務:我方=任何有負責業務者;範圍=所有符合篩選的機構(市場滲透率)。
    * - 選了業務:切「業務轄區視角」——範圍=該業務有客戶的行政區(轄區)內的所有機構;
    *   我方=該業務自己的客戶。覆蓋率 = 該業務客戶 ÷ 轄區市場總數。
    *   (若不這樣做,單純用業務篩掉別人的列會讓分母=分子、覆蓋率永遠 100%,失去意義。)
    */
   const scope = useMemo(() => {
-    const nonSp = rows.filter((r) =>
-      (cities.size === 0 || cities.has(r.city)) &&
-      (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
-      (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
-      (!statusFilter || r.status === statusFilter) &&
-      (!excludeClosed || r.status !== '已歇業')
-    )
-    if (!spFilter) return { rows: nonSp, mine: isExisting, spMode: false, territoryCount: 0 }
-    const terr = new Set(nonSp.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
-    const inTerr = nonSp.filter((r) => terr.has(r.city + '|' + r.district))
+    if (!spFilter) return { rows: baseFiltered, mine: isExisting, spMode: false, territoryCount: 0 }
+    const terr = new Set(baseFiltered.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
+    const inTerr = baseFiltered.filter((r) => terr.has(r.city + '|' + r.district))
     return { rows: inTerr, mine: (r: Row) => r.salesperson === spFilter, spMode: true, territoryCount: terr.size }
-  }, [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed, spFilter])
+  }, [baseFiltered, spFilter])
 
-  const filtered = scope.rows
-  const mine = scope.mine
+  const filtered = assignMode ? baseFiltered : scope.rows
+  const mine = assignMode ? isExisting : scope.mine
 
   // 業務持有一覽:業務→持有數(依目前篩選範圍;含公司/盤商,離職重分時看全貌)
   const holdings = useMemo(() => {
@@ -233,6 +236,11 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     setDistrictSel(new Set())
     setOpenPop('')
   }
+  const enterAssignMode = () => {
+    setAssignMode(true)
+    setSpFilter('')
+    setOpenPop('')
+  }
 
   // 縣市按鈕摘要文字
   const cityLabel = useMemo(() => {
@@ -296,9 +304,9 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-full bg-stone-100 p-1">
             <button onClick={() => setAssignMode(false)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!assignMode ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>檢視模式</button>
-            <button onClick={() => setAssignMode(true)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${assignMode ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>分派模式</button>
+            <button onClick={enterAssignMode} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${assignMode ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>分派模式</button>
           </div>
-          {assignMode && <span className="text-xs text-stone-400">把各區未分派客戶(負責業務空白)劃給業務;公司/盤商/已具名者不動</span>}
+          {assignMode && <span className="text-xs text-stone-400">分派模式不套用負責業務篩選,只處理負責業務空白的客戶</span>}
         </div>
       )}
 
@@ -375,12 +383,19 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
             ))}
           </Pop>
 
-          <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
-            <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
-            {allSalespersons.map((sp) => (
-              <button key={sp} onClick={() => selectSalesperson(sp)} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
-            ))}
-          </Pop>
+          {assignMode ? (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-500">
+              <span className="text-stone-400 text-xs">負責業務</span>
+              <span className="font-semibold">於分派彈窗選擇</span>
+            </div>
+          ) : (
+            <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
+              <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
+              {allSalespersons.map((sp) => (
+                <button key={sp} onClick={() => selectSalesperson(sp)} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
+              ))}
+            </Pop>
+          )}
 
           <button onClick={resetAll} className="px-3 py-2 rounded-full text-sm text-stone-400 hover:text-stone-600 transition-colors">清除全部</button>
         </div>
@@ -396,7 +411,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       </div>
 
       {/* 業務視角橫幅 */}
-      {scope.spMode && (
+      {!assignMode && scope.spMode && (
         <div className="card-soft p-4 flex items-center justify-between flex-wrap gap-3 bg-brand-50/45">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">業務轄區覆蓋率模式</p>
@@ -423,7 +438,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                   const house = sp === '公司' || sp === '盤商'
                   return (
                     <span key={sp} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${house ? 'bg-stone-100 text-stone-500' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-700'}`}>
-                      {house && <span className="text-[10px]">🏢</span>}{sp}<span className="font-bold text-brand-600">{n.toLocaleString()}</span>
+                      {house && <span className="text-[10px]">內部</span>}{sp}<span className="font-bold text-brand-600">{n.toLocaleString()}</span>
                     </span>
                   )
                 })}
@@ -437,7 +452,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
               <div><p className="text-2xl font-bold text-stone-400">{districts.reduce((s, d) => s + d.house, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">公司/盤商</p></div>
               <div><p className="text-2xl font-bold text-rose-500">{districts.reduce((s, d) => s + d.unassigned, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">未分派(可劃)</p></div>
             </div>
-            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。用上方篩選(類型/機構狀態/排除已歇業)控制要劃給業務的顆粒度。</p>
+            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。分派模式只套用地區、行政區、類型、機構狀態與排除已歇業條件。</p>
           </div>
         </div>
       ) : (
@@ -643,7 +658,7 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
 
           {done ? (
             <div className="text-center py-6">
-              <p className="text-4xl">✅</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">分派完成</p>
               <p className="mt-3 text-lg font-bold text-stone-800">已分派 {done.assigned} 家 → {sp}</p>
               {done.skipped > 0 && <p className="mt-1 text-sm text-stone-400">跳過 {done.skipped} 家(期間已被指派,未覆蓋)</p>}
             </div>
@@ -668,7 +683,7 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
                   {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <p className="text-[11px] text-stone-400">⚠ 這會把上述 {pool.poolSize} 家的「負責業務」寫成所選業務。寫入前系統會逐筆重新確認仍為空白,只寫空白者,絕不覆蓋任何已有值。</p>
+              <p className="text-[11px] text-stone-400">注意:這會把上述 {pool.poolSize} 家的「負責業務」寫成所選業務。寫入前系統會逐筆重新確認仍為空白,只寫空白者,絕不覆蓋任何已有值。</p>
             </>
           )}
         </div>
