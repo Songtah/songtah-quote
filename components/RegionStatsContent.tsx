@@ -131,15 +131,26 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     const m = new Map<string, number>() // city|district → count
     for (const r of rows) {
       if (cities.size > 0 && !cities.has(r.city)) continue
+      if (typeFilter && (typeFilter === '其他' ? MAIN_TYPES.includes(r.type as any) : r.type !== typeFilter)) continue
+      if (statusFilter && r.status !== statusFilter) continue
+      if (excludeClosed && r.status === '已歇業') continue
+      if (excludePersonal && r.type === '個人') continue
       const k = r.city + '|' + r.district
       m.set(k, (m.get(k) ?? 0) + r.count)
     }
     return Array.from(m.entries())
       .map(([k, n]) => ({ key: k, city: k.split('|')[0], district: k.split('|')[1], count: n }))
       .sort((a, b) => a.city.localeCompare(b.city, 'zh-TW') || b.count - a.count)
-  }, [rows, cities])
+  }, [rows, cities, typeFilter, statusFilter, excludeClosed, excludePersonal])
 
-  // 基礎篩選結果:只套用地區/行政區/類型/狀態/排除已歇業。
+  // 地理範圍:只套用地區/行政區。業務轄區必須用這份資料推算,
+  // 避免類型/狀態/排除個人反向改變「該業務有哪些轄區」。
+  const geoFiltered = useMemo(() => rows.filter((r) =>
+    (cities.size === 0 || cities.has(r.city)) &&
+    (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district))
+  ), [rows, cities, effDistrictSel])
+
+  // 基礎篩選結果:套用地區/行政區/類型/狀態/排除已歇業/排除個人。
   // 分派模式必須使用這份資料,避免被「負責業務轄區視角」縮小分派池。
   const baseFiltered = useMemo(() => rows.filter((r) =>
     (cities.size === 0 || cities.has(r.city)) &&
@@ -159,10 +170,10 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
    */
   const scope = useMemo(() => {
     if (!spFilter) return { rows: baseFiltered, mine: isExisting, spMode: false, territoryCount: 0 }
-    const terr = new Set(baseFiltered.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
+    const terr = new Set(geoFiltered.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
     const inTerr = baseFiltered.filter((r) => terr.has(r.city + '|' + r.district))
     return { rows: inTerr, mine: (r: Row) => r.salesperson === spFilter, spMode: true, territoryCount: terr.size }
-  }, [baseFiltered, spFilter])
+  }, [baseFiltered, geoFiltered, spFilter])
 
   const assignmentRows = baseFiltered
   const assignmentDisplayRows = useMemo(() => (
