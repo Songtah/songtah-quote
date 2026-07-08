@@ -198,13 +198,13 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     }
   }, [filtered, mine])
 
-  type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; leads: number; assignedNamed: number; house: number; unassigned: number; bySp: Record<string, number> }
+  type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; companyCovered: number; leads: number; assignedNamed: number; house: number; unassigned: number; bySp: Record<string, number> }
   const districts = useMemo(() => {
     const map = new Map<string, Agg>()
     for (const r of filtered) {
       const key = r.city + '|' + r.district
       let d = map.get(key)
-      if (!d) { d = { city: r.city, district: r.district, total: 0, clinics: 0, labs: 0, hospitals: 0, others: 0, unknown: 0, existing: 0, leads: 0, assignedNamed: 0, house: 0, unassigned: 0, bySp: {} }; map.set(key, d) }
+      if (!d) { d = { city: r.city, district: r.district, total: 0, clinics: 0, labs: 0, hospitals: 0, others: 0, unknown: 0, existing: 0, companyCovered: 0, leads: 0, assignedNamed: 0, house: 0, unassigned: 0, bySp: {} }; map.set(key, d) }
       d.total += r.count
       if (r.type === '牙醫診所') d.clinics += r.count
       else if (r.type === '牙體技術所') d.labs += r.count
@@ -212,6 +212,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       else d.others += r.count
       if (r.status === '狀況不明') d.unknown += r.count
       if (mine(r)) d.existing += r.count // 覆蓋率分子:未選業務=全部既有;選了業務=該業務客戶
+      if (isExisting(r)) d.companyCovered += r.count // 表格總數欄試作:固定顯示全公司覆蓋數
       if (isExisting(r)) d.bySp[r.salesperson] = (d.bySp[r.salesperson] ?? 0) + r.count // 展開列仍顯示所有業務
       // 分派視角:已具名業務 / 公司+盤商(house) / 未分派(空白)
       if (!r.salesperson) d.unassigned += r.count
@@ -499,7 +500,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
             <thead>
               <tr className="text-left text-xs text-stone-400 border-b border-stone-900/[0.06]">
                 <SortHead k="district" label="縣市 / 行政區" className="!px-5 text-left" />
-                <SortHead k="total" label="總數" className="text-right" />
+                <SortHead k="total" label="市場 / 覆蓋" className="text-right" />
                 <SortHead k="clinics" label="牙醫" className="text-right" />
                 <SortHead k="labs" label="牙技所" className="text-right" />
                 <SortHead k="hospitals" label="醫院" className="text-right" />
@@ -535,7 +536,11 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                         <span className="ml-2 font-semibold text-stone-800">{d.district}</span>
                         <span className="ml-1.5 text-xs text-stone-300">{open ? '▾' : '▸'}</span>
                       </td>
-                      <td className="px-3 py-3 text-right font-bold">{d.total.toLocaleString()}</td>
+                      <td className="px-3 py-3 text-right font-bold whitespace-nowrap">
+                        <span className="text-stone-800">{d.total.toLocaleString()}</span>
+                        <span className="mx-1 text-stone-300">/</span>
+                        <span className="text-emerald-600">{d.companyCovered.toLocaleString()}</span>
+                      </td>
                       <td className="px-3 py-3 text-right">{d.clinics.toLocaleString()}</td>
                       <td className="px-3 py-3 text-right">{d.labs.toLocaleString()}</td>
                       <td className="px-3 py-3 text-right">{d.hospitals || <span className="text-stone-200">0</span>}</td>
