@@ -77,6 +77,8 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   const [statusFilter, setStatusFilter] = useState('')
   const [spFilter, setSpFilter] = useState('')
   const [excludeClosed, setExcludeClosed] = useState(false) // 排除已歇業
+  const [excludePersonal, setExcludePersonal] = useState(false) // 排除個人客戶
+  const [assignSummaryView, setAssignSummaryView] = useState<'numbers' | 'bars'>('numbers')
   const [expanded, setExpanded] = useState('')
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'total', dir: 'desc' })
   const [openPop, setOpenPop] = useState<string>('') // 開啟中的下拉
@@ -144,8 +146,9 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
     (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
     (!statusFilter || r.status === statusFilter) &&
-    (!excludeClosed || r.status !== '已歇業')
-  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed])
+    (!excludeClosed || r.status !== '已歇業') &&
+    (!excludePersonal || r.type !== '個人')
+  ), [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed, excludePersonal])
 
   /**
    * scope:檢視模式納入統計的列 + 「我方」定義。
@@ -229,7 +232,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   })
   const toggleDistrict = (k: string) => setDistrictSel((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n })
   const toggleSort = (key: SortKey) => setSort((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'district' ? 'asc' : 'desc' })
-  const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter(''); setExcludeClosed(false) }
+  const resetAll = () => { setCities(new Set(REGION_GROUPS[0].cities)); setDistrictSel(new Set()); setTypeFilter(''); setStatusFilter(''); setSpFilter(''); setExcludeClosed(false); setExcludePersonal(false) }
   const selectSalesperson = (sp: string) => {
     setSpFilter(sp)
     setCities(new Set())
@@ -323,6 +326,9 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
           <span className="w-px self-stretch bg-stone-900/[0.06] mx-1" />
           <button className={pillBtn(excludeClosed)} onClick={() => setExcludeClosed((v) => !v)}>
             {excludeClosed ? '✓ ' : ''}排除已歇業
+          </button>
+          <button className={pillBtn(excludePersonal)} onClick={() => setExcludePersonal((v) => !v)}>
+            {excludePersonal ? '✓ ' : ''}排除個人
           </button>
         </div>
 
@@ -446,13 +452,20 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
             )}
           </div>
           <div className="card-soft p-5">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">分派總覽(依篩選範圍)</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div><p className="text-2xl font-bold text-stone-700">{districts.reduce((s, d) => s + d.assignedNamed, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">已指派業務</p></div>
-              <div><p className="text-2xl font-bold text-stone-400">{districts.reduce((s, d) => s + d.house, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">公司/盤商</p></div>
-              <div><p className="text-2xl font-bold text-rose-500">{districts.reduce((s, d) => s + d.unassigned, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">未分派(可劃)</p></div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">分派總覽(依篩選範圍)</p>
+              <div className="inline-flex rounded-full bg-stone-100 p-1">
+                <button onClick={() => setAssignSummaryView('numbers')} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${assignSummaryView === 'numbers' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>數字</button>
+                <button onClick={() => setAssignSummaryView('bars')} className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${assignSummaryView === 'bars' ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>長條圖</button>
+              </div>
             </div>
-            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。分派模式只套用地區、行政區、類型、機構狀態與排除已歇業條件。</p>
+            <AssignSummary
+              view={assignSummaryView}
+              assignedNamed={districts.reduce((s, d) => s + d.assignedNamed, 0)}
+              house={districts.reduce((s, d) => s + d.house, 0)}
+              unassigned={districts.reduce((s, d) => s + d.unassigned, 0)}
+            />
+            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。分派模式只套用地區、行政區、類型、機構狀態、排除已歇業與排除個人條件。</p>
           </div>
         </div>
       ) : (
@@ -599,7 +612,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
         <AssignModal
           {...assignTarget}
           salespersons={allSalespersons.filter((s) => s !== '公司' && s !== '盤商')}
-          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed }}
+          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed, excludePersonal }}
           onClose={(assigned) => { setAssignTarget(null); if (assigned) fetchData(true) }}
         />
       )}
@@ -607,10 +620,54 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   )
 }
 
+function AssignSummary({ view, assignedNamed, house, unassigned }: {
+  view: 'numbers' | 'bars'
+  assignedNamed: number
+  house: number
+  unassigned: number
+}) {
+  const items = [
+    { label: '已指派業務', value: assignedNamed, tone: 'text-stone-700', bar: 'bg-stone-600' },
+    { label: '公司/盤商', value: house, tone: 'text-stone-400', bar: 'bg-stone-300' },
+    { label: '未分派(可劃)', value: unassigned, tone: 'text-rose-500', bar: 'bg-rose-400' },
+  ]
+  const total = Math.max(items.reduce((s, i) => s + i.value, 0), 1)
+  if (view === 'numbers') {
+    return (
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {items.map((item) => (
+          <div key={item.label}>
+            <p className={`text-2xl font-bold ${item.tone}`}>{item.value.toLocaleString()}</p>
+            <p className="mt-0.5 text-xs text-stone-400">{item.label}</p>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const pct = Math.round((item.value / total) * 100)
+        return (
+          <div key={item.label} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-stone-600">{item.label}</span>
+              <span className={`font-bold ${item.tone}`}>{item.value.toLocaleString()} <span className="text-xs font-medium text-stone-300">({pct}%)</span></span>
+            </div>
+            <div className="h-2.5 rounded-full bg-stone-100 overflow-hidden">
+              <div className={`h-full rounded-full ${item.bar}`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── 分派彈窗:把某區未分派池劃給某業務 ─────────────────────────────────────────
 function AssignModal({ city, district, salespersons, filters, onClose }: {
   city: string; district: string; salespersons: string[]
-  filters: { type?: string; status?: string; excludeClosed?: boolean }
+  filters: { type?: string; status?: string; excludeClosed?: boolean; excludePersonal?: boolean }
   onClose: (assigned: boolean) => void
 }) {
   const [pool, setPool] = useState<{ poolSize: number; sample: { name: string; type: string; status: string; phone: string }[] } | null>(null)
@@ -639,7 +696,7 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
     } catch (e: any) { setError(e.message); setBusy(false) }
   }
 
-  const filterNote = [filters.type, filters.status, filters.excludeClosed ? '排除已歇業' : ''].filter(Boolean).join('・') || '全部類型與狀態'
+  const filterNote = [filters.type, filters.status, filters.excludeClosed ? '排除已歇業' : '', filters.excludePersonal ? '排除個人' : ''].filter(Boolean).join('・') || '全部類型與狀態'
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
