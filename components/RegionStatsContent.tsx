@@ -38,7 +38,7 @@ const STATUS_OPTIONS = ['開業', '狀況不明', '停業', '已歇業', '撤銷
 
 const isExisting = (r: Row) => !!r.salesperson
 
-type SortKey = 'district' | 'total' | 'clinics' | 'labs' | 'hospitals' | 'unknown' | 'existing' | 'leads' | 'coverage' | 'unassigned'
+type SortKey = 'district' | 'total' | 'clinics' | 'labs' | 'hospitals' | 'existing' | 'leads' | 'coverage' | 'unassigned'
 
 function fmtTime(iso: string) {
   if (!iso) return '—'
@@ -505,7 +505,6 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                 <SortHead k="labs" label="牙技所" className="text-right" />
                 <SortHead k="hospitals" label="醫院" className="text-right" />
                 <th className="px-3 py-3 font-medium text-right">其他</th>
-                <SortHead k="unknown" label="狀況不明" className="text-right !text-amber-500" />
                 {assignMode ? (
                   <>
                     <th className="px-3 py-3 font-medium text-right">已指派</th>
@@ -545,7 +544,6 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                       <td className="px-3 py-3 text-right">{d.labs.toLocaleString()}</td>
                       <td className="px-3 py-3 text-right">{d.hospitals || <span className="text-stone-200">0</span>}</td>
                       <td className="px-3 py-3 text-right text-stone-400">{d.others || <span className="text-stone-200">0</span>}</td>
-                      <td className="px-3 py-3 text-right text-amber-600">{d.unknown || <span className="text-stone-200">0</span>}</td>
                       {assignMode ? (
                         <>
                           <td className="px-3 py-3 text-right text-stone-600">{d.assignedNamed || <span className="text-stone-200">0</span>}</td>
@@ -573,7 +571,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                     </tr>
                     {open && (
                       <tr className="bg-stone-50/60">
-                        <td colSpan={assignMode ? 11 : 10} className="px-5 py-4">
+                        <td colSpan={assignMode ? 10 : 9} className="px-5 py-4">
                           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{d.city}{d.district}・各業務既有客戶數</p>
                           {spEntries.length === 0 ? (
                             <p className="mt-2 text-sm text-stone-400">此轄區尚無指派負責業務的客戶</p>
@@ -597,7 +595,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
                 )
               })}
               {districts.length === 0 && (
-                <tr><td colSpan={assignMode ? 11 : 10} className="px-5 py-10 text-center text-sm text-stone-400">目前篩選條件下沒有資料</td></tr>
+                <tr><td colSpan={assignMode ? 10 : 9} className="px-5 py-10 text-center text-sm text-stone-400">目前篩選條件下沒有資料</td></tr>
               )}
             </tbody>
           </table>
