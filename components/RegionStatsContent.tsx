@@ -164,15 +164,20 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     return { rows: inTerr, mine: (r: Row) => r.salesperson === spFilter, spMode: true, territoryCount: terr.size }
   }, [baseFiltered, spFilter])
 
-  const filtered = assignMode ? baseFiltered : scope.rows
+  const assignmentRows = baseFiltered
+  const assignmentDisplayRows = useMemo(() => (
+    assignMode && spFilter ? baseFiltered.filter((r) => r.salesperson === spFilter) : baseFiltered
+  ), [assignMode, baseFiltered, spFilter])
+  const filtered = assignMode ? assignmentRows : scope.rows
   const mine = assignMode ? isExisting : scope.mine
 
   // 業務持有一覽:業務→持有數(依目前篩選範圍;含公司/盤商,離職重分時看全貌)
   const holdings = useMemo(() => {
     const m: Record<string, number> = {}
-    for (const r of filtered) if (r.salesperson) m[r.salesperson] = (m[r.salesperson] ?? 0) + r.count
+    const source = assignMode ? assignmentDisplayRows : filtered
+    for (const r of source) if (r.salesperson) m[r.salesperson] = (m[r.salesperson] ?? 0) + r.count
     return Object.entries(m).sort((a, b) => b[1] - a[1])
-  }, [filtered])
+  }, [assignMode, assignmentDisplayRows, filtered])
 
   const summary = useMemo(() => {
     const base = filtered
@@ -239,11 +244,8 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     setDistrictSel(new Set())
     setOpenPop('')
   }
-  const enterAssignMode = () => {
-    setAssignMode(true)
-    setSpFilter('')
-    setOpenPop('')
-  }
+  const enterAssignMode = () => { setAssignMode(true); setOpenPop('') }
+  const selectAssignmentSalesperson = (sp: string) => { setSpFilter(sp); setOpenPop('') }
 
   // 縣市按鈕摘要文字
   const cityLabel = useMemo(() => {
@@ -389,19 +391,12 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
             ))}
           </Pop>
 
-          {assignMode ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-500">
-              <span className="text-stone-400 text-xs">負責業務</span>
-              <span className="font-semibold">於分派彈窗選擇</span>
-            </div>
-          ) : (
-            <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
-              <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
-              {allSalespersons.map((sp) => (
-                <button key={sp} onClick={() => selectSalesperson(sp)} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
-              ))}
-            </Pop>
-          )}
+          <Pop id="sp" label="負責業務" value={spFilter || '全部'} width="w-56">
+            <button onClick={() => { setSpFilter(''); setOpenPop('') }} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${!spFilter ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>全部業務</button>
+            {allSalespersons.map((sp) => (
+              <button key={sp} onClick={() => assignMode ? selectAssignmentSalesperson(sp) : selectSalesperson(sp)} className={`block w-full text-left px-3 py-2 rounded-xl text-sm ${spFilter === sp ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-stone-100'}`}>{sp}</button>
+            ))}
+          </Pop>
 
           <button onClick={resetAll} className="px-3 py-2 rounded-full text-sm text-stone-400 hover:text-stone-600 transition-colors">清除全部</button>
         </div>
@@ -435,7 +430,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       {assignMode ? (
         <div className="grid md:grid-cols-2 gap-4">
           <div className="card-soft p-5">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">各業務持有(依篩選範圍)</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{spFilter ? `${spFilter} 持有(依篩選範圍)` : '各業務持有(依篩選範圍)'}</p>
             {holdings.length === 0 ? (
               <p className="text-sm text-stone-400">此範圍尚無任何指派</p>
             ) : (
@@ -465,7 +460,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
               house={districts.reduce((s, d) => s + d.house, 0)}
               unassigned={districts.reduce((s, d) => s + d.unassigned, 0)}
             />
-            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。分派模式只套用地區、行政區、類型、機構狀態、排除已歇業與排除個人條件。</p>
+            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。負責業務篩選只影響左側持有數,不會縮小未分派池。</p>
           </div>
         </div>
       ) : (
