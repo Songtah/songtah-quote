@@ -26,6 +26,27 @@ const looksLikeCode = (s: string) => /^[A-Za-z0-9]{5,}$/.test(s.trim())
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
+
+    // ── 路徑 B:智慧產生後直接以 customerId 匯入(跳過文字比對,仍去重)──
+    if (Array.isArray(body.members)) {
+      const direct: { customerId: string; name: string; salesperson?: string }[] = body.members
+        .filter((m: any) => m?.customerId && m?.name)
+      if (direct.length === 0) return NextResponse.json({ error: '成員清單是空的' }, { status: 400 })
+      if (direct.length > 500) return NextResponse.json({ error: '單次最多 500 筆' }, { status: 400 })
+      const existingMembers = await listMembers(params.id)
+      const alreadyIn = new Set(existingMembers.map((m) => m.customerId.replace(/-/g, '')))
+      const toAdd = direct.filter((m) => !alreadyIn.has(m.customerId.replace(/-/g, '')))
+      const created = await addMembers(params.id, toAdd)
+      await logAuditEvent({
+        module: 'bd', action: 'create', entityType: 'campaign-members',
+        entityId: params.id, summary: `名單智慧匯入成員 ${created} 筆(重複跳過 ${direct.length - toAdd.length})`,
+        actor: getAuditActor(session), request: getAuditRequestContext(req),
+        after: { created, duplicated: direct.length - toAdd.length },
+      }).catch(() => {})
+      return NextResponse.json({ dryRun: false, created, duplicated: direct.length - toAdd.length, ambiguous: [], unmatched: [] })
+    }
+
+    // ── 路徑 A:貼上文字清單 → 比對客戶主檔 ──
     const lines: string[] = (Array.isArray(body.lines) ? body.lines : [])
       .map((l: string) => String(l).trim()).filter(Boolean)
     if (lines.length === 0) return NextResponse.json({ error: '清單是空的' }, { status: 400 })

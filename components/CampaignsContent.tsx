@@ -383,13 +383,33 @@ function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: ()
   )
 }
 
-// ── 加成員(既有名單追加)────────────────────────────────────────────────
+// ── 加成員(既有名單追加:貼上清單 / 智慧產生)──────────────────────────────
+type Candidate = { customerId: string; name: string; salesperson: string; area: string; reason: string }
+
 function ImportModal({ campaignId, onClose }: { campaignId: string; onClose: (imported: boolean) => void }) {
+  const [tab, setTab] = useState<'paste' | 'smart'>('paste')
   const [listText, setListText] = useState('')
   const [preview, setPreview] = useState<MatchResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const lines = useMemo(() => listText.split('\n').map((l) => l.trim()).filter(Boolean), [listText])
+
+  // 智慧產生狀態
+  const [source, setSource] = useState<'cross-sell' | 'visit-interest' | 'competitor'>('cross-sell')
+  const [scope, setScope] = useState<'series' | 'category' | 'brand'>('series')
+  const [keyword, setKeyword] = useState('')
+  const [competitor, setCompetitor] = useState('')
+  const [competitorOptions, setCompetitorOptions] = useState<string[]>([])
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null)
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [capped, setCapped] = useState(false)
+
+  // 競品選項(切到競品來源時載入一次)
+  useEffect(() => {
+    if (source === 'competitor' && competitorOptions.length === 0) {
+      fetch('/api/visits/options').then((r) => r.json()).then((d) => setCompetitorOptions(d.competitorOptions ?? [])).catch(() => {})
+    }
+  }, [source, competitorOptions.length])
 
   async function run(dryRun: boolean) {
     if (!lines.length) { setErr('請先貼上清單'); return }
@@ -406,32 +426,155 @@ function ImportModal({ campaignId, onClose }: { campaignId: string; onClose: (im
     } catch (e: any) { setErr(e?.message ?? '失敗') } finally { setBusy(false) }
   }
 
+  async function generate() {
+    setBusy(true); setErr(''); setCandidates(null)
+    try {
+      const res = await fetch(`/api/bd/campaigns/${campaignId}/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, scope, keyword: keyword || undefined, competitor: competitor || undefined }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? '產生失敗')
+      setCandidates(d.candidates ?? [])
+      setCapped(!!d.capped)
+      setChecked(new Set((d.candidates ?? []).map((c: Candidate) => c.customerId)))
+    } catch (e: any) { setErr(e?.message ?? '產生失敗') } finally { setBusy(false) }
+  }
+
+  async function importChecked() {
+    const sel = (candidates ?? []).filter((c) => checked.has(c.customerId))
+    if (!sel.length) { setErr('請至少勾選一家'); return }
+    setBusy(true); setErr('')
+    try {
+      const res = await fetch(`/api/bd/campaigns/${campaignId}/members`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: sel.map((c) => ({ customerId: c.customerId, name: c.name, salesperson: c.salesperson })) }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? '匯入失敗')
+      onClose(true)
+    } catch (e: any) { setErr(e?.message ?? '匯入失敗'); setBusy(false) }
+  }
+
+  const srcChip = (active: boolean) => `px-3.5 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${active ? 'bg-brand-500 text-white' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-600 hover:bg-stone-50'}`
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(false)} />
-      <div className="relative w-full max-w-xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
-          <h3 className="text-lg font-bold">加入成員</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold">加入成員</h3>
+            <div className="inline-flex rounded-full bg-stone-100 p-0.5">
+              <button onClick={() => setTab('paste')} className={`px-3.5 py-1 rounded-full text-xs font-medium transition-all ${tab === 'paste' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>貼上清單</button>
+              <button onClick={() => setTab('smart')} className={`px-3.5 py-1 rounded-full text-xs font-medium transition-all ${tab === 'smart' ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>🤖 智慧產生</button>
+            </div>
+          </div>
           <button onClick={() => onClose(false)} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-all text-lg">✕</button>
         </div>
-        <div className="p-6 space-y-3">
-          <textarea className="w-full px-4 py-2.5 rounded-2xl bg-stone-50 outline outline-1 outline-stone-900/[0.08] focus:bg-white focus:outline-brand-400 text-sm" rows={7}
-            value={listText} onChange={(e) => setListText(e.target.value)} placeholder={'每行一個客戶名稱或機構代碼'} />
-          <p className="text-[11px] text-stone-400">{lines.length} 行</p>
-          {preview && (
-            <div className="rounded-2xl bg-white ring-1 ring-stone-900/[0.06] p-4 text-sm space-y-1.5">
-              <p>✅ 可匯入 <span className="font-bold text-emerald-600">{preview.matched.length}</span> 家</p>
-              {preview.duplicated.length > 0 && <p className="text-stone-400">↩︎ 已在名單內 {preview.duplicated.length} 家</p>}
-              {preview.ambiguous.length > 0 && <p className="text-amber-600">⚠ 同名多筆:{preview.ambiguous.map((a) => a.input).join('、')}</p>}
-              {preview.unmatched.length > 0 && <p className="text-rose-500">✗ 比對不到:{preview.unmatched.slice(0, 8).join('、')}{preview.unmatched.length > 8 ? '…' : ''}</p>}
+
+        {tab === 'paste' ? (
+          <>
+            <div className="p-6 space-y-3">
+              <textarea className="w-full px-4 py-2.5 rounded-2xl bg-stone-50 outline outline-1 outline-stone-900/[0.08] focus:bg-white focus:outline-brand-400 text-sm" rows={7}
+                value={listText} onChange={(e) => setListText(e.target.value)} placeholder={'每行一個客戶名稱或機構代碼'} />
+              <p className="text-[11px] text-stone-400">{lines.length} 行</p>
+              {preview && (
+                <div className="rounded-2xl bg-white ring-1 ring-stone-900/[0.06] p-4 text-sm space-y-1.5">
+                  <p>✅ 可匯入 <span className="font-bold text-emerald-600">{preview.matched.length}</span> 家</p>
+                  {preview.duplicated.length > 0 && <p className="text-stone-400">↩︎ 已在名單內 {preview.duplicated.length} 家</p>}
+                  {preview.ambiguous.length > 0 && <p className="text-amber-600">⚠ 同名多筆:{preview.ambiguous.map((a) => a.input).join('、')}</p>}
+                  {preview.unmatched.length > 0 && <p className="text-rose-500">✗ 比對不到:{preview.unmatched.slice(0, 8).join('、')}{preview.unmatched.length > 8 ? '…' : ''}</p>}
+                </div>
+              )}
+              {err && <p className="text-sm text-rose-500">{err}</p>}
             </div>
-          )}
-          {err && <p className="text-sm text-rose-500">{err}</p>}
-        </div>
-        <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-between">
-          <button onClick={() => run(true)} disabled={busy || !lines.length} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all disabled:opacity-40">{busy ? '處理中…' : '比對預覽'}</button>
-          <button onClick={() => run(false)} disabled={busy || !lines.length} className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50">確認匯入</button>
-        </div>
+            <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-between">
+              <button onClick={() => run(true)} disabled={busy || !lines.length} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all disabled:opacity-40">{busy ? '處理中…' : '比對預覽'}</button>
+              <button onClick={() => run(false)} disabled={busy || !lines.length} className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50">確認匯入</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-6 space-y-4">
+              {/* 來源 */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">名單來源</p>
+                <div className="flex flex-wrap gap-2">
+                  <button className={srcChip(source === 'cross-sell')} onClick={() => { setSource('cross-sell'); setCandidates(null) }}>🛒 交叉銷售(買過相關產品)</button>
+                  <button className={srcChip(source === 'visit-interest')} onClick={() => { setSource('visit-interest'); setCandidates(null) }}>💬 拜訪表達過興趣</button>
+                  <button className={srcChip(source === 'competitor')} onClick={() => { setSource('competitor'); setCandidates(null) }}>⚔️ 使用競品</button>
+                </div>
+              </div>
+              {/* 參數 */}
+              {source === 'cross-sell' && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">關聯範圍(依名單的目標 SKU 推算)</p>
+                  <div className="flex gap-2">
+                    {([['series', '同系列'], ['category', '同分類'], ['brand', '同品牌']] as const).map(([v, l]) => (
+                      <button key={v} className={srcChip(scope === v)} onClick={() => { setScope(v); setCandidates(null) }}>{l}</button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-stone-400">例:目標 HT+ 鋯塊 → 找買過{scope === 'series' ? ' HT+ 其他規格' : scope === 'category' ? '其他氧化鋯塊' : '貝施美其他產品'}、但沒買過目標 SKU 的客戶</p>
+                </div>
+              )}
+              {source === 'visit-interest' && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">關鍵字(留空=用名單的目標商品)</p>
+                  <input className="w-full px-4 py-2.5 rounded-2xl bg-stone-50 outline outline-1 outline-stone-900/[0.08] focus:bg-white focus:outline-brand-400 text-sm"
+                    value={keyword} onChange={(e) => { setKeyword(e.target.value); setCandidates(null) }} placeholder="比對拜訪紀錄的「有興趣的產品」與內容" />
+                </div>
+              )}
+              {source === 'competitor' && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-2">競品</p>
+                  <select className="select-soft w-full text-sm" value={competitor} onChange={(e) => { setCompetitor(e.target.value); setCandidates(null) }}>
+                    <option value="">— 選擇競品 —</option>
+                    {competitorOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <button onClick={generate} disabled={busy}
+                className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50">
+                {busy && !candidates ? '分析中…(掃描訂單/拜訪紀錄)' : '產生候選名單'}
+              </button>
+
+              {/* 候選清單 */}
+              {candidates && (
+                <div className="rounded-2xl bg-white ring-1 ring-stone-900/[0.06] overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-stone-900/[0.05] flex items-center justify-between text-sm">
+                    <p>找到 <span className="font-bold text-brand-600">{candidates.length}</span> 家候選{capped && <span className="text-amber-500 text-xs">(已達 300 上限)</span>}・已勾 {checked.size}</p>
+                    <div className="flex gap-2 text-xs">
+                      <button className="text-brand-600" onClick={() => setChecked(new Set(candidates.map((c) => c.customerId)))}>全選</button>
+                      <button className="text-stone-400" onClick={() => setChecked(new Set())}>全不選</button>
+                    </div>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto divide-y divide-stone-900/[0.04]">
+                    {candidates.length === 0 && <p className="px-4 py-6 text-center text-sm text-stone-400">沒有符合的候選(已排除名單內既有成員)</p>}
+                    {candidates.map((c) => (
+                      <label key={c.customerId} className="flex items-start gap-3 px-4 py-2.5 hover:bg-brand-50/40 cursor-pointer">
+                        <input type="checkbox" className="mt-1 accent-[#b8956a]" checked={checked.has(c.customerId)}
+                          onChange={() => setChecked((prev) => { const n = new Set(prev); n.has(c.customerId) ? n.delete(c.customerId) : n.add(c.customerId); return n })} />
+                        <span className="min-w-0">
+                          <span className="text-sm font-semibold text-stone-800">{c.name}</span>
+                          <span className="ml-2 text-xs text-stone-400">{c.area}{c.salesperson && `・${c.salesperson}`}</span>
+                          <span className="block text-xs text-stone-500 truncate">{c.reason}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {err && <p className="text-sm text-rose-500">{err}</p>}
+            </div>
+            <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-end">
+              <button onClick={importChecked} disabled={busy || !candidates || checked.size === 0}
+                className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40">
+                {busy && candidates ? '匯入中…' : `匯入所選 ${checked.size} 家`}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
