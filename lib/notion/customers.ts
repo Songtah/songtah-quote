@@ -263,6 +263,7 @@ const AREA_EMPTY = new Set(['(未填縣市)', '(未填行政區)'])
 export async function listCustomersByArea(f: {
   city?: string; district?: string; salesperson?: string
   type?: string; status?: string; devStage?: string
+  unassignedOnly?: boolean   // true = 只撈「負責業務空白」的未分派池(忽略 salesperson)
 }): Promise<AreaCustomer[]> {
   if (!DB.customers) return []
   const clauses: any[] = []
@@ -272,7 +273,8 @@ export async function listCustomersByArea(f: {
   if (f.district) clauses.push(AREA_EMPTY.has(f.district)
     ? { property: '行政區', rich_text: { is_empty: true } }
     : { property: '行政區', rich_text: { equals: f.district } })
-  if (f.salesperson) clauses.push({ property: '負責業務', select: { equals: f.salesperson } })
+  if (f.unassignedOnly) clauses.push({ property: '負責業務', select: { is_empty: true } })
+  else if (f.salesperson) clauses.push({ property: '負責業務', select: { equals: f.salesperson } })
   if (f.type)   clauses.push({ property: '客戶類型', select: { equals: f.type } })
   if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
   if (f.devStage) clauses.push({ property: '開發階段', select: { equals: f.devStage } })
@@ -307,6 +309,44 @@ export async function listCustomersByArea(f: {
   } while (cursor)
   out.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
   return out
+}
+
+/**
+ * 安全批次分派:把一批客戶的「負責業務」設為某業務。
+ * 鐵律(零覆蓋):寫入前逐筆重新讀取,只有「負責業務仍為空白」者才寫;
+ * 已被指派(任何值:人名/公司/盤商)一律跳過。回傳實寫數與跳過清單。
+ * 只允許「空白 → 業務名」單向,永不覆蓋既有值。
+ */
+export async function assignSalesperson(
+  customerIds: string[], salesperson: string
+): Promise<{ assigned: number; skipped: { id: string; name: string; current: string }[] }> {
+  if (!DB.customers) throw new Error('客戶主檔未設定')
+  if (!salesperson) throw new Error('未指定負責業務')
+  const customersDb = normalizeDatabaseId(DB.customers).replace(/-/g, '')
+
+  let assigned = 0
+  const skipped: { id: string; name: string; current: string }[] = []
+  for (const id of customerIds) {
+    // 重讀當前狀態(防競態 + 防誤傳非空白 id)
+    const page: any = await notionCallWithRetry('assignSalesperson:check', () =>
+      notion.pages.retrieve({ page_id: id })
+    )
+    const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+    if (targetDb !== customersDb) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: '(非客戶主檔)' }); continue }
+    const current = getSelect(page, '負責業務')
+    if (current) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current }); continue } // 已有值→不動
+    await notionCallWithRetry('assignSalesperson:write', () =>
+      notion.pages.update({ page_id: id, properties: { '負責業務': { select: { name: salesperson } } } as any })
+    )
+    assigned++
+  }
+  // 失效受影響快取
+  if (assigned > 0) {
+    setCachedValue('all-system-customers-v2', null as any, 1)
+    setCachedValue('region-stats-rows-v2', null as any, 1)
+    try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v2') } catch {}
+  }
+  return { assigned, skipped }
 }
 
 // ── 醫事監控用：載入所有有機構代碼的客戶（含代碼欄位）──────────────────

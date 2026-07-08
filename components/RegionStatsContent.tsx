@@ -38,7 +38,7 @@ const STATUS_OPTIONS = ['開業', '狀況不明', '停業', '已歇業', '撤銷
 
 const isExisting = (r: Row) => !!r.salesperson
 
-type SortKey = 'district' | 'total' | 'clinics' | 'labs' | 'hospitals' | 'unknown' | 'existing' | 'leads' | 'coverage'
+type SortKey = 'district' | 'total' | 'clinics' | 'labs' | 'hospitals' | 'unknown' | 'existing' | 'leads' | 'coverage' | 'unassigned'
 
 function fmtTime(iso: string) {
   if (!iso) return '—'
@@ -62,12 +62,14 @@ function CovRow({ label, c, bold }: { label: string; c: { total: number; existin
   )
 }
 
-export default function RegionStatsContent({ initialData }: { initialData: Data | null }) {
+export default function RegionStatsContent({ initialData, canAssign = false }: { initialData: Data | null; canAssign?: boolean }) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [updatedAt, setUpdatedAt] = useState(initialData?.updatedAt ?? '')
   const [loading, setLoading] = useState(!initialData)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [assignMode, setAssignMode] = useState(false) // 分派模式(限主管)
+  const [assignTarget, setAssignTarget] = useState<{ city: string; district: string } | null>(null)
 
   const [cities, setCities] = useState<Set<string>>(new Set(REGION_GROUPS[0].cities))
   const [districtSel, setDistrictSel] = useState<Set<string>>(new Set()) // key = city|district;空=全部
@@ -159,6 +161,13 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
   const filtered = scope.rows
   const mine = scope.mine
 
+  // 業務持有一覽:業務→持有數(依目前篩選範圍;含公司/盤商,離職重分時看全貌)
+  const holdings = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const r of filtered) if (r.salesperson) m[r.salesperson] = (m[r.salesperson] ?? 0) + r.count
+    return Object.entries(m).sort((a, b) => b[1] - a[1])
+  }, [filtered])
+
   const summary = useMemo(() => {
     const base = filtered
     const sum = (p: (r: Row) => boolean) => base.filter(p).reduce((s, r) => s + r.count, 0)
@@ -178,13 +187,13 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
     }
   }, [filtered, mine])
 
-  type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; leads: number; bySp: Record<string, number> }
+  type Agg = { city: string; district: string; total: number; clinics: number; labs: number; hospitals: number; others: number; unknown: number; existing: number; leads: number; assignedNamed: number; house: number; unassigned: number; bySp: Record<string, number> }
   const districts = useMemo(() => {
     const map = new Map<string, Agg>()
     for (const r of filtered) {
       const key = r.city + '|' + r.district
       let d = map.get(key)
-      if (!d) { d = { city: r.city, district: r.district, total: 0, clinics: 0, labs: 0, hospitals: 0, others: 0, unknown: 0, existing: 0, leads: 0, bySp: {} }; map.set(key, d) }
+      if (!d) { d = { city: r.city, district: r.district, total: 0, clinics: 0, labs: 0, hospitals: 0, others: 0, unknown: 0, existing: 0, leads: 0, assignedNamed: 0, house: 0, unassigned: 0, bySp: {} }; map.set(key, d) }
       d.total += r.count
       if (r.type === '牙醫診所') d.clinics += r.count
       else if (r.type === '牙體技術所') d.labs += r.count
@@ -193,6 +202,10 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       if (r.status === '狀況不明') d.unknown += r.count
       if (mine(r)) d.existing += r.count // 覆蓋率分子:未選業務=全部既有;選了業務=該業務客戶
       if (isExisting(r)) d.bySp[r.salesperson] = (d.bySp[r.salesperson] ?? 0) + r.count // 展開列仍顯示所有業務
+      // 分派視角:已具名業務 / 公司+盤商(house) / 未分派(空白)
+      if (!r.salesperson) d.unassigned += r.count
+      else if (r.salesperson === '公司' || r.salesperson === '盤商') d.house += r.count
+      else d.assignedNamed += r.count
       if (r.devStage === '線索') d.leads += r.count
     }
     const cov = (d: Agg) => d.total ? d.existing / d.total : 0
@@ -278,6 +291,17 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
 
   return (
     <div className="space-y-5">
+      {/* 模式切換(限主管) */}
+      {canAssign && (
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-full bg-stone-100 p-1">
+            <button onClick={() => setAssignMode(false)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!assignMode ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>檢視模式</button>
+            <button onClick={() => setAssignMode(true)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${assignMode ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>分派模式</button>
+          </div>
+          {assignMode && <span className="text-xs text-stone-400">把各區未分派客戶(負責業務空白)劃給業務;公司/盤商/已具名者不動</span>}
+        </div>
+      )}
+
       {/* 篩選 */}
       <div className="card-soft p-5 space-y-4">
         {/* 地區快選 */}
@@ -386,7 +410,37 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
         </div>
       )}
 
-      {/* 摘要 */}
+      {/* 分派模式:業務持有一覽 + 分派總覽 */}
+      {assignMode ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="card-soft p-5">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">各業務持有(依篩選範圍)</p>
+            {holdings.length === 0 ? (
+              <p className="text-sm text-stone-400">此範圍尚無任何指派</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {holdings.map(([sp, n]) => {
+                  const house = sp === '公司' || sp === '盤商'
+                  return (
+                    <span key={sp} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${house ? 'bg-stone-100 text-stone-500' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-700'}`}>
+                      {house && <span className="text-[10px]">🏢</span>}{sp}<span className="font-bold text-brand-600">{n.toLocaleString()}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          <div className="card-soft p-5">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">分派總覽(依篩選範圍)</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><p className="text-2xl font-bold text-stone-700">{districts.reduce((s, d) => s + d.assignedNamed, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">已指派業務</p></div>
+              <div><p className="text-2xl font-bold text-stone-400">{districts.reduce((s, d) => s + d.house, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">公司/盤商</p></div>
+              <div><p className="text-2xl font-bold text-rose-500">{districts.reduce((s, d) => s + d.unassigned, 0).toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">未分派(可劃)</p></div>
+            </div>
+            <p className="mt-3 text-[11px] text-stone-400">未分派 = 負責業務空白;公司/盤商/已具名者一律不動。用上方篩選(類型/機構狀態/排除已歇業)控制要劃給業務的顆粒度。</p>
+          </div>
+        </div>
+      ) : (
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card-soft p-5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{scope.spMode ? `${spFilter} 轄區市場` : '市場規模(依篩選)'}</p>
@@ -413,6 +467,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
           </p>
         </div>
       </div>
+      )}
 
       {/* 明細表 */}
       <div className="card-soft overflow-hidden">
@@ -427,9 +482,20 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                 <SortHead k="hospitals" label="醫院" className="text-right" />
                 <th className="px-3 py-3 font-medium text-right">其他</th>
                 <SortHead k="unknown" label="狀況不明" className="text-right !text-amber-500" />
-                <SortHead k="existing" label={scope.spMode ? `${spFilter} 客戶` : '既有客戶'} className="text-right !text-emerald-600" />
-                <SortHead k="leads" label="線索" className="text-right !text-sky-600" />
-                <SortHead k="coverage" label="覆蓋率" className="text-right" />
+                {assignMode ? (
+                  <>
+                    <th className="px-3 py-3 font-medium text-right">已指派</th>
+                    <th className="px-3 py-3 font-medium text-right">公司/盤商</th>
+                    <SortHead k="unassigned" label="未分派" className="text-right !text-rose-500" />
+                    <th className="px-3 py-3 font-medium text-right">分派</th>
+                  </>
+                ) : (
+                  <>
+                    <SortHead k="existing" label={scope.spMode ? `${spFilter} 客戶` : '既有客戶'} className="text-right !text-emerald-600" />
+                    <SortHead k="leads" label="線索" className="text-right !text-sky-600" />
+                    <SortHead k="coverage" label="覆蓋率" className="text-right" />
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-900/[0.04]">
@@ -452,18 +518,34 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                       <td className="px-3 py-3 text-right">{d.hospitals || <span className="text-stone-200">0</span>}</td>
                       <td className="px-3 py-3 text-right text-stone-400">{d.others || <span className="text-stone-200">0</span>}</td>
                       <td className="px-3 py-3 text-right text-amber-600">{d.unknown || <span className="text-stone-200">0</span>}</td>
-                      <td className="px-3 py-3 text-right font-semibold text-emerald-600">{d.existing.toLocaleString()}</td>
-                      <td className="px-3 py-3 text-right text-sky-600">{d.leads || <span className="text-stone-200">0</span>}</td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="w-12 h-1.5 rounded-full bg-stone-100 overflow-hidden"><span className="block h-full bg-brand-500" style={{ width: `${Math.min(coverage, 100)}%` }} /></span>
-                          <span className="text-xs text-stone-500 w-9 text-right">{coverage}%</span>
-                        </span>
-                      </td>
+                      {assignMode ? (
+                        <>
+                          <td className="px-3 py-3 text-right text-stone-600">{d.assignedNamed || <span className="text-stone-200">0</span>}</td>
+                          <td className="px-3 py-3 text-right text-stone-400">{d.house || <span className="text-stone-200">0</span>}</td>
+                          <td className="px-3 py-3 text-right font-bold text-rose-500">{d.unassigned.toLocaleString()}</td>
+                          <td className="px-3 py-3 text-right">
+                            {d.unassigned > 0
+                              ? <button onClick={(e) => { e.stopPropagation(); setAssignTarget({ city: d.city, district: d.district }) }}
+                                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-sm shadow-brand-500/25 active:scale-95 transition-all whitespace-nowrap">分派 →</button>
+                              : <span className="text-xs text-stone-300">—</span>}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-3 py-3 text-right font-semibold text-emerald-600">{d.existing.toLocaleString()}</td>
+                          <td className="px-3 py-3 text-right text-sky-600">{d.leads || <span className="text-stone-200">0</span>}</td>
+                          <td className="px-3 py-3 text-right">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="w-12 h-1.5 rounded-full bg-stone-100 overflow-hidden"><span className="block h-full bg-brand-500" style={{ width: `${Math.min(coverage, 100)}%` }} /></span>
+                              <span className="text-xs text-stone-500 w-9 text-right">{coverage}%</span>
+                            </span>
+                          </td>
+                        </>
+                      )}
                     </tr>
                     {open && (
                       <tr className="bg-stone-50/60">
-                        <td colSpan={10} className="px-5 py-4">
+                        <td colSpan={assignMode ? 11 : 10} className="px-5 py-4">
                           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{d.city}{d.district}・各業務既有客戶數</p>
                           {spEntries.length === 0 ? (
                             <p className="mt-2 text-sm text-stone-400">此轄區尚無指派負責業務的客戶</p>
@@ -487,7 +569,7 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
                 )
               })}
               {districts.length === 0 && (
-                <tr><td colSpan={10} className="px-5 py-10 text-center text-sm text-stone-400">目前篩選條件下沒有資料</td></tr>
+                <tr><td colSpan={assignMode ? 11 : 10} className="px-5 py-10 text-center text-sm text-stone-400">目前篩選條件下沒有資料</td></tr>
               )}
             </tbody>
           </table>
@@ -498,6 +580,114 @@ export default function RegionStatsContent({ initialData }: { initialData: Data 
       </div>
 
       {modal && <CustomerModal {...modal} onClose={() => setModal(null)} />}
+      {assignTarget && (
+        <AssignModal
+          {...assignTarget}
+          salespersons={allSalespersons.filter((s) => s !== '公司' && s !== '盤商')}
+          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed }}
+          onClose={(assigned) => { setAssignTarget(null); if (assigned) fetchData(true) }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── 分派彈窗:把某區未分派池劃給某業務 ─────────────────────────────────────────
+function AssignModal({ city, district, salespersons, filters, onClose }: {
+  city: string; district: string; salespersons: string[]
+  filters: { type?: string; status?: string; excludeClosed?: boolean }
+  onClose: (assigned: boolean) => void
+}) {
+  const [pool, setPool] = useState<{ poolSize: number; sample: { name: string; type: string; status: string; phone: string }[] } | null>(null)
+  const [sp, setSp] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<{ assigned: number; skipped: number } | null>(null)
+  const [error, setError] = useState('')
+
+  const body = { city, district, ...filters }
+
+  useEffect(() => {
+    fetch('/api/customers/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, dryRun: true }) })
+      .then((r) => r.ok ? r.json() : r.json().then((j) => Promise.reject(new Error(j.error || '讀取失敗'))))
+      .then(setPool)
+      .catch((e) => setError(e.message))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function execute() {
+    if (!sp) { setError('請選擇要分派的業務'); return }
+    setBusy(true); setError('')
+    try {
+      const res = await fetch('/api/customers/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, salesperson: sp, dryRun: false }) })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error || '分派失敗')
+      setDone({ assigned: j.assigned, skipped: j.skipped })
+    } catch (e: any) { setError(e.message); setBusy(false) }
+  }
+
+  const filterNote = [filters.type, filters.status, filters.excludeClosed ? '排除已歇業' : ''].filter(Boolean).join('・') || '全部類型與狀態'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
+      <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(!!done)} />
+      <div className="relative w-full max-w-lg bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+        <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">轄區分派</p>
+            <h3 className="text-lg font-bold text-stone-800 mt-0.5">{city}{district} 未分派客戶</h3>
+          </div>
+          <button onClick={() => onClose(!!done)} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-all text-lg">✕</button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {error && !done && <p className="text-sm text-rose-500">{error}</p>}
+
+          {done ? (
+            <div className="text-center py-6">
+              <p className="text-4xl">✅</p>
+              <p className="mt-3 text-lg font-bold text-stone-800">已分派 {done.assigned} 家 → {sp}</p>
+              {done.skipped > 0 && <p className="mt-1 text-sm text-stone-400">跳過 {done.skipped} 家(期間已被指派,未覆蓋)</p>}
+            </div>
+          ) : !pool ? (
+            <div className="text-center py-10">
+              <div className="inline-block w-5 h-5 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
+              <p className="mt-2 text-sm text-stone-400">盤點未分派池…</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-2xl bg-white ring-1 ring-stone-900/[0.06] p-4">
+                <p className="text-sm">此範圍未分派客戶 <span className="text-2xl font-bold text-brand-600">{pool.poolSize}</span> 家</p>
+                <p className="mt-1 text-[11px] text-stone-400">篩選:{filterNote}・只含負責業務空白者(公司/盤商/已具名不列入)</p>
+                {pool.sample.length > 0 && (
+                  <p className="mt-2 text-xs text-stone-500 line-clamp-2">{pool.sample.map((c) => c.name).join('、')}{pool.poolSize > pool.sample.length ? ` …等 ${pool.poolSize} 家` : ''}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1.5">分派給</label>
+                <select className="select-soft w-full text-sm" value={sp} onChange={(e) => setSp(e.target.value)}>
+                  <option value="">— 選擇業務 —</option>
+                  {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <p className="text-[11px] text-stone-400">⚠ 這會把上述 {pool.poolSize} 家的「負責業務」寫成所選業務。寫入前系統會逐筆重新確認仍為空白,只寫空白者,絕不覆蓋任何已有值。</p>
+            </>
+          )}
+        </div>
+
+        {!done && pool && (
+          <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-end gap-2">
+            <button onClick={() => onClose(false)} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
+            <button onClick={execute} disabled={busy || !sp || pool.poolSize === 0}
+              className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40">
+              {busy ? '分派中…' : `確認分派 ${pool.poolSize} 家給 ${sp || '…'}`}
+            </button>
+          </div>
+        )}
+        {done && (
+          <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-end">
+            <button onClick={() => onClose(true)} className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
