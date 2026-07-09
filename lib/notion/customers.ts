@@ -341,12 +341,45 @@ export async function assignSalesperson(
     assigned++
   }
   // 失效受影響快取
-  if (assigned > 0) {
-    setCachedValue('all-system-customers-v2', null as any, 1)
-    setCachedValue('region-stats-rows-v2', null as any, 1)
-    try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v2') } catch {}
-  }
+  if (assigned > 0) await invalidateCustomerCaches()
   return { assigned, skipped }
+}
+
+async function invalidateCustomerCaches() {
+  setCachedValue('all-system-customers-v2', null as any, 1)
+  setCachedValue('region-stats-rows-v2', null as any, 1)
+  try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v2') } catch {}
+}
+
+/**
+ * 業務離職轉移:把一批客戶的「負責業務」由 from 改為 to(或 null=釋出為未分派)。
+ * 鐵律(只動離職者自己的):寫入前逐筆重讀,只有「負責業務仍等於 from」者才寫;
+ * 已被改成別人/公司/盤商/空白者一律跳過。永不動到 from 以外的任何客戶。
+ */
+export async function reassignSalesperson(
+  customerIds: string[], from: string, to: string | null
+): Promise<{ reassigned: number; skipped: { id: string; name: string; current: string }[] }> {
+  if (!DB.customers) throw new Error('客戶主檔未設定')
+  if (!from) throw new Error('未指定原負責業務')
+  const customersDb = normalizeDatabaseId(DB.customers).replace(/-/g, '')
+
+  let reassigned = 0
+  const skipped: { id: string; name: string; current: string }[] = []
+  for (const id of customerIds) {
+    const page: any = await notionCallWithRetry('reassignSalesperson:check', () =>
+      notion.pages.retrieve({ page_id: id })
+    )
+    const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+    if (targetDb !== customersDb) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: '(非客戶主檔)' }); continue }
+    const current = getSelect(page, '負責業務')
+    if (current !== from) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: current || '(空白)' }); continue } // 已非離職者→不動
+    await notionCallWithRetry('reassignSalesperson:write', () =>
+      notion.pages.update({ page_id: id, properties: { '負責業務': to ? { select: { name: to } } : { select: null } } as any })
+    )
+    reassigned++
+  }
+  if (reassigned > 0) await invalidateCustomerCaches()
+  return { reassigned, skipped }
 }
 
 // ── 醫事監控用：載入所有有機構代碼的客戶（含代碼欄位）──────────────────

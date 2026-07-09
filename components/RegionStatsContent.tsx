@@ -70,6 +70,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   const [error, setError] = useState('')
   const [assignMode, setAssignMode] = useState(false) // 分派模式(限主管)
   const [assignTarget, setAssignTarget] = useState<{ city: string; district: string } | null>(null)
+  const [reassignFrom, setReassignFrom] = useState<string | null>(null) // 業務離職轉移的來源業務
 
   const [cities, setCities] = useState<Set<string>>(new Set(REGION_GROUPS[0].cities))
   const [districtSel, setDistrictSel] = useState<Set<string>>(new Set()) // key = city|district;空=全部
@@ -440,17 +441,23 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       {assignMode ? (
         <div className="grid md:grid-cols-2 gap-4">
           <div className="card-soft p-5">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{spFilter ? `${spFilter} 持有(依篩選範圍)` : '各業務持有(依篩選範圍)'}</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{spFilter ? `${spFilter} 持有(依篩選範圍)` : '各業務持有(點業務可離職轉移)'}</p>
             {holdings.length === 0 ? (
               <p className="text-sm text-stone-400">此範圍尚無任何指派</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {holdings.map(([sp, n]) => {
                   const house = sp === '公司' || sp === '盤商'
-                  return (
-                    <span key={sp} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${house ? 'bg-stone-100 text-stone-500' : 'bg-white ring-1 ring-stone-900/[0.08] text-stone-700'}`}>
-                      {house && <span className="text-[10px]">內部</span>}{sp}<span className="font-bold text-brand-600">{n.toLocaleString()}</span>
+                  if (house) return (
+                    <span key={sp} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-stone-100 text-stone-500">
+                      <span className="text-[10px]">內部</span>{sp}<span className="font-bold text-stone-500">{n.toLocaleString()}</span>
                     </span>
+                  )
+                  return (
+                    <button key={sp} onClick={() => setReassignFrom(sp)} title={`把 ${sp} 的客戶按行政區轉給接手業務`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-white ring-1 ring-stone-900/[0.08] text-stone-700 hover:bg-brand-50 hover:ring-brand-300 active:scale-95 transition-all">
+                      {sp}<span className="font-bold text-brand-600">{n.toLocaleString()}</span><span className="text-stone-300 text-xs">→</span>
+                    </button>
                   )
                 })}
               </div>
@@ -623,6 +630,17 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
           onClose={(assigned) => { setAssignTarget(null); if (assigned) fetchData(true) }}
         />
       )}
+      {reassignFrom && (
+        <ReassignModal
+          from={reassignFrom}
+          // 該業務在目前篩選範圍內、各行政區的持有(從 rows 直接算,零額外抓取)
+          districts={Array.from(rows.filter((r) => r.salesperson === reassignFrom)
+            .reduce((m, r) => { const k = r.city + '|' + r.district; m.set(k, (m.get(k) ?? 0) + r.count); return m }, new Map<string, number>())
+            .entries()).map(([k, n]) => ({ city: k.split('|')[0], district: k.split('|')[1], count: n })).sort((a, b) => b.count - a.count)}
+          successors={allSalespersons.filter((s) => s !== reassignFrom && s !== '公司' && s !== '盤商')}
+          onClose={(changed) => { setReassignFrom(null); if (changed) fetchData(true) }}
+        />
+      )}
     </div>
   )
 }
@@ -765,6 +783,111 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
           <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-end">
             <button onClick={() => onClose(true)} className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── 業務離職・轄區接手彈窗 ──────────────────────────────────────────────────
+// 把離職業務的客戶按鄉鎮市區整包指定接手業務(或釋出為未分派)。只動「仍等於離職者」的客戶。
+const RELEASE = '__release__'
+function ReassignModal({ from, districts, successors, onClose }: {
+  from: string
+  districts: { city: string; district: string; count: number }[]
+  successors: string[]
+  onClose: (changed: boolean) => void
+}) {
+  const [target, setTarget] = useState<Record<string, string>>({}) // key city|district → 接手業務('' 保留)
+  const [bulkTo, setBulkTo] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<{ totalReassigned: number; totalSkipped: number } | null>(null)
+  const [error, setError] = useState('')
+
+  const total = districts.reduce((s, d) => s + d.count, 0)
+  const moves = districts.filter((d) => target[d.city + '|' + d.district]).map((d) => ({ city: d.city, district: d.district, to: target[d.city + '|' + d.district] }))
+  const plannedCount = moves.reduce((s, m) => s + (districts.find((d) => d.city === m.city && d.district === m.district)?.count ?? 0), 0)
+
+  function applyBulk(to: string) {
+    setBulkTo(to)
+    if (!to) return
+    const next: Record<string, string> = {}
+    for (const d of districts) next[d.city + '|' + d.district] = to
+    setTarget(next)
+  }
+
+  async function execute() {
+    if (moves.length === 0) { setError('請至少為一個行政區指定接手業務'); return }
+    setBusy(true); setError('')
+    try {
+      const res = await fetch('/api/customers/reassign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, moves, dryRun: false }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error ?? '轉移失敗')
+      setDone({ totalReassigned: j.totalReassigned, totalSkipped: j.totalSkipped })
+    } catch (e: any) { setError(e.message); setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
+      <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(!!done)} />
+      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+        <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務離職・轄區接手</p>
+            <h3 className="text-lg font-bold text-stone-800 mt-0.5">{from} 的客戶(共 {total.toLocaleString()} 家・{districts.length} 區)</h3>
+          </div>
+          <button onClick={() => onClose(!!done)} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-all text-lg">✕</button>
+        </div>
+
+        {done ? (
+          <div className="p-6">
+            <div className="text-center py-6">
+              <p className="text-4xl">✅</p>
+              <p className="mt-3 text-lg font-bold text-stone-800">已轉出 {done.totalReassigned} 家</p>
+              {done.totalSkipped > 0 && <p className="mt-1 text-sm text-stone-400">跳過 {done.totalSkipped} 家(期間已被改動,未覆蓋)</p>}
+            </div>
+            <div className="flex justify-end"><button onClick={() => onClose(true)} className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button></div>
+          </div>
+        ) : (
+          <>
+            <div className="px-6 py-3 border-b border-stone-900/[0.06] flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-stone-400">一鍵全部指定給:</span>
+              <select className="select-soft text-xs !py-1.5" value={bulkTo} onChange={(e) => applyBulk(e.target.value)}>
+                <option value="">— 逐區個別指定 —</option>
+                {successors.map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value={RELEASE}>釋出為未分派</option>
+              </select>
+              <span className="ml-auto text-xs text-stone-400">安全:只改仍屬 {from} 的客戶,別人/公司/盤商不動</span>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto divide-y divide-stone-900/[0.04]">
+              {districts.map((d) => {
+                const key = d.city + '|' + d.district
+                return (
+                  <div key={key} className="px-6 py-2.5 flex items-center justify-between gap-3">
+                    <div><span className="text-xs text-stone-400">{d.city}</span> <span className="font-medium text-stone-800">{d.district}</span> <span className="text-sm text-stone-400">{d.count} 家</span></div>
+                    <select className="select-soft text-xs !py-1.5 w-40" value={target[key] ?? ''} onChange={(e) => setTarget((p) => ({ ...p, [key]: e.target.value }))}>
+                      <option value="">保留不動</option>
+                      {successors.map((s) => <option key={s} value={s}>→ {s}</option>)}
+                      <option value={RELEASE}>釋出為未分派</option>
+                    </select>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="px-6 py-4 border-t border-stone-900/[0.06] flex items-center justify-between gap-2">
+              <p className="text-xs text-stone-400">{error ? <span className="text-rose-500">{error}</span> : `已規劃轉出 ${plannedCount} 家 / ${moves.length} 區`}</p>
+              <div className="flex gap-2">
+                <button onClick={() => onClose(false)} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
+                <button onClick={execute} disabled={busy || moves.length === 0}
+                  className="px-6 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40">
+                  {busy ? '轉移中…' : `確認轉出 ${plannedCount} 家`}
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
