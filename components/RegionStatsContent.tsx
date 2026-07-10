@@ -176,10 +176,16 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     return { rows: inTerr, mine: (r: Row) => r.salesperson === spFilter, spMode: true, territoryCount: terr.size }
   }, [baseFiltered, geoFiltered, spFilter])
 
-  const assignmentRows = baseFiltered
+  // 分派模式:選了負責業務時,收斂到「該業務有客戶的行政區」(轄區),但每區仍保留完整分派池
+  // (含未分派/公司/其他業務)——這樣負責業務篩選會連動,又不會把該區的未分派數縮成 0。
+  const assignmentRows = useMemo(() => {
+    if (!spFilter) return baseFiltered
+    const terr = new Set(geoFiltered.filter((r) => r.salesperson === spFilter).map((r) => r.city + '|' + r.district))
+    return baseFiltered.filter((r) => terr.has(r.city + '|' + r.district))
+  }, [baseFiltered, geoFiltered, spFilter])
   const assignmentDisplayRows = useMemo(() => (
-    assignMode && spFilter ? baseFiltered.filter((r) => r.salesperson === spFilter) : baseFiltered
-  ), [assignMode, baseFiltered, spFilter])
+    assignMode && spFilter ? assignmentRows.filter((r) => r.salesperson === spFilter) : assignmentRows
+  ), [assignMode, assignmentRows, spFilter])
   const filtered = assignMode ? assignmentRows : scope.rows
   const mine = assignMode ? isExisting : scope.mine
 
