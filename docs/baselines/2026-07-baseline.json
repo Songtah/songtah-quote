@@ -1,0 +1,68 @@
+{
+ "snapshotDate": "2026-07-10",
+ "purpose": "2026下半年計畫 baseline(7月快照,供年終 before/after 對比)",
+ "customers": {
+  "total": 10374,
+  "byType": {
+   "牙醫診所": 7199,
+   "牙體技術所": 2179,
+   "醫院": 197
+  },
+  "coverage": {
+   "牙醫診所": {
+    "total": 7199,
+    "existing": 571,
+    "pct": 8
+   },
+   "牙體技術所": {
+    "total": 2179,
+    "existing": 739,
+    "pct": 34
+   },
+   "醫院": {
+    "total": 197,
+    "existing": 62,
+    "pct": 31
+   }
+  },
+  "coverageOverall": {
+   "existing": 1795,
+   "pct": 17
+  },
+  "unassigned": 8579,
+  "house": 1131,
+  "named": 664,
+  "statusUnknown": 3,
+  "closed": 246,
+  "missingDistrict": 2,
+  "holdersTop": {
+   "公司": 939,
+   "盤商": 192,
+   "Sam": 150,
+   "Paul": 130,
+   "Amy": 106,
+   "Edward": 74,
+   "Eason": 65,
+   "Hank": 46,
+   "Dancan": 37,
+   "Gus": 32,
+   "James": 24
+  }
+ },
+ "pipeline": {
+  "total": 87,
+  "byStage": {
+   "線索": 86,
+   "流失": 1
+  },
+  "unclaimedLeads": 86
+ },
+ "followUps": {
+  "openCrossMonth": 429
+ },
+ "campaigns": {
+  "count": 0,
+  "totalMembers": 0
+ },
+ "regionStatsUpdatedAt": "2026-07-10T15:53:56.452Z"
+}
