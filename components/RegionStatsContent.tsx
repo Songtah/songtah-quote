@@ -320,20 +320,20 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   )
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       {/* 模式切換(限主管) */}
       {canAssign && (
-        <div className="flex items-center gap-2">
+        <div className="order-1 flex items-center gap-2">
           <div className="inline-flex rounded-full bg-stone-100 p-1">
             <button onClick={() => setAssignMode(false)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!assignMode ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>檢視模式</button>
             <button onClick={enterAssignMode} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${assignMode ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>分派模式</button>
           </div>
-          {assignMode && <span className="text-xs text-stone-400">分派模式不套用負責業務篩選,只處理負責業務空白的客戶</span>}
+          {assignMode && <span className="text-xs text-stone-400">選業務可看其轄區;分派/釋出只動負責業務空白或該離職業務的客戶</span>}
         </div>
       )}
 
-      {/* 篩選 */}
-      <div className="card-soft p-5 space-y-4">
+      {/* 篩選(分派模式移到摘要下方) */}
+      <div className={`card-soft p-5 space-y-4 ${assignMode ? 'order-3' : 'order-2'}`}>
         {/* 地區快選 */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mr-1">快速選區</span>
@@ -430,7 +430,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
 
       {/* 業務視角橫幅 */}
       {!assignMode && scope.spMode && (
-        <div className="card-soft p-4 flex items-center justify-between flex-wrap gap-3 bg-brand-50/45">
+        <div className="order-3 card-soft p-4 flex items-center justify-between flex-wrap gap-3 bg-brand-50/45">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">業務轄區覆蓋率模式</p>
             <p className="mt-1 text-sm text-stone-600">
@@ -443,9 +443,9 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
         </div>
       )}
 
-      {/* 分派模式:業務持有一覽 + 分派總覽 */}
+      {/* 分派模式:業務持有一覽 + 分派總覽(order-2 = 排在篩選之上) */}
       {assignMode ? (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="order-2 grid md:grid-cols-2 gap-4">
           <div className="card-soft p-5">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{spFilter ? `${spFilter} 持有(依篩選範圍)` : '各業務持有(點業務可離職轉移)'}</p>
             {holdings.length === 0 ? (
@@ -487,7 +487,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
           </div>
         </div>
       ) : (
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="order-4 grid md:grid-cols-2 gap-4">
         <div className="card-soft p-5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-3">{scope.spMode ? `${spFilter} 轄區市場` : '市場規模(依篩選)'}</p>
           <div className="grid grid-cols-4 gap-2 text-center">
@@ -516,7 +516,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       )}
 
       {/* 明細表 */}
-      <div className="card-soft overflow-hidden">
+      <div className="order-5 card-soft overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
