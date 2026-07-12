@@ -80,6 +80,28 @@ WHITELIST_CATEGORIES = {
 }
 
 
+# ── 品牌前綴規則(2026-07-12 使用者定案:貨號前綴=品牌)─────────────────
+# 鍵=貨號開頭的字母段(大寫)。來源:全目錄 6,084 筆實測,每前綴唯一對應一品牌、零衝突。
+# 未列入的前綴(VP/ST/C0/BF 等)品牌待使用者確認,不要猜。
+BRAND_PREFIXES = {
+    'YMH': 'YAMAHACHI', 'ZZ': 'Zirkonzahn', 'BS': '貝施美', 'DSD': 'Davis Schottlander',
+    'GC': 'GC / 台灣而至', 'SY': 'Song Young', 'YM': 'YAMAKIN', 'DK': 'DENKEN',
+    'SS': 'Sunshine / DR.HOPF', 'CA': 'CAM / 上海穩昊', 'AG': 'ASIGA', 'DUM': 'Dumont',
+    'WM': 'WHIP MIX', 'SUN': 'SUN Oberflächentechnik', 'GEN': 'GenCore', 'ADB': 'Prima Dental',
+    'KM': 'KO-MAX', 'DT': 'DETAX', 'MT': 'DENTAL ESPAN', 'HD': 'HIGH DENTAL JAPAN',
+    'AB': 'Aalba Dent', 'UW': 'URAWA', 'MO': 'MOTYL', 'RD': 'Redon', 'KS': 'KEYSTONE',
+    'ME': 'MEDIFIVE', 'MPF': 'MPF', 'CAD': 'CADstar', 'PD': 'PRODENT-HOLLIGER',
+    'SA': 'SAEYANG', 'SD': 'Select Dental', 'UG': 'UGin Dental', 'DB': 'DENTBIRD',
+    'DKM': 'Dekema', 'PC': 'PACIFIC ABRASIVES', 'PM': 'PROMEDLCA', 'TD': 'Talmax',
+    'AF': 'Argofile', 'DOF': 'DOF', 'DP': 'DENKEN', 'OS': 'Olson Saw', 'WF': 'WINFRIED MULLER',
+}
+
+
+def brand_from_code(code: str):
+    m = re.match(r'^([A-Za-z]+)', code or '')
+    return BRAND_PREFIXES.get(m.group(1).upper()) if m else None
+
+
 def classify(name: str):
     for pat, cat in RULES:
         if re.search(pat, name, re.I):
@@ -106,7 +128,21 @@ def main():
             continue
         mismatches.append((p, want))
 
-    print(f'總品項: {len(catalog)}，分類疑似錯誤: {len(mismatches)}')
+    # 品牌檢查:前綴=品牌(空白可 --fix 補;不一致只回報,由人工判斷是 ERP 錯還是新前綴)
+    brand_blank, brand_conflict = [], []
+    for p in catalog:
+        want_b = brand_from_code(p['code'])
+        if want_b is None:
+            continue
+        if not p.get('brand'):
+            brand_blank.append((p, want_b))
+        elif p['brand'] != want_b:
+            brand_conflict.append((p, want_b))
+
+    print(f'總品項: {len(catalog)}，分類疑似錯誤: {len(mismatches)}，'
+          f'品牌空白可補: {len(brand_blank)}，品牌與前綴不符: {len(brand_conflict)}')
+    for p, want_b in brand_conflict:
+        print(f'  品牌不符  {p["code"]}  {p["brand"]!r} → 前綴應為 {want_b!r}')
     from collections import Counter
     stat = Counter(f"{p['category']} → {want}" for p, want in mismatches)
     for k, v in stat.most_common():
@@ -142,9 +178,11 @@ def main():
     if fix:
         for p, want in mismatches:
             p['category'] = want
+        for p, want_b in brand_blank:  # 只補空白,不覆蓋既有品牌
+            p['brand'] = want_b
         with open(CATALOG, 'w', encoding='utf-8') as f:
             json.dump(catalog, f, ensure_ascii=False, indent=1)
-        print(f'已修正 {len(mismatches)} 筆分類')
+        print(f'已修正 {len(mismatches)} 筆分類、補 {len(brand_blank)} 筆空白品牌')
 
 
 if __name__ == '__main__':
