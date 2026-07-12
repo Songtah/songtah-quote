@@ -527,3 +527,34 @@ export async function deleteVisit(id: string): Promise<void> {
     notion.pages.update({ page_id: id, archived: true })
   )
 }
+
+/**
+ * 全掃拜訪庫,回傳 customerId(去連字號)→最後拜訪日(YYYY-MM-DD)。
+ * 供拜訪建議快取層(組合層 visit-suggestions)每晚重算;不要在請求路徑直接呼叫。
+ * 現量 ~4.8k 筆;接近 10k 靜默截斷上限時需改分區掃描(鐵則 #0)。
+ */
+export async function scanVisitRecency(): Promise<Record<string, string>> {
+  const map: Record<string, string> = {}
+  let total = 0
+  let cur: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('scanVisitRecency', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      total++
+      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+      if (!relId) continue
+      const date = page.properties?.['日期']?.date?.start ?? ''
+      if (!date) continue
+      if (!map[relId] || date > map[relId]) map[relId] = date
+    }
+    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cur)
+  if (total >= 9500) console.warn(`scanVisitRecency: 拜訪庫已達 ${total} 筆,逼近 Notion 10k 截斷上限,須改分區掃描`)
+  return map
+}

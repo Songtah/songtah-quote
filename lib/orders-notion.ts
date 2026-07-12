@@ -511,3 +511,35 @@ export async function updateOrder(id: string, data: {
     await notion.pages.update({ page_id: formatted, properties: props })
   }
 }
+
+/**
+ * 掃描指定日期起的訂單,回傳 customerId(去連字號)→{ 最近訂單日, 張數 }。
+ * 訂單的客戶ID為文字欄(建單時存客戶頁 id);供拜訪建議快取層每晚重算。
+ */
+export async function scanOrderActivity(
+  sinceIso: string
+): Promise<Record<string, { lastOrder: string; count: number }>> {
+  const map: Record<string, { lastOrder: string; count: number }> = {}
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDERS_DB,
+      page_size: 100,
+      filter: { property: '日期', date: { on_or_after: sinceIso } },
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    for (const page of resp.results ?? []) {
+      const cid = (getText(page, '客戶ID') || '').replace(/-/g, '')
+      if (!cid) continue
+      const date = getDate(page, '日期') || ''
+      const cur = map[cid]
+      if (!cur) map[cid] = { lastOrder: date, count: 1 }
+      else {
+        cur.count++
+        if (date > cur.lastOrder) cur.lastOrder = date
+      }
+    }
+    cursor = resp.has_more ? (resp.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  return map
+}

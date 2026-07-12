@@ -32,3 +32,14 @@ jobs:
             -H "x-cron-secret: ${CRON_SECRET}")
           echo "HTTP $code"; cat /tmp/resp2.json
           test "$code" = "200"
+
+      - name: 拜訪建議映射重算(最後拜訪日/設備/訂單)
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp3.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/refresh-visit-suggestions" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp3.json
+          test "$code" = "200"

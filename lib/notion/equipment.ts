@@ -280,3 +280,37 @@ export async function updateEquipment(id: string, data: {
     }
   })
 }
+
+/**
+ * 全掃設備庫,回傳 customerId(去連字號)→設備數。
+ * 客戶 relation 欄位名稱歷史上不固定,逐候選欄位嘗試(同 listCustomerEquipment)。
+ * 供拜訪建議快取層每晚重算;不要在請求路徑直接呼叫。
+ */
+export async function scanEquipmentCustomerCounts(): Promise<Record<string, number>> {
+  if (!DB.equipment) return {}
+  const map: Record<string, number> = {}
+  let cur: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('scanEquipmentCustomerCounts', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.equipment),
+        page_size: 100,
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    for (const page of res.results ?? []) {
+      for (const field of EQUIPMENT_CUSTOMER_FIELDS) {
+        const rels = page.properties?.[field]?.relation
+        if (Array.isArray(rels) && rels.length) {
+          for (const r of rels) {
+            const id = ((r?.id as string) ?? '').replace(/-/g, '')
+            if (id) map[id] = (map[id] ?? 0) + 1
+          }
+          break
+        }
+      }
+    }
+    cur = res.has_more ? (res.next_cursor ?? undefined) : undefined
+  } while (cur)
+  return map
+}
