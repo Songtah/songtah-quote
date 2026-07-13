@@ -2,12 +2,6 @@
 
 > 通用工作方法(模型調度/交辦範本/判斷 rubric)在 `~/.claude/ops/`,由全域 CLAUDE.md 路由;本檔只放**這個系統特有**的領域鐵則。本檔上限 150 行,長內容放 `docs/rules/` 並在此留一行路由。
 
-## 公司營運系統長期方向（規劃或改功能前必讀）
-
-- 四大主線、共同資料底座、分期路線圖與不破壞既有功能的交付原則：`docs/strategy/operating-system-roadmap.md`
-- 最新盤點與已確認的 live schema 風險：`docs/strategy/2026-07-14-system-inventory.md`、`docs/strategy/2026-07-14-ticket-schema-audit.md`
-- 原則：系統由「分頁功能集合」轉為「訊號 → 判斷 → 工作 → 負責人 → 期限 → 結果 → 指標」閉環；不得以策略改造為由破壞既有報價、訂貨、客情、技服、設備、行銷或行政流程。
-
 ## 設計語言(摘要;動任何 UI 前必讀 docs/rules/design-language.md 全文)
 
 - 卡片用 `.card-soft`(禁平面灰框)、按鈕 `rounded-full`、互動色只用 brand-500 棕金(**禁止 blue-\***)

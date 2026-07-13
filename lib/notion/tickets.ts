@@ -10,6 +10,20 @@ import {
 } from './shared'
 import { resolveCustomerNames } from './relations'
 
+const TICKET_LIST_CACHE_PREFIX = 'tickets:list:v2:'
+
+/** 清除會因工單新增而過期的清單快取；保留其他領域快取。 */
+function invalidateTicketListCaches(customerId?: string) {
+  transientCache.forEach((_value, key) => {
+    if (
+      key.startsWith(TICKET_LIST_CACHE_PREFIX) ||
+      (customerId && key === `customer-tickets:${customerId}`)
+    ) {
+      transientCache.delete(key)
+    }
+  })
+}
+
 export async function listCustomerTickets(customerId: string): Promise<Ticket[]> {
   if (!DB.tickets) return []
   const cacheKey = `customer-tickets:${customerId}`
@@ -160,7 +174,7 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
     })
   )
 
-  transientCache.delete('tickets:list')
+  invalidateTicketListCaches(payload.customerId)
 
   return {
     id: response.id,
@@ -187,7 +201,7 @@ export async function listSystemTickets(options?: {
 
   // 只有第一頁（無 cursor）才用 cache
   if (!cursor) {
-    const cacheKey = `tickets:list:v2:${limit}`
+    const cacheKey = `${TICKET_LIST_CACHE_PREFIX}${limit}`
     const cached = getCachedValue<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }>(cacheKey)
     if (cached) return cached
 
