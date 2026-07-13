@@ -12,12 +12,19 @@ import dict from '@/data/opportunity-keywords.json'
 
 export type OpportunitySignal = {
   tag: string
+  gold?: boolean
   keywords: string[]
   implication: string
   productLines: string[]
 }
 
 export const SIGNAL_DICTIONARY: OpportunitySignal[] = (dict.signals ?? []) as OpportunitySignal[]
+
+/** 金訊號標籤(設備直客):院內技工室/數位牙科/3D列印。排序與標色用。 */
+export const GOLD_TAGS = SIGNAL_DICTIONARY.filter((s) => s.gold).map((s) => s.tag)
+/** 所有商機標籤(依字典順序,金訊號在前)。 */
+export const ALL_TAGS = SIGNAL_DICTIONARY.map((s) => s.tag)
+export function isGoldTag(tag: string): boolean { return GOLD_TAGS.includes(tag) }
 
 export type SignalHit = {
   tag: string

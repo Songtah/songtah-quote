@@ -4,6 +4,7 @@ import { AppShell } from '@/components/AppShell'
 import { ClinicMonitorContent } from '@/components/ClinicMonitorContent'
 import RegionStatsContent from '@/components/RegionStatsContent'
 import TerritoryContent from '@/components/TerritoryContent'
+import OpportunityContent from './OpportunityContent'
 import { requireViewPermission } from '@/lib/permissions'
 import { peekRegionStatsRows } from '@/lib/notion/customers'
 import { authOptions } from '@/lib/auth'
@@ -29,7 +30,9 @@ export default async function ClinicMonitorPage({
     ? 'regions'
     : searchParams.tab === 'territory'
       ? 'territory'
-      : 'monitor'
+      : searchParams.tab === 'opportunity'
+        ? 'opportunity'
+        : 'monitor'
 
   // 區域/轄區分頁共用同一份 region-stats 快取(SSR 只讀快取,不觸發全庫掃描)
   const regionInitial = tab === 'regions' || tab === 'territory'
@@ -40,17 +43,20 @@ export default async function ClinicMonitorPage({
     { id: 'monitor',   href: '/admin/clinic-monitor',                 label: '🩺 客戶監控' },
     { id: 'regions',   href: '/admin/clinic-monitor?tab=regions',     label: '📊 區域客戶儀表板' },
     { id: 'territory', href: '/admin/clinic-monitor?tab=territory',   label: '🗺️ 業務轄區管理' },
+    { id: 'opportunity', href: '/admin/clinic-monitor?tab=opportunity', label: '🔍 商機偵測' },
   ] as const
 
   return (
     <AppShell
-      title={tab === 'regions' ? '區域客戶儀表板' : tab === 'territory' ? '業務轄區管理' : '客戶資料監控'}
+      title={tab === 'regions' ? '區域客戶儀表板' : tab === 'territory' ? '業務轄區管理' : tab === 'opportunity' ? '商機偵測' : '客戶資料監控'}
       description={
         tab === 'regions'
           ? '各鄉鎮市區的機構規模、公司既有客戶覆蓋與各業務轄區客戶數。'
           : tab === 'territory'
             ? '以業務為主角:檢視每位業務涵蓋的鄉鎮市區,認領該區未分派客戶(新增)或釋出/轉走(移除)。'
-            : '每月比對全台牙科單位的開業／停業狀況，關聯崧達客戶。'
+            : tab === 'opportunity'
+              ? '從 Google 商家資訊挖出診所的設備/數位訊號(如一日假牙=院內技工室),標記商機、鎖定設備直客。'
+              : '每月比對全台牙科單位的開業／停業狀況，關聯崧達客戶。'
       }
       hidePhaseNote
     >
@@ -75,6 +81,8 @@ export default async function ClinicMonitorPage({
         <RegionStatsContent initialData={regionInitial} canAssign={canAssign} />
       ) : tab === 'territory' ? (
         <TerritoryContent initialData={regionInitial} canAssign={canAssign} canManageCompany={canManageCompany} />
+      ) : tab === 'opportunity' ? (
+        <OpportunityContent canScan={canManageCompany} />
       ) : (
         <ClinicMonitorContent />
       )}
