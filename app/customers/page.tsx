@@ -15,7 +15,7 @@ export default async function CustomersPage() {
     >
       <div className="mb-5 flex justify-end">
         <Link
-          href="/customers/regions"
+          href="/admin/clinic-monitor?tab=regions"
           className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
         >
           📊 區域客戶儀表板
