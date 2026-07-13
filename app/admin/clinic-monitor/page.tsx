@@ -22,6 +22,8 @@ export default async function ClinicMonitorPage({
   const accountType = (session?.user as any)?.accountType as string | undefined
   // 分派/轉移=改寫主檔的管理動作,限 admin/中央管理/總經理(與 /api/customers/assign|reassign 一致)
   const canAssign = role === 'admin' || accountType === '中央管理' || accountType === '總經理'
+  // 公司既有客戶調度(公司↔業務)更嚴,僅限中央管理(與 /api/customers/assign-company 一致)
+  const canManageCompany = role === 'admin' || accountType === '中央管理'
 
   const tab = searchParams.tab === 'regions'
     ? 'regions'
@@ -72,7 +74,7 @@ export default async function ClinicMonitorPage({
       {tab === 'regions' ? (
         <RegionStatsContent initialData={regionInitial} canAssign={canAssign} />
       ) : tab === 'territory' ? (
-        <TerritoryContent initialData={regionInitial} canAssign={canAssign} />
+        <TerritoryContent initialData={regionInitial} canAssign={canAssign} canManageCompany={canManageCompany} />
       ) : (
         <ClinicMonitorContent />
       )}
