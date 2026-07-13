@@ -34,6 +34,26 @@ export default function TerritoryContent({ initialData, canAssign = false, canMa
   const [addOpen, setAddOpen] = useState(false)
   const [companyOpen, setCompanyOpen] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<{ city: string; district: string; count: number } | null>(null)
+  // 展開某區客戶清單(點客戶數):快取以 sp|city|district 為鍵(換業務不衝突)
+  const [openKey, setOpenKey] = useState<string | null>(null)
+  const [listCache, setListCache] = useState<Record<string, { loading: boolean; items: { id: string; name: string; type: string; status: string; phone: string }[]; err?: string }>>({})
+
+  const toggleDistrict = useCallback(async (city: string, district: string) => {
+    const key = `${sp}|${city}|${district}`
+    if (openKey === key) { setOpenKey(null); return }
+    setOpenKey(key)
+    if (listCache[key]) return
+    setListCache((c) => ({ ...c, [key]: { loading: true, items: [] } }))
+    try {
+      const q = new URLSearchParams({ city, district, salesperson: sp })
+      const r = await fetch('/api/customers/by-area?' + q)
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || '讀取失敗')
+      setListCache((c) => ({ ...c, [key]: { loading: false, items: d.items ?? [] } }))
+    } catch (e: any) {
+      setListCache((c) => ({ ...c, [key]: { loading: false, items: [], err: e.message } }))
+    }
+  }, [sp, openKey, listCache])
 
   const fetchData = useCallback(async () => {
     setLoading(true); setError('')
@@ -151,18 +171,55 @@ export default function TerritoryContent({ initialData, canAssign = false, canMa
             <div className="p-8 text-center text-sm text-stone-400">{sp} 目前沒有持有任何客戶。用「＋ 新增轄區」認領某區的未分派客戶。</div>
           ) : (
             <ul className="divide-y divide-stone-900/[0.04]">
-              {myDistricts.map((d) => (
-                <li key={d.city + '|' + d.district} className="px-5 py-3 flex items-center gap-3 hover:bg-brand-50/50 transition-colors">
-                  <span className="font-medium text-stone-800">{d.city}{d.district}</span>
-                  <span className="chip text-[11px]">{d.count} 家</span>
-                  {canAssign && (
-                    <button onClick={() => setRemoveTarget(d)}
-                            className="ml-auto px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:scale-95 transition-all">
-                      移除
-                    </button>
-                  )}
-                </li>
-              ))}
+              {myDistricts.map((d) => {
+                const key = `${sp}|${d.city}|${d.district}`
+                const isOpen = openKey === key
+                const cached = listCache[key]
+                return (
+                  <li key={d.city + '|' + d.district}>
+                    <div className="px-5 py-3 flex items-center gap-3 hover:bg-brand-50/50 transition-colors">
+                      <span className="font-medium text-stone-800">{d.city}{d.district}</span>
+                      <button onClick={() => toggleDistrict(d.city, d.district)}
+                              className={`chip text-[11px] active:scale-95 transition-all ${isOpen ? 'chip-active' : 'hover:outline-brand-400'}`}
+                              title="點擊看客戶名單">
+                        {d.count} 家 <span className="text-stone-400">{isOpen ? '▲' : '▾'}</span>
+                      </button>
+                      {canAssign && (
+                        <button onClick={() => setRemoveTarget(d)}
+                                className="ml-auto px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:scale-95 transition-all">
+                          移除
+                        </button>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <div className="px-5 pb-3">
+                        {cached?.loading && <p className="text-xs text-stone-400 py-2">載入客戶名單…</p>}
+                        {cached?.err && <p className="text-xs text-red-600 py-2">{cached.err}</p>}
+                        {cached && !cached.loading && !cached.err && (
+                          cached.items.length === 0 ? (
+                            <p className="text-xs text-stone-400 py-2">此區目前查無客戶(資料可能剛異動,稍後會同步)。</p>
+                          ) : (
+                            <ul className="grid gap-1.5 sm:grid-cols-2 rounded-2xl bg-stone-50/70 p-2.5 ring-1 ring-stone-900/[0.05]">
+                              {cached.items.map((c) => (
+                                <li key={c.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-stone-900/[0.05]">
+                                  <span className="text-sm text-stone-800 flex-1 min-w-0 truncate">{c.name}</span>
+                                  {c.type && <span className="chip text-[10px] shrink-0">{c.type}</span>}
+                                  {c.phone && (
+                                    <a href={'tel:' + c.phone.replace(/[^\d+]/g, '')}
+                                       className="text-[11px] text-brand-600 hover:text-brand-700 shrink-0 active:scale-95 transition-all">
+                                      撥號
+                                    </a>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
