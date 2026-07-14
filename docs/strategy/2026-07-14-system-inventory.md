@@ -1,6 +1,6 @@
 # 2026-07-14 營運系統第一輪盤點
 
-> 盤點方式：程式碼與現有文件唯讀檢查；未對正式 Notion 資料做寫入。
+> 盤點方式：初始盤點階段只做程式碼、文件與正式 Notion schema／樣本的唯讀檢查；後續 schema 與測試工單寫入均另經使用者明確授權，執行結果記錄於本文及工單 schema audit。
 > 對應長期方向：`docs/strategy/operating-system-roadmap.md`
 
 ## 一、結論
@@ -13,7 +13,7 @@
 
 | 優先級 | 發現 | 影響 | 決策 |
 |---|---|---|---|
-| P0（已修正） | 工單新增刪除 `tickets:list`，實際清單快取為 `tickets:list:v2:*` | 新工單可能三分鐘不出現，造成重複送單 | 2026-07-14 已修正所有清單 key 及該客戶工單快取；typecheck、build、fresh-context read-back 通過 |
+| P0（已修正） | 工單新增原本只刪除 `tickets:list`，實際清單快取為 `tickets:list:v2:*` | 新工單可能三分鐘不出現，造成重複送單 | 2026-07-14 曾先修正快取 key；第二批確認跨 instance 仍可能不一致後，已移除全部工單 process-local 詳情與清單快取 |
 | P0（已修正） | 工單建立 payload 原有四項不符合 live schema：案件標題、案件類型、聯絡人及客戶 relation 欄位 | 建立工單可能被 Notion 拒絕 | 2026-07-14 已依明確授權新增 optional 欄位並修正程式 mapping；正式測試工單 read-back 通過 |
 | P0（已修正） | 工單表單送出 `equipmentId`，原 live 工單 DB 沒有設備 relation | 無法形成設備維修履歷 | 2026-07-14 已新增單向 `設備資料` relation；正式測試工單設備 relation read-back 通過 |
 | P1 | 設備查詢遇到第一個合法但空的 relation 便停止 | 歷史設備可能在客戶頁消失 | 盤點各 relation 分布後，兼容取聯集與去重 |
@@ -21,7 +21,7 @@
 | P1 | 只有一般拜訪 POST 推進 Campaign 已聯絡狀態 | 行銷名單狀態取決於回報入口 | 建立共用 application service 與可補跑副作用 |
 | P1 | CEO dashboard 冷啟動扇出多組 Notion 查詢且有 12 秒 timeout | 主管數字慢、逾時或跨 instance 不一致 | 改為共享快照及 generatedAt，現有即時計算保留為受控重算 |
 | P1 | 首頁摘要的 `total` 是第一頁筆數 | 可能把至少 100 誤解為精確 100 | UI 保留 `+` 語意；後續接權威快照，不在請求路徑全掃 |
-| P1 | 工單只有預計外派日，缺狀態更新、SLA、改派與衝突控制 | 技服仍是紀錄，不是可控履約流程 | 完成 schema 與角色/狀態盤點後分批新增 |
+| P1（部分修正） | 工單原本只有預計外派日，缺狀態更新、SLA、改派與衝突控制 | 技服仍是紀錄，不是可控履約流程 | 2026-07-14 已開放受權限控管的狀態、優先級、對口、業務窗口、預計日期及處理紀錄更新；SLA、排程衝突與正式改派規則仍待下一批 |
 | P2 | 產品文件 metadata 為 JSON rich text，未形成知識庫 | 不利搜尋、版本與機型適用管理 | 先定義知識模型與權限，不改寫既有文件 JSON |
 
 ## 三、目前回歸安全網
@@ -68,10 +68,22 @@
 
 ## 六、第一批實作範圍
 
-本批已修正工單新增後的快取失效：
+第一批曾修正工單新增後的單一 instance 快取失效：
 
 - 清除所有 `tickets:list:v2:*` 第一頁快取。
 - 若工單有客戶 relation，同時清除該客戶的 `customer-tickets:*` 快取。
 - 不改 API contract、Notion schema、工單 payload、狀態或 UI。
 
 驗收結果：`npx tsc --noEmit` 與 `npm run build` 通過；fresh-context 驗證快取 key 與既有清單邏輯一致。後續經使用者明確授權，以一筆正式測試工單完成新舊欄位、relation、select/status、日期與文字欄位 read-back，測試單已結案保留。
+
+第二批加入工單更新後，fresh-context 審查確認上述快取只存在 Vercel 單一 instance，無法保證跨 instance 一致。因此最終決策改為移除工單詳情、工單第一頁清單及客戶工單清單的 process-local 快取，以正確顯示最新處理狀態優先；若未來要恢復快取，必須使用可跨 instance 失效的共享版本或 Redis 機制。
+
+## 七、第二批實作範圍：工單進度可控化
+
+- `GET /api/tickets/:id` 改用 `rma.view`；`PATCH /api/tickets/:id` 使用 `rma.edit`。
+- 可更新狀態、優先級、技術支援對口、業務窗口、預計維修日期、原因、解決方案、備註及設備 relation；未知欄位、無效選項、壞日期、壞 relation、非字串與超長文字會在寫入前拒絕。
+- 工單詳情新增編輯／取消／儲存流程及設備資料連結；未具編輯權限者維持唯讀。
+- 更新前後會寫操作稽核。若 Notion 已更新但立即 read-back 暫時失敗，API 以已驗證變更組合回應成功並在稽核標記 `readBack=failed`，避免使用者因假失敗重複送出。
+- 既有正式測試工單已兩輪完成狀態與備註的 update/read-back/restore，最後狀態皆讀回 `✅ 結案`。
+
+本批不包含 SLA 計時、排程衝突檢查、自動通知、批次改派或設備頁反向維修履歷。

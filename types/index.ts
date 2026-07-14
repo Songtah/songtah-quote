@@ -78,6 +78,18 @@ export interface CreateTicketPayload {
   manufacturer?: string
 }
 
+export interface UpdateTicketPayload {
+  status?: string
+  priority?: string
+  supportOwner?: string
+  salesOwner?: string
+  scheduledDate?: string
+  cause?: string
+  solution?: string
+  note?: string
+  equipmentId?: string
+}
+
 export interface QuoteItem {
   productId: string
   name: string

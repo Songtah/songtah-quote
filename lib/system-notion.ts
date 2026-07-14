@@ -36,7 +36,7 @@ export {
 
 // ─── 工單 / RMA → 已抽至 ./notion/tickets（葉領域）─────────────────────────────
 export {
-  listCustomerTickets, createTicket, listSystemTickets, getSystemTicketById,
+  listCustomerTickets, createTicket, updateTicket, listSystemTickets, getSystemTicketById,
 } from './notion/tickets'
 
 // ─── 客情拜訪 → 已抽至 ./notion/visits（葉領域）────────────────────────────────
@@ -69,4 +69,3 @@ export {
   getSystemUsers, getSystemUserByCredentials, createSystemUser,
   getSystemUserById, updateSystemUser, deleteSystemUser,
 } from './notion/accounts'
-

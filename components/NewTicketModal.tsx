@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { CreateTicketPayload, Equipment } from '@/types'
+import {
+  TICKET_PRIORITIES as PRIORITIES,
+  TICKET_SALES_OWNERS as SALES_OWNERS,
+  TICKET_SUPPORT_OWNERS as SUPPORT_OWNERS,
+  TICKET_TYPES,
+} from '@/lib/ticket-validation'
 
 type SystemCustomer = { id: string; name: string; city: string; type: string }
-
-const TICKET_TYPES = ['技術支援', '維修', 'RMA', '換貨', '客訴', '安裝', '教育訓練']
-const PRIORITIES = ['P1', 'P2', 'P3', 'P4']
-const SUPPORT_OWNERS = ['小黃', 'Paul', 'Aaron', 'Ted', 'Luca', 'Brain', '致廷']
-const SALES_OWNERS = ['公司直營', 'Duncan', 'Gus', 'Hank', 'James', 'Eason', 'Amy', '小郭', 'Paul', 'Chloe']
 
 const EMPTY_FORM: CreateTicketPayload = {
   customerName: '',

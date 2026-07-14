@@ -4,7 +4,7 @@
 > 操作：只讀取 database schema 與依建立日期倒序的前 20 筆；未寫入、未改 schema、未觸發通知。
 > 隱私：本文件不保存 token、客戶名稱或完整 relation ID。
 
-> 2026-07-14 執行狀態：使用者明確核准選項 A；schema、程式 mapping 與一筆正式測試工單 read-back 均已完成。
+> 2026-07-14 執行狀態：使用者明確核准選項 A；schema、程式 mapping、一筆正式測試工單 read-back，以及受權限控管的工單更新流程均已完成。
 
 ## 一、Live schema
 
@@ -64,9 +64,11 @@
 - 生產商：`ASIGA`、`Zirkonzhan`、`金泰`、`KO-MAX`、`BSM`、`普登`、`AR Loupe`、`ACTILINK`、`Graphy`、`HANAU`。
 - 初次盤點時 `故障分類` 無既有 option；正式測試建立 `技術支援` option 成功。
 
-## 三、程式與 schema 的已確認矛盾
+## 三、初次盤點時的程式與 schema 矛盾（已修正）
 
-| 程式行為 | Live schema | 風險 |
+下表記錄修正前狀態；相關 schema 與 mapping 已依第五、六節完成更新與 read-back。
+
+| 當時的程式行為 | 初次盤點時的 Live schema | 當時風險 |
 |---|---|---|
 | 建立時寫 `案件標題` rich_text | 欄位不存在 | Notion validation error |
 | 建立時寫 `案件類型` select | 正式欄位為 `故障分類` multi_select | validation error；既有分類讀取也可能為空 |
@@ -132,8 +134,18 @@ read-back 後已將測試工單狀態改為 `✅ 結案`，未刪除，以保留
 
 API 防呆同步補強：POST 會在呼叫 Notion 前驗證案件類型、狀態、優先級、技術支援對口、業務窗口、生產商、三個 relation ID 格式及日期格式；無效輸入回 400。
 
+後續以同一筆已結案測試工單驗證 PATCH 資料層：暫時修改狀態與備註、立即 read-back，再精確還原原值並二次 read-back。快取一致性修正前後各執行一輪，兩輪皆通過；最終狀態皆為 `✅ 結案`。
+
+工單更新流程的安全邊界：
+
+- `GET` 需 `rma.view`，`PATCH` 需 `rma.edit`。
+- PATCH 僅接受狀態、優先級、技術支援對口、業務窗口、預計維修日期、原因、解決方案、備註及設備 relation。
+- malformed JSON、未知欄位、非字串、無效 option/date/relation 與超過 2000 字的處理文字會回 400。
+- 正常路徑記錄 before/after 與 changed fields；read-back 暫時失敗時仍以驗證後變更建立 after、記錄稽核並回更新成功。
+- 為避免 Vercel 多 instance 回傳舊工單，本領域不再使用 process-local 詳情與清單快取。
+
 ## 七、仍待後續處理
 
 1. 確認現有 Notion automation 是否依 `客戶單位` title、狀態或分類觸發。
-2. 工單詳情與設備詳情尚未呈現互相連結的維修履歷 UI。
-3. 工單狀態更新、SLA、改派與排程衝突控制仍屬下一批功能，不應與本次 schema 相容修正混做。
+2. 工單詳情已可連至設備詳情；設備詳情尚未呈現反向工單維修履歷。
+3. 工單狀態、優先級、對口、業務窗口、預計日期與處理紀錄已可人工更新；SLA、正式改派規則與排程衝突控制仍屬下一批。

@@ -2,33 +2,15 @@
  * lib/notion/tickets.ts — 工單 / RMA（葉領域，從 system-notion.ts 抽出）
  * 客戶名稱解析走 ./relations（跨切面），不直接 import customers。
  */
-import type { CreateTicketPayload, Ticket } from '@/types'
+import type { CreateTicketPayload, Ticket, UpdateTicketPayload } from '@/types'
 import {
-  notion, DB, transientCache, normalizeDatabaseId, notionCallWithRetry,
-  getCachedValue, setCachedValue, richText,
+  notion, DB, normalizeDatabaseId, notionCallWithRetry, richText,
   getTitle, getText, getSelect, getDate, getRelationIds, getRollupText,
 } from './shared'
 import { resolveCustomerNames } from './relations'
 
-const TICKET_LIST_CACHE_PREFIX = 'tickets:list:v2:'
-
-/** 清除會因工單新增而過期的清單快取；保留其他領域快取。 */
-function invalidateTicketListCaches(customerId?: string) {
-  transientCache.forEach((_value, key) => {
-    if (
-      key.startsWith(TICKET_LIST_CACHE_PREFIX) ||
-      (customerId && key === `customer-tickets:${customerId}`)
-    ) {
-      transientCache.delete(key)
-    }
-  })
-}
-
 export async function listCustomerTickets(customerId: string): Promise<Ticket[]> {
   if (!DB.tickets) return []
-  const cacheKey = `customer-tickets:${customerId}`
-  const cached = getCachedValue<Ticket[]>(cacheKey)
-  if (cached) return cached
 
   const response: any = await notionCallWithRetry('listCustomerTickets', () =>
     notion.databases.query({
@@ -41,8 +23,6 @@ export async function listCustomerTickets(customerId: string): Promise<Ticket[]>
 
   const rawItems = (response.results ?? []).map(mapTicketPageRaw)
   const items = (await resolveTicketNames(rawItems)) as Ticket[]
-
-  setCachedValue(cacheKey, items, 180_000) // 3 min
   return items
 }
 
@@ -187,8 +167,6 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
     })
   )
 
-  invalidateTicketListCaches(payload.customerId)
-
   return {
     id: response.id,
     equipmentId: payload.equipmentId,
@@ -206,6 +184,42 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
   }
 }
 
+export async function updateTicket(id: string, data: UpdateTicketPayload): Promise<void> {
+  const properties: Record<string, any> = {}
+
+  if (data.status !== undefined) properties['狀態'] = { status: { name: data.status } }
+  if (data.priority !== undefined) {
+    properties['優先級'] = { select: data.priority ? { name: data.priority } : null }
+  }
+  if (data.supportOwner !== undefined) {
+    properties['技術支援對口'] = { select: data.supportOwner ? { name: data.supportOwner } : null }
+  }
+  if (data.salesOwner !== undefined) {
+    properties['業務窗口'] = { select: data.salesOwner ? { name: data.salesOwner } : null }
+  }
+  if (data.scheduledDate !== undefined) {
+    properties['預計維修日期（外派）'] = {
+      date: data.scheduledDate ? { start: data.scheduledDate } : null,
+    }
+  }
+  if (data.cause !== undefined) {
+    properties['原因'] = { rich_text: data.cause ? richText(data.cause) : [] }
+  }
+  if (data.solution !== undefined) {
+    properties['解決方案'] = { rich_text: data.solution ? richText(data.solution) : [] }
+  }
+  if (data.note !== undefined) {
+    properties['備註'] = { rich_text: data.note ? richText(data.note) : [] }
+  }
+  if (data.equipmentId !== undefined) {
+    properties['設備資料'] = { relation: data.equipmentId ? [{ id: data.equipmentId }] : [] }
+  }
+
+  await notionCallWithRetry('updateTicket', () =>
+    notion.pages.update({ page_id: id, properties: properties as any })
+  )
+}
+
 export async function listSystemTickets(options?: {
   limit?: number
   cursor?: string
@@ -213,12 +227,7 @@ export async function listSystemTickets(options?: {
   const limit = options?.limit ?? 10
   const cursor = options?.cursor
 
-  // 只有第一頁（無 cursor）才用 cache
   if (!cursor) {
-    const cacheKey = `${TICKET_LIST_CACHE_PREFIX}${limit}`
-    const cached = getCachedValue<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }>(cacheKey)
-    if (cached) return cached
-
     const response: any = await notionCallWithRetry('listSystemTickets', () =>
       notion.databases.query({
         database_id: normalizeDatabaseId(DB.tickets),
@@ -228,13 +237,11 @@ export async function listSystemTickets(options?: {
     )
     const rawItems = (response.results ?? []).map(mapTicketPageRaw)
     const items = (await resolveTicketNames(rawItems)) as Ticket[]
-    const result = {
+    return {
       items,
       hasMore: response.has_more ?? false,
       nextCursor: response.next_cursor ?? null,
     }
-    setCachedValue(cacheKey, result, 180_000)
-    return result
   }
 
   // cursor 分頁
@@ -256,15 +263,10 @@ export async function listSystemTickets(options?: {
 }
 
 export async function getSystemTicketById(id: string) {
-  const cacheKey = `ticket:${id}`
-  const cached = getCachedValue<Omit<ReturnType<typeof mapTicketPageRaw>, '_relId'>>(cacheKey)
-  if (cached) return cached
-
   const page: any = await notionCallWithRetry('getSystemTicketById', () =>
     notion.pages.retrieve({ page_id: id })
   )
 
   const [ticket] = await resolveTicketNames([mapTicketPageRaw(page)])
-  setCachedValue(cacheKey, ticket, 300_000) // 5 min
   return ticket
 }
