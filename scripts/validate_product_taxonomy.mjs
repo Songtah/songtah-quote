@@ -17,9 +17,9 @@ const PATHS = {
 
 const EXPECTED = {
   catalogRawHash: 'a814589dec6fe24da78cc39ccdc821bf8083b5ea91e642873385139d0977b6b8',
-  familiesRawHash: '626c84bc6d1642ea450de487c86c2dce6b22f6cc45b71cee199d95931d507b0b',
+  familiesRawHash: 'ea41abd75140008f64110ebded04c6d69265aaf138b99b0ad02b2dafca9eafa8',
   catalogBusinessHash: 'bfbbaed426269528850294b9f557607ca6dd3cb6e8f9f40923c03369d579d8d8',
-  familyIdsHash: '575774846527f055e83ae21946a15b7fa3c53df10ead27131e26686668127b19',
+  familyIdsHash: 'e753f67d11f12d74ae7d6d8394a3e86508a53bc588848eb15a4d87eb318b7579',
   dictionaryContractHash: '096f9e06a12d356698fca61220bf128973f15c50e2d4a6d6c79844d6872fc87f',
   schemaVersion: '2026-07-14.v1',
   catalogRows: 6084,
@@ -27,7 +27,7 @@ const EXPECTED = {
   discontinuedRows: 140,
   stoppedRows: 91,
   notSoldRows: 49,
-  familyRows: 105,
+  familyRows: 106,
 }
 const EXPECTED_BUSINESS_IDS = [
   'digital-manufacturing', 'additive-manufacturing', 'fixed-restorative', 'removable-prosthetics',

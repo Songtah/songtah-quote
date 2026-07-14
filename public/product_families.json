@@ -6689,5 +6689,61 @@
       "Waterbased D3 50ml": "ZZ-64-D3",
       "Waterbased D4 50ml": "ZZ-64-D4"
     }
+  },
+  {
+    "id": "AB",
+    "seriesCode": "AB",
+    "seriesName": "金屬材料",
+    "brand": "Aalba Dent",
+    "productType": "材料",
+    "category": "金屬材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Vera Bond 瓷牙金屬",
+          "Vera Bond II 瓷牙金屬(不含鈹)",
+          "Vera Bond V 瓷牙金屬（AB-03）",
+          "Vera Bond V 瓷牙金屬（AB-03-1）",
+          "Comandium 陶瓷合金",
+          "Continum V 陶瓷合金",
+          "Continum C 陶瓷合金",
+          "NPG Alloy (100g)",
+          "VB Solder 瓷牙焊條 (10g)",
+          "Vera PDS 軟 太空金屬",
+          "Vera PDN 硬 太空金屬",
+          "Vera PDN 軟 太空金屬",
+          "PDS 活動金屬(散粒)",
+          "Comandium II 瓷牙金屬",
+          "Vera Bond 2V 瓷牙金屬",
+          "Vera PDI 硬 太空金屬",
+          "Comandium (ti) 陶瓷合金",
+          "Vera Bond III 鈷鉻金屬"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Vera Bond 瓷牙金屬": "AB-01",
+      "Vera Bond II 瓷牙金屬(不含鈹)": "AB-02",
+      "Vera Bond V 瓷牙金屬（AB-03）": "AB-03",
+      "Vera Bond V 瓷牙金屬（AB-03-1）": "AB-03-1",
+      "Comandium 陶瓷合金": "AB-04",
+      "Continum V 陶瓷合金": "AB-05",
+      "Continum C 陶瓷合金": "AB-06",
+      "NPG Alloy (100g)": "AB-07",
+      "VB Solder 瓷牙焊條 (10g)": "AB-09",
+      "Vera PDS 軟 太空金屬": "AB-10",
+      "Vera PDN 硬 太空金屬": "AB-11",
+      "Vera PDN 軟 太空金屬": "AB-12",
+      "PDS 活動金屬(散粒)": "AB-15",
+      "Comandium II 瓷牙金屬": "AB-17",
+      "Vera Bond 2V 瓷牙金屬": "AB-20",
+      "Vera PDI 硬 太空金屬": "AB-21",
+      "Comandium (ti) 陶瓷合金": "AB-22",
+      "Vera Bond III 鈷鉻金屬": "AB-23"
+    }
   }
 ]
