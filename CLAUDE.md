@@ -20,10 +20,13 @@
 0. **Notion 全庫掃描必用分區**:無過濾的 `databases.query` 分頁在 **10,000 筆處靜默截斷**(has_more 直接 false,2026-07-06 實測 10,655 筆只回 10,000,曾致監控誤判 280 筆重複匯入)。掃全客戶庫一律走 `lib/notion/customers.ts` 的 `scanAllCustomerPages`(按縣市分區+空白批);其他接近萬筆的 DB 全掃比照辦理。
 
 1. **價格快照**：訂單/報價一旦成立，品名與單價定格在單據內，禁止連動主檔。
-2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/價格/規格歸 `public/products_catalog.json`；圖片/介紹歸 Notion。
+2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/價格/目錄規格摘要歸 `public/products_catalog.json`；圖片/介紹/富內容技術規格表/文件歸 Notion。Notion 富內容不得反向覆蓋 ERP 與目錄主檔欄位。
 3. **ERP 匯入新品後必跑** `python3 scripts/validate_categories.py`，分類錯誤先修再上線。
 4. **價格更新流程**：改 Excel 主檔 → `scripts/merge_catalog_prices.py` → git push 部署。價格表比對規則見桌面《價格表比對規則.docx》。
 5. **銷售狀態同步**：核對表（桌面《產品目錄核對表》）的「銷售狀態」以貨號（`code`）合併回 `products_catalog.json`——有售價→寫 `price`；已停售／未販售→`discontinued:true` 且 `status` 記細分。**選品器以 `discontinued` 隱藏**：`searchCatalog`（`/api/products/search`，訂貨/報價）過濾掉 discontinued；管理頁走 `getCatalog`／`catalog-raw` 仍全顯示並標狀態徽章。既成單據走價格快照不受影響。
+6. **產品編輯後台只限中央管理**：所有商品內容、系列、圖片、文件與群組歸屬寫入 API 必須用 `withApiAuth('central-management', ...)`；一般產品權限只能瀏覽。ERP 貨號／品名及目錄價格在後台維持唯讀。
+7. **系列群組雙層來源**：部署內 `product_families.json` 保存規格矩陣；Notion 系列庫保存後台建立系列、名稱與介紹，產品庫「系列群組」保存人工 SKU 歸屬。人工歸屬覆蓋靜態歸屬，但寫入前必驗證系列存在、寫後必 read-back；管理資料讀取不完整時 fail-closed，不得讓後台在殘缺資料上繼續寫入。
+8. **產品 GET 禁止改 schema**：產品資料讀取只能查詢，不得在 GET/helper 中呼叫 `notion.databases.update`。缺欄位時明確報錯並先做 schema dry-run／取得核准，禁止靜默補欄位。
 
 ## 促銷與訂貨鐵則
 
@@ -58,7 +61,7 @@
 
 ## 安全鐵則（2026 資安稽核後建立）
 
-1. **API route 一律用 `withApiAuth` 宣告授權規則，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。統一閘道在 `lib/api-auth.ts`——`export const POST = withApiAuth(rule, async (req, ctx, session) => {...})`，規則為 `'session'`（只需登入）／`'admin'`（role==='admin'）／`{ roles: [...] }`（accountType 任一）／`{ module, action:'view'|'edit' }`（沿用 `lib/permissions` 的 canView/canEdit）。**新增任何 route 一律走 withApiAuth**。例外只有雙重驗證的 `daily-report`（cron secret）與 `line/webhook`（HMAC），這兩個維持手動驗證。高權限路由（accounts、admin/medical-monitor、clinic-monitor、line/import、dashboard/ceo）已全數採用;其餘 module-edit 寫入路由仍有正確的 inline `canEdit` 檢查（安全），可漸進改用 withApiAuth。
+1. **API route 一律用 `withApiAuth` 宣告授權規則，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。統一閘道在 `lib/api-auth.ts`——`export const POST = withApiAuth(rule, async (req, ctx, session) => {...})`，規則為 `'session'`（只需登入）／`'admin'`（role==='admin'）／`'central-management'`（accountType 必須精準等於中央管理）／`{ roles: [...] }`（accountType 任一）／`{ module, action:'view'|'edit' }`（沿用 `lib/permissions` 的 canView/canEdit）。**新增任何 route 一律走 withApiAuth**。例外只有雙重驗證的 `daily-report`（cron secret）與 `line/webhook`（HMAC），這兩個維持手動驗證。高權限路由（accounts、admin/medical-monitor、clinic-monitor、line/import、dashboard/ceo）已全數採用;其餘 module-edit 寫入路由仍有正確的 inline `canEdit` 檢查（安全），可漸進改用 withApiAuth。
 2. **密碼一律雜湊，禁止明文比對／儲存**：`lib/system-notion.ts` 的 `hashPassword`/`verifyPassword`（bcrypt）是唯一允許的密碼存取路徑；新增任何帳號相關欄位寫入都要走這兩個 helper，不可直接 `properties['密碼'] = richText(plainPassword)`。
 3. **共用密鑰比對一律 timing-safe**：LINE webhook 簽章、`DAILY_REPORT_SECRET` 等共用密鑰比對禁止用 `===`，要用 `crypto.timingSafeEqual`；密鑰未設定時必須「失效關閉」（拒絕請求），不可「失效開放」。
 4. **訂單金額/數量伺服器端必須驗證**：兩道防線,任何新增訂貨/報價寫入路徑都要套用,不可只信任前端算好的金額——

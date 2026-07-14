@@ -93,15 +93,22 @@ function mapPage(page: any): SeriesRecord {
 
 // ── CRUD ───────────────────────────────────────────────────────
 
-/** Get all series records (no pagination needed — typically < 200 series). */
+/** Get all series records. */
 export async function listSeriesRecords(): Promise<SeriesRecord[]> {
   const dbId = getSeriesDb()
-  const response: any = await notion.databases.query({
-    database_id: dbId,
-    page_size: 100,
-    sorts: [{ property: '系列代碼', direction: 'ascending' }],
-  })
-  return (response.results ?? []).map(mapPage)
+  const records: SeriesRecord[] = []
+  let cursor: string | undefined
+  do {
+    const response: any = await notion.databases.query({
+      database_id: dbId,
+      page_size: 100,
+      sorts: [{ property: '系列代碼', direction: 'ascending' }],
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    records.push(...(response.results ?? []).map(mapPage))
+    cursor = response.has_more ? response.next_cursor : undefined
+  } while (cursor)
+  return records
 }
 
 /** Get a single series record by seriesCode. Returns null if not found. */

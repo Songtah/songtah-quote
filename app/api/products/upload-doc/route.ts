@@ -13,6 +13,7 @@ import { put } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import crypto from 'crypto'
+import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,7 @@ const ALLOWED_TYPES = new Set([
   'application/octet-stream',   // some browsers send this for .docx/.xlsx
 ])
 
-export const POST = withApiAuth('central-management', async (req: NextRequest) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest, _ctx, session) => {
   let formData: FormData
   try {
     formData = await req.formData()
@@ -70,6 +71,12 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
   try {
     const blob = await put(blobPath, file, { access: 'public', allowOverwrite: true })
+    await logAuditEvent({
+      module: 'products', action: 'upload', entityType: 'product-document', entityId: blobPath,
+      entityTitle: file.name, summary: `上傳產品文件：${file.name}`,
+      actor: getAuditActor(session), request: getAuditRequestContext(req),
+      metadata: { contentType: file.type, size: file.size },
+    }).catch((error) => console.error('audit product document upload error:', error))
     return NextResponse.json({ url: blob.url, name: file.name, size: file.size })
   } catch (err: any) {
     const msg: string = err?.message ?? ''

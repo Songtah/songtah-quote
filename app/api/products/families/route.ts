@@ -1,20 +1,18 @@
-import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
-import { getAllFamilies, getFamilyByCode } from '@/lib/products-catalog'
+import { withApiAuth } from '@/lib/api-auth'
+import { getManagedFamilies } from '@/lib/products-managed-families'
+import { explicitFamilySkuCodes } from '@/lib/product-family-members'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   const code = req.nextUrl.searchParams.get('code') ?? ''
+  const families = await getManagedFamilies()
 
   if (code) {
-    const family = getFamilyByCode(code)
+    const family = families.find((item) => explicitFamilySkuCodes(item).includes(code))
     return NextResponse.json(family ?? null)
   }
 
-  return NextResponse.json(getAllFamilies())
-}
+  return NextResponse.json(families)
+})

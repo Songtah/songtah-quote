@@ -24,6 +24,9 @@ export interface ProductFamily {
   skuMap?: Record<string, string>
   /** 無法由規格表完整表達時，明確列出的系列成員 SKU。 */
   coveredSkuCodes?: string[]
+  /** 後台人工指定的系列成員；可能不在規格矩陣 skuMap 中。 */
+  manualAssignedSkuCodes?: string[]
+  source?: 'catalog' | 'notion'
   /** 特殊 UI 變體。'ymh-tooth-grid' = YAMAHACHI 牙型座標格 */
   uiVariant?: string
 }

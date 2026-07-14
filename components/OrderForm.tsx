@@ -38,6 +38,78 @@ interface CatalogItem {
   notes: string
 }
 
+interface ManualFamilyMember {
+  code: string
+  name: string
+  brand: string
+}
+
+function ManualFamilyItems({
+  family,
+  priceMap,
+  onAdd,
+  allowedSkuCodes,
+}: {
+  family: ProductFamily
+  priceMap: Record<string, { p: number; s?: number }>
+  onAdd: (item: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => void
+  allowedSkuCodes?: string[]
+}) {
+  const [members, setMembers] = useState<ManualFamilyMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    fetch(`/api/products/families/${encodeURIComponent(family.id)}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return response.json()
+      })
+      .then((data) => {
+        if (!active) return
+        const rows = Array.isArray(data.members) ? data.members : []
+        const allowed = allowedSkuCodes ? new Set(allowedSkuCodes) : null
+        setMembers(allowed ? rows.filter((member: ManualFamilyMember) => allowed.has(member.code)) : rows)
+      })
+      .catch(() => { if (active) setError('系列品項暫時無法讀取') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [allowedSkuCodes, family.id])
+
+  if (loading) return <p className="px-5 py-4 text-sm text-stone-400">載入系列品項…</p>
+  if (error) return <p className="px-5 py-4 text-sm text-red-600" role="alert">{error}</p>
+
+  return (
+    <div className="space-y-1 bg-stone-50/60 px-3 py-2 sm:px-5">
+      {members.map((member) => (
+        <button
+          key={member.code}
+          type="button"
+          onClick={() => onAdd({
+            skuCode: member.code,
+            skuName: member.name,
+            brand: member.brand || family.brand,
+            seriesName: family.seriesName,
+            seriesId: family.id,
+            unitPrice: priceMap[member.code]?.s ?? priceMap[member.code]?.p ?? 0,
+          })}
+          className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white px-3 py-2 text-left transition-all hover:bg-brand-50 active:scale-[0.99]"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-stone-700">{member.name}</span>
+            <span className="font-mono text-[11px] text-stone-400">{member.code}</span>
+          </span>
+          <span className="text-xs font-semibold text-brand-600">加入</span>
+        </button>
+      ))}
+      {members.length === 0 && <p className="py-4 text-center text-sm text-stone-400">此系列尚無品項</p>}
+    </div>
+  )
+}
+
 // ── 狀態顏色 ──────────────────────────────────────────────────
 
 const STATUS_OPTIONS = ['草稿', '已送出', '確認中', '已到貨', '已取消'] as const
@@ -339,15 +411,21 @@ function ProductPicker({
                         </div>
                       </button>
                       {isExpanded && (
-                        family.uiVariant === 'ymh-tooth-grid'
-                          ? <YMHToothGridPanel
+                        <>
+                          {family.uiVariant === 'ymh-tooth-grid'
+                            ? <YMHToothGridPanel
                               family={family}
                               onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
-                          : <FamilySpecPanel
+                            : family.specs.length > 0 ? <FamilySpecPanel
                               family={family}
                               onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
+                            : <ManualFamilyItems family={family} priceMap={priceMap} onAdd={handleAddItem} />}
+                          {family.specs.length > 0 && (family.manualAssignedSkuCodes?.length ?? 0) > 0 && (
+                            <ManualFamilyItems family={family} priceMap={priceMap} onAdd={handleAddItem} allowedSkuCodes={family.manualAssignedSkuCodes} />
+                          )}
+                        </>
                       )}
                     </div>
                   )
@@ -448,15 +526,21 @@ function ProductPicker({
                         </div>
                       </button>
                       {isExpanded && (
-                        family.uiVariant === 'ymh-tooth-grid'
-                          ? <YMHToothGridPanel
+                        <>
+                          {family.uiVariant === 'ymh-tooth-grid'
+                            ? <YMHToothGridPanel
                               family={family}
                               onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
-                          : <FamilySpecPanel
+                            : family.specs.length > 0 ? <FamilySpecPanel
                               family={family}
                               onAdd={(code, name) => handleAddItem({ skuCode: code, skuName: name, brand: family.brand, seriesName: family.seriesName, seriesId: family.id, unitPrice: priceMap[code]?.s ?? priceMap[code]?.p ?? 0 })}
                             />
+                            : <ManualFamilyItems family={family} priceMap={priceMap} onAdd={handleAddItem} />}
+                          {family.specs.length > 0 && (family.manualAssignedSkuCodes?.length ?? 0) > 0 && (
+                            <ManualFamilyItems family={family} priceMap={priceMap} onAdd={handleAddItem} allowedSkuCodes={family.manualAssignedSkuCodes} />
+                          )}
+                        </>
                       )}
                     </div>
                   )

@@ -12,47 +12,12 @@ import { Client } from '@notionhq/client'
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_PRODUCTS = process.env.NOTION_PRODUCTS_DB!
 
-// ── Field ensure ────────────────────────────────────────────
-// _specsFieldReady tracks whether '技術規格' was successfully added
-// to the DB schema — we only write that field when we're sure it exists.
-
-let _ensurePromise:    Promise<void> | null = null
-let _specsFieldReady:  boolean              = false
-
-function ensureFields(): Promise<void> {
-  if (!_ensurePromise) {
-    _ensurePromise = (async () => {
-      try {
-        await notion.databases.update({
-          database_id: DB_PRODUCTS,
-          properties: {
-            '貨號':     { rich_text: {} },
-            '售價':     { number: { format: 'number' } },
-            '圖片URL':  { url: {} },
-            '商品介紹': { rich_text: {} },
-            '技術規格': { rich_text: {} },  // JSON: { columns, rows }
-            '形象素材': { rich_text: {} },  // JSON: string[] of image URLs
-            '文件資料': { rich_text: {} },  // JSON: { name, url, size }[]
-            '系列群組': { rich_text: {} },  // manually assigned family ID
-          } as any,
-        })
-        _specsFieldReady = true
-      } catch (e: any) {
-        console.warn('[products-notion] ensureFields warning:', e?.message ?? e)
-        // Allow retry after 60 s so transient failures don't block forever
-        setTimeout(() => { _ensurePromise = null }, 60_000)
-      }
-    })()
-  }
-  return _ensurePromise
-}
-
 // ── Helpers ──────────────────────────────────────────────────
 
 function richText(content: string) {
-  // Empty string → empty array (Notion's canonical empty rich_text)
   if (!content) return []
-  return [{ text: { content: content.slice(0, 2000) } }]
+  const chunks = content.match(/[\s\S]{1,2000}/g) ?? []
+  return chunks.map((chunk) => ({ text: { content: chunk } }))
 }
 
 function readRichText(page: any, field: string): string {
@@ -97,10 +62,10 @@ export interface CatalogSnapshot {
  * exists yet (first time editing a product).
  */
 export async function getProductRichData(skuCode: string): Promise<ProductRichData | null> {
-  await ensureFields()
   const resp = await notion.databases.query({
     database_id: DB_PRODUCTS,
     filter: { property: '貨號', rich_text: { equals: skuCode } },
+    sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
     page_size: 1,
   }) as any
 
@@ -138,8 +103,6 @@ export async function upsertProductRichData(
     familyId?:    string
   }
 ): Promise<string> {
-  await ensureFields()
-
   // Build the properties patch
   const props: Record<string, any> = {}
   if (data.price !== undefined)
@@ -148,14 +111,13 @@ export async function upsertProductRichData(
     props['圖片URL'] = data.imageUrl ? { url: data.imageUrl } : { url: null }
   if (data.description !== undefined)
     props['商品介紹'] = { rich_text: richText(data.description) }
-  // Only write 技術規格 / 形象素材 if we confirmed the fields exist in the DB schema
-  if (data.specsJson !== undefined && _specsFieldReady)
+  if (data.specsJson !== undefined)
     props['技術規格'] = { rich_text: richText(data.specsJson) }
-  if (data.galleryJson !== undefined && _specsFieldReady)
+  if (data.galleryJson !== undefined)
     props['形象素材'] = { rich_text: richText(data.galleryJson) }
-  if (data.docsJson !== undefined && _specsFieldReady)
+  if (data.docsJson !== undefined)
     props['文件資料'] = { rich_text: richText(data.docsJson) }
-  if (data.familyId !== undefined && _specsFieldReady)
+  if (data.familyId !== undefined)
     props['系列群組'] = { rich_text: richText(data.familyId) }
 
   // Check if a page already exists for this SKU
@@ -195,7 +157,6 @@ export async function upsertProductRichData(
  * Returns all SKU codes (貨號) in Notion Products DB that have 系列群組 === familyId.
  */
 export async function listSkusByFamilyId(familyId: string): Promise<string[]> {
-  await ensureFields()
   const results: any[] = []
   let cursor: string | undefined
   do {
@@ -216,18 +177,38 @@ export async function listSkusByFamilyId(familyId: string): Promise<string[]> {
  * Used by OrderForm to exclude these from flat search results (dedup).
  */
 export async function listAllFamilyAssignments(): Promise<string[]> {
-  await ensureFields()
+  const assignments = await listFamilyAssignments()
+  return assignments.map((assignment) => assignment.skuCode)
+}
+
+export interface ProductFamilyAssignment {
+  skuCode: string
+  familyId: string
+}
+
+/** Returns every explicit SKU → family assignment stored in Notion. */
+export async function listFamilyAssignments(): Promise<ProductFamilyAssignment[]> {
   const results: any[] = []
   let cursor: string | undefined
   do {
     const resp: any = await notion.databases.query({
       database_id: DB_PRODUCTS,
       filter: { property: '系列群組', rich_text: { is_not_empty: true } },
+      sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
       page_size: 100,
       ...(cursor ? { start_cursor: cursor } : {}),
     })
     results.push(...resp.results)
     cursor = resp.has_more ? resp.next_cursor : undefined
   } while (cursor)
-  return results.map((p: any) => readRichText(p, '貨號')).filter(Boolean)
+  const assignments = results.map((page: any) => ({
+      skuCode: readRichText(page, '貨號'),
+      familyId: readRichText(page, '系列群組'),
+    }))
+    .filter((assignment) => Boolean(assignment.skuCode && assignment.familyId))
+  const latestBySku = new Map<string, ProductFamilyAssignment>()
+  for (const assignment of assignments) {
+    if (!latestBySku.has(assignment.skuCode)) latestBySku.set(assignment.skuCode, assignment)
+  }
+  return Array.from(latestBySku.values())
 }

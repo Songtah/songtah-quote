@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import { SeriesModal } from '@/components/SeriesModal'
+import { ProductSeriesAdminDrawer } from '@/components/ProductSeriesAdminDrawer'
 import { MainCategoryArtwork, SeriesArtwork } from '@/components/product-series/SeriesArtwork'
 import { buildExactFamilyIndex, explicitFamilySkuCodes } from '@/lib/product-family-members'
 import { useBodyScrollLock, useDialogFocus } from '@/lib/use-dialog-focus'
@@ -90,6 +91,8 @@ interface ProductFamily {
   namePattern?: string
   uiVariant?: string
   coveredSkuCodes?: string[]
+  manualAssignedSkuCodes?: string[]
+  source?: 'catalog' | 'notion'
 }
 
 interface RichData {
@@ -1264,11 +1267,13 @@ function ProductEditDrawer({
   skuCode,
   onClose,
   onSaved,
+  onFamilyChanged,
   allFamilies,
 }: {
   skuCode: string
   onClose: () => void
   onSaved: (skuCode: string, price: number | null) => void
+  onFamilyChanged: () => Promise<void>
   allFamilies: ProductFamily[]
 }) {
   const [catalog, setCatalog] = useState<CatalogItem | null>(null)
@@ -1277,7 +1282,6 @@ function ProductEditDrawer({
   const [error,   setError]   = useState('')
 
   // Form state
-  const [price,         setPrice]         = useState('')
   const [imageUrl,      setImageUrl]      = useState('')
   const [description,   setDescription]   = useState('')
   const [specs,         setSpecs]         = useState<SpecTable>(defaultSpecs())
@@ -1286,6 +1290,7 @@ function ProductEditDrawer({
 
   // Family assignment state
   const [selectedFamilyId, setSelectedFamilyId] = useState('')
+  const [originalFamilyId, setOriginalFamilyId] = useState('')
   const [familySaving,     setFamilySaving]      = useState(false)
   const [familySaved,      setFamilySaved]        = useState(false)
   const [familyError,      setFamilyError]        = useState('')
@@ -1303,12 +1308,14 @@ function ProductEditDrawer({
       .then((data) => {
         if (data.error) { setError(data.error); return }
         setCatalog(data.catalog)
-        setPrice(data.rich.price != null ? String(data.rich.price) : '')
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
         setGalleryImages(parseGallery(data.rich.galleryJson ?? '[]'))
-        setSelectedFamilyId(data.rich.familyId ?? '')
+        const manualFamilyId = data.rich.familyId ?? ''
+        const deployedFamilyId = allFamilies.find((family) => explicitFamilySkuCodes(family).includes(skuCode))?.id ?? ''
+        setSelectedFamilyId(manualFamilyId)
+        setOriginalFamilyId(manualFamilyId || deployedFamilyId)
         try {
           const parsed = JSON.parse(data.rich.docsJson ?? '[]')
           setDocs(Array.isArray(parsed) ? parsed : [])
@@ -1318,9 +1325,17 @@ function ProductEditDrawer({
       })
       .catch(() => setError('無法載入商品資料'))
       .finally(() => setLoading(false))
-  }, [skuCode])
+  }, [allFamilies, skuCode])
 
   const handleSaveFamily = async (familyIdToSave: string) => {
+    if (familyIdToSave !== originalFamilyId && originalFamilyId) {
+      const previousName = allFamilies.find((family) => family.id === originalFamilyId)?.seriesName ?? originalFamilyId
+      const nextName = allFamilies.find((family) => family.id === familyIdToSave)?.seriesName
+      const message = familyIdToSave
+        ? `此品項目前屬於「${previousName}」。確定要移到「${nextName ?? familyIdToSave}」嗎？`
+        : `確定要清除「${previousName}」的手動歸類嗎？`
+      if (!window.confirm(message)) return
+    }
     setFamilySaving(true)
     setFamilyError('')
     setFamilySaved(false)
@@ -1337,7 +1352,13 @@ function ProductEditDrawer({
         setFamilyError(msg)
       } else {
         setSelectedFamilyId(familyIdToSave)
+        setOriginalFamilyId(familyIdToSave)
         setFamilySaved(true)
+        try {
+          await onFamilyChanged()
+        } catch {
+          setFamilyError('歸類已儲存，但系列清單重新整理失敗；請重新載入頁面確認。')
+        }
         setTimeout(() => setFamilySaved(false), 2000)
       }
     } catch (err: any) {
@@ -1350,12 +1371,6 @@ function ProductEditDrawer({
   const handleSave = async () => {
     setSaving(true)
     setError('')
-    const priceNum = price.trim() !== '' ? Number(price) : null
-    if (price.trim() !== '' && isNaN(priceNum!)) {
-      setError('售價必須為數字')
-      setSaving(false)
-      return
-    }
     // Only save specs if there's actual data (at least one non-empty row)
     const hasSpecs = specs.rows.some(r => r.some(c => c.trim()))
     const specsJson = hasSpecs ? JSON.stringify(specs) : ''
@@ -1366,7 +1381,7 @@ function ProductEditDrawer({
       res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price: priceNum, imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson }),
+        body: JSON.stringify({ imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson }),
       })
     } catch (err: any) {
       setError(err.message ?? '網路中斷，請稍後再試')
@@ -1383,7 +1398,7 @@ function ProductEditDrawer({
       return
     }
     setSaving(false)
-    onSaved(skuCode, priceNum)
+    onSaved(skuCode, catalog?.price ?? null)
     onClose()
   }
 
@@ -1498,22 +1513,13 @@ function ProductEditDrawer({
             </div>
           </div>
 
-          {/* 售價 */}
-          <div>
-            <label htmlFor="product-price" className="mb-1.5 block text-sm font-semibold text-stone-700">
-              售價 <span className="text-stone-400 font-normal text-xs">（NT$）</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">NT$</span>
-              <input
-                id="product-price"
-                type="number" min={0} value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="尚未設定"
-                className="input-soft min-h-11 w-full pl-10 text-sm"
-                disabled={loading}
-              />
-            </div>
+          {/* 售價由產品價格主檔維護，後台僅顯示。 */}
+          <div className="rounded-2xl bg-stone-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">售價（唯讀）</p>
+            <p className="mt-1 text-base font-bold text-stone-800">
+              {catalog?.price != null ? `NT$${catalog.price.toLocaleString('zh-TW')}` : '尚未定價'}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-stone-500">價格需由 Excel 主檔合併與驗證後部署，避免已成立單據與正式目錄不同步。</p>
           </div>
 
           {/* 商品圖片 */}
@@ -2032,6 +2038,8 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
   const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
+  const [seriesAdminOpen, setSeriesAdminOpen] = useState(false)
+  const [seriesAdminError, setSeriesAdminError] = useState('')
 
   // Cache: skuCode → price. Populated from catalog and refreshed after edits.
   const [priceCache,     setPriceCache]     = useState<Map<string, number | null>>(new Map())
@@ -2070,6 +2078,23 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
       .catch((error) => setLoadError(error instanceof Error ? error.message : '產品目錄暫時無法讀取'))
       .finally(() => setLoading(false))
   }, [loadAttempt])
+
+  const refreshFamilies = useCallback(async () => {
+    const response = await fetch('/api/products/families/manage', { cache: 'no-store' })
+    if (!response.ok) throw new Error(`系列資料讀取失敗（HTTP ${response.status}）`)
+    const data = await response.json()
+    setFamilies(Array.isArray(data) ? data : [])
+  }, [])
+
+  const openSeriesAdmin = useCallback(async () => {
+    setSeriesAdminError('')
+    try {
+      await refreshFamilies()
+      setSeriesAdminOpen(true)
+    } catch {
+      setSeriesAdminError('系列管理資料無法完整讀取，已停用編輯以避免覆蓋現有歸屬。')
+    }
+  }, [refreshFamilies])
 
   // Debounced 關鍵字(全目錄已在記憶體,搜尋與篩選一律 client-side,含停售品)
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -2183,14 +2208,18 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   return (
     <>
       {canManageProducts && (
-        <div className="card-soft mb-4 flex items-center gap-3 px-4 py-3 sm:px-5" role="status">
+        <div className="card-soft mb-4 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5" role="status">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xl" aria-hidden="true">✎</span>
           <div className="min-w-0">
             <p className="text-sm font-bold text-stone-800">中央管理編輯模式</p>
             <p className="mt-0.5 text-xs leading-relaxed text-stone-500">可維護商品內容、照片、規格、文件與系列介紹；貨號及 ERP 品名維持唯讀。</p>
           </div>
+          <button type="button" onClick={openSeriesAdmin} className="min-h-11 rounded-full bg-brand-500 px-5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 sm:ml-auto">
+            管理系列群組
+          </button>
         </div>
       )}
+      {seriesAdminError && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{seriesAdminError}</div>}
       {/* Search + Filters */}
       <div className="mb-6">
         {/* Row: search + filter toggle */}
@@ -2524,6 +2553,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
             skuCode={editingItem.code}
             onClose={() => setEditingItem(null)}
             onSaved={handleSaved}
+            onFamilyChanged={refreshFamilies}
             allFamilies={families}
           />
         )}
@@ -2538,6 +2568,17 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
             onEdit={(item) => { setModalFamily(null); setEditingItem(item) }}
             onClose={() => setModalFamily(null)}
             canManageProducts={canManageProducts}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {canManageProducts && seriesAdminOpen && (
+          <ProductSeriesAdminDrawer
+            families={families}
+            allItems={allItems}
+            onClose={() => setSeriesAdminOpen(false)}
+            onChanged={refreshFamilies}
           />
         )}
       </AnimatePresence>
