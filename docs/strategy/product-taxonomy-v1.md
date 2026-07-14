@@ -92,6 +92,9 @@
 - 同一 SKU 精確命中多個 family 時標記 `conflict`，不得自行選第一筆。
 - 不使用 `startsWith(seriesCode)` 批次回填；現有 prefix 會產生多重命中及大量未命中。
 - 沒有自然系列的單品允許 `seriesId=null`，不製造「其他系列」。
+- 名稱自動歸組只處理高信心規格軸：`brand`、`productType`、`mainCategoryId`、`categoryId` 皆相同，名稱只差可辨識的色號、容量、包裝數或尺寸尾碼，且 SKU 具共同結構。
+- 同名異貨號、設備世代、`Kit` / `Set`、牙位方向、車針／鑽針不透明代碼及任意字碼不自動歸組；維持獨立或進入人工覆核。
+- 自動建立的 family 使用一維「規格／型號」與精確 `skuMap`，確保產品頁與訂貨選品器都能選擇具體 SKU。
 
 ## 五、分類信心與人工覆核
 
