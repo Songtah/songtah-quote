@@ -9,8 +9,11 @@ const GENERATOR_PATH = fileURLToPath(import.meta.url)
 const ROOT = resolve(dirname(GENERATOR_PATH), '..')
 const CATALOG_PATH = resolve(ROOT, 'public/products_catalog.json')
 const FAMILIES_PATH = resolve(ROOT, 'public/product_families.json')
+const RESEARCH_OVERRIDES_PATH = resolve(ROOT, 'data/product_taxonomy_research_overrides.json')
 const WRITE_MODE = process.argv.includes('--write')
 const VERSION = '2026-07-14.v1'
+let RESEARCH_OVERRIDES = new Map()
+let RESEARCH_UNRESOLVED = new Map()
 
 const PRODUCT_KINDS = [
   'equipment',
@@ -22,6 +25,17 @@ const PRODUCT_KINDS = [
   'software_license',
   'service',
   'other_review',
+]
+const SUPPLEMENTAL_FUNCTIONS = [
+  ['3d-printer', 'additive-manufacturing', 'equipment'],
+  ['print-resin', 'additive-manufacturing', 'material'],
+  ['post-processing', 'additive-manufacturing', 'equipment'],
+  ['printer-accessory', 'additive-manufacturing', 'accessory'],
+  ['printing-consumable', 'additive-manufacturing', 'consumable'],
+  ['printer-spare-part', 'additive-manufacturing', 'spare_part'],
+  ['printing-software-service', 'additive-manufacturing', 'software_license'],
+  ['implant-surface-treatment-equipment', 'clinical-tools', 'equipment'],
+  ['die-model-accessory', 'lab-production', 'accessory'],
 ]
 
 // Every legacy category must have exactly one baseline mapping. More specific,
@@ -241,6 +255,10 @@ function classify3d(product) {
   const brand = product.brand || ''
   const code = product.code || ''
 
+  if (RESEARCH_OVERRIDES.has(code)) {
+    const item = RESEARCH_OVERRIDES.get(code)
+    return [item.businessCategory, item.functionCategory, item.productKind]
+  }
   if (VERIFIED_PRODUCT_OVERRIDES.has(code)) return VERIFIED_PRODUCT_OVERRIDES.get(code)
   if (SUN_GRINDING_CODES.has(code)) return ['lab-production', 'grinding-tool', 'consumable']
   if (SUN_POLISHING_CODES.has(code)) return ['lab-production', 'polishing-consumable', 'consumable']
@@ -303,6 +321,9 @@ function classifyProduct(product, seriesIndex) {
     brand: product.brand || null,
     productKind,
   }
+  const researchOverride = RESEARCH_OVERRIDES.get(product.code)
+  const researchUnresolved = RESEARCH_UNRESOLVED.get(product.code)
+  if (researchOverride?.packageForm) facets.packageForm = researchOverride.packageForm
   if (product.brand === 'SUN Oberflächentechnik' && /\bkit\b/i.test(product.name || '')) {
     facets.packageForm = 'kit'
   }
@@ -320,11 +341,27 @@ function classifyProduct(product, seriesIndex) {
     classificationStatus: businessCategory === 'other-review'
       ? 'unresolved'
       : reviewReasons.length > 0 ? 'needs_review' : 'approved_rule',
-    classificationMethod: OFFICIAL_3D_CODES.has(product.code)
+    classificationMethod: researchOverride
+      ? 'researched_sku_rule'
+      : researchUnresolved ? 'researched_unresolved'
+      : OFFICIAL_3D_CODES.has(product.code)
       ? 'official_sku_rule'
       : VERIFIED_SKU_CODES.has(product.code) ? 'verified_sku_rule'
         : override ? 'specific_3d_rule' : 'legacy_category_rule',
     seriesMatch,
+    ...(researchOverride
+      ? { verification: {
+          confidence: researchOverride.confidence,
+          evidence: researchOverride.evidence,
+          sourceUrl: researchOverride.sourceUrl || null,
+        } }
+      : researchUnresolved
+        ? { verification: {
+            confidence: 'unresolved',
+            evidence: researchUnresolved.reason,
+            sourceUrl: researchUnresolved.sourceUrl || null,
+          } }
+        : {}),
     legacy: {
       productType: product.productType,
       mainCategory: product.mainCategory,
@@ -346,17 +383,7 @@ function dictionaryOutput(generatorSourceHash) {
     if (reviewRequired) functions[functionCategory].reviewRequired = true
   }
 
-  for (const [id, businessCategory, productKind] of [
-    ['3d-printer', 'additive-manufacturing', 'equipment'],
-    ['print-resin', 'additive-manufacturing', 'material'],
-    ['post-processing', 'additive-manufacturing', 'equipment'],
-    ['printer-accessory', 'additive-manufacturing', 'accessory'],
-    ['printing-consumable', 'additive-manufacturing', 'consumable'],
-    ['printer-spare-part', 'additive-manufacturing', 'spare_part'],
-    ['printing-software-service', 'additive-manufacturing', 'software_license'],
-    ['implant-surface-treatment-equipment', 'clinical-tools', 'equipment'],
-    ['die-model-accessory', 'lab-production', 'accessory'],
-  ]) {
+  for (const [id, businessCategory, productKind] of SUPPLEMENTAL_FUNCTIONS) {
     functions[id] ||= { id, businessCategory, legacyCategories: [], defaultProductKind: productKind }
   }
 
@@ -567,14 +594,54 @@ ${sampleRows}
 }
 
 async function main() {
-  const [catalog, families, generatorSource] = await Promise.all([
+  const [catalog, families, researchFile, generatorSource] = await Promise.all([
     readFile(CATALOG_PATH, 'utf8').then(JSON.parse),
     readFile(FAMILIES_PATH, 'utf8').then(JSON.parse),
+    readFile(RESEARCH_OVERRIDES_PATH, 'utf8').then(JSON.parse),
     readFile(GENERATOR_PATH, 'utf8'),
   ])
   const generatorSourceHash = createHash('sha256').update(generatorSource).digest('hex')
 
-  if (!Array.isArray(catalog) || !Array.isArray(families)) throw new Error('Expected both source files to contain arrays')
+  if (!Array.isArray(catalog) || !Array.isArray(families) || !Array.isArray(researchFile.items)) {
+    throw new Error('Expected catalog, families, and research override items to contain arrays')
+  }
+
+  const catalogCodes = new Set(catalog.map((item) => item.code))
+  const allResearchItems = [...researchFile.items, ...(researchFile.unresolved || [])]
+  const researchCodes = allResearchItems.map((item) => item.skuCode)
+  const duplicateResearchCodes = Object.entries(countBy(allResearchItems, (item) => item.skuCode)).filter(([, count]) => count > 1)
+  if (duplicateResearchCodes.length > 0) {
+    throw new Error(`Duplicate research SKU codes: ${duplicateResearchCodes.map(([code]) => code).join(', ')}`)
+  }
+  const unknownResearchCodes = researchCodes.filter((code) => !catalogCodes.has(code))
+  if (unknownResearchCodes.length > 0) throw new Error(`Unknown research SKU codes: ${unknownResearchCodes.join(', ')}`)
+  for (const item of researchFile.items) {
+    if (!['high', 'medium'].includes(item.confidence)) throw new Error(`Invalid research confidence: ${item.skuCode}`)
+    if (!item.evidence?.trim()) throw new Error(`Missing research evidence: ${item.skuCode}`)
+    if (item.sourceUrl && !/^https:\/\//.test(item.sourceUrl)) throw new Error(`Invalid research source URL: ${item.skuCode}`)
+    if (!PRODUCT_KINDS.includes(item.productKind)) throw new Error(`Invalid research product kind: ${item.skuCode}`)
+  }
+  const allowedBusinessCategories = new Set(Object.values(CATEGORY_MAPPING).map(([businessCategory]) => businessCategory))
+  const functionOwners = new Map()
+  for (const [, [businessCategory, functionCategory]] of Object.entries(CATEGORY_MAPPING)) {
+    const existingOwner = functionOwners.get(functionCategory)
+    if (existingOwner && existingOwner !== businessCategory) throw new Error(`Conflicting function owner: ${functionCategory}`)
+    functionOwners.set(functionCategory, businessCategory)
+  }
+  for (const [functionCategory, businessCategory] of SUPPLEMENTAL_FUNCTIONS) {
+    const existingOwner = functionOwners.get(functionCategory)
+    if (existingOwner && existingOwner !== businessCategory) throw new Error(`Conflicting supplemental function owner: ${functionCategory}`)
+    functionOwners.set(functionCategory, businessCategory)
+  }
+  for (const item of researchFile.items) {
+    if (!allowedBusinessCategories.has(item.businessCategory)) throw new Error(`Invalid research business category: ${item.skuCode}`)
+    if (!functionOwners.has(item.functionCategory)) throw new Error(`Invalid research function category: ${item.skuCode}`)
+    if (functionOwners.get(item.functionCategory) !== item.businessCategory) {
+      throw new Error(`Research function owner mismatch: ${item.skuCode}`)
+    }
+  }
+  RESEARCH_OVERRIDES = new Map(researchFile.items.map((item) => [item.skuCode, item]))
+  RESEARCH_UNRESOLVED = new Map((researchFile.unresolved || []).map((item) => [item.skuCode, item]))
 
   const sourceCategories = [...new Set(catalog.map((item) => item.category))].sort()
   const unknownCategories = sourceCategories.filter((category) => !CATEGORY_MAPPING[category])
@@ -623,7 +690,7 @@ async function main() {
   const mapOutput = {
     schemaVersion: VERSION,
     generatorSourceHash,
-    source: ['public/products_catalog.json', 'public/product_families.json'],
+    source: ['public/products_catalog.json', 'public/product_families.json', 'data/product_taxonomy_research_overrides.json'],
     total: records.length,
     items: records,
   }

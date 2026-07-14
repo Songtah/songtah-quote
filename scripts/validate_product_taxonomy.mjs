@@ -12,6 +12,7 @@ const PATHS = {
   families: resolve(ROOT, 'public/product_families.json'),
   dictionary: resolve(ROOT, 'data/product_taxonomy_dictionary.json'),
   mapping: resolve(ROOT, 'data/product_taxonomy_map.json'),
+  research: resolve(ROOT, 'data/product_taxonomy_research_overrides.json'),
 }
 
 const EXPECTED = {
@@ -38,7 +39,10 @@ const EXPECTED_PRODUCT_KINDS = [
   'software_license', 'service', 'other_review',
 ]
 const CLASSIFICATION_STATUSES = new Set(['approved_rule', 'needs_review', 'unresolved'])
-const CLASSIFICATION_METHODS = new Set(['legacy_category_rule', 'official_sku_rule', 'verified_sku_rule', 'specific_3d_rule'])
+const CLASSIFICATION_METHODS = new Set([
+  'legacy_category_rule', 'official_sku_rule', 'verified_sku_rule', 'specific_3d_rule',
+  'researched_sku_rule', 'researched_unresolved',
+])
 const SUN_GRINDING_CODES = new Set(`
   SUN-PSC132104F SUN-PSC138104F SUN-PSC151104F SUN-PSC153104F SUN-PSC159104F SUN-PSC191104F
   SUN-PSC199104F SUN-PSC219104F SUN-PSC239104F SUN-PSC508104F SUN-PSC538104F SUN-PSC566104F
@@ -193,8 +197,9 @@ function assertClassificationSamples(byCode, catalogByCode) {
       if (JSON.stringify(actual) !== JSON.stringify(expected)) {
         fail('sun_verified_classification', skuCode, `expected=${expected.join('/')}; actual=${actual.join('/')}`)
       }
-      if (item.classificationMethod !== 'verified_sku_rule') {
-        fail('sun_verified_method', skuCode, String(item.classificationMethod))
+      const expectedMethod = SUN_REVIEW_CODES.has(skuCode) ? 'researched_sku_rule' : 'verified_sku_rule'
+      if (item.classificationMethod !== expectedMethod) {
+        fail('sun_verified_method', skuCode, `expected=${expectedMethod}; actual=${item.classificationMethod}`)
       }
       const shouldReview = SUN_REVIEW_CODES.has(skuCode)
       if (item.reviewRequired !== shouldReview) {
@@ -218,10 +223,12 @@ async function main() {
   const families = JSON.parse(raw.families)
   const dictionary = JSON.parse(raw.dictionary)
   const mapping = JSON.parse(raw.mapping)
+  const research = JSON.parse(raw.research)
   const records = mapping.items
 
-  if (!Array.isArray(catalog) || !Array.isArray(families) || !Array.isArray(records)) {
-    throw new Error('catalog, families and mapping.items must be arrays')
+  if (!Array.isArray(catalog) || !Array.isArray(families) || !Array.isArray(records)
+    || !Array.isArray(research.items) || !Array.isArray(research.unresolved)) {
+    throw new Error('catalog, families, mapping.items, and research lists must be arrays')
   }
   const catalogByCode = new Map(catalog.map((item) => [item.code, item]))
 
@@ -269,6 +276,43 @@ async function main() {
   const seriesIndex = explicitSeriesIndex(families)
   const familyIds = new Set(families.map((family) => family.id))
   const byCode = new Map(records.map((item) => [item.skuCode, item]))
+  const researchCodes = [...research.items, ...research.unresolved].map((item) => item.skuCode)
+  for (const skuCode of duplicates(researchCodes)) fail('research_unique_sku', skuCode, 'duplicate research row')
+  assertCount('research_target_rows', researchCodes.length, research.coverage?.targetReviewItems)
+  assertCount('research_classified_rows', research.items.length, research.coverage?.classified)
+  assertCount('research_unresolved_rows', research.unresolved.length, research.coverage?.unresolved)
+
+  for (const researched of research.items) {
+    const mapped = byCode.get(researched.skuCode)
+    if (!mapped) {
+      fail('research_mapping_exists', researched.skuCode, 'mapping row missing')
+      continue
+    }
+    const actual = [mapped.taxonomy?.businessCategory, mapped.taxonomy?.functionCategory, mapped.facets?.productKind]
+    const expected = [researched.businessCategory, researched.functionCategory, researched.productKind]
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      fail('research_mapping_exact', researched.skuCode, `expected=${expected.join('/')}; actual=${actual.join('/')}`)
+    }
+    if (mapped.classificationMethod !== 'researched_sku_rule') {
+      fail('research_mapping_method', researched.skuCode, String(mapped.classificationMethod))
+    }
+    if (mapped.verification?.evidence !== researched.evidence || mapped.verification?.confidence !== researched.confidence) {
+      fail('research_verification_contract', researched.skuCode, 'evidence or confidence mismatch')
+    }
+  }
+  for (const unresolved of research.unresolved) {
+    const mapped = byCode.get(unresolved.skuCode)
+    if (!mapped) {
+      fail('research_unresolved_mapping_exists', unresolved.skuCode, 'mapping row missing')
+      continue
+    }
+    if (mapped.classificationMethod !== 'researched_unresolved' || !mapped.reviewRequired) {
+      fail('research_unresolved_contract', unresolved.skuCode, `method=${mapped.classificationMethod}; review=${mapped.reviewRequired}`)
+    }
+    if (mapped.verification?.evidence !== unresolved.reason || mapped.verification?.confidence !== 'unresolved') {
+      fail('research_unresolved_verification', unresolved.skuCode, 'reason or confidence mismatch')
+    }
+  }
 
   for (const item of records) {
     const skuCode = item.skuCode
@@ -330,6 +374,7 @@ async function main() {
     reviewRequired: records.filter((item) => item.reviewRequired).length,
     unresolved: records.filter((item) => item.classificationStatus === 'unresolved').length,
     officialSkuRules: records.filter((item) => item.classificationMethod === 'official_sku_rule').length,
+    researchedSkuRules: records.filter((item) => item.classificationMethod === 'researched_sku_rule').length,
     exactSeries: records.filter((item) => item.taxonomy?.seriesId).length,
     failures: failures.length,
   }
