@@ -76,12 +76,50 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{children}</h3>
 }
 
-export function SeriesSkuDetails({
+export function SeriesSkuSummary({
   item,
   onEdit,
 }: {
   item: SeriesCatalogItem | null
   onEdit: (item: SeriesCatalogItem) => void
+}) {
+  if (!item) {
+    return (
+      <div className="card-soft flex min-h-48 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+        <span className="text-3xl" aria-hidden="true">☝️</span>
+        <p className="text-sm font-semibold text-stone-700">先選擇一個規格</p>
+        <p className="max-w-sm text-xs leading-relaxed text-stone-400">選定後會在這裡顯示貨號、品名與產品分類。</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card-soft flex items-start gap-3 p-3 sm:p-4" data-testid="series-sku-summary">
+      <SeriesArtwork category={item.category} mainCategory={item.mainCategory} label={item.name} />
+      <div className="min-w-0 flex-1 py-1">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">目前規格</p>
+        <h3 className="mt-1 text-base font-bold leading-snug text-stone-800">{item.name}</h3>
+        <p className="mt-1 truncate font-mono text-xs text-stone-400">{item.code}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="chip">{item.category}</span>
+          <span className="chip">{item.productType}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onEdit(item)}
+        className="hidden min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95 sm:flex"
+      >
+        編輯資料
+      </button>
+    </div>
+  )
+}
+
+export function SeriesSkuDetails({
+  item,
+}: {
+  item: SeriesCatalogItem | null
 }) {
   const [rich, setRich] = useState<RichData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -119,37 +157,11 @@ export function SeriesSkuDetails({
     : []
 
   if (!item) {
-    return (
-      <div className="card-soft flex min-h-48 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
-        <span className="text-3xl" aria-hidden="true">☝️</span>
-        <p className="text-sm font-semibold text-stone-700">先選擇一個規格</p>
-        <p className="max-w-sm text-xs leading-relaxed text-stone-400">選定後會在這裡顯示照片、售價、技術規格與對應技術文件。</p>
-      </div>
-    )
+    return null
   }
 
   return (
     <div className="space-y-3" data-testid="series-sku-details">
-      <div className="card-soft flex items-start gap-3 p-3 sm:p-4">
-        <SeriesArtwork category={item.category} mainCategory={item.mainCategory} label={item.name} />
-        <div className="min-w-0 flex-1 py-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">目前規格</p>
-          <h3 className="mt-1 text-base font-bold leading-snug text-stone-800">{item.name}</h3>
-          <p className="mt-1 truncate font-mono text-xs text-stone-400">{item.code}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="chip">{item.category}</span>
-            <span className="chip">{item.productType}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => onEdit(item)}
-          className="hidden min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95 sm:flex"
-        >
-          編輯資料
-        </button>
-      </div>
-
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="h-52 animate-pulse rounded-3xl bg-stone-100" />

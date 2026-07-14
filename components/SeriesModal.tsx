@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import type { ProductFamily } from '@/components/FamilySpecPicker'
-import { SeriesSkuDetails, type SeriesCatalogItem } from '@/components/product-series/SeriesSkuDetails'
+import { SeriesSkuDetails, SeriesSkuSummary, type SeriesCatalogItem } from '@/components/product-series/SeriesSkuDetails'
 import { explicitFamilySkuCodes } from '@/lib/product-family-members'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -388,19 +388,6 @@ export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalPr
 
         <div className="overflow-y-auto overscroll-contain px-3 pb-5 sm:px-6 sm:pb-6">
           <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-5">
-            <div className="px-4 pt-4 sm:px-5">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">系列介紹</p>
-            </div>
-            <SeriesInfoSection
-              family={family}
-              seriesData={seriesData}
-              seriesLoading={seriesLoading}
-              isAdmin={isAdmin}
-              onSeries={setSeriesData}
-            />
-          </section>
-
-          <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-4">
             <div className="px-4 pb-1 pt-4 sm:px-5">
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">選擇規格</p>
               <p className="mt-1 text-xs leading-relaxed text-stone-500">同系列規格集中於此；選定後，下方資料會切換成該貨號的照片、售價、規格與文件。</p>
@@ -419,7 +406,24 @@ export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalPr
           </section>
 
           <section className="mt-3 sm:mt-4">
-            <SeriesSkuDetails item={selectedItem} onEdit={(item) => onEdit(item as CatalogItem)} />
+            <SeriesSkuSummary item={selectedItem} onEdit={(item) => onEdit(item as CatalogItem)} />
+          </section>
+
+          <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-4">
+            <div className="px-4 pt-4 sm:px-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">產品介紹</p>
+            </div>
+            <SeriesInfoSection
+              family={family}
+              seriesData={seriesData}
+              seriesLoading={seriesLoading}
+              isAdmin={isAdmin}
+              onSeries={setSeriesData}
+            />
+          </section>
+
+          <section className="mt-3 sm:mt-4">
+            <SeriesSkuDetails item={selectedItem} />
           </section>
         </div>
         {selectedItem && (
