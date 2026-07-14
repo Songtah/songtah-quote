@@ -7,7 +7,6 @@ import { SeriesModal } from '@/components/SeriesModal'
 import { MainCategoryArtwork, SeriesArtwork } from '@/components/product-series/SeriesArtwork'
 import { buildExactFamilyIndex, explicitFamilySkuCodes } from '@/lib/product-family-members'
 import { useBodyScrollLock, useDialogFocus } from '@/lib/use-dialog-focus'
-import { useSession } from 'next-auth/react'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -2004,182 +2003,9 @@ function FamilyCard({
   )
 }
 
-// ── Featured Strip ────────────────────────────────────────────
-
-function FeaturedStrip({
-  featuredIds,
-  families,
-  onSelectFamily,
-}: {
-  featuredIds: string[]
-  families: ProductFamily[]
-  onSelectFamily: (f: ProductFamily) => void
-}) {
-  const featuredFamilies = featuredIds
-    .map((id) => families.find((f) => f.id === id))
-    .filter(Boolean) as ProductFamily[]
-
-  if (featuredFamilies.length === 0) return null
-
-  return (
-    <div className="mb-6">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-stone-400">常用系列</p>
-      <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {featuredFamilies.map((f) => (
-          <button type="button"
-            key={f.id}
-            onClick={() => onSelectFamily(f)}
-            className="card-soft card-soft-hover flex min-h-20 min-w-[140px] max-w-[180px] shrink-0 flex-col items-start gap-1 rounded-2xl px-4 py-3 text-left transition-all active:scale-95"
-          >
-            <span className="text-sm font-semibold text-stone-900 leading-tight line-clamp-2">{f.seriesName}</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {f.brand && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">{f.brand}</span>}
-              {f.productType && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-100">{f.productType}</span>}
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Featured Manager (admin only) ────────────────────────────
-
-function FeaturedManager({
-  families,
-  initialIds,
-  onSaved,
-}: {
-  families: ProductFamily[]
-  initialIds: string[]
-  onSaved: (ids: string[]) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<Set<string>>(new Set(initialIds))
-  const [search, setSearch] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [saveError, setSaveError] = useState('')
-  const reduceMotion = useReducedMotion()
-
-  // Sync initialIds when they change externally
-  useEffect(() => { setSelected(new Set(initialIds)) }, [initialIds])
-
-  const filtered = families.filter(
-    (f) =>
-      !search ||
-      f.seriesName.toLowerCase().includes(search.toLowerCase()) ||
-      f.brand.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-    setSaved(false)
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    setSaveError('')
-    try {
-      const ids = Array.from(selected)
-      const response = await fetch('/api/products/featured-families', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ familyIds: ids }),
-      })
-      if (!response.ok) throw new Error(`常用系列儲存失敗（HTTP ${response.status}）`)
-      setSaved(true)
-      onSaved(ids)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : '常用系列暫時無法儲存')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="mb-4">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-controls="featured-family-manager"
-        className="flex min-h-11 items-center gap-1.5 rounded-full px-2 text-xs text-stone-400 transition-all hover:bg-brand-50 hover:text-brand-600 active:scale-95"
-      >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        管理常用系列
-        {open ? ' ▴' : ' ▾'}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
-            className="overflow-hidden"
-          >
-            <div id="featured-family-manager" className="card-soft mt-3 space-y-3 p-4">
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜尋系列名稱…"
-                aria-label="搜尋常用系列"
-                className="input-soft min-h-11 w-full text-sm"
-              />
-              <div className="max-h-60 overflow-y-auto space-y-1">
-                {filtered.map((f) => (
-                  <label key={f.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-brand-50/50">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(f.id)}
-                      onChange={() => toggle(f.id)}
-                      className="rounded border-stone-300 text-brand-500 focus:ring-brand-400"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm text-stone-800">{f.seriesName}</span>
-                      <span className="text-xs text-stone-400 ml-2">{f.brand}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {saveError && <p className="rounded-2xl bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{saveError}</p>}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-stone-400" aria-live="polite">已選 {selected.size} 個系列</span>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="min-h-11 rounded-full bg-brand-500 px-4 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
-                >
-                  {saving ? '儲存中…' : saved ? '✓ 已儲存' : '儲存設定'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
 // ── Main Component ────────────────────────────────────────────
 
 export function CatalogManagerContent({ brands, categories, productTypes, taxonomy }: Props) {
-  const { data: session } = useSession()
-  const sessionUser = session?.user as any
-  const isAdmin = sessionUser?.role === 'admin' || sessionUser?.accountType === '行政'
   const reduceMotion = useReducedMotion()
 
   const [families,     setFamilies]     = useState<ProductFamily[]>([])
@@ -2196,7 +2022,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   const [filtersOpen,    setFiltersOpen]    = useState(false)
 
   const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
-  const [featuredIds,  setFeaturedIds]  = useState<string[]>([])
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
 
   // Cache: skuCode → price. Populated from catalog and refreshed after edits.
@@ -2235,11 +2060,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
       })
       .catch((error) => setLoadError(error instanceof Error ? error.message : '產品目錄暫時無法讀取'))
       .finally(() => setLoading(false))
-
-    fetch('/api/products/featured-families')
-      .then((r) => r.json())
-      .then((data) => { if (data.familyIds) setFeaturedIds(data.familyIds) })
-      .catch(() => {})
   }, [loadAttempt])
 
   // Debounced 關鍵字(全目錄已在記憶體,搜尋與篩選一律 client-side,含停售品)
@@ -2353,32 +2173,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
   return (
     <>
-      {/* Featured strip (or admin onboarding card when empty) */}
-      {!isSearching && !loadError && (
-        featuredIds.length > 0
-          ? <FeaturedStrip featuredIds={featuredIds} families={families} onSelectFamily={setModalFamily} />
-          : isAdmin && !loading && (
-            <div className="card-soft mb-5 flex items-center gap-3 px-4 py-3 text-left">
-              <span className="text-2xl shrink-0">⭐</span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-stone-600">尚未設定常用系列</p>
-                <p className="text-xs text-stone-400 mt-0.5">
-                  點擊下方「管理常用系列」，將常用產品系列釘選在頂部快速存取
-                </p>
-              </div>
-            </div>
-          )
-      )}
-
-      {/* Admin: manage featured series */}
-      {isAdmin && !isSearching && !loadError && (
-        <FeaturedManager
-          families={families}
-          initialIds={featuredIds}
-          onSaved={setFeaturedIds}
-        />
-      )}
-
       {/* Search + Filters */}
       <div className="mb-6">
         {/* Row: search + filter toggle */}
