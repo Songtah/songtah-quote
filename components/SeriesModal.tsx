@@ -1,20 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
-import { YMHToothGridPanel, buildFromPattern } from '@/components/FamilySpecPicker'
+import { FamilySpecPanel, YMHToothGridPanel, buildFromPattern } from '@/components/FamilySpecPicker'
 import type { ProductFamily } from '@/components/FamilySpecPicker'
+import { SeriesSkuDetails, type SeriesCatalogItem } from '@/components/product-series/SeriesSkuDetails'
+import { explicitFamilySkuCodes } from '@/lib/product-family-members'
 
 // ── Types ─────────────────────────────────────────────────────
 
-interface CatalogItem {
-  code: string
-  name: string
-  brand: string
-  productType: string
-  category: string
-}
+interface CatalogItem extends SeriesCatalogItem {}
 
 interface SeriesData {
   id: string
@@ -31,7 +27,6 @@ interface SeriesData {
 interface SeriesModalProps {
   family: ProductFamily
   allItems: CatalogItem[]
-  onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
   onClose: () => void
 }
@@ -94,22 +89,21 @@ function SeriesInfoSection({
     }
   }
 
-  const inputCls =
-    'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-y'
+  const inputCls = 'input-soft min-h-11 w-full resize-y text-sm'
 
   if (seriesLoading) {
     return (
-      <div className="px-5 py-4 border-b border-gray-100 space-y-2 animate-pulse">
-        <div className="h-3 bg-gray-100 rounded w-full" />
-        <div className="h-3 bg-gray-100 rounded w-3/4" />
+      <div className="space-y-2 px-4 py-4 animate-pulse sm:px-5">
+        <div className="h-3 w-full rounded-full bg-stone-100" />
+        <div className="h-3 w-3/4 rounded-full bg-stone-100" />
       </div>
     )
   }
 
   if (editing) {
     return (
-      <div className="px-5 py-4 border-b border-gray-100 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">系列介紹編輯</p>
+      <div className="space-y-3 px-4 py-4 sm:px-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">系列介紹編輯</p>
 
         <div>
           <label className="text-xs text-gray-500 mb-1 block">介紹說明</label>
@@ -131,7 +125,7 @@ function SeriesInfoSection({
             className={inputCls}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <label className="text-xs text-gray-500 mb-1 block">技術參數</label>
             <textarea
@@ -153,17 +147,17 @@ function SeriesInfoSection({
             />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-2 rounded-xl text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50"
+            className="min-h-12 flex-1 rounded-full bg-brand-500 px-5 py-2 text-sm font-medium text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
           >
             {saving ? '儲存中…' : '儲存'}
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
+            className="min-h-12 rounded-full border border-stone-200 px-5 py-2 text-sm text-stone-600 transition-all hover:bg-stone-50 active:scale-95"
           >
             取消
           </button>
@@ -176,26 +170,26 @@ function SeriesInfoSection({
   const hasContent = seriesData?.description || seriesData?.imageUrl || seriesData?.technicalSpecs || seriesData?.applicableScope
 
   return (
-    <div className="px-5 py-4 border-b border-gray-100">
+    <div className="px-4 py-4 sm:px-5">
       {hasContent ? (
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           {seriesData?.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={seriesData.imageUrl}
               alt={family.seriesName}
-              className="w-20 h-20 object-cover rounded-xl shrink-0 border border-gray-100 bg-gray-50"
+              className="h-44 w-full shrink-0 rounded-2xl bg-stone-50 object-contain ring-1 ring-stone-900/[0.05] sm:h-24 sm:w-24"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           )}
           <div className="flex-1 min-w-0">
             {seriesData?.description && (
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-stone-600">
                 {seriesData.description}
               </p>
             )}
             {(seriesData?.technicalSpecs || seriesData?.applicableScope) && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-400">
                 {seriesData?.applicableScope && (
                   <span>適用：{seriesData.applicableScope}</span>
                 )}
@@ -223,7 +217,7 @@ function SeriesInfoSection({
       {isAdmin && (
         <button
           onClick={() => setEditing(true)}
-          className="mt-3 text-xs font-medium px-3 py-1.5 rounded-lg border transition
+          className="mt-3 min-h-11 rounded-full border px-4 py-2 text-xs font-medium transition-all active:scale-95
             bg-brand-50 border-brand-200 text-brand-600 hover:bg-brand-100 hover:border-brand-400"
         >
           {hasContent ? '✏ 編輯系列介紹' : '＋ 新增系列介紹'}
@@ -401,35 +395,15 @@ function SpecDrivenContent({
 // ── Case C: Member list content ────────────────────────────────
 
 function MemberListContent({
-  family,
-  onView,
+  members,
+  selectedCode,
+  onSelect,
 }: {
-  family: ProductFamily
-  onView: (item: CatalogItem) => void
+  members: CatalogItem[]
+  selectedCode?: string
+  onSelect: (item: CatalogItem) => void
 }) {
-  const [members, setMembers] = useState<CatalogItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [memberSearch, setMemberSearch] = useState('')
-
-  useEffect(() => {
-    fetch(`/api/products/families/${encodeURIComponent(family.id)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.members)) {
-          setMembers(
-            data.members.map((m: any) => ({
-              code: m.code,
-              name: m.name,
-              brand: m.brand ?? family.brand,
-              productType: m.productType ?? family.productType,
-              category: m.category ?? family.category,
-            }))
-          )
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [family])
 
   const filtered = memberSearch
     ? members.filter(
@@ -440,30 +414,27 @@ function MemberListContent({
     : members
 
   return (
-    <div className="px-5 py-4 space-y-3">
+    <div className="space-y-3">
       <input
         type="search"
         value={memberSearch}
         onChange={(e) => setMemberSearch(e.target.value)}
         placeholder="搜尋貨號或品名…"
-        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        className="input-soft min-h-11 w-full text-sm"
       />
-      <div className="max-h-80 overflow-y-auto space-y-0.5">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-10 rounded-lg bg-gray-100 animate-pulse" />
-          ))
-        ) : filtered.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">找不到品項</p>
+      <div className="max-h-72 space-y-1 overflow-y-auto overscroll-contain pr-1">
+        {filtered.length === 0 ? (
+          <p className="py-8 text-center text-sm text-stone-400">找不到品項</p>
         ) : (
           filtered.map((m) => (
             <button
               key={m.code}
-              onClick={() => onView(m)}
-              className="w-full flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 text-left transition-colors"
+              onClick={() => onSelect(m)}
+              className={`flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-all active:scale-[0.99] ${selectedCode === m.code ? 'bg-brand-50 ring-1 ring-brand-200' : 'hover:bg-brand-50/50'}`}
             >
-              <span className="font-mono text-[11px] text-gray-400 w-28 shrink-0">{m.code}</span>
-              <span className="text-sm text-gray-700 flex-1 truncate">{m.name}</span>
+              <span className="w-24 shrink-0 truncate font-mono text-[11px] text-stone-400 sm:w-32">{m.code}</span>
+              <span className="flex-1 truncate text-sm font-medium text-stone-700">{m.name}</span>
+              <span className="text-brand-600" aria-hidden="true">›</span>
             </button>
           ))
         )}
@@ -474,7 +445,7 @@ function MemberListContent({
 
 // ── Main SeriesModal ──────────────────────────────────────────
 
-export function SeriesModal({ family, allItems, onView, onEdit, onClose }: SeriesModalProps) {
+export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalProps) {
   const { data: session } = useSession()
   const s = session as any
   const isAdmin =
@@ -484,6 +455,23 @@ export function SeriesModal({ family, allItems, onView, onEdit, onClose }: Serie
 
   const [seriesData, setSeriesData] = useState<SeriesData | null>(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
+  const memberItems = useMemo(() => {
+    const itemByCode = new Map(allItems.map((item) => [item.code, item]))
+    return explicitFamilySkuCodes(family)
+      .map((code) => itemByCode.get(code))
+      .filter((item): item is CatalogItem => Boolean(item))
+  }, [allItems, family])
+  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
+
+  useEffect(() => {
+    setSelectedItem((current) => {
+      if (current) {
+        const refreshed = memberItems.find((item) => item.code === current.code)
+        if (refreshed) return refreshed
+      }
+      return memberItems[0] ?? null
+    })
+  }, [family.id, memberItems])
 
   // Fetch series-level data from new DB
   useEffect(() => {
@@ -510,44 +498,51 @@ export function SeriesModal({ family, allItems, onView, onEdit, onClose }: Serie
   }, [onClose])
 
   const isYMH = family.uiVariant === 'ymh-tooth-grid'
-  const hasSpecDriven = !isYMH && (family.skuMap || family.skuPattern) && family.specs.length > 0
-  const isMemberList = !isYMH && !hasSpecDriven
+  // skuPattern 無法表達缺號／例外 SKU；只有精確 skuMap 才啟用規格組合器。
+  const hasSpecDriven = !isYMH && Boolean(family.skuMap) && family.specs.length > 0
+  const representative = memberItems[0]
+  const selectSku = (skuCode: string) => {
+    const item = memberItems.find((candidate) => candidate.code === skuCode)
+    if (item) setSelectedItem(item)
+  }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      role="presentation"
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.98 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-[92vh] sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="series-modal-title"
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+        <div className="glass-bar z-20 flex items-start justify-between border-b border-stone-900/[0.06] px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex-1 min-w-0 pr-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-semibold text-gray-900">{family.seriesName}</h2>
+              <h2 id="series-modal-title" className="text-lg font-bold text-stone-800 sm:text-xl">{family.seriesName}</h2>
               {family.brand && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                <span className="chip">
                   {family.brand}
                 </span>
               )}
-              {family.productType && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600">
-                  {family.productType}
+              {(representative?.productType || family.productType) && (
+                <span className="chip-active">
+                  {representative?.productType || family.productType}
                 </span>
               )}
             </div>
-            {family.category && (
-              <p className="text-xs text-gray-400 mt-0.5">{family.category}</p>
-            )}
+            <p className="mt-1 text-xs text-stone-400">{representative?.category || family.category} · {memberItems.length} 個明確對應規格</p>
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95"
             aria-label="關閉"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -556,36 +551,52 @@ export function SeriesModal({ family, allItems, onView, onEdit, onClose }: Serie
           </button>
         </div>
 
-        {/* Series info (shared across all modes) */}
-        <SeriesInfoSection
-          family={family}
-          seriesData={seriesData}
-          seriesLoading={seriesLoading}
-          isAdmin={isAdmin}
-          onSeries={setSeriesData}
-        />
-
-        {/* Product selection content */}
-        {isYMH ? (
-          <div className="px-5 py-4">
-            <YMHToothGridPanel
+        <div className="overflow-y-auto overscroll-contain px-3 pb-5 sm:px-6 sm:pb-6">
+          <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-5">
+            <div className="px-4 pt-4 sm:px-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">系列介紹</p>
+            </div>
+            <SeriesInfoSection
               family={family}
-              onAdd={(skuCode) => {
-                const item = allItems.find((it) => it.code === skuCode)
-                if (item) onView(item)
-              }}
-              actionLabel="查看詳情"
+              seriesData={seriesData}
+              seriesLoading={seriesLoading}
+              isAdmin={isAdmin}
+              onSeries={setSeriesData}
             />
+          </section>
+
+          <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-4">
+            <div className="px-4 pb-1 pt-4 sm:px-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">選擇規格</p>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500">同系列規格集中於此；選定後，下方資料會切換成該貨號的照片、售價、規格與文件。</p>
+            </div>
+            {isYMH ? (
+              <div className="px-1 pb-3 sm:px-2">
+                <YMHToothGridPanel family={family} onAdd={selectSku} actionLabel="查看此規格" />
+              </div>
+            ) : hasSpecDriven ? (
+              <FamilySpecPanel family={family} onAdd={selectSku} actionLabel="查看此規格" />
+            ) : (
+              <div className="px-4 pb-4 pt-3 sm:px-5">
+                <MemberListContent members={memberItems} selectedCode={selectedItem?.code} onSelect={setSelectedItem} />
+              </div>
+            )}
+          </section>
+
+          <section className="mt-3 sm:mt-4">
+            <SeriesSkuDetails item={selectedItem} onEdit={(item) => onEdit(item as CatalogItem)} />
+          </section>
+        </div>
+        {selectedItem && (
+          <div className="glass-bar z-20 border-t border-stone-900/[0.06] p-3 sm:hidden">
+            <button
+              type="button"
+              onClick={() => onEdit(selectedItem)}
+              className="flex min-h-12 w-full items-center justify-center rounded-full bg-brand-500 px-5 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all active:scale-[0.98]"
+            >
+              編輯此規格的照片、規格與文件
+            </button>
           </div>
-        ) : hasSpecDriven ? (
-          <SpecDrivenContent
-            family={family}
-            allItems={allItems}
-            onView={onView}
-            onEdit={onEdit}
-          />
-        ) : (
-          <MemberListContent family={family} onView={onView} />
         )}
       </motion.div>
     </div>

@@ -16,8 +16,8 @@ const PATHS = {
 }
 
 const EXPECTED = {
-  catalogRawHash: 'f8131d80b4df6d9ee2d2f7505a476a421997024cfbc20857edfe91f9a4770463',
-  familiesRawHash: 'ab73a40d73bc77ec87b7a305c445e95e8216e8b336a15467b93965dda89fa376',
+  catalogRawHash: 'a814589dec6fe24da78cc39ccdc821bf8083b5ea91e642873385139d0977b6b8',
+  familiesRawHash: '7320f26fb7acf4b2b124102bdff21371107c1ea59162b0c70c6bf2bf9842fe4f',
   catalogBusinessHash: 'bfbbaed426269528850294b9f557607ca6dd3cb6e8f9f40923c03369d579d8d8',
   familyIdsHash: '33f809e5b41c43f61338bb173220c9351c93e247c6009cac438ed881d1010d96',
   dictionaryContractHash: '096f9e06a12d356698fca61220bf128973f15c50e2d4a6d6c79844d6872fc87f',
