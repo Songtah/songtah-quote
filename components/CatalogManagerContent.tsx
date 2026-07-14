@@ -2068,7 +2068,9 @@ function CategoryBrowserModal({
         aria-modal="true"
         aria-labelledby="category-browser-title"
         tabIndex={-1}
-        initial={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 24, scale: reduceMotion ? 1 : 0.98 }}
+        // 不做進場動畫(initial=false):大分類(千項)開窗時的重渲染會把 rAF 動畫凍在半途,
+        // 使用者會看到半透明疊影的彈窗;直接以完全不透明呈現,退場動畫保留。
+        initial={false}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 24, scale: reduceMotion ? 1 : 0.98 }}
         transition={{ duration: reduceMotion ? 0 : 0.2 }}
@@ -2172,6 +2174,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
 
   const [search, setSearch] = useState('')
   const [categorySelection, setCategorySelection] = useState<CategorySelection | null>(null)
+  // 產品系列分組收合(依主分類):113 個系列全平鋪會把瀏覽頁撐到近 2 萬 px,
+  // 且首載重渲染會凍結頁面進場動畫;預設收合、展開才渲染該組卡片。
+  const [openFamilyGroups, setOpenFamilyGroups] = useState<Set<string>>(new Set())
 
   const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
@@ -2249,6 +2254,36 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       (p.brand || '').toLowerCase().includes(debouncedQ) ||
       (p.seriesName || '').toLowerCase().includes(debouncedQ))
   }, [isSearching, allItems, debouncedQ])
+
+  // 系列依主分類分組(以第一個成員 SKU 的主分類為準),照總表主分類順序排。
+  // 成員判定三層:coveredSkuCodes(新群組)→ skuMap 值(pattern 型舊系列,seriesCode 非真實前綴)
+  // → seriesCode 前綴。孤兒系列(目錄查無成員)落「其他」。
+  const familyGroups = useMemo(() => {
+    const byCode = new Map(allItems.map((p) => [p.code, p]))
+    const byMain = new Map<string, ProductFamily[]>()
+    for (const f of families) {
+      const member =
+        f.coveredSkuCodes?.map((c) => byCode.get(c)).find(Boolean) ??
+        Object.values(f.skuMap ?? {}).map((c) => byCode.get(c)).find(Boolean) ??
+        allItems.find((p) => p.code.startsWith(f.seriesCode))
+      const main = member?.mainCategory || '其他'
+      const list = byMain.get(main) ?? []
+      list.push(f)
+      byMain.set(main, list)
+    }
+    const order = new Map(taxonomy.mains.map((m, i) => [m.name, i]))
+    return Array.from(byMain.entries())
+      .map(([main, fams]) => ({ main, families: fams }))
+      .sort((a, b) => (order.get(a.main) ?? 999) - (order.get(b.main) ?? 999))
+  }, [families, allItems, taxonomy])
+
+  const toggleFamilyGroup = (main: string) => {
+    setOpenFamilyGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(main)) next.delete(main); else next.add(main)
+      return next
+    })
+  }
 
   // After a save, update caches
   const handleSaved = useCallback((skuCode: string, price: number | null) => {
@@ -2460,28 +2495,53 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             </div>
           </div>
 
-          {/* Family browse */}
+          {/* Family browse:依主分類分組收合(避免 113 張卡全平鋪) */}
           <div>
             <div className="mb-3 flex items-baseline gap-2">
               <h3 className="text-sm font-bold text-stone-700">🗂 產品系列</h3>
-              <span className="text-[11px] text-stone-400">{families.length} 個系列</span>
+              <span className="text-[11px] text-stone-400">{families.length} 個系列・依主分類分組,點開瀏覽</span>
             </div>
-            <div className="space-y-3">
-              {families.length === 0 && (
-                <p className="text-center py-12 text-sm text-stone-400">目前沒有產品系列</p>
-              )}
-              {families.map((family) => (
-                <FamilyCard
-                  key={family.id}
-                  family={family}
-                  allItems={allItems}
-                  priceCache={priceCache}
-                  onEdit={setEditingItem}
-                  onOpenModal={() => setModalFamily(family)}
-                  canManageProducts={canManageProducts}
-                />
-              ))}
-            </div>
+            {families.length === 0 ? (
+              <p className="text-center py-12 text-sm text-stone-400">目前沒有產品系列</p>
+            ) : (
+              <div className="space-y-3">
+                {familyGroups.map(({ main, families: groupFamilies }) => {
+                  const open = openFamilyGroups.has(main)
+                  return (
+                    <section key={main} className="card-soft overflow-hidden p-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleFamilyGroup(main)}
+                        className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-all hover:bg-brand-50/40 active:scale-[0.99] sm:px-5"
+                        aria-expanded={open}
+                      >
+                        <span className={`text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-stone-700">{main}</span>
+                          <span className="mt-0.5 block text-xs text-stone-400">{groupFamilies.length} 個系列</span>
+                        </span>
+                        <span className="text-xs font-semibold text-brand-600">{open ? '收合' : '瀏覽'}</span>
+                      </button>
+                      {open && (
+                        <div className="space-y-3 border-t border-stone-900/[0.06] bg-stone-50/50 p-3 sm:p-4">
+                          {groupFamilies.map((family) => (
+                            <FamilyCard
+                              key={family.id}
+                              family={family}
+                              allItems={allItems}
+                              priceCache={priceCache}
+                              onEdit={setEditingItem}
+                              onOpenModal={() => setModalFamily(family)}
+                              canManageProducts={canManageProducts}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Standalone products stay collapsed by default to keep 3,000+ rows manageable. */}
