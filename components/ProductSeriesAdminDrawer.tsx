@@ -38,14 +38,20 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(families[0]?.id ?? '')
   const [memberQuery, setMemberQuery] = useState('')
+  const [selectedSkuCodes, setSelectedSkuCodes] = useState<Set<string>>(new Set())
   const [newSeries, setNewSeries] = useState({ seriesCode: '', seriesName: '', brand: '' })
   const [renaming, setRenaming] = useState('')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const dialogRef = useRef<HTMLDivElement>(null)
   const reduceMotion = useReducedMotion()
 
-  useDialogFocus(dialogRef, onClose)
+  function requestClose() {
+    if (!busy) onClose()
+  }
+
+  useDialogFocus(dialogRef, requestClose)
   useBodyScrollLock()
 
   const filteredFamilies = useMemo(() => {
@@ -74,14 +80,38 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
     () => allItems.filter((item) => memberCodes.has(item.code)),
     [allItems, memberCodes],
   )
-  const candidates = useMemo(() => {
+  const matchingCandidates = useMemo(() => {
     const keyword = memberQuery.trim().toLowerCase()
     if (!keyword) return []
     return allItems
       .filter((item) => !memberCodes.has(item.code))
       .filter((item) => `${item.code} ${item.name} ${item.brand}`.toLowerCase().includes(keyword))
-      .slice(0, 20)
   }, [allItems, memberCodes, memberQuery])
+  const candidates = matchingCandidates.slice(0, 100)
+
+  function toggleCandidate(skuCode: string) {
+    setSelectedSkuCodes((current) => {
+      const next = new Set(current)
+      if (next.has(skuCode)) next.delete(skuCode)
+      else if (next.size < 100) next.add(skuCode)
+      else setError('每次最多選擇 100 個品項')
+      return next
+    })
+    setNotice('')
+  }
+
+  function selectVisibleCandidates() {
+    setSelectedSkuCodes((current) => {
+      const next = new Set(current)
+      for (const item of candidates) {
+        if (next.size >= 100) break
+        next.add(item.code)
+      }
+      return next
+    })
+    setError('')
+    setNotice('')
+  }
 
   async function createSeries() {
     setBusy('create')
@@ -96,6 +126,8 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
       const created = await response.json()
       await onChanged()
       setSelectedId(`custom:${created.seriesCode}`)
+      setSelectedSkuCodes(new Set())
+      setMemberQuery('')
       setNewSeries({ seriesCode: '', seriesName: '', brand: '' })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '建立系列失敗')
@@ -149,9 +181,62 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
     }
   }
 
+  async function bulkAssignSkus() {
+    if (!selected || selectedSkuCodes.size === 0) return
+    const skuCodes = Array.from(selectedSkuCodes)
+    const movingCount = skuCodes.filter((skuCode) => {
+      const owner = owningFamilyBySku.get(skuCode)
+      return owner && owner.id !== selected.id
+    }).length
+    const message = movingCount > 0
+      ? `將 ${skuCodes.length} 個品項加入「${selected.seriesName}」，其中 ${movingCount} 個會從其他系列移入。確定繼續嗎？`
+      : `確定將所選 ${skuCodes.length} 個品項加入「${selected.seriesName}」嗎？`
+    if (!window.confirm(message)) return
+
+    setBusy('bulk')
+    setError('')
+    setNotice('')
+    try {
+      const response = await fetch(`/api/products/families/${encodeURIComponent(selected.id)}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skuCodes }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok && response.status !== 207) {
+        throw new Error(data?.error || `批次加入失敗（HTTP ${response.status}）`)
+      }
+      const succeeded: string[] = Array.isArray(data?.succeeded) ? data.succeeded : []
+      setSelectedSkuCodes((current) => {
+        const next = new Set(current)
+        succeeded.forEach((skuCode) => next.delete(skuCode))
+        return next
+      })
+      try {
+        await onChanged()
+      } catch {
+        setError(`已成功加入 ${succeeded.length} 項，但系列清單重新整理失敗；請重新載入頁面確認。`)
+        return
+      }
+      if (Array.isArray(data?.failed) && data.failed.length > 0) {
+        const failedDetails = data.failed
+          .map((item: { skuCode: string; error?: string }) => `${item.skuCode}${item.error ? `（${item.error}）` : ''}`)
+          .join('、')
+        setError(`成功加入 ${succeeded.length} 項；${data.failed.length} 項失敗：${failedDetails}`)
+      } else {
+        setNotice(`已將 ${succeeded.length} 個品項加入「${selected.seriesName}」`)
+        setMemberQuery('')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '批次加入失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <motion.div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex" onClick={(event) => { if (event.target === event.currentTarget) requestClose() }}>
+      <motion.div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={requestClose} />
       <motion.div
         ref={dialogRef}
         initial={{ x: reduceMotion ? 0 : '100%' }}
@@ -169,11 +254,12 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
             <h2 id="series-admin-title" className="mt-1 text-xl font-bold text-stone-800">系列群組管理</h2>
             <p className="mt-1 text-xs text-stone-500">建立、改名及調整手動歸類；ERP 貨號與品名不會被修改。</p>
           </div>
-          <button type="button" onClick={onClose} data-dialog-initial-focus aria-label="關閉系列管理" className="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 active:scale-95">✕</button>
+          <button type="button" onClick={requestClose} disabled={Boolean(busy)} data-dialog-initial-focus aria-label="關閉系列管理" className="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 active:scale-95 disabled:opacity-40">✕</button>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {error && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</div>}
+          {notice && <div className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">{notice}</div>}
 
           <section className="card-soft p-4 sm:p-5">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">建立新系列</p>
@@ -192,7 +278,7 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
               </div>
               <div className="max-h-80 overflow-y-auto p-2 md:max-h-[56vh]">
                 {filteredFamilies.map((family) => (
-                  <button key={family.id} type="button" aria-pressed={selected?.id === family.id} onClick={() => { setSelectedId(family.id); setRenaming(''); setMemberQuery(''); setError('') }} className={`mb-1 flex min-h-12 w-full items-center rounded-2xl px-3 py-2 text-left transition-all active:scale-[0.99] ${selected?.id === family.id ? 'bg-brand-50 text-brand-800 ring-1 ring-brand-200' : 'text-stone-700 hover:bg-stone-50'}`}>
+                  <button key={family.id} type="button" disabled={Boolean(busy)} aria-pressed={selected?.id === family.id} onClick={() => { setSelectedId(family.id); setRenaming(''); setMemberQuery(''); setSelectedSkuCodes(new Set()); setError(''); setNotice('') }} className={`mb-1 flex min-h-12 w-full items-center rounded-2xl px-3 py-2 text-left transition-all active:scale-[0.99] disabled:opacity-50 ${selected?.id === family.id ? 'bg-brand-50 text-brand-800 ring-1 ring-brand-200' : 'text-stone-700 hover:bg-stone-50'}`}>
                     <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{family.seriesName}</span><span className="block truncate font-mono text-[10px] text-stone-400">{family.seriesCode}</span></span>
                     <span className="ml-2 text-[11px] text-stone-400">{explicitFamilySkuCodes(family).length}</span>
                   </button>
@@ -214,19 +300,38 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
                   </div>
 
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">加入品項</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">批次加入品項</p>
+                      {selectedSkuCodes.size > 0 && <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">已選 {selectedSkuCodes.size} / 100</span>}
+                    </div>
                     <input type="search" className="input-soft mt-2 min-h-11 w-full" value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="輸入貨號或品名…" aria-label="搜尋要加入的品項" />
                     {candidates.length > 0 && (
-                      <div className="mt-2 max-h-56 space-y-1 overflow-y-auto rounded-2xl bg-stone-50 p-2">
+                      <div className="mt-2 rounded-2xl bg-stone-50 p-2">
+                        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 px-2">
+                          <span className="text-xs text-stone-500">找到 {matchingCandidates.length} 項{matchingCandidates.length > 100 ? '，顯示前 100 項' : ''}</span>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={selectVisibleCandidates} disabled={Boolean(busy)} className="min-h-11 rounded-full px-3 text-xs font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50">全選結果</button>
+                            {selectedSkuCodes.size > 0 && <button type="button" onClick={() => setSelectedSkuCodes(new Set())} disabled={Boolean(busy)} className="min-h-11 rounded-full px-3 text-xs text-stone-500 transition-all hover:bg-white active:scale-95 disabled:opacity-50">清除</button>}
+                          </div>
+                        </div>
+                        <div className="max-h-64 space-y-1 overflow-y-auto">
                         {candidates.map((item) => {
                           const previousFamily = owningFamilyBySku.get(item.code)
+                          const checked = selectedSkuCodes.has(item.code)
                           return (
-                            <button key={item.code} type="button" onClick={() => assignSku(item.code, selected.id, previousFamily)} disabled={Boolean(busy)} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white px-3 py-2 text-left transition-all hover:bg-brand-50 active:scale-[0.99] disabled:opacity-50">
-                              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-stone-700">{item.name}</span><span className="font-mono text-[11px] text-stone-400">{item.code}</span>{previousFamily && <span className="mt-0.5 block truncate text-[10px] text-amber-600">目前：{previousFamily.seriesName}</span>}</span><span className="text-xs font-semibold text-brand-600">{previousFamily ? '移入' : '加入'}</span>
-                            </button>
+                            <label key={item.code} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition-all active:scale-[0.99] ${checked ? 'bg-brand-50 ring-1 ring-brand-200' : 'bg-white hover:bg-brand-50/50'} ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleCandidate(item.code)} disabled={Boolean(busy)} className="h-5 w-5 shrink-0 accent-brand-500" />
+                              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-stone-700">{item.name}</span><span className="font-mono text-[11px] text-stone-400">{item.code}</span>{previousFamily && <span className="mt-0.5 block truncate text-[10px] text-amber-600">目前：{previousFamily.seriesName}</span>}</span>
+                            </label>
                           )
                         })}
+                        </div>
                       </div>
+                    )}
+                    {selectedSkuCodes.size > 0 && (
+                      <button type="button" onClick={bulkAssignSkus} disabled={Boolean(busy)} className="mt-3 min-h-12 w-full rounded-full bg-brand-500 px-5 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-[0.98] disabled:opacity-50">
+                        {busy === 'bulk' ? '批次加入中…' : `一次加入所選 ${selectedSkuCodes.size} 項`}
+                      </button>
                     )}
                   </div>
 
