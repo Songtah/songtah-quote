@@ -15,9 +15,13 @@ export interface CatalogProduct {
   code: string        // 貨品碼 / SKU code
   name: string        // 貨品名稱
   brand: string       // 品牌 / 生產商
-  productType: string // 商品類型
-  category: string    // 分類
-  mainCategory?: string
+  productType: string // 商品型態(9 種,見 data/product-taxonomy.json)
+  category: string    // 功能分類(62 種)
+  mainCategory?: string   // 主分類(11 種)
+  mainCategoryId?: string // 主分類英文 slug(官網 URL/程式判斷用)
+  categoryId?: string     // 功能分類英文 slug
+  seriesName?: string     // 總表系列名稱(如「EFC-A 塑鋼前齒」)
+  needsReview?: boolean   // 總表待覆核/未判定旗標
   price?: number      // 售價（由產品價格主檔.xlsx 維護）
   salePrice?: number  // 優惠價
   spec?: string       // 技術規格摘要
@@ -115,6 +119,62 @@ export function getCatalogFilterOptions(): {
     brands:       Array.from(new Set(all.map((p) => p.brand).filter(Boolean))).sort(),
     productTypes: Array.from(new Set(all.map((p) => p.productType).filter(Boolean))).sort(),
     categories:   Array.from(new Set(all.map((p) => p.category).filter(Boolean))).sort(),
+  }
+}
+
+// ── Taxonomy(主分類→功能分類 主樹,源自 data/product-taxonomy.json)────────────
+
+export interface TaxonomyFunc { id: string; name: string; count: number }
+export interface TaxonomyMain { id: string; name: string; count: number; funcs: TaxonomyFunc[] }
+export interface TaxonomyBrowser {
+  version: string
+  mains: TaxonomyMain[]                      // 11 主分類(字典順序),含各自完整功能分類與 SKU 數
+  productForms: { name: string; count: number }[]  // 9 商品型態
+}
+
+interface TaxonomyDict {
+  version: string
+  mainCategories: { id: string; name: string }[]
+  funcCategories: { id: string; name: string; mainId: string; mainName: string }[]
+  productForms: { id: string; name: string }[]
+}
+
+let _taxonomy: TaxonomyDict | null = null
+function getTaxonomyDict(): TaxonomyDict {
+  if (!_taxonomy) {
+    const filePath = path.join(process.cwd(), 'data', 'product-taxonomy.json')
+    _taxonomy = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as TaxonomyDict
+  }
+  return _taxonomy
+}
+
+/** 主分類→功能分類完整主樹 + 各層 SKU 數(商品目錄管理頁「分類完整呈現」用)。 */
+export function getTaxonomyBrowser(): TaxonomyBrowser {
+  const dict = getTaxonomyDict()
+  const all = getCatalog()
+  const catCount = new Map<string, number>()
+  const mainCount = new Map<string, number>()
+  const formCount = new Map<string, number>()
+  for (const p of all) {
+    if (p.category) catCount.set(p.category, (catCount.get(p.category) ?? 0) + 1)
+    if (p.mainCategory) mainCount.set(p.mainCategory, (mainCount.get(p.mainCategory) ?? 0) + 1)
+    if (p.productType) formCount.set(p.productType, (formCount.get(p.productType) ?? 0) + 1)
+  }
+  const mains: TaxonomyMain[] = dict.mainCategories.map((m) => ({
+    id: m.id,
+    name: m.name,
+    count: mainCount.get(m.name) ?? 0,
+    funcs: dict.funcCategories
+      .filter((f) => f.mainId === m.id)
+      .map((f) => ({ id: f.id, name: f.name, count: catCount.get(f.name) ?? 0 }))
+      .sort((a, b) => b.count - a.count),
+  }))
+  // 有商品的主分類排前(依 SKU 數),空的(如技術服務)沉底但仍完整呈現
+  mains.sort((a, b) => b.count - a.count)
+  return {
+    version: dict.version,
+    mains,
+    productForms: dict.productForms.map((f) => ({ name: f.name, count: formCount.get(f.name) ?? 0 })),
   }
 }
 

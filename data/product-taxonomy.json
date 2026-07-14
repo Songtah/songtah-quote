@@ -1,0 +1,462 @@
+{
+ "_說明": "產品分類字典(源自 松達產品分類總表 2026-07-14)。三層:主分類→功能分類(含所屬主分類)+商品型態。validator 與 UI 共用;改分類先改總表再跑 scripts/migrate-taxonomy.py。",
+ "version": "2026-07-14",
+ "mainCategories": [
+  {
+   "id": "digital-manufacturing",
+   "name": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "additive-manufacturing",
+   "name": "3D 列印"
+  },
+  {
+   "id": "fixed-restorative",
+   "name": "固定式修復材料"
+  },
+  {
+   "id": "removable-prosthetics",
+   "name": "活動義齒與人工牙"
+  },
+  {
+   "id": "color-characterization",
+   "name": "比色、染色與表面處理"
+  },
+  {
+   "id": "lab-production",
+   "name": "技工製程與耗材"
+  },
+  {
+   "id": "lab-equipment",
+   "name": "技工設備與基礎設施"
+  },
+  {
+   "id": "clinical-tools",
+   "name": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "software-digital-service",
+   "name": "軟體與數位服務"
+  },
+  {
+   "id": "technical-service",
+   "name": "技術服務"
+  },
+  {
+   "id": "other-review",
+   "name": "待人工確認"
+  }
+ ],
+ "funcCategories": [
+  {
+   "id": "3d-printer",
+   "name": "3D 列印機",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "abrasive-media",
+   "name": "研磨砂／拋光砂",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "acrylic-teeth",
+   "name": "塑鋼牙／人工牙",
+   "mainId": "removable-prosthetics",
+   "mainName": "活動義齒與人工牙"
+  },
+  {
+   "id": "articulator",
+   "name": "咬合器",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "articulator-accessory",
+   "name": "咬合器配件",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "bur-drill",
+   "name": "車針／鑽針",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "casting-pressing-equipment",
+   "name": "壓鑄／鑄造設備",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "ceramic-brush",
+   "name": "瓷筆／刷具",
+   "mainId": "color-characterization",
+   "mainName": "比色、染色與表面處理"
+  },
+  {
+   "id": "ceramic-furnace",
+   "name": "瓷爐",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "ceramic-material",
+   "name": "瓷粉／陶瓷材料",
+   "mainId": "fixed-restorative",
+   "mainName": "固定式修復材料"
+  },
+  {
+   "id": "ceramic-powder",
+   "name": "瓷粉",
+   "mainId": "fixed-restorative",
+   "mainName": "固定式修復材料"
+  },
+  {
+   "id": "cleaning-dust-control",
+   "name": "清潔／吸塵設備",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "cutting-disc",
+   "name": "切片／鋸片",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "dental-instrument",
+   "name": "牙科器材",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "design-software",
+   "name": "設計軟體",
+   "mainId": "software-digital-service",
+   "mainName": "軟體與數位服務"
+  },
+  {
+   "id": "die-model-accessory",
+   "name": "代型／模型托盤配件",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "equipment-accessory",
+   "name": "設備配件",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "external-stain",
+   "name": "外染液",
+   "mainId": "color-characterization",
+   "mainName": "比色、染色與表面處理"
+  },
+  {
+   "id": "filter-consumable",
+   "name": "過濾耗材",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "flasking-pressing-tool",
+   "name": "煮模／壓模工具",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "furnace-accessory",
+   "name": "爐具配件",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "general-tool",
+   "name": "一般工具",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "generic-equipment",
+   "name": "泛用設備",
+   "mainId": "other-review",
+   "mainName": "待人工確認"
+  },
+  {
+   "id": "glass-ceramic",
+   "name": "玻璃陶瓷",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "glaze-material",
+   "name": "釉材／表面塗層",
+   "mainId": "color-characterization",
+   "mainName": "比色、染色與表面處理"
+  },
+  {
+   "id": "grinding-tool",
+   "name": "磨石／研磨工具",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "implant-component",
+   "name": "植體配件",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "implant-surface-treatment-equipment",
+   "name": "植體表面處理設備",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "impression-material",
+   "name": "印模材料",
+   "mainId": "removable-prosthetics",
+   "mainName": "活動義齒與人工牙"
+  },
+  {
+   "id": "internal-stain",
+   "name": "內染液",
+   "mainId": "color-characterization",
+   "mainName": "比色、染色與表面處理"
+  },
+  {
+   "id": "investment-gypsum",
+   "name": "包埋材／石膏",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "kit-bundle",
+   "name": "套裝組",
+   "mainId": "other-review",
+   "mainName": "待人工確認"
+  },
+  {
+   "id": "light-curing-equipment",
+   "name": "光重合／光固化設備",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "metal-material",
+   "name": "金屬材料",
+   "mainId": "fixed-restorative",
+   "mainName": "固定式修復材料"
+  },
+  {
+   "id": "milling-accessory",
+   "name": "車機配件",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "milling-machine",
+   "name": "車機／研磨機",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "model-accessory",
+   "name": "模型配件",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "motor-accessory",
+   "name": "馬達配件",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "motor-handpiece",
+   "name": "馬達／手機",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "optical-equipment",
+   "name": "光學設備",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "other-equipment",
+   "name": "其他設備",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "other-material",
+   "name": "其他材料",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "other-tool",
+   "name": "其他工具",
+   "mainId": "clinical-tools",
+   "mainName": "臨床／技工器械與輔助工具"
+  },
+  {
+   "id": "pmma-blank",
+   "name": "PMMA 塊",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "polishing-consumable",
+   "name": "拋光／研磨耗材",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "post-processing",
+   "name": "清洗與後固化設備",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "print-resin",
+   "name": "3D 列印材料／樹脂",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "printer-accessory",
+   "name": "列印機配件",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "printer-spare-part",
+   "name": "列印機維修料件",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "printing-consumable",
+   "name": "3D 列印製程耗材",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "printing-software-service",
+   "name": "3D 列印軟體／技術服務",
+   "mainId": "additive-manufacturing",
+   "mainName": "3D 列印"
+  },
+  {
+   "id": "process-liquid",
+   "name": "專用液／藥劑",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "resin-material",
+   "name": "樹脂材料",
+   "mainId": "removable-prosthetics",
+   "mainName": "活動義齒與人工牙"
+  },
+  {
+   "id": "scanner",
+   "name": "掃描儀",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "shade-guide",
+   "name": "比色板",
+   "mainId": "color-characterization",
+   "mainName": "比色、染色與表面處理"
+  },
+  {
+   "id": "sintering-furnace",
+   "name": "燒結爐",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "uncategorized",
+   "name": "未分類",
+   "mainId": "other-review",
+   "mainName": "待人工確認"
+  },
+  {
+   "id": "wax-blank",
+   "name": "蠟塊",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "wax-equipment",
+   "name": "蠟工設備",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "wax-pressing-material",
+   "name": "蠟／壓鑄材料",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
+  },
+  {
+   "id": "workbench",
+   "name": "技工桌",
+   "mainId": "lab-equipment",
+   "mainName": "技工設備與基礎設施"
+  },
+  {
+   "id": "zirconia-blank",
+   "name": "氧化鋯塊",
+   "mainId": "digital-manufacturing",
+   "mainName": "CAD/CAM 數位製造"
+  }
+ ],
+ "productForms": [
+  {
+   "id": "equipment",
+   "name": "設備"
+  },
+  {
+   "id": "material",
+   "name": "材料"
+  },
+  {
+   "id": "consumable",
+   "name": "耗材"
+  },
+  {
+   "id": "durable_tool",
+   "name": "耐用工具／器械"
+  },
+  {
+   "id": "accessory",
+   "name": "配件"
+  },
+  {
+   "id": "spare_part",
+   "name": "維修料件"
+  },
+  {
+   "id": "software_license",
+   "name": "軟體／授權"
+  },
+  {
+   "id": "service",
+   "name": "服務"
+  },
+  {
+   "id": "other_review",
+   "name": "待確認"
+  }
+ ]
+}

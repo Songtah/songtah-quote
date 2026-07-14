@@ -3,6 +3,7 @@
 > 狀態：2026-07-14 經使用者確認開始全品項分類。
 > 適用範圍：`public/products_catalog.json`、`public/product_families.json`、產品管理頁、訂貨／報價選品與未來官方網站。
 > 原則：先以 additive sidecar 建立新分類，不直接覆寫既有 catalog 欄位；完成雙讀與驗收後才討論切換。
+> **2026-07-14 更新:使用者確認總表後指示直接切換**——`scripts/migrate-taxonomy.py` 已將 category/mainCategory/productType 換為新體系值(additive 加上 mainCategoryId/categoryId/seriesName/needsReview),字典落在 `data/product-taxonomy.json`,validator 改字典驅動。第一節「不可變」條款全數遵守(skuCode/價格/停售/families/既成單據快照未動,81 筆標 needsReview)。
 
 ## 一、不可變的識別與歷史資料
 

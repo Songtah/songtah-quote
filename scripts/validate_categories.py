@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-產品分類驗證器 — 防止分類汙染再次發生。
+產品分類驗證器(2026-07-14 改版:字典驅動)
 
-用品名規則檢查 products_catalog.json 的每一筆，找出「品名特徵與分類不符」的品項。
+分類權威 = data/product-taxonomy.json(源自松達產品分類總表;11 主分類 × 62 功能分類 × 9 商品型態)。
+檢查 products_catalog.json 每一筆:
+  1. 結構:mainCategory/category/productType 皆屬字典、功能分類隸屬正確主分類、id 與名稱一致
+  2. 品名規則:新品(ERP 匯入)依品名 regex 建議功能分類,現值不符即回報
+  3. 品牌前綴:貨號前綴=品牌(2026-07-12 使用者定案),空白可 --fix 補、不符回報
 
-用法：
-    python3 scripts/validate_categories.py            # 驗證報告（不改檔）
-    python3 scripts/validate_categories.py --fix      # 自動修正高信心項目
-    python3 scripts/validate_categories.py --excel 路徑.xlsx   # 輸出重分類草稿 Excel
-
-ERP 匯入新品項後務必跑一次。規則新增直接改下方 RULES。
+用法:
+    python3 scripts/validate_categories.py            # 驗證報告(不改檔)
+    python3 scripts/validate_categories.py --fix      # 自動修正高信心項目(品牌空白/型態一致化)
+ERP 匯入新品項後務必跑一次。分類規則調整請改總表後跑 scripts/migrate-taxonomy.py,不要手改 catalog。
 """
 
 import json
@@ -17,72 +19,49 @@ import re
 import sys
 import os
 
-CATALOG = os.path.join(os.path.dirname(__file__), '..', 'public', 'products_catalog.json')
+ROOT = os.path.join(os.path.dirname(__file__), '..')
+CATALOG = os.path.join(ROOT, 'public', 'products_catalog.json')
+TAXONOMY = os.path.join(ROOT, 'data', 'product-taxonomy.json')
 
-# ── 分類規則 ──────────────────────────────────────────────────────
-# (品名 regex, 正確分類)。由上而下先中先贏；只在「現分類 != 正確分類」時回報。
+# ── 品名 regex → 建議功能分類(新品自動歸位用;由上而下先中先贏)──────
 RULES = [
-    # 假牙 / 塑鋼牙
-    (r'^(EFC-[AP]|FX |MILLION|AC 半塑鋼|SIM-P|EFUCERA|Soluute|Crown PX|New Ace|RH 塑鋼|Enigma 塑鋼)', '塑鋼牙'),
-    # 氧化鋯塊
+    (r'^(EFC-[AP]|FX |MILLION|AC 半塑鋼|SIM-P|EFUCERA|Soluute|Crown PX|New Ace|RH 塑鋼|Enigma 塑鋼)', '塑鋼牙／人工牙'),
     (r'^(Prettau \d|Prettau Zirconia|ZRA[BD]\d|Antomic|Anatomic Coloured|ICE PLUS|ICE ZIRKON)', '氧化鋯塊'),
-    # PMMA / 樹脂圓盤
     (r'^(Temp Basic|Temp Premiu|TEMP PREMIUM|MULTISTRATUM|Tecno Med|TECNO MED|ABRO|DENTURE GINGIVA)', 'PMMA 塊'),
-    # 金屬圓盤
     (r'^(Sintermetall \d|SINTERNIT|Titan 5|TITANIT|Chrom-cobalt|MEAC\d|MEAL\d)', '金屬材料'),
-    # 染液 - 內染（含 SHT Standard / 3D Master 及所有預染液）
-    (r'(Color Liquid|Colour Liquid|Color Luquid|Aquarell(?! Set)|Waterbased [A-Z]|Bio-Pigme|Fresco Liquid|內染液)', '染液 - 內染'),
-    # 染液 - 外染（烤燒後表面染色：Stain、Artamic）
-    (r'(Artamic[\w\s]*Stain|Matchmaker Stain|3D Stain|Initial Spectrum Stain)', '染液 - 外染'),
-    # 瓷粉（3D Base 粉末，歸染液色料大分類）
-    (r'3D Base [ABCD]|3D Base Glaze', '瓷粉'),
-    # 染液試色板
-    (r'Colou?r test Plate', '染液 / 色料'),
-    # 蠟
-    (r'(Curving Wax|Wax White|蠟塊|Wax Disk)', '蠟 / 壓鑄材'),
-    # 樹脂材料（義齒床/補修/臨時冠樹脂）
+    (r'(Color Liquid|Colour Liquid|Color Luquid|Aquarell(?! Set)|Waterbased [A-Z]|Bio-Pigme|Fresco Liquid|內染液)', '內染液'),
+    (r'(Artamic[\w\s]*Stain|Matchmaker Stain|3D Stain|Initial Spectrum Stain)', '外染液'),
+    (r'(Curving Wax|Wax White|蠟塊|Wax Disk)', '蠟塊'),
     (r'(Basing Resin|Re-Fine Bright|Ortho Bright|Soft Liner|OSTRON|TEMPSMART|Basis 慢性粉)', '樹脂材料'),
-    # CAD/CAM 複合瓷塊
     (r'(CERASMART|CEARSMART)', '玻璃陶瓷'),
-    # 器械（American Eagle 刮治器/探針，GC 代理）
     (r'^(AEGA|AEDG|AESM|AEDGM)', '牙科器材'),
-    # 植體工具
     (r'^Screwdriver', '植體配件'),
-    # 設備零件
     (r'^Spare Part', '設備配件'),
-    # 工具
-    (r'(瓷粉雕刀|雕刻刀)', '瓷筆 / 刷具'),
-    # 染液試色板（用戶指定：Colour test Plate 歸染液/色料）
-    (r'Colou?r test Plate', '染液 / 色料'),
-    # 比色板
+    (r'(瓷粉雕刀|雕刻刀)', '瓷筆／刷具'),
     (r'(Shade Guide|比色板)', '比色板'),
 ]
 
-# 例外白名單：這些品名雖中規則但分類本來就對（避免誤報）
-WHITELIST_CATEGORIES = {
-    # pattern 的目標分類本身，以及合理近親
-    '塑鋼牙': {'塑鋼牙'},
+# 近親豁免:規則建議 A 但現值為集合內者不誤報
+WHITELIST = {
+    '塑鋼牙／人工牙': {'塑鋼牙／人工牙'},
     '氧化鋯塊': {'氧化鋯塊'},
     'PMMA 塊': {'PMMA 塊'},
     '金屬材料': {'金屬材料'},
-    '染液 / 色料': {'染液 / 色料'},
-    '染液 - 內染': {'染液 - 內染'},
-    '染液 - 外染': {'染液 - 外染'},
-    '瓷粉': {'瓷粉'},
-    '蠟 / 壓鑄材': {'蠟 / 壓鑄材', '蠟塊'},
-    '樹脂材料': {'樹脂材料'},
+    '內染液': {'內染液'},
+    '外染液': {'外染液'},
+    '蠟塊': {'蠟塊', '蠟／壓鑄材料'},
+    '樹脂材料': {'樹脂材料', '3D 列印材料／樹脂'},
     '玻璃陶瓷': {'玻璃陶瓷'},
-    '牙科器材': {'牙科器材', '工具'},
-    '植體配件': {'植體配件'},
-    '設備配件': {'設備配件', '3D列印機配件'},
-    '瓷筆 / 刷具': {'瓷筆 / 刷具'},
+    '牙科器材': {'牙科器材', '一般工具', '其他工具'},
+    # Screwdriver:植體起子歸植體配件,但總表把部分歸牙科器材(臨床器械),兩者皆可
+    '植體配件': {'植體配件', '牙科器材'},
+    # Spare Part:設備維修件為主,但植體系統的 Spare Part 總表歸植體配件,尊重總表
+    '設備配件': {'設備配件', '列印機配件', '車機配件', '爐具配件', '馬達配件', '咬合器配件', '植體配件'},
+    '瓷筆／刷具': {'瓷筆／刷具'},
     '比色板': {'比色板'},
 }
 
-
-# ── 品牌前綴規則(2026-07-12 使用者定案:貨號前綴=品牌)─────────────────
-# 鍵=貨號開頭的字母段(大寫)。來源:全目錄 6,084 筆實測,每前綴唯一對應一品牌、零衝突。
-# 未列入的前綴(VP/ST/C0/BF 等)品牌待使用者確認,不要猜。
+# ── 品牌前綴規則(貨號開頭字母段=品牌;全目錄實測零衝突)──────────────
 BRAND_PREFIXES = {
     'YMH': 'YAMAHACHI', 'ZZ': 'Zirkonzahn', 'BS': '貝施美', 'DSD': 'Davis Schottlander',
     'GC': 'GC / 台灣而至', 'SY': 'Song Young', 'YM': 'YAMAKIN', 'DK': 'DENKEN',
@@ -97,12 +76,12 @@ BRAND_PREFIXES = {
 }
 
 
-def brand_from_code(code: str):
+def brand_from_code(code):
     m = re.match(r'^([A-Za-z]+)', code or '')
     return BRAND_PREFIXES.get(m.group(1).upper()) if m else None
 
 
-def classify(name: str):
+def classify(name):
     for pat, cat in RULES:
         if re.search(pat, name, re.I):
             return cat
@@ -111,24 +90,44 @@ def classify(name: str):
 
 def main():
     fix = '--fix' in sys.argv
-    excel_path = None
-    if '--excel' in sys.argv:
-        excel_path = sys.argv[sys.argv.index('--excel') + 1]
 
     with open(CATALOG, encoding='utf-8') as f:
         catalog = json.load(f)
+    with open(TAXONOMY, encoding='utf-8') as f:
+        tax = json.load(f)
 
-    mismatches = []
+    mains = {m['name']: m['id'] for m in tax['mainCategories']}
+    funcs = {c['name']: c for c in tax['funcCategories']}
+    forms = {p['name'] for p in tax['productForms']}
+
+    # 1. 結構驗證(字典驅動)
+    struct_bad = []
+    for p in catalog:
+        errs = []
+        if p.get('mainCategory') not in mains: errs.append(f"主分類「{p.get('mainCategory')}」不在字典")
+        if p.get('category') not in funcs: errs.append(f"功能分類「{p.get('category')}」不在字典")
+        if p.get('productType') not in forms: errs.append(f"型態「{p.get('productType')}」不在字典")
+        if not errs:
+            fc = funcs[p['category']]
+            if fc['mainName'] != p['mainCategory']:
+                errs.append(f"功能「{p['category']}」應屬「{fc['mainName']}」而非「{p['mainCategory']}」")
+            if p.get('mainCategoryId') != mains[p['mainCategory']]:
+                errs.append('mainCategoryId 與主分類不一致')
+            if p.get('categoryId') != fc['id']:
+                errs.append('categoryId 與功能分類不一致')
+        if errs:
+            struct_bad.append((p, errs))
+
+    # 2. 品名規則(新品歸位建議)
+    name_bad = []
     for p in catalog:
         want = classify(p['name'])
         if want is None:
             continue
-        ok_set = WHITELIST_CATEGORIES.get(want, {want})
-        if p['category'] in ok_set:
-            continue
-        mismatches.append((p, want))
+        if p['category'] not in WHITELIST.get(want, {want}):
+            name_bad.append((p, want))
 
-    # 品牌檢查:前綴=品牌(空白可 --fix 補;不一致只回報,由人工判斷是 ERP 錯還是新前綴)
+    # 3. 品牌前綴
     brand_blank, brand_conflict = [], []
     for p in catalog:
         want_b = brand_from_code(p['code'])
@@ -139,50 +138,26 @@ def main():
         elif p['brand'] != want_b:
             brand_conflict.append((p, want_b))
 
-    print(f'總品項: {len(catalog)}，分類疑似錯誤: {len(mismatches)}，'
-          f'品牌空白可補: {len(brand_blank)}，品牌與前綴不符: {len(brand_conflict)}')
-    for p, want_b in brand_conflict:
-        print(f'  品牌不符  {p["code"]}  {p["brand"]!r} → 前綴應為 {want_b!r}')
-    from collections import Counter
-    stat = Counter(f"{p['category']} → {want}" for p, want in mismatches)
-    for k, v in stat.most_common():
-        print(f'  {v:>5}  {k}')
+    needs_review = sum(1 for p in catalog if p.get('needsReview'))
 
-    if excel_path:
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment
-        from openpyxl.utils import get_column_letter
-        wb = Workbook()
-        ws = wb.active
-        ws.title = '重分類草稿'
-        ws.append(['貨號', '品名', '品牌', '原分類', '建議分類', '✏️確認(留空=同意/填別的分類)'])
-        hdr = PatternFill('solid', start_color='1F4E79')
-        for c in ws[1]:
-            c.fill = hdr
-            c.font = Font(bold=True, color='FFFFFF', name='Arial', size=10)
-            c.alignment = Alignment(horizontal='center')
-        edit = PatternFill('solid', start_color='FFF2CC')
-        for p, want in mismatches:
-            ws.append([p['code'], p['name'], p['brand'], p['category'], want, ''])
-            ws.cell(row=ws.max_row, column=6).fill = edit
-        for row in ws.iter_rows(min_row=2):
-            for cell in row:
-                cell.font = Font(name='Arial', size=10)
-        for i, w in enumerate([22, 48, 16, 14, 14, 24], 1):
-            ws.column_dimensions[get_column_letter(i)].width = w
-        ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:F{ws.max_row}'
-        wb.save(excel_path)
-        print(f'草稿已輸出: {excel_path}')
+    print(f'總品項: {len(catalog)}(字典 v{tax.get("version", "?")}:主分類 {len(mains)}/功能 {len(funcs)}/型態 {len(forms)})')
+    print(f'結構錯誤: {len(struct_bad)},品名建議不符: {len(name_bad)},品牌空白可補: {len(brand_blank)},品牌不符: {len(brand_conflict)},待覆核旗標: {needs_review}')
+    for p, errs in struct_bad[:20]:
+        print(f'  結構  {p["code"]}  {"; ".join(errs)}')
+    for p, want in name_bad[:20]:
+        print(f'  品名  {p["code"]}  「{p["category"]}」→ 建議「{want}」  ({p["name"][:30]})')
+    for p, want_b in brand_conflict:
+        print(f'  品牌  {p["code"]}  {p["brand"]!r} → 前綴應為 {want_b!r}')
 
     if fix:
-        for p, want in mismatches:
-            p['category'] = want
-        for p, want_b in brand_blank:  # 只補空白,不覆蓋既有品牌
+        for p, want_b in brand_blank:  # 只補空白,不覆蓋
             p['brand'] = want_b
         with open(CATALOG, 'w', encoding='utf-8') as f:
             json.dump(catalog, f, ensure_ascii=False, indent=1)
-        print(f'已修正 {len(mismatches)} 筆分類、補 {len(brand_blank)} 筆空白品牌')
+        print(f'已補 {len(brand_blank)} 筆空白品牌')
+
+    if struct_bad:
+        sys.exit(1)
 
 
 if __name__ == '__main__':

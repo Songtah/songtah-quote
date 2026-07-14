@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import { SeriesModal } from '@/components/SeriesModal'
@@ -57,8 +57,11 @@ interface CatalogItem {
   code: string
   name: string
   brand: string
-  productType: string
-  category: string
+  productType: string   // 商品型態(9 種)
+  category: string      // 功能分類(62 種)
+  mainCategory?: string // 主分類(11 種)
+  seriesName?: string   // 總表系列
+  needsReview?: boolean // 分類待覆核
   price?: number      // 售價（products_catalog.json 靜態維護）
   salePrice?: number
   spec?: string
@@ -100,6 +103,16 @@ interface Props {
   brands: string[]
   categories: string[]
   productTypes: string[]
+  taxonomy: TaxonomyBrowser
+}
+
+// 主分類→功能分類主樹(伺服器端由 data/product-taxonomy.json + catalog 計數而來)
+interface TaxonomyFunc { id: string; name: string; count: number }
+interface TaxonomyMain { id: string; name: string; count: number; funcs: TaxonomyFunc[] }
+interface TaxonomyBrowser {
+  version: string
+  mains: TaxonomyMain[]
+  productForms: { name: string; count: number }[]
 }
 
 // ── Client-side compression (keeps payload under Vercel's 4.5MB limit) ──────
@@ -1940,6 +1953,11 @@ function SkuRow({
               {item.status || '未販售'}
             </span>
           )}
+          {item.needsReview && (
+            <span className="shrink-0 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              分類待覆核
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {item.brand && (
@@ -1948,6 +1966,9 @@ function SkuRow({
             </span>
           )}
           <p className="font-mono text-[11px] text-gray-400 truncate">{item.code}</p>
+          {item.category && (
+            <span className="text-[10px] text-stone-400 truncate hidden sm:inline">{item.category}</span>
+          )}
         </div>
       </div>
 
@@ -2371,7 +2392,7 @@ function FeaturedManager({
 
 // ── Main Component ────────────────────────────────────────────
 
-export function CatalogManagerContent({ brands, categories, productTypes }: Props) {
+export function CatalogManagerContent({ brands, categories, productTypes, taxonomy }: Props) {
   const { data: session } = useSession()
   const sessionUser = session?.user as any
   const isAdmin = sessionUser?.role === 'admin' || sessionUser?.accountType === '行政'
@@ -2382,7 +2403,9 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
 
   const [search,         setSearch]         = useState('')
   const [filterBrand,    setFilterBrand]    = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
+  const [filterMain,     setFilterMain]     = useState('')   // 主分類(11)
+  const [filterCategory, setFilterCategory] = useState('')   // 功能分類(62)
+  const [filterType,     setFilterType]     = useState('')   // 商品型態(9)
   const [filtersOpen,    setFiltersOpen]    = useState(false)
 
   const [viewingItem,  setViewingItem]  = useState<CatalogItem | null>(null)
@@ -2427,39 +2450,31 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
       .catch(() => {})
   }, [])
 
-  // Debounced search results
-  const [searchResults, setSearchResults] = useState<CatalogItem[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
-
-  const isSearching = search.trim().length > 0 || filterBrand || filterCategory
-
+  // Debounced 關鍵字(全目錄已在記憶體,搜尋與篩選一律 client-side,含停售品)
+  const [debouncedQ, setDebouncedQ] = useState('')
   useEffect(() => {
-    if (!isSearching) { setSearchResults([]); return }
     if (timerRef.current) clearTimeout(timerRef.current)
-    setSearchLoading(true)
-    timerRef.current = setTimeout(() => {
-      const params = new URLSearchParams({ limit: '200' })
-      if (search.trim()) params.set('q', search.trim())
-      if (filterBrand)    params.set('brand', filterBrand)
-      if (filterCategory) params.set('category', filterCategory)
-      fetch(`/api/products/search?${params}`)
-        .then((r) => r.json())
-        .then((data) => {
-          const items: CatalogItem[] = Array.isArray(data)
-            ? data.map((it: any) => ({
-                code:        it.skuCode || it.id || '',
-                name:        it.name    || '',
-                brand:       it.manufacturer || '',
-                productType: it.productType  || '',
-                category:    it.category     || '',
-              }))
-            : []
-          setSearchResults(items)
-        })
-        .catch(console.error)
-        .finally(() => setSearchLoading(false))
-    }, 300)
-  }, [search, filterBrand, filterCategory, isSearching])
+    timerRef.current = setTimeout(() => setDebouncedQ(search.trim().toLowerCase()), 250)
+  }, [search])
+
+  const isSearching = !!(debouncedQ || filterBrand || filterMain || filterCategory || filterType)
+  const searchLoading = loading
+
+  const searchResults = useMemo(() => {
+    if (!isSearching) return []
+    let items = allItems
+    if (debouncedQ) {
+      items = items.filter((p) =>
+        p.code.toLowerCase().includes(debouncedQ) ||
+        p.name.toLowerCase().includes(debouncedQ) ||
+        (p.brand || '').toLowerCase().includes(debouncedQ))
+    }
+    if (filterBrand)    items = items.filter((p) => p.brand === filterBrand)
+    if (filterMain)     items = items.filter((p) => p.mainCategory === filterMain)
+    if (filterCategory) items = items.filter((p) => p.category === filterCategory)
+    if (filterType)     items = items.filter((p) => p.productType === filterType)
+    return items
+  }, [isSearching, allItems, debouncedQ, filterBrand, filterMain, filterCategory, filterType])
 
   // After a save, update caches
   const handleSaved = useCallback((skuCode: string, price: number | null, imageUrl: string) => {
@@ -2476,12 +2491,37 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
     })
   }, [])
 
-  // Filter families by active filters (brand/category)
+  // 系列的分類:product_families.json 內是舊分類快照,以成員 SKU 的新分類為準
+  const familyTaxonomy = useMemo(() => {
+    const m = new Map<string, { main: string; category: string; type: string }>()
+    for (const f of families) {
+      const member = allItems.find((p) => p.code.startsWith(f.seriesCode))
+      if (member) m.set(f.id, { main: member.mainCategory || '', category: member.category, type: member.productType })
+    }
+    return m
+  }, [families, allItems])
+
+  // Filter families by active filters(依成員 SKU 的新分類)
   const visibleFamilies = families.filter((f) => {
-    if (filterBrand    && f.brand    !== filterBrand)    return false
-    if (filterCategory && f.category !== filterCategory) return false
+    if (filterBrand && f.brand !== filterBrand) return false
+    const tx = familyTaxonomy.get(f.id)
+    if (filterMain     && tx?.main     !== filterMain)     return false
+    if (filterCategory && tx?.category !== filterCategory) return false
+    if (filterType     && tx?.type     !== filterType)     return false
     return true
   })
+
+  const activeFilterCount = (filterBrand ? 1 : 0) + (filterMain ? 1 : 0) + (filterCategory ? 1 : 0) + (filterType ? 1 : 0)
+  const clearFilters = () => { setFilterBrand(''); setFilterMain(''); setFilterCategory(''); setFilterType('') }
+  // 點主分類:切換選取並清掉不屬於它的功能分類
+  const pickMain = (name: string) => {
+    setFilterMain((cur) => {
+      const next = cur === name ? '' : name
+      setFilterCategory('')
+      return next
+    })
+  }
+  const selectedMain = taxonomy.mains.find((m) => m.name === filterMain)
 
   const chip = (active: boolean) => [
     'px-3 py-1 rounded-full text-xs font-medium border transition-all',
@@ -2534,7 +2574,7 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
             onClick={() => setFiltersOpen((o) => !o)}
             className={[
               'relative flex items-center gap-1.5 px-4 py-2.5 rounded-full border text-sm font-semibold transition-all active:scale-95 shrink-0',
-              filtersOpen || filterBrand || filterCategory
+              filtersOpen || activeFilterCount > 0
                 ? 'border-brand-400 bg-brand-50 text-brand-700'
                 : 'border-stone-200 bg-white text-stone-600 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50/40',
             ].join(' ')}
@@ -2543,15 +2583,15 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2M13 16h-2" />
             </svg>
             篩選
-            {(filterBrand || filterCategory) && (
+            {activeFilterCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-                {(filterBrand ? 1 : 0) + (filterCategory ? 1 : 0)}
+                {activeFilterCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* Collapsible filter panel */}
+        {/* Collapsible filter panel:主分類 → 功能分類 二級聯動 + 商品型態 + 品牌 */}
         <AnimatePresence>
           {filtersOpen && (
             <motion.div
@@ -2563,6 +2603,51 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
               className="overflow-hidden"
             >
               <div className="pt-3 space-y-2.5">
+                {/* 主分類(11,完整) */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">主分類</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => { setFilterMain(''); setFilterCategory('') }} className={chip(!filterMain)}>全部</button>
+                    {taxonomy.mains.map((m) => (
+                      <button key={m.id} onClick={() => pickMain(m.name)} className={chip(filterMain === m.name)}>
+                        {m.name} <span className="opacity-60">{m.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 功能分類(選了主分類 → 顯示其完整功能分類;未選 → 提示) */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">
+                    功能分類{selectedMain ? `(${selectedMain.name})` : ''}
+                  </p>
+                  {selectedMain ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部</button>
+                      {selectedMain.funcs.map((f) => (
+                        <button key={f.id} onClick={() => setFilterCategory(filterCategory === f.name ? '' : f.name)} className={chip(filterCategory === f.name)}>
+                          {f.name} <span className="opacity-60">{f.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">先選主分類,即顯示其下全部功能分類(共 62 類,亦可從下方「商品分類總覽」直接點選)</p>
+                  )}
+                </div>
+
+                {/* 商品型態(9) */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">商品型態</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => setFilterType('')} className={chip(!filterType)}>全部</button>
+                    {taxonomy.productForms.map((t) => (
+                      <button key={t.name} onClick={() => setFilterType(filterType === t.name ? '' : t.name)} className={chip(filterType === t.name)}>
+                        {t.name} <span className="opacity-60">{t.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Brand filter */}
                 {brands.length > 0 && (
                   <div>
@@ -2578,26 +2663,11 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
                   </div>
                 )}
 
-                {/* Category filter */}
-                {categories.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">分類</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <button onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部</button>
-                      {categories.map((c) => (
-                        <button key={c} onClick={() => setFilterCategory(filterCategory === c ? '' : c)} className={chip(filterCategory === c)}>
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Clear all */}
-                {(filterBrand || filterCategory) && (
+                {activeFilterCount > 0 && (
                   <button
                     type="button"
-                    onClick={() => { setFilterBrand(''); setFilterCategory('') }}
+                    onClick={clearFilters}
                     className="text-xs text-gray-400 hover:text-red-500 transition"
                   >
                     ✕ 清除全部篩選
@@ -2624,22 +2694,27 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
           ))}
         </div>
       ) : isSearching ? (
-        /* ── Search results mode ── */
+        /* ── Search results mode(全目錄 client-side 篩選)── */
         <div className="card-soft p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-700">
-              {searchLoading ? '搜尋中…' : `找到 ${searchResults.length} 筆`}
+              找到 {searchResults.length} 筆
+              {(filterMain || filterCategory || filterType) && (
+                <span className="ml-2 text-xs font-normal text-brand-600">
+                  {[filterMain, filterCategory, filterType].filter(Boolean).join(' › ')}
+                </span>
+              )}
             </span>
-            <button onClick={() => { setSearch(''); setFilterBrand(''); setFilterCategory('') }}
+            <button onClick={() => { setSearch(''); clearFilters() }}
               className="text-xs text-gray-400 hover:text-gray-600">
               清除篩選
             </button>
           </div>
           <div className="px-5 py-2 max-h-[65vh] overflow-y-auto">
-            {searchResults.length === 0 && !searchLoading && (
+            {searchResults.length === 0 && (
               <p className="py-8 text-center text-sm text-gray-400">找不到符合的商品</p>
             )}
-            {searchResults.map((item) => (
+            {searchResults.slice(0, 300).map((item) => (
               <SkuRow
                 key={item.code}
                 item={item}
@@ -2649,26 +2724,70 @@ export function CatalogManagerContent({ brands, categories, productTypes }: Prop
                 onEdit={setEditingItem}
               />
             ))}
+            {searchResults.length > 300 && (
+              <p className="py-3 text-center text-xs text-gray-400">僅顯示前 300 筆,請加關鍵字或功能分類縮小範圍(共 {searchResults.length} 筆)</p>
+            )}
           </div>
         </div>
       ) : (
-        /* ── Family browse mode ── */
-        <div className="space-y-3">
-          {visibleFamilies.length === 0 && (
-            <p className="text-center py-12 text-sm text-gray-400">沒有符合條件的系列</p>
-          )}
-          {visibleFamilies.map((family) => (
-            <FamilyCard
-              key={family.id}
-              family={family}
-              allItems={allItems}
-              priceCache={priceCache}
-              imageFlagCache={imageFlagCache}
-              onView={setViewingItem}
-              onEdit={setEditingItem}
-              onOpenModal={() => setModalFamily(family)}
-            />
-          ))}
+        /* ── Browse mode:商品分類總覽(11 主分類 × 62 功能分類完整呈現)+ 系列 ── */
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-baseline gap-2 mb-3">
+              <h3 className="text-sm font-bold text-stone-700">📂 商品分類總覽</h3>
+              <span className="text-[11px] text-stone-400">11 主分類 × 62 功能分類・點分類直接瀏覽商品(總表 {taxonomy.version})</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {taxonomy.mains.map((m) => (
+                <div key={m.id} className="card-soft p-4">
+                  <button onClick={() => { pickMain(m.name); setFiltersOpen(true) }}
+                          className="w-full flex items-baseline gap-2 text-left group active:scale-[0.99] transition-all">
+                    <span className="font-bold text-stone-800 group-hover:text-brand-600 transition-colors">{m.name}</span>
+                    <span className="ml-auto text-xs text-stone-400">{m.count} 項</span>
+                  </button>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {m.funcs.map((f) => (
+                      <button key={f.id}
+                              onClick={() => { setFilterMain(m.name); setFilterCategory(f.name) }}
+                              className={`px-2.5 py-1 rounded-full text-[11px] transition-all active:scale-95 ${
+                                f.count > 0
+                                  ? 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
+                                  : 'bg-stone-50 text-stone-300'
+                              }`}>
+                        {f.name} <span className="opacity-60">{f.count}</span>
+                      </button>
+                    ))}
+                    {m.funcs.length === 0 && <span className="text-[11px] text-stone-300">(暫無細分)</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Family browse */}
+          <div>
+            <div className="flex items-baseline gap-2 mb-3">
+              <h3 className="text-sm font-bold text-stone-700">🗂 產品系列</h3>
+              <span className="text-[11px] text-stone-400">{visibleFamilies.length} 個系列</span>
+            </div>
+            <div className="space-y-3">
+              {visibleFamilies.length === 0 && (
+                <p className="text-center py-12 text-sm text-gray-400">沒有符合條件的系列</p>
+              )}
+              {visibleFamilies.map((family) => (
+                <FamilyCard
+                  key={family.id}
+                  family={family}
+                  allItems={allItems}
+                  priceCache={priceCache}
+                  imageFlagCache={imageFlagCache}
+                  onView={setViewingItem}
+                  onEdit={setEditingItem}
+                  onOpenModal={() => setModalFamily(family)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
