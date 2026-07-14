@@ -4,6 +4,8 @@
 > 操作：只讀取 database schema 與依建立日期倒序的前 20 筆；未寫入、未改 schema、未觸發通知。
 > 隱私：本文件不保存 token、客戶名稱或完整 relation ID。
 
+> 2026-07-14 執行狀態：使用者明確核准選項 A；schema、程式 mapping 與一筆正式測試工單 read-back 均已完成。
+
 ## 一、Live schema
 
 | 欄位 | 型別 |
@@ -32,7 +34,14 @@
 | 預計維修日期（外派） | date |
 | 🏥 牙科單位資料 | relation |
 
-schema 中沒有：`案件標題`、`案件類型`、`聯絡人`、`全台牙科相關單位名單`，也沒有設備 relation。
+初次盤點時 schema 中沒有：`案件標題`、`案件類型`、`聯絡人`、`全台牙科相關單位名單`，也沒有設備 relation。
+
+依明確授權新增後，read-back 已確認：
+
+- `案件標題`：rich_text。
+- `聯絡人`：rich_text。
+- `設備資料`：指向正式設備 DB 的 single-property relation。
+- 既有 `故障分類` 仍為 multi_select；既有 `🏥 牙科單位資料` relation 未改動。
 
 ## 二、前 20 筆樣本分布
 
@@ -58,9 +67,20 @@ schema 中沒有：`案件標題`、`案件類型`、`聯絡人`、`全台牙科
 
 相關程式：`lib/notion/tickets.ts` 的 mapper 與 `createTicket`、`app/api/tickets/route.ts` 的必填驗證、`types/index.ts` 的 `CreateTicketPayload`。
 
-## 四、決策選項
+## 四、設備 DB 盤點
 
-### 選項 A：補齊正式 schema（建議）
+正式設備 DB 標題為「持有的數位牙材設備」。新增工單 relation 前的前 20 筆樣本結果：
+
+- 客戶 relation：18/20 有值。
+- 機型 relation：20/20 有值。
+- 軟體模組 relation：0/20 有值。
+- 產品狀態：18/20 有值。
+
+設備 DB 的正式客戶 relation 為 `客戶名稱`，機型 relation 為 `機型`。工單新增的 `設備資料` 採單向 relation，未新增或改動設備 DB 欄位。
+
+## 五、決策與執行
+
+### 選項 A：補齊正式 schema（已採用）
 
 1. 新增 `案件標題` rich_text。
 2. 新增 `聯絡人` rich_text。
@@ -68,20 +88,32 @@ schema 中沒有：`案件標題`、`案件類型`、`聯絡人`、`全台牙科
 4. 程式改用既有 `故障分類` multi_select。
 5. 客戶 relation 改用既有 `🏥 牙科單位資料`。
 
-優點：保留表單資料並形成設備維修履歷。風險：屬正式 Notion schema 變更，需確認 automation、前 20 筆樣本與回滾策略後由使用者核准。
+已依使用者明確授權執行。只新增 optional 欄位，不刪除、改名或批次改寫既有資料。
 
-### 選項 B：不改 schema
+### 選項 B：不改 schema（未採用）
 
 移除不存在欄位，將案件標題與聯絡人合併進 `情境描述` 或 `備註`，只寫既有 relation 與分類欄位。
 
 優點：不改正式 schema。缺點：資料失去結構化、查詢與排程能力，與技服規模化方向不一致，不建議作長期方案。
 
-## 五、下一步安全閘門
+## 六、正式測試工單 read-back
 
-在使用者核准選項 A 前，不改正式 Notion schema、不對正式 DB 建立測試工單。核准後仍須：
+測試工單 page ID：`39ddcdaa-fb2a-818a-9655-fafdc9ebade5`。
 
-1. 唯讀確認設備 DB 的 database ID 與 relation 目標。
-2. 確認 Notion automation 是否依 `客戶單位` title、狀態或分類觸發。
-3. schema 變更前列出現有欄位及前 20 筆樣本（本文件已完成工單端；設備端待完成）。
-4. 先新增 optional 欄位，再部署兼容程式；不批次改歷史資料。
-5. 以一筆明確標示的測試工單驗證建立、列表、客戶 360、設備履歷與 read-back；測試資料的後續處理另經使用者確認，不自行刪除。
+已驗證且全部通過：
+
+1. 案件標題 rich_text。
+2. 聯絡人 rich_text。
+3. 故障分類 multi-select（技術支援）。
+4. 客戶 relation。
+5. 設備 relation。
+6. 產品 relation。
+7. 初始狀態（尚未處理）。
+
+read-back 後已將測試工單狀態改為 `✅ 結案`，未刪除，以保留稽核軌跡。
+
+## 七、仍待後續處理
+
+1. 確認現有 Notion automation 是否依 `客戶單位` title、狀態或分類觸發。
+2. 工單詳情與設備詳情尚未呈現互相連結的維修履歷 UI。
+3. 工單狀態更新、SLA、改派與排程衝突控制仍屬下一批功能，不應與本次 schema 相容修正混做。

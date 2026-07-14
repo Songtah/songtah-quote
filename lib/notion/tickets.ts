@@ -53,6 +53,15 @@ function getTicketNumber(page: any): string {
   return `${prefix}-${uid.number}`
 }
 
+function getMultiSelectNames(page: any, field: string): string {
+  const property = page.properties?.[field]
+  if (property?.type !== 'multi_select') return ''
+  return (property.multi_select ?? [])
+    .map((item: any) => item.name)
+    .filter(Boolean)
+    .join(', ')
+}
+
 /** Returns true when a string looks like an ISO 8601 datetime (Notion automation artefact). */
 function isIsoDatetime(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s.trim())
@@ -65,10 +74,11 @@ function mapTicketPageRaw(page: any) {
   return {
     id: page.id,
     _relId: getRelationIds(page, '🏥 牙科單位資料')[0] ?? '',
+    equipmentId: getRelationIds(page, '設備資料')[0] ?? '',
     number: getTicketNumber(page),
     customerName: titleFallback,          // overwritten after relation resolved
     title: getText(page, '案件標題') || titleFallback,
-    ticketType: getSelect(page, '故障分類') || getSelect(page, '案件類型'),
+    ticketType: getMultiSelectNames(page, '故障分類') || getSelect(page, '案件類型'),
     status: getSelect(page, '狀態'),
     priority: getSelect(page, '優先級'),
     scheduledDate: getDate(page, '預計維修日期（外派）'),
@@ -129,7 +139,7 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
           ? { 案件標題: { rich_text: richText(payload.title) } }
           : {}),
         ...(payload.ticketType
-          ? { 案件類型: { select: { name: payload.ticketType } } }
+          ? { 故障分類: { multi_select: [{ name: payload.ticketType }] } }
           : {}),
         ...(payload.contactName
           ? { 聯絡人: { rich_text: richText(payload.contactName) } }
@@ -165,7 +175,10 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
           ? { 生產商: { select: { name: mapManufacturerOption(payload.manufacturer) } } }
           : {}),
         ...(payload.customerId
-          ? { '全台牙科相關單位名單': { relation: [{ id: payload.customerId }] } }
+          ? { '🏥 牙科單位資料': { relation: [{ id: payload.customerId }] } }
+          : {}),
+        ...(payload.equipmentId
+          ? { 設備資料: { relation: [{ id: payload.equipmentId }] } }
           : {}),
         ...(payload.productId
           ? { 產品資料庫: { relation: [{ id: payload.productId }] } }
@@ -178,6 +191,7 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
 
   return {
     id: response.id,
+    equipmentId: payload.equipmentId,
     number: getTicketNumber(response),
     customerName: payload.customerName,
     title: payload.title,

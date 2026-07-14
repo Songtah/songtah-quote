@@ -14,8 +14,8 @@
 | 優先級 | 發現 | 影響 | 決策 |
 |---|---|---|---|
 | P0（已修正） | 工單新增刪除 `tickets:list`，實際清單快取為 `tickets:list:v2:*` | 新工單可能三分鐘不出現，造成重複送單 | 2026-07-14 已修正所有清單 key 及該客戶工單快取；typecheck、build、fresh-context read-back 通過 |
-| P0（待決策） | 工單建立 payload 有四項不符合 live schema：案件標題、案件類型、聯絡人及客戶 relation 欄位 | 建立工單可能被 Notion 拒絕；直接刪欄位又會遺失表單資料 | 詳見 `2026-07-14-ticket-schema-audit.md`；須決定新增正式欄位或降低結構化程度 |
-| P0（待決策） | 工單表單送出 `equipmentId`，live 工單 DB 已確認沒有設備 relation | 無法形成設備維修履歷 | 建議在正式工單 DB 新增設備 relation；屬 schema 變更，須使用者核准 |
+| P0（已修正） | 工單建立 payload 原有四項不符合 live schema：案件標題、案件類型、聯絡人及客戶 relation 欄位 | 建立工單可能被 Notion 拒絕 | 2026-07-14 已依明確授權新增 optional 欄位並修正程式 mapping；正式測試工單 read-back 通過 |
+| P0（已修正） | 工單表單送出 `equipmentId`，原 live 工單 DB 沒有設備 relation | 無法形成設備維修履歷 | 2026-07-14 已新增單向 `設備資料` relation；正式測試工單設備 relation read-back 通過 |
 | P1 | 設備查詢遇到第一個合法但空的 relation 便停止 | 歷史設備可能在客戶頁消失 | 盤點各 relation 分布後，兼容取聯集與去重 |
 | P1 | LINE batch 拜訪只存名稱，未必保存客戶 relation | 同一事件因入口而有不同資料品質 | 抽共用精準配對；多筆或模糊命中進人工例外 |
 | P1 | 只有一般拜訪 POST 推進 Campaign 已聯絡狀態 | 行銷名單狀態取決於回報入口 | 建立共用 application service 與可補跑副作用 |
@@ -43,10 +43,11 @@
 
 ## 五、下一批唯讀盤點
 
-### 工單 DB（schema 與 20 筆樣本已完成；下一步待使用者核准）
+### 工單 DB（schema、20 筆樣本與第一批修正已完成）
 
 - 已確認 live properties、relation 目標與前 20 筆客戶/產品/技術人員 relation 分布。
-- 尚須核准：是否在正式工單 DB 新增案件標題、聯絡人與設備 relation；`故障分類` 沿用現有 multi-select。
+- 已新增 `案件標題`、`聯絡人` 與單向 `設備資料` relation；`故障分類` 沿用既有 multi-select。
+- 程式已改用正確客戶 relation、設備 relation 及 multi-select 寫法，並保留舊 `案件類型` 讀取 fallback。
 - 尚須確認：Notion automation 是否依現有 title 或 status 運作，避免 schema 調整造成連動故障。
 
 ### 設備 DB

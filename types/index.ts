@@ -38,6 +38,7 @@ export interface Equipment {
 
 export interface Ticket {
   id: string
+  equipmentId?: string
   number: string
   customerName: string
   title: string
