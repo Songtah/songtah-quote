@@ -6745,5 +6745,267 @@
       "Comandium (ti) 陶瓷合金": "AB-22",
       "Vera Bond III 鈷鉻金屬": "AB-23"
     }
+  },
+  {
+    "id": "AG-3D-PRINTER",
+    "seriesCode": "AG-3D-PRINTER",
+    "seriesName": "ASIGA 3D 列印機",
+    "brand": "ASIGA",
+    "productType": "設備",
+    "category": "3D 列印機",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "MAX UV 3D Printer",
+          "PRO 4K80 UV 3D Printer",
+          "Ultra 3D Printer",
+          "Max 2 3D Printer（AG-07388）",
+          "Max 2 3D Printer（AG-07915）",
+          "Max 2 (50) 3D Printer"
+        ]
+      }
+    ],
+    "skuMap": {
+      "MAX UV 3D Printer": "AG-02391",
+      "PRO 4K80 UV 3D Printer": "AG-04634",
+      "Ultra 3D Printer": "AG-07323",
+      "Max 2 3D Printer（AG-07388）": "AG-07388",
+      "Max 2 3D Printer（AG-07915）": "AG-07915",
+      "Max 2 (50) 3D Printer": "AG-07930"
+    }
+  },
+  {
+    "id": "AG-POST-CURING",
+    "seriesCode": "AG-POST-CURING",
+    "seriesName": "ASIGA 後固化設備",
+    "brand": "ASIGA",
+    "productType": "設備",
+    "category": "清洗與後固化設備",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Asiga Flash 光固化機",
+          "Cure 2.5 光固化機"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Asiga Flash 光固化機": "AG-00194",
+      "Cure 2.5 光固化機": "AG-07946"
+    }
+  },
+  {
+    "id": "AG-PRINT-RESIN",
+    "seriesCode": "AG-PRINT-RESIN",
+    "seriesName": "ASIGA 3D 列印樹脂",
+    "brand": "ASIGA",
+    "productType": "材料",
+    "category": "3D 列印材料／樹脂",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "PlasGRAY V2 1kg",
+          "PlasPINK V2 1kg",
+          "PlasCLEAR V2 1kg Bottle",
+          "PlasWHITE V2 1kg Bottle",
+          "FusionGRAY V2 1kg Bottle",
+          "DentaModel",
+          "Denta BASE N1 1kg Bottle",
+          "Denta TOOTH A1 1kg Bottle",
+          "Denta TOOTH A2 Bottle(1Kg)",
+          "Denta TOOTH A3",
+          "Denta GUM 1kg Bottle",
+          "DentaTRY A1 1kg Bottle",
+          "DentaTOOTH 1kg Bottle",
+          "DentaTRY A2 1kg Bottle",
+          "Denta GUIDE 1kg Bottle",
+          "Denta Cast 1kg Bottle",
+          "DentaFORM Grey",
+          "Denta STUDY 1kg Bottle",
+          "DentaTRAY Orange 1kg Bottle",
+          "DentaFORM Beige 1kg Bottle"
+        ]
+      }
+    ],
+    "skuMap": {
+      "PlasGRAY V2 1kg": "AG-00928",
+      "PlasPINK V2 1kg": "AG-00929",
+      "PlasCLEAR V2 1kg Bottle": "AG-00930",
+      "PlasWHITE V2 1kg Bottle": "AG-00931",
+      "FusionGRAY V2 1kg Bottle": "AG-01329",
+      "DentaModel": "AG-03000",
+      "Denta BASE N1 1kg Bottle": "AG-03569",
+      "Denta TOOTH A1 1kg Bottle": "AG-03624",
+      "Denta TOOTH A2 Bottle(1Kg)": "AG-03625",
+      "Denta TOOTH A3": "AG-03626",
+      "Denta GUM 1kg Bottle": "AG-03653",
+      "DentaTRY A1 1kg Bottle": "AG-03768",
+      "DentaTOOTH 1kg Bottle": "AG-03810",
+      "DentaTRY A2 1kg Bottle": "AG-03817",
+      "Denta GUIDE 1kg Bottle": "AG-04504",
+      "Denta Cast 1kg Bottle": "AG-04748",
+      "DentaFORM Grey": "AG-05167",
+      "Denta STUDY 1kg Bottle": "AG-05367",
+      "DentaTRAY Orange 1kg Bottle": "AG-07862",
+      "DentaFORM Beige 1kg Bottle": "AG-07876"
+    }
+  },
+  {
+    "id": "AG-PRINT-CONSUMABLE",
+    "seriesCode": "AG-PRINT-CONSUMABLE",
+    "seriesName": "ASIGA 列印料槽／耗材",
+    "brand": "ASIGA",
+    "productType": "耗材",
+    "category": "3D 列印製程耗材",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Bundled 1L MAX Build Tary",
+          "MAX Build Tray 1L 料槽",
+          "MAX Build Tray 2L 料槽",
+          "MAX Build Tray 5L 料槽",
+          "MAX Build Tray 10L 料槽",
+          "PRO Build Tray 2L 料槽",
+          "PRO Build Tray 5L 料槽",
+          "PRO Build Tray 10L 料槽",
+          "MAX Law Force Build Tray 1L 料槽",
+          "MAX UltraGloss Build Tray 1L 料槽",
+          "PRO UltraGloss 2L 料槽",
+          "Ultra Endurance Build Tray 2L 料槽",
+          "Ultra UltraGLOSS 2L 料槽",
+          "Ultra Endurance Build Tray 5L 料槽",
+          "Max UltraGLOSS LIFT 料槽",
+          "Max LIFT Build Tray 料槽",
+          "PRO 4K Endurance Build Tray 2L 料槽",
+          "PRO 4K Endurance Build Tray 5L 料槽",
+          "Max Crown Kit Build Tray",
+          "Ultra Crown Kit Build Tray"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Bundled 1L MAX Build Tary": "AG-0044",
+      "MAX Build Tray 1L 料槽": "AG-02499",
+      "MAX Build Tray 2L 料槽": "AG-02500",
+      "MAX Build Tray 5L 料槽": "AG-02501",
+      "MAX Build Tray 10L 料槽": "AG-02502",
+      "PRO Build Tray 2L 料槽": "AG-04569",
+      "PRO Build Tray 5L 料槽": "AG-04570",
+      "PRO Build Tray 10L 料槽": "AG-04571",
+      "MAX Law Force Build Tray 1L 料槽": "AG-05220",
+      "MAX UltraGloss Build Tray 1L 料槽": "AG-05864",
+      "PRO UltraGloss 2L 料槽": "AG-05868",
+      "Ultra Endurance Build Tray 2L 料槽": "AG-07419",
+      "Ultra UltraGLOSS 2L 料槽": "AG-07422",
+      "Ultra Endurance Build Tray 5L 料槽": "AG-07647",
+      "Max UltraGLOSS LIFT 料槽": "AG-07650",
+      "Max LIFT Build Tray 料槽": "AG-07741",
+      "PRO 4K Endurance Build Tray 2L 料槽": "AG-07788",
+      "PRO 4K Endurance Build Tray 5L 料槽": "AG-07789",
+      "Max Crown Kit Build Tray": "AG-07950",
+      "Ultra Crown Kit Build Tray": "AG-07957"
+    }
+  },
+  {
+    "id": "AG-PRINTER-ACCESSORY",
+    "seriesCode": "AG-PRINTER-ACCESSORY",
+    "seriesName": "ASIGA 列印機配件",
+    "brand": "ASIGA",
+    "productType": "配件",
+    "category": "列印機配件",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "MAX 2 Crown kit",
+          "MAX Build Platform 成型台",
+          "MAX Build Tray Storage Case 料槽收納盒",
+          "PRO 4K Tool kit 工具組",
+          "MAX Tool kit 工具組",
+          "PRO Build Tray Storage Case 料槽收納盒(大)",
+          "Ultra 成型平台",
+          "Ultra Reseller Service Tool kit 工具組",
+          "校正工具包",
+          "Max Crown Kit Set",
+          "Ultra Crown Kit Set"
+        ]
+      }
+    ],
+    "skuMap": {
+      "MAX 2 Crown kit": "AG-0077",
+      "MAX Build Platform 成型台": "AG-02479",
+      "MAX Build Tray Storage Case 料槽收納盒": "AG-04248",
+      "PRO 4K Tool kit 工具組": "AG-05226",
+      "MAX Tool kit 工具組": "AG-05359",
+      "PRO Build Tray Storage Case 料槽收納盒(大)": "AG-05565",
+      "Ultra 成型平台": "AG-07063",
+      "Ultra Reseller Service Tool kit 工具組": "AG-07440",
+      "校正工具包": "AG-07570",
+      "Max Crown Kit Set": "AG-07951",
+      "Ultra Crown Kit Set": "AG-07956"
+    }
+  },
+  {
+    "id": "AG-SPARE-PART",
+    "seriesCode": "AG-SPARE-PART",
+    "seriesName": "ASIGA 維修料件",
+    "brand": "ASIGA",
+    "productType": "維修料件",
+    "category": "列印機維修料件",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "光固化機-燈管",
+          "MAX Touchscreen",
+          "Posltion Encoder Projector USB Cable",
+          "Ultra Hood 門板蓋子",
+          "Ultra 油壓桿",
+          "Encoder Board Assembly",
+          "Max 2/Ultra CPU Board",
+          "Max2 Front Panel觸控面板",
+          "Stepping Motor",
+          "Ultra Projector 50um",
+          "Ultra 平台列印偵測器",
+          "Ultra Front Panel觸控面板"
+        ]
+      }
+    ],
+    "skuMap": {
+      "光固化機-燈管": "AG-00194-1",
+      "MAX Touchscreen": "AG-01407",
+      "Posltion Encoder Projector USB Cable": "AG-02551",
+      "Ultra Hood 門板蓋子": "AG-05899",
+      "Ultra 油壓桿": "AG-07035",
+      "Encoder Board Assembly": "AG-07391",
+      "Max 2/Ultra CPU Board": "AG-07446",
+      "Max2 Front Panel觸控面板": "AG-07458",
+      "Stepping Motor": "AG-07514",
+      "Ultra Projector 50um": "AG-08110",
+      "Ultra 平台列印偵測器": "AG-08111",
+      "Ultra Front Panel觸控面板": "AG-08114"
+    }
   }
 ]
