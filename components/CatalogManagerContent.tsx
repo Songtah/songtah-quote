@@ -1568,426 +1568,131 @@ function ProductEditDrawer({
   )
 }
 
-// ── Product Detail Card ───────────────────────────────────────
-
-function ProductDetailCard({
-  skuCode,
-  onClose,
-  onEdit,
-}: {
-  skuCode: string
-  onClose: () => void
-  onEdit:  () => void
-}) {
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
-  const [catalog, setCatalog] = useState<CatalogItem | null>(null)
-  const [rich,    setRich]    = useState<{
-    price:       number | null
-    imageUrl:    string
-    description: string
-    specsJson:   string
-    galleryJson: string
-    docsJson:    string
-  } | null>(null)
-
-  useEffect(() => {
-    setLoading(true); setError('')
-    fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) { setError(data.error); return }
-        setCatalog(data.catalog)
-        setRich(data.rich)
-      })
-      .catch(() => setError('無法載入商品資料'))
-      .finally(() => setLoading(false))
-  }, [skuCode])
-
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
-
-  const specs: SpecTable = rich ? parseSpecs(rich.specsJson) : defaultSpecs()
-  const galleryImages: GalleryImage[] = parseGallery(rich?.galleryJson ?? '[]')
-  const docs: DocFile[] = (() => {
-    try { const p = JSON.parse(rich?.docsJson ?? '[]'); return Array.isArray(p) ? p : [] } catch { return [] }
-  })()
-
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (lightboxIdx !== null) { setLightboxIdx(null); return }
-        onClose()
-      }
-      if (lightboxIdx !== null) {
-        if (e.key === 'ArrowRight')
-          setLightboxIdx((i) => i !== null ? Math.min(i + 1, galleryImages.length - 1) : null)
-        if (e.key === 'ArrowLeft')
-          setLightboxIdx((i) => i !== null ? Math.max(i - 1, 0) : null)
-      }
-    }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [onClose, lightboxIdx, galleryImages.length])
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
-
-  const hasAnyRich = rich && (
-    rich.imageUrl || rich.description || rich.price != null ||
-    specs.rows.length > 0 || galleryImages.length > 0 || docs.length > 0
-  )
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-3 pb-3 pt-14 sm:p-6"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <motion.div
-        className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
-        onClick={onClose}
-      />
-
-      <motion.div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-        initial={{ opacity: 0, scale: 0.96, y: 10 }}
-        animate={{ opacity: 1, scale: 1,    y: 0 }}
-        exit={{    opacity: 0, scale: 0.96, y: 10 }}
-        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-      >
-        {/* ── Header ───────────────────────────────────────── */}
-        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              {/* Tags */}
-              {catalog && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {catalog.brand && (
-                    <span className="text-xs font-semibold bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">
-                      {catalog.brand}
-                    </span>
-                  )}
-                  {catalog.category && (
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                      {catalog.category}
-                    </span>
-                  )}
-                  {catalog.productType && (
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                      {catalog.productType}
-                    </span>
-                  )}
-                </div>
-              )}
-              <h2 className="text-xl font-bold text-slate-900 leading-snug">
-                {loading ? '載入中…' : (catalog?.name ?? skuCode)}
-              </h2>
-              <p className="text-xs font-mono text-gray-400 mt-1">{skuCode}</p>
-            </div>
-            {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0 mt-0.5">
-              {!loading && !error && (
-                <button
-                  onClick={onEdit}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600
-                             hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition"
-                >
-                  ✏️ 編輯
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
-              >✕</button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Body ─────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-
-          {/* Loading */}
-          {loading && (
-            <div className="flex items-center justify-center py-24">
-              <svg className="animate-spin h-6 w-6 text-brand-400" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path  className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="m-6 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
-
-          {/* Empty (no rich data yet) */}
-          {!loading && !error && !hasAnyRich && (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
-              <span className="text-5xl">📦</span>
-              <p className="text-sm">尚未填寫商品資料</p>
-              <button
-                onClick={onEdit}
-                className="mt-1 text-xs font-medium text-brand-600 hover:text-brand-700 underline"
-              >點擊「編輯」開始填寫</button>
-            </div>
-          )}
-
-          {/* Content */}
-          {!loading && !error && hasAnyRich && (
-            <>
-              {/* ── Top: image + price + description ────────── */}
-              <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-5">
-                {/* Main image */}
-                {rich!.imageUrl ? (
-                  <div className="w-full sm:w-44 sm:h-44 aspect-square sm:aspect-auto shrink-0 rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm">
-                    <img src={rich!.imageUrl} alt={catalog?.name} className="w-full h-full object-contain"/>
-                  </div>
-                ) : (
-                  <div className="w-full sm:w-44 sm:h-44 aspect-square sm:aspect-auto shrink-0 rounded-xl bg-gray-50 border border-dashed border-gray-200
-                                  flex items-center justify-center">
-                    <span className="text-5xl text-gray-200">🖼</span>
-                  </div>
-                )}
-
-                {/* Price + description */}
-                <div className="flex-1 min-w-0">
-                  {rich!.price != null && (
-                    <div className="mb-4">
-                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-0.5">售價</p>
-                      <p className="text-2xl font-bold text-slate-900">
-                        NT${rich!.price.toLocaleString('zh-TW')}
-                      </p>
-                    </div>
-                  )}
-                  {rich!.description ? (
-                    <div>
-                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1.5">商品介紹</p>
-                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {rich!.description}
-                      </p>
-                    </div>
-                  ) : !rich!.price && (
-                    <p className="text-sm text-gray-400 italic mt-2">尚未填寫介紹與售價</p>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Technical specs ──────────────────────────── */}
-              {specs.rows.length > 0 && (
-                <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">技術規格</p>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
-                    {/* Header */}
-                    <div className="bg-slate-50 border-b border-gray-200"
-                      style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.columns.length}, minmax(80px, 1fr))` }}>
-                      {specs.columns.map((col, ci) => (
-                        <div key={ci} className={`px-3 py-2 text-xs font-semibold text-slate-600 ${ci < specs.columns.length - 1 ? 'border-r border-gray-200' : ''}`}>
-                          {col}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Rows */}
-                    {specs.rows.map((row, ri) => (
-                      <div key={ri} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
-                        style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.columns.length}, minmax(80px, 1fr))` }}>
-                        {row.map((cell, ci) => (
-                          <div key={ci} className={`px-3 py-2 text-sm text-gray-700 ${ci < specs.columns.length - 1 ? 'border-r border-gray-100' : ''}`}>
-                            {cell || <span className="text-gray-300">—</span>}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Gallery ──────────────────────────────────── */}
-              {galleryImages.length > 0 && (
-                <div className="px-6 pb-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                    形象素材 <span className="text-gray-300 font-normal normal-case tracking-normal">（點擊放大）</span>
-                  </p>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {galleryImages.map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setLightboxIdx(i)}
-                        className="shrink-0 w-28 h-28 rounded-xl overflow-hidden bg-white border border-gray-200
-                                   hover:border-brand-300 hover:shadow-md transition-all focus:outline-none"
-                      >
-                        <img src={img.url} alt={`素材 ${i + 1}`} className="w-full h-full object-cover"
-                          style={{ objectPosition: img.pos }} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Documents ────────────────────────────────── */}
-              {docs.length > 0 && (
-                <div className="px-6 pb-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">文件資料</p>
-                  <div className="rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
-                    {docs.map((doc, i) => (
-                      <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition">
-                        <span className="text-xl shrink-0">{docIcon(doc.name)}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
-                          <p className="text-[11px] text-gray-400">{formatFileSize(doc.size)}</p>
-                        </div>
-                        <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"
-                          className="shrink-0 text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500
-                                     hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
-                          下載
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* ── Lightbox ─────────────────────────────────────── */}
-        <AnimatePresence>
-          {lightboxIdx !== null && galleryImages[lightboxIdx] && (
-            <motion.div
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/90 rounded-2xl"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              onClick={() => setLightboxIdx(null)}
-            >
-              {/* Image */}
-              <motion.img
-                key={lightboxIdx}
-                src={galleryImages[lightboxIdx].url}
-                alt={`素材 ${lightboxIdx + 1}`}
-                className="max-w-full max-h-full object-contain rounded-lg select-none"
-                style={{ maxHeight: 'calc(90vh - 80px)', padding: '48px 56px' }}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                onClick={(e) => e.stopPropagation()}
-                draggable={false}
-              />
-
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={() => setLightboxIdx(null)}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full
-                           bg-white/10 text-white hover:bg-white/20 transition text-sm"
-              >✕</button>
-
-              {/* Counter */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/40 text-white text-xs
-                              px-3 py-1 rounded-full font-medium pointer-events-none">
-                {lightboxIdx + 1} / {galleryImages.length}
-              </div>
-
-              {/* Prev */}
-              {lightboxIdx > 0 && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx - 1) }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center
-                             rounded-full bg-white/10 text-white hover:bg-white/25 transition text-lg"
-                >‹</button>
-              )}
-
-              {/* Next */}
-              {lightboxIdx < galleryImages.length - 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setLightboxIdx(lightboxIdx + 1) }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center
-                             rounded-full bg-white/10 text-white hover:bg-white/25 transition text-lg"
-                >›</button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
-  )
-}
-
 // ── SKU Row ───────────────────────────────────────────────────
 
 function SkuRow({
   item,
   priceCache,
   imageFlagCache,
-  onView,
   onEdit,
 }: {
   item: CatalogItem
   priceCache: Map<string, number | null>
   imageFlagCache: Set<string>
-  onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const [summary, setSummary] = useState<IntroData | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const summaryFetched = useRef(false)
   const hasPrice = priceCache.has(item.code)
   const hasImage = imageFlagCache.has(item.code)
   const price    = priceCache.get(item.code)
 
-  return (
-    <div
-      onClick={() => onView(item)}
-      className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 group
-                 cursor-pointer hover:bg-brand-50/40 -mx-2 px-2 rounded-lg transition-colors"
-    >
-      {/* Image dot */}
-      <div className={`w-2 h-2 rounded-full shrink-0 ${hasImage ? 'bg-blue-400' : 'bg-gray-200'}`} />
+  const handleToggle = () => {
+    const next = !open
+    setOpen(next)
+    if (!next || summaryFetched.current) return
+    summaryFetched.current = true
+    setSummaryLoading(true)
+    fetch(`/api/products/sku/${encodeURIComponent(item.code)}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!data?.rich) return
+        setSummary({
+          notionId: data.rich.notionId ?? null,
+          imageUrl: data.rich.imageUrl ?? '',
+          description: data.rich.description ?? '',
+        })
+      })
+      .catch(() => setSummary(null))
+      .finally(() => setSummaryLoading(false))
+  }
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="text-sm text-gray-800 truncate">{item.name}</p>
-          {item.discontinued && (
-            <span className="shrink-0 text-[10px] font-medium text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
-              {item.status || '未販售'}
-            </span>
-          )}
-          {item.needsReview && (
-            <span className="shrink-0 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-              分類待覆核
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          {item.brand && (
-            <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded-full shrink-0">
-              {item.brand}
-            </span>
-          )}
-          <p className="font-mono text-[11px] text-gray-400 truncate">{item.code}</p>
-          {item.category && (
-            <span className="text-[10px] text-stone-400 truncate hidden sm:inline">{item.category}</span>
-          )}
-        </div>
+  return (
+    <div className="border-b border-stone-900/[0.05] py-1 last:border-0" data-testid="inline-sku-summary">
+      <div className="group flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-brand-50/40">
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition-all active:scale-[0.99]"
+          aria-expanded={open}
+        >
+          <div className={`h-2 w-2 shrink-0 rounded-full ${hasImage ? 'bg-brand-500' : 'bg-stone-200'}`} />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium text-stone-800">{item.name}</p>
+              {item.discontinued && (
+                <span className="shrink-0 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
+                  {item.status || '未販售'}
+                </span>
+              )}
+              {item.needsReview && (
+                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+                  分類待覆核
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="truncate font-mono text-[11px] text-stone-400">{item.code}</p>
+              {item.brand && <span className="chip">{item.brand}</span>}
+              {item.category && <span className="hidden text-[10px] text-stone-400 sm:inline">{item.category}</span>}
+            </div>
+          </div>
+
+          <div className="shrink-0 text-right">
+            {hasPrice && price != null ? (
+              <span className="price-pill">NT${price.toLocaleString('zh-TW')}</span>
+            ) : (
+              <span className="text-[11px] font-medium text-amber-600">待定價</span>
+            )}
+            <span className={`ml-2 inline-block text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">›</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs font-medium text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
+        >
+          編輯
+        </button>
       </div>
 
-      {hasPrice && price != null && (
-        <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
-          NT${price.toLocaleString('zh-TW')}
-        </span>
-      )}
-
-      <button
-        onClick={(e) => { e.stopPropagation(); onEdit(item) }}
-        className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500
-                   hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition
-                   opacity-0 group-hover:opacity-100"
-      >
-        編輯
-      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mx-2 mb-2 flex flex-col gap-3 rounded-2xl bg-stone-50 p-3 sm:flex-row">
+              {summaryLoading ? (
+                <div className="h-20 w-full animate-pulse rounded-2xl bg-stone-100" />
+              ) : (
+                <>
+                  {summary?.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={summary.notionId ? `/api/notion-image?pageId=${summary.notionId}` : summary.imageUrl}
+                      alt={item.name}
+                      className="h-36 w-full shrink-0 rounded-2xl bg-white object-contain ring-1 ring-stone-900/[0.05] sm:h-24 sm:w-24"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">產品介紹</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-stone-600">
+                      {summary?.description || '尚未建立產品介紹。'}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -2003,7 +1708,6 @@ function FamilyCard({
   allItems,
   priceCache,
   imageFlagCache,
-  onView,
   onEdit,
   onOpenModal,
 }: {
@@ -2011,7 +1715,6 @@ function FamilyCard({
   allItems: CatalogItem[]
   priceCache: Map<string, number | null>
   imageFlagCache: Set<string>
-  onView: (item: CatalogItem) => void
   onEdit: (item: CatalogItem) => void
   onOpenModal?: () => void
 }) {
@@ -2019,7 +1722,9 @@ function FamilyCard({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [introLoading, setIntroLoading] = useState(false)
   const [introData,    setIntroData]    = useState<IntroData | null>(null)
+  const [focusedSkuCode, setFocusedSkuCode] = useState('')
   const introFetched = useRef(false)
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   // 系列成員只接受明確 SKU 對照，不用貨號前綴猜測。
   const skuCodes = explicitFamilySkuCodes(family)
@@ -2030,6 +1735,16 @@ function FamilyCard({
   if (items.length === 0) return null
 
   const priceSetCount = items.filter((it) => priceCache.has(it.code) && priceCache.get(it.code) != null).length
+  const priceValues = items
+    .map((item) => item.price ?? priceCache.get(item.code))
+    .filter((price): price is number => typeof price === 'number')
+  const minPrice = priceValues.length > 0 ? Math.min(...priceValues) : null
+  const maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : null
+  const priceSummary = minPrice == null
+    ? '待定價'
+    : minPrice === maxPrice
+      ? `NT$${minPrice.toLocaleString('zh-TW')}`
+      : `NT$${minPrice.toLocaleString('zh-TW')}～${maxPrice!.toLocaleString('zh-TW')}`
   const imageSetCount = items.filter((it) => imageFlagCache.has(it.code)).length
   const visibleItems  = items.slice(0, visibleCount)
   const remaining     = items.length - visibleCount
@@ -2042,9 +1757,23 @@ function FamilyCard({
         introFetched.current = true
         setIntroLoading(true)
         ;(async () => {
-          // Try up to 5 members to find one with an image or description
-          const candidates = items.slice(0, 5)
           let found: IntroData | null = null
+          try {
+            const seriesResponse = await fetch(`/api/products/series/${encodeURIComponent(family.seriesCode)}`)
+            if (seriesResponse.ok) {
+              const series = await seriesResponse.json()
+              if (series?.imageUrl || series?.description) {
+                found = {
+                  notionId: null,
+                  imageUrl: series.imageUrl ?? '',
+                  description: series.description ?? '',
+                }
+              }
+            }
+          } catch { /* fallback to SKU content */ }
+
+          // 系列資料未建立時，回退前 5 個 SKU 的既有介紹。
+          const candidates = found ? [] : items.slice(0, 5)
           for (const item of candidates) {
             try {
               const res = await fetch(`/api/products/sku/${encodeURIComponent(item.code)}`)
@@ -2070,6 +1799,15 @@ function FamilyCard({
   }
 
   const representative = items[0]
+  const handleFocusSku = (skuCode: string) => {
+    const index = items.findIndex((item) => item.code === skuCode)
+    if (index < 0) return
+    setFocusedSkuCode(skuCode)
+    setVisibleCount((count) => Math.max(count, index + 1))
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => itemRefs.current.get(skuCode)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+    })
+  }
 
   return (
     <div className="card-soft card-soft-hover overflow-hidden" data-testid="series-result-card">
@@ -2096,8 +1834,10 @@ function FamilyCard({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="text-xs text-stone-400">{items.length} 個規格</span>
-            {priceSetCount > 0 && <span className="price-pill">✓ {priceSetCount} 已設售價</span>}
+            <span className={minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
+            {priceSetCount > 0 && priceSetCount < items.length && <span className="text-[11px] text-stone-400">{items.length - priceSetCount} 項待定價</span>}
             {imageSetCount > 0 && <span className="text-xs font-medium text-brand-600">✓ {imageSetCount} 已設圖片</span>}
+            <span className="text-[11px] font-medium text-brand-600">照片・規格・文件 ›</span>
           </div>
         </button>
         <span className="hidden shrink-0 text-xs text-stone-400 lg:block">{representative.category}</span>
@@ -2127,10 +1867,10 @@ function FamilyCard({
                 </div>
               ) : introData?.imageUrl || introData?.description ? (
                 <div className="flex gap-4">
-                  {introData.imageUrl && introData.notionId && (
+                  {introData.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={`/api/notion-image?pageId=${introData.notionId}`}
+                      src={introData.notionId ? `/api/notion-image?pageId=${introData.notionId}` : introData.imageUrl}
                       alt={family.seriesName}
                       className="w-24 h-24 rounded-xl object-cover shrink-0 border border-gray-100 bg-gray-50"
                     />
@@ -2162,20 +1902,14 @@ function FamilyCard({
                   {family.uiVariant === 'ymh-tooth-grid' ? (
                     <YMHToothGridPanel
                       family={family}
-                      onAdd={(skuCode) => {
-                        const item = allItems.find((it) => it.code === skuCode)
-                        if (item) onView(item)
-                      }}
-                      actionLabel="查看詳情"
+                      onAdd={handleFocusSku}
+                      actionLabel="定位此品項"
                     />
                   ) : (
                     <FamilySpecPanel
                       family={family}
-                      onAdd={(skuCode) => {
-                        const item = allItems.find((it) => it.code === skuCode)
-                        if (item) onView(item)
-                      }}
-                      actionLabel="查看詳情"
+                      onAdd={handleFocusSku}
+                      actionLabel="定位此品項"
                     />
                   )}
                 </div>
@@ -2190,22 +1924,23 @@ function FamilyCard({
                   {visibleItems.map((item) => (
                     <div
                       key={item.code}
-                      className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-gray-50 group cursor-pointer"
-                      onClick={() => onView(item)}
+                      ref={(element) => {
+                        if (element) itemRefs.current.set(item.code, element)
+                        else itemRefs.current.delete(item.code)
+                      }}
+                      className={`group flex min-h-12 items-center gap-3 rounded-2xl px-2 py-2 transition-colors ${focusedSkuCode === item.code ? 'bg-brand-50 ring-1 ring-brand-200' : 'hover:bg-brand-50/40'}`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${imageFlagCache.has(item.code) ? 'bg-blue-400' : 'bg-gray-200'}`} />
-                      <span className="font-mono text-[11px] text-gray-400 w-28 shrink-0">{item.code}</span>
-                      <span className="text-sm text-gray-700 flex-1 truncate">{item.name}</span>
-                      {priceCache.has(item.code) && priceCache.get(item.code) != null && (
-                        <span className="text-xs text-emerald-600 shrink-0">
-                          NT${(priceCache.get(item.code) as number).toLocaleString('zh-TW')}
-                        </span>
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${imageFlagCache.has(item.code) ? 'bg-brand-500' : 'bg-stone-200'}`} />
+                      <span className="w-24 shrink-0 truncate font-mono text-[11px] text-stone-400 sm:w-32">{item.code}</span>
+                      <span className="flex-1 truncate text-sm font-medium text-stone-700">{item.name}</span>
+                      {(item.price ?? priceCache.get(item.code)) != null ? (
+                        <span className="price-pill shrink-0">NT${(item.price ?? priceCache.get(item.code) as number).toLocaleString('zh-TW')}</span>
+                      ) : (
+                        <span className="shrink-0 text-[11px] font-medium text-amber-600">待定價</span>
                       )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(item) }}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-400
-                                   hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50
-                                   opacity-0 group-hover:opacity-100 transition shrink-0"
+                        onClick={() => onEdit(item)}
+                        className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
                       >
                         編輯
                       </button>
@@ -2409,7 +2144,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   const [filterType,     setFilterType]     = useState('')   // 商品型態(9)
   const [filtersOpen,    setFiltersOpen]    = useState(false)
 
-  const [viewingItem,  setViewingItem]  = useState<CatalogItem | null>(null)
   const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
   const [featuredIds,  setFeaturedIds]  = useState<string[]>([])
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
@@ -2748,7 +2482,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                     allItems={allItems}
                     priceCache={priceCache}
                     imageFlagCache={imageFlagCache}
-                    onView={setViewingItem}
                     onEdit={setEditingItem}
                     onOpenModal={() => setModalFamily(family)}
                   />
@@ -2771,7 +2504,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                 item={item}
                 priceCache={priceCache}
                 imageFlagCache={imageFlagCache}
-                onView={setViewingItem}
                 onEdit={setEditingItem}
               />
             ))}
@@ -2837,7 +2569,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                   allItems={allItems}
                   priceCache={priceCache}
                   imageFlagCache={imageFlagCache}
-                  onView={setViewingItem}
                   onEdit={setEditingItem}
                   onOpenModal={() => setModalFamily(family)}
                 />
@@ -2846,22 +2577,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
           </div>
         </div>
       )}
-
-      {/* Detail Card */}
-      <AnimatePresence>
-        {viewingItem && !editingItem && (
-          <ProductDetailCard
-            key={`view-${viewingItem.code}`}
-            skuCode={viewingItem.code}
-            onClose={() => setViewingItem(null)}
-            onEdit={() => {
-              const item = viewingItem
-              setViewingItem(null)
-              setEditingItem(item)
-            }}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Edit Drawer */}
       <AnimatePresence>
