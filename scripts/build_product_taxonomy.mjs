@@ -139,6 +139,22 @@ const DETAX_PRINT_RESIN_CODES = new Set(`
   DT-03608 DT-03989 DT-04016 DT-04062 DT-04063 DT-04064 DT-04092 DT-04101 DT-04249 DT-04427
   DT-04432 DT-04433 DT-04436 DT-04625 DT-04626 DT-09900-2
 `.trim().split(/\s+/))
+const SUN_GRINDING_CODES = new Set(`
+  SUN-PSC132104F SUN-PSC138104F SUN-PSC151104F SUN-PSC153104F SUN-PSC159104F SUN-PSC191104F
+  SUN-PSC199104F SUN-PSC219104F SUN-PSC239104F SUN-PSC508104F SUN-PSC538104F SUN-PSC566104F
+  SUN-PSC569104F SUN-PSCSET104/01 SUN-PSCSET104/05
+`.trim().split(/\s+/))
+const SUN_POLISHING_CODES = new Set(`
+  SUN-PGS106104M SUN-PGS146104M SUN-PGS546104M SUN-PGS600104M SUN-PGSSET104/01
+  SUN-TCP100104MSW4Z SUN-TCP100104XFSW4Z SUN-TCP140104M SUN-TCP140104XF SUN-TCP158104MSW4Z
+  SUN-TCP140104C SUN-TCP140104XC SUN-TCP158104XFSW4Z SUN-TCP417104GR16 SUN-TCP419104GR16
+  SUN-TCP541104MSW4Z SUN-TCP541104XFSW4Z SUN-TCP541104XCSW4Z
+  SUN-TCP545104MSW4Z SUN-TCP545104XFSW4Z SUN-TCP546104M SUN-TCP546104XF
+  SUN-TCPPASTE01/20 SUN-TCPSET104/01 SUN-TCPSET104/02 SUN-TCPSET104/10 SUN-TCPSET104/11
+  SUN-XPL111104M SUN-XPL111104XF SUN-XPL547104M SUN-XPL548104C SUN-XPL548104M SUN-XPL628
+  SUN-XPL932 SUN-XPLPaste02/40 SUN-XPLSET104/01
+`.trim().split(/\s+/))
+const SUN_REVIEW_CODES = new Set(['SUN-PSCSET104/05'])
 
 const ASIGA_OFFICIAL_GROUPS = [
   ASIGA_PRINTER_CODES,
@@ -167,6 +183,11 @@ const VERIFIED_PRODUCT_OVERRIDES = new Map([
   ['SY-01050-3', ['lab-equipment', 'light-curing-equipment', 'spare_part']],
   ['SY-01051', ['lab-equipment', 'light-curing-equipment', 'equipment']],
   ['SY-04170', ['lab-production', 'die-model-accessory', 'accessory']],
+])
+const VERIFIED_SKU_CODES = new Set([
+  ...VERIFIED_PRODUCT_OVERRIDES.keys(),
+  ...SUN_GRINDING_CODES,
+  ...SUN_POLISHING_CODES,
 ])
 
 function countBy(items, selector) {
@@ -221,6 +242,9 @@ function classify3d(product) {
   const code = product.code || ''
 
   if (VERIFIED_PRODUCT_OVERRIDES.has(code)) return VERIFIED_PRODUCT_OVERRIDES.get(code)
+  if (SUN_GRINDING_CODES.has(code)) return ['lab-production', 'grinding-tool', 'consumable']
+  if (SUN_POLISHING_CODES.has(code)) return ['lab-production', 'polishing-consumable', 'consumable']
+  if (brand === 'SUN Oberflächentechnik') throw new Error(`SUN SKU lacks a verified classification rule: ${code}`)
 
   if (ASIGA_PRINTER_CODES.has(code)) return ['additive-manufacturing', '3d-printer', 'equipment']
   if (ASIGA_POST_PROCESSING_CODES.has(code)) return ['additive-manufacturing', 'post-processing', 'equipment']
@@ -273,6 +297,15 @@ function classifyProduct(product, seriesIndex) {
   if (product.mainCategory === '設備' && product.productType !== '設備' && !override) {
     reviewReasons.push('equipment_axis_conflict')
   }
+  if (SUN_REVIEW_CODES.has(product.code)) reviewReasons.push('official_sku_code_mismatch')
+
+  const facets = {
+    brand: product.brand || null,
+    productKind,
+  }
+  if (product.brand === 'SUN Oberflächentechnik' && /\bkit\b/i.test(product.name || '')) {
+    facets.packageForm = 'kit'
+  }
 
   return {
     skuCode: product.code,
@@ -281,10 +314,7 @@ function classifyProduct(product, seriesIndex) {
       functionCategory,
       seriesId: seriesMatch.seriesId,
     },
-    facets: {
-      brand: product.brand || null,
-      productKind,
-    },
+    facets,
     reviewRequired: reviewReasons.length > 0,
     reviewReasons,
     classificationStatus: businessCategory === 'other-review'
@@ -292,7 +322,7 @@ function classifyProduct(product, seriesIndex) {
       : reviewReasons.length > 0 ? 'needs_review' : 'approved_rule',
     classificationMethod: OFFICIAL_3D_CODES.has(product.code)
       ? 'official_sku_rule'
-      : VERIFIED_PRODUCT_OVERRIDES.has(product.code) ? 'verified_sku_rule'
+      : VERIFIED_SKU_CODES.has(product.code) ? 'verified_sku_rule'
         : override ? 'specific_3d_rule' : 'legacy_category_rule',
     seriesMatch,
     legacy: {
@@ -334,7 +364,8 @@ function dictionaryOutput(generatorSourceHash) {
     schemaVersion: VERSION,
     generatorSourceHash,
     hierarchy: ['businessCategory', 'functionCategory', 'seriesId', 'skuCode'],
-    facets: ['brand', 'productKind'],
+    facets: ['brand', 'productKind', 'packageForm'],
+    packageForms: [{ id: 'kit', label: '套裝組' }],
     productKinds: PRODUCT_KINDS,
     businessCategories: Object.entries(BUSINESS_LABELS).map(([id, label]) => ({ id, label })),
     functionCategories: Object.values(functions).sort((a, b) => a.id.localeCompare(b.id)),
@@ -363,6 +394,9 @@ function dictionaryOutput(generatorSourceHash) {
       medifiveProductOverview: 'https://medifive.gobizkorea.com/mini/site/miniSiteMain.do',
       songYoungDieLockTray: 'https://songyoung.com.tw/product_detail.php?productID=230',
       actilinkRebornProductSheet: 'https://kyushu-dentalshow.jp/2026/wp-content/uploads/2025/04/ACTILINK-Reborn_202502_Nxt.pdf',
+      sunPantherSeries: 'https://www.sun-dental.de/produkte/panther-serie',
+      sunPantherPolymer: 'https://www.sun-dental.de/en/panther-polymer',
+      sunPantherProductIndex: 'https://www.sun-dental.de/artikelgruppe/panther',
     },
   }
 }
@@ -382,7 +416,7 @@ function summaryOutput(catalog, records, unknownCategories, generatedAt) {
   }
 }
 
-function assertRequired3dRules(catalog, records) {
+function assertRequiredSkuRules(catalog, records) {
   const byCode = new Map(records.map((item) => [item.skuCode, item]))
   const checks = [
     {
@@ -420,6 +454,16 @@ function assertRequired3dRules(catalog, records) {
       products: catalog.filter((item) => ASIGA_SPARE_PART_CODES.has(item.code)),
       expected: (item) => item.taxonomy.functionCategory === 'printer-spare-part' && item.facets.productKind === 'spare_part',
     },
+    {
+      label: 'SUN Panther grinding instruments',
+      products: catalog.filter((item) => SUN_GRINDING_CODES.has(item.code)),
+      expected: (item) => item.taxonomy.businessCategory === 'lab-production' && item.taxonomy.functionCategory === 'grinding-tool' && item.facets.productKind === 'consumable',
+    },
+    {
+      label: 'SUN Panther polishing instruments',
+      products: catalog.filter((item) => SUN_POLISHING_CODES.has(item.code)),
+      expected: (item) => item.taxonomy.businessCategory === 'lab-production' && item.taxonomy.functionCategory === 'polishing-consumable' && item.facets.productKind === 'consumable',
+    },
   ]
 
   const asigaSourceCodes = new Set(catalog.filter((item) => item.brand === 'ASIGA').map((item) => item.code))
@@ -435,13 +479,27 @@ function assertRequired3dRules(catalog, records) {
     throw new Error(`DETAX official resin SKUs are absent from catalog: ${missingDetaxProducts.join(', ')}`)
   }
 
+  const sunSourceCodes = new Set(catalog.filter((item) => item.brand === 'SUN Oberflächentechnik').map((item) => item.code))
+  const sunRuleCodes = new Set([...SUN_GRINDING_CODES, ...SUN_POLISHING_CODES])
+  const missingSunRules = [...sunSourceCodes].filter((code) => !sunRuleCodes.has(code))
+  const missingSunProducts = [...sunRuleCodes].filter((code) => !sunSourceCodes.has(code))
+  if (missingSunRules.length > 0 || missingSunProducts.length > 0) {
+    throw new Error(`SUN verified rules are incomplete: unclassified=${missingSunRules.join('|') || 'none'}; absent=${missingSunProducts.join('|') || 'none'}`)
+  }
+  for (const code of SUN_REVIEW_CODES) {
+    const item = byCode.get(code)
+    if (!item?.reviewRequired || !item.reviewReasons.includes('official_sku_code_mismatch')) {
+      throw new Error(`SUN official SKU mismatch must remain under review: ${code}`)
+    }
+  }
+
   for (const check of checks) {
-    if (check.products.length === 0) throw new Error(`Required 3D check has no source products: ${check.label}`)
+    if (check.products.length === 0) throw new Error(`Required SKU check has no source products: ${check.label}`)
     const failures = check.products
       .map((product) => byCode.get(product.code))
       .filter((item) => !item || !check.expected(item))
     if (failures.length > 0) {
-      throw new Error(`Required 3D rule failed (${check.label}): ${failures.map((item) => item?.skuCode || '<missing>').join(', ')}`)
+      throw new Error(`Required SKU rule failed (${check.label}): ${failures.map((item) => item?.skuCode || '<missing>').join(', ')}`)
     }
   }
 }
@@ -529,7 +587,7 @@ async function main() {
 
   const seriesIndex = buildSeriesIndex(families)
   const records = catalog.map((product) => classifyProduct(product, seriesIndex))
-  assertRequired3dRules(catalog, records)
+  assertRequiredSkuRules(catalog, records)
   const generatedAt = new Date().toISOString()
   const summary = summaryOutput(catalog, records, unknownCategories, generatedAt)
   const samples = records.slice(0, 20)

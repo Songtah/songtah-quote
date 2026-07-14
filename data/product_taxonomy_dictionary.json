@@ -1,6 +1,6 @@
 {
   "schemaVersion": "2026-07-14.v1",
-  "generatorSourceHash": "fe4bf7d55e2e1f4b2dbc92b91c657d575ddf8e9923e6cd0ff02ce397a08374a8",
+  "generatorSourceHash": "53b0cb04d2e46c940734ba03c1574372ea918425cb9bfc1355274e3874c1994f",
   "hierarchy": [
     "businessCategory",
     "functionCategory",
@@ -9,7 +9,14 @@
   ],
   "facets": [
     "brand",
-    "productKind"
+    "productKind",
+    "packageForm"
+  ],
+  "packageForms": [
+    {
+      "id": "kit",
+      "label": "套裝組"
+    }
   ],
   "productKinds": [
     "equipment",
@@ -924,6 +931,9 @@
     "gcOptiglazeColor": "https://www.gc.dental/america/products/laboratory/indirect-composites/optiglaze-color",
     "medifiveProductOverview": "https://medifive.gobizkorea.com/mini/site/miniSiteMain.do",
     "songYoungDieLockTray": "https://songyoung.com.tw/product_detail.php?productID=230",
-    "actilinkRebornProductSheet": "https://kyushu-dentalshow.jp/2026/wp-content/uploads/2025/04/ACTILINK-Reborn_202502_Nxt.pdf"
+    "actilinkRebornProductSheet": "https://kyushu-dentalshow.jp/2026/wp-content/uploads/2025/04/ACTILINK-Reborn_202502_Nxt.pdf",
+    "sunPantherSeries": "https://www.sun-dental.de/produkte/panther-serie",
+    "sunPantherPolymer": "https://www.sun-dental.de/en/panther-polymer",
+    "sunPantherProductIndex": "https://www.sun-dental.de/artikelgruppe/panther"
   }
 }

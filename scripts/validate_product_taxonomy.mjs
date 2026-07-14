@@ -15,7 +15,7 @@ const PATHS = {
 }
 
 const EXPECTED = {
-  catalogRawHash: 'ac025d8edff23c5550029280ef7199c1d21c5233e3b8a8af83143008fcb4b1af',
+  catalogRawHash: 'f8131d80b4df6d9ee2d2f7505a476a421997024cfbc20857edfe91f9a4770463',
   familiesRawHash: 'ab73a40d73bc77ec87b7a305c445e95e8216e8b336a15467b93965dda89fa376',
   catalogBusinessHash: 'bfbbaed426269528850294b9f557607ca6dd3cb6e8f9f40923c03369d579d8d8',
   familyIdsHash: '33f809e5b41c43f61338bb173220c9351c93e247c6009cac438ed881d1010d96',
@@ -39,6 +39,22 @@ const EXPECTED_PRODUCT_KINDS = [
 ]
 const CLASSIFICATION_STATUSES = new Set(['approved_rule', 'needs_review', 'unresolved'])
 const CLASSIFICATION_METHODS = new Set(['legacy_category_rule', 'official_sku_rule', 'verified_sku_rule', 'specific_3d_rule'])
+const SUN_GRINDING_CODES = new Set(`
+  SUN-PSC132104F SUN-PSC138104F SUN-PSC151104F SUN-PSC153104F SUN-PSC159104F SUN-PSC191104F
+  SUN-PSC199104F SUN-PSC219104F SUN-PSC239104F SUN-PSC508104F SUN-PSC538104F SUN-PSC566104F
+  SUN-PSC569104F SUN-PSCSET104/01 SUN-PSCSET104/05
+`.trim().split(/\s+/))
+const SUN_POLISHING_CODES = new Set(`
+  SUN-PGS106104M SUN-PGS146104M SUN-PGS546104M SUN-PGS600104M SUN-PGSSET104/01
+  SUN-TCP100104MSW4Z SUN-TCP100104XFSW4Z SUN-TCP140104C SUN-TCP140104M SUN-TCP140104XC
+  SUN-TCP140104XF SUN-TCP158104MSW4Z SUN-TCP158104XFSW4Z SUN-TCP417104GR16 SUN-TCP419104GR16
+  SUN-TCP541104MSW4Z SUN-TCP541104XCSW4Z SUN-TCP541104XFSW4Z SUN-TCP545104MSW4Z
+  SUN-TCP545104XFSW4Z SUN-TCP546104M SUN-TCP546104XF SUN-TCPPASTE01/20 SUN-TCPSET104/01
+  SUN-TCPSET104/02 SUN-TCPSET104/10 SUN-TCPSET104/11 SUN-XPL111104M SUN-XPL111104XF
+  SUN-XPL547104M SUN-XPL548104C SUN-XPL548104M SUN-XPL628 SUN-XPL932 SUN-XPLPaste02/40
+  SUN-XPLSET104/01
+`.trim().split(/\s+/))
+const SUN_REVIEW_CODES = new Set(['SUN-PSCSET104/05'])
 
 const failures = []
 const fail = (rule, skuCode, detail) => failures.push({ rule, skuCode: skuCode || '-', detail })
@@ -129,7 +145,7 @@ function assertDictionary(dictionary) {
   return Object.fromEntries(Object.entries(namespaces).map(([name, ids]) => [name, new Set(ids)]))
 }
 
-function assertThreeDimensionalSamples(byCode) {
+function assertClassificationSamples(byCode, catalogByCode) {
   const cases = [
     ['AG-02391', 'additive-manufacturing', '3d-printer', 'equipment'],
     ['DT-02040', 'additive-manufacturing', 'print-resin', 'material'],
@@ -146,17 +162,52 @@ function assertThreeDimensionalSamples(byCode) {
     ['PM-02', 'clinical-tools', 'implant-surface-treatment-equipment', 'equipment'],
     ['SY-01051', 'lab-equipment', 'light-curing-equipment', 'equipment'],
     ['SY-04170', 'lab-production', 'die-model-accessory', 'accessory'],
+    ['SUN-PSC138104F', 'lab-production', 'grinding-tool', 'consumable'],
+    ['SUN-TCP140104M', 'lab-production', 'polishing-consumable', 'consumable'],
+    ['SUN-PGS106104M', 'lab-production', 'polishing-consumable', 'consumable'],
+    ['SUN-XPL548104C', 'lab-production', 'polishing-consumable', 'consumable'],
+    ['SUN-XPLPaste02/40', 'lab-production', 'polishing-consumable', 'consumable'],
   ]
   for (const [skuCode, business, func, kind] of cases) {
     const item = byCode.get(skuCode)
     if (!item) {
-      fail('3d_sample_exists', skuCode, 'mapping row missing')
+      fail('classification_sample_exists', skuCode, 'mapping row missing')
       continue
     }
     const actual = [item.taxonomy?.businessCategory, item.taxonomy?.functionCategory, item.facets?.productKind]
     const expected = [business, func, kind]
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      fail('3d_exact_classification', skuCode, `expected=${expected.join('/')}; actual=${actual.join('/')}`)
+      fail('exact_classification_sample', skuCode, `expected=${expected.join('/')}; actual=${actual.join('/')}`)
+    }
+  }
+
+  for (const [codes, func] of [[SUN_GRINDING_CODES, 'grinding-tool'], [SUN_POLISHING_CODES, 'polishing-consumable']]) {
+    for (const skuCode of codes) {
+      const item = byCode.get(skuCode)
+      if (!item) {
+        fail('sun_verified_sku_exists', skuCode, 'mapping row missing')
+        continue
+      }
+      const actual = [item.taxonomy?.businessCategory, item.taxonomy?.functionCategory, item.facets?.productKind]
+      const expected = ['lab-production', func, 'consumable']
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        fail('sun_verified_classification', skuCode, `expected=${expected.join('/')}; actual=${actual.join('/')}`)
+      }
+      if (item.classificationMethod !== 'verified_sku_rule') {
+        fail('sun_verified_method', skuCode, String(item.classificationMethod))
+      }
+      const shouldReview = SUN_REVIEW_CODES.has(skuCode)
+      if (item.reviewRequired !== shouldReview) {
+        fail('sun_review_contract', skuCode, `expected=${shouldReview}; actual=${item.reviewRequired}`)
+      }
+      if (shouldReview && !item.reviewReasons?.includes('official_sku_code_mismatch')) {
+        fail('sun_review_reason', skuCode, (item.reviewReasons || []).join('|'))
+      }
+      const source = catalogByCode.get(skuCode)
+      const isKit = /\bkit\b/i.test(source?.name || '')
+      if ((item.facets?.packageForm === 'kit') !== isKit) {
+        fail('sun_kit_package_form', skuCode, `name=${source?.name || ''}; packageForm=${item.facets?.packageForm || '<empty>'}`)
+      }
     }
   }
 }
@@ -172,6 +223,7 @@ async function main() {
   if (!Array.isArray(catalog) || !Array.isArray(families) || !Array.isArray(records)) {
     throw new Error('catalog, families and mapping.items must be arrays')
   }
+  const catalogByCode = new Map(catalog.map((item) => [item.code, item]))
 
   if (sha256(raw.catalog) !== EXPECTED.catalogRawHash) fail('catalog_raw_hash', '-', sha256(raw.catalog))
   if (sha256(raw.families) !== EXPECTED.familiesRawHash) fail('families_raw_hash', '-', sha256(raw.families))
@@ -197,6 +249,9 @@ async function main() {
   assertCount('catalog_discontinued_rows', catalog.filter((item) => item.discontinued === true).length, EXPECTED.discontinuedRows)
   assertCount('catalog_stopped_rows', catalog.filter((item) => item.status === '已停售').length, EXPECTED.stoppedRows)
   assertCount('catalog_not_sold_rows', catalog.filter((item) => item.status === '未販售').length, EXPECTED.notSoldRows)
+  assertCount('mestra_brand_rows', catalog.filter((item) => item.brand === 'MESTRA').length, 32)
+  assertCount('legacy_dental_espan_rows', catalog.filter((item) => item.brand === 'DENTAL ESPAN').length, 0)
+  assertCount('sun_brand_rows', catalog.filter((item) => item.brand === 'SUN Oberflächentechnik').length, 51)
   assertCount('family_rows', families.length, EXPECTED.familyRows)
   assertCount('family_unique_ids', new Set(families.map((family) => family.id)).size, EXPECTED.familyRows)
   assertCount('mapping_rows', records.length, catalog.length)
@@ -267,7 +322,7 @@ async function main() {
     }
   }
 
-  assertThreeDimensionalSamples(byCode)
+  assertClassificationSamples(byCode, catalogByCode)
 
   const stats = {
     catalogRows: catalog.length,

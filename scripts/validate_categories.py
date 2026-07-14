@@ -88,7 +88,7 @@ BRAND_PREFIXES = {
     'GC': 'GC / 台灣而至', 'SY': 'Song Young', 'YM': 'YAMAKIN', 'DK': 'DENKEN',
     'SS': 'Sunshine / DR.HOPF', 'CA': 'CAM / 上海穩昊', 'AG': 'ASIGA', 'DUM': 'Dumont',
     'WM': 'WHIP MIX', 'SUN': 'SUN Oberflächentechnik', 'GEN': 'GenCore', 'ADB': 'Prima Dental',
-    'KM': 'KO-MAX', 'DT': 'DETAX', 'MT': 'DENTAL ESPAN', 'HD': 'HIGH DENTAL JAPAN',
+    'KM': 'KO-MAX', 'DT': 'DETAX', 'MT': 'MESTRA', 'HD': 'HIGH DENTAL JAPAN',
     'AB': 'Aalba Dent', 'UW': 'URAWA', 'MO': 'MOTYL', 'RD': 'Redon', 'KS': 'KEYSTONE',
     'ME': 'MEDIFIVE', 'MPF': 'MPF', 'CAD': 'CADstar', 'PD': 'PRODENT-HOLLIGER',
     'SA': 'SAEYANG', 'SD': 'Select Dental', 'UG': 'UGin Dental', 'DB': 'DENTBIRD',

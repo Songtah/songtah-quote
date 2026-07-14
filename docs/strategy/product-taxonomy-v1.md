@@ -76,6 +76,15 @@
 
 分類器不得只憑 `print`、`tray`、`固化` 等單一關鍵字判定 3D 類別；舊分類與名稱衝突時，優先採 SKU 級原廠證據，否則維持待覆核。
 
+### 品牌正規化與 SUN Panther 系列
+
+- `MT-*` 的 32 筆產品原標為內部代稱 `DENTAL ESPAN`；原廠 SKU、品名與官方資料均指向西班牙 `MESTRA`（Talleres Mestraitua, S.L.），品牌正規化為 `MESTRA`，但不越權修改 ERP 擁有的貨號與品名：[MESTRA 官方網站](https://mestra.es/en/)。
+- SUN Oberflächentechnik 的 51 筆 Panther 產品都是牙科技工用旋轉研磨／拋光耗材，主分類統一為 `lab-production`、商品型態為 `consumable`。
+- 依 SUN 官方產品索引的器械類型分群：`Panther Stone`（PSC）歸 `grinding-tool`；`Panther Green`（PGS）、Panther ceramic（TCP）及 Panther polymer（XPL）歸 `polishing-consumable`。Green 雖用於預燒結氧化鋯修整，原廠仍明列為 `Polierer`，因此不以加工動作自行改稱研磨工具：[SUN Panther 系列](https://www.sun-dental.de/produkte/panther-serie)、[SUN Panther 產品索引](https://www.sun-dental.de/artikelgruppe/panther)。
+- 目前 ERP 貨號 `SUN-PSCSET104/05` 與原廠索引的 `PSCSET105/05` 不一致；不越權修改 ERP 貨號，先依 Panther Stone 系列歸 `grinding-tool`，同時保留 `official_sku_code_mismatch` 待覆核標記。
+- SUN 商品名稱只要含 `Kit`，即標記 `facets.packageForm=kit`（中文顯示「套裝組」）；套裝標記不取代原本的研磨／拋光功能分類與 `consumable` 商品型態。
+- SUN 規則使用 51 個精確 SKU allowlist；新增 SUN SKU 若未列入規則，分類器必須失敗並要求重新查證，不可用品牌或名稱概括套用。
+
 ## 四、系列歸屬規則
 
 - 只接受 `skuMap` 或 `coveredSkuCodes` 的精確唯一命中。
