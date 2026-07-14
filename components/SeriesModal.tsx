@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { useSession } from 'next-auth/react'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import type { ProductFamily } from '@/components/FamilySpecPicker'
 import { SeriesSkuDetails, SeriesSkuSummary, type SeriesCatalogItem } from '@/components/product-series/SeriesSkuDetails'
@@ -30,6 +29,7 @@ interface SeriesModalProps {
   allItems: CatalogItem[]
   onEdit: (item: CatalogItem) => void
   onClose: () => void
+  canManageProducts: boolean
 }
 
 // ── Series Info Section ───────────────────────────────────────
@@ -129,7 +129,7 @@ function SeriesInfoSection({
     )
   }
 
-  if (editing) {
+  if (editing && isAdmin) {
     return (
       <div className="space-y-3 px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">系列介紹編輯</p>
@@ -320,13 +320,7 @@ function MemberListContent({
 
 // ── Main SeriesModal ──────────────────────────────────────────
 
-export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalProps) {
-  const { data: session } = useSession()
-  const s = session as any
-  const isAdmin =
-    s?.user?.role === 'admin' ||
-    s?.user?.accountType === '行政' ||
-    s?.user?.accountType === '中央管理'
+export function SeriesModal({ family, allItems, onEdit, onClose, canManageProducts }: SeriesModalProps) {
 
   const [seriesData, setSeriesData] = useState<SeriesData | null>(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
@@ -449,7 +443,10 @@ export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalPr
           </section>
 
           <section className="mt-3 sm:mt-4">
-            <SeriesSkuSummary item={selectedItem} onEdit={(item) => onEdit(item as CatalogItem)} />
+            <SeriesSkuSummary
+              item={selectedItem}
+              onEdit={canManageProducts ? (item) => onEdit(item as CatalogItem) : undefined}
+            />
           </section>
 
           <section className="mt-3 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-900/[0.05] sm:mt-4">
@@ -461,7 +458,7 @@ export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalPr
               seriesData={seriesData}
               seriesLoading={seriesLoading}
               seriesError={seriesError}
-              isAdmin={isAdmin}
+              isAdmin={canManageProducts}
               onSeries={setSeriesData}
               onRetry={() => setSeriesLoadAttempt((attempt) => attempt + 1)}
             />
@@ -471,7 +468,7 @@ export function SeriesModal({ family, allItems, onEdit, onClose }: SeriesModalPr
             <SeriesSkuDetails item={selectedItem} />
           </section>
         </div>
-        {selectedItem && (
+        {canManageProducts && selectedItem && (
           <div className="glass-bar z-20 border-t border-stone-900/[0.06] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden">
             <button
               type="button"

@@ -8,6 +8,7 @@
  * 規則種類：
  *   'session'                          只要登入即可
  *   'admin'                            role === 'admin'
+ *   'central-management'               accountType === '中央管理'
  *   { roles: [...] }                   role==='admin' 或 accountType ∈ roles
  *   { module, action: 'view'|'edit' }  依模組權限（沿用 lib/permissions 的 canView/canEdit）
  *
@@ -25,6 +26,7 @@ import type { ModuleKey } from '@/lib/notion/permissions-model'
 export type ApiAuthRule =
   | 'session'
   | 'admin'
+  | 'central-management'
   | { roles: string[] }
   | { module: ModuleKey; action: 'view' | 'edit' }
 
@@ -32,6 +34,7 @@ function passes(session: Session, rule: ApiAuthRule): boolean {
   const user = session.user as any
   if (rule === 'session') return true
   if (rule === 'admin') return user?.role === 'admin'
+  if (rule === 'central-management') return user?.accountType === '中央管理'
   if ('roles' in rule) return user?.role === 'admin' || rule.roles.includes(user?.accountType)
   if ('module' in rule) {
     return rule.action === 'edit' ? canEdit(session, rule.module) : canView(session, rule.module)

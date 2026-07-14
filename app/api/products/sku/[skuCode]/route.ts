@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import { getCatalogProduct } from '@/lib/products-catalog'
 import { getProductRichData, upsertProductRichData } from '@/lib/products-notion'
 
@@ -10,10 +9,7 @@ type Ctx = { params: { skuCode: string } }
 
 // ── GET /api/products/sku/[skuCode] ──────────────────────────
 // Returns { catalog, rich } — catalog is read-only, rich is editable.
-export async function GET(_req: NextRequest, { params }: Ctx) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withApiAuth<Ctx>('session', async (_req, { params }) => {
   const { skuCode } = params
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
@@ -30,21 +26,11 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     },
     rich: rich ?? { notionId: null, price: null, imageUrl: '', description: '', specsJson: '', galleryJson: '', docsJson: '', familyId: '' },
   })
-}
+})
 
 // ── PUT /api/products/sku/[skuCode] ──────────────────────────
 // Body: { price?: number | null, imageUrl?: string, description?: string }
-export async function PUT(req: NextRequest, { params }: Ctx) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const role = (session.user as any)?.role
-  if (role !== 'admin') {
-    const perms = (session.user as any)?.permissions
-    if (perms && !perms?.products?.edit)
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
+export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }) => {
   const { skuCode } = params
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
@@ -86,4 +72,4 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
       { status: 500 },
     )
   }
-}
+})

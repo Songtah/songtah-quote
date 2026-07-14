@@ -1,12 +1,12 @@
 import { AppShell } from '@/components/AppShell'
-import { requireViewPermission } from '@/lib/permissions'
+import { isCentralManagement, requireViewPermission } from '@/lib/permissions'
 import { getCatalogFilterOptions, getTaxonomyBrowser } from '@/lib/products-catalog'
 import { CatalogManagerContent } from '@/components/CatalogManagerContent'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ProductCatalogPage() {
-  await requireViewPermission('products')
+  const session = await requireViewPermission('products')
 
   const opts = getCatalogFilterOptions()
   const taxonomy = getTaxonomyBrowser()
@@ -22,6 +22,7 @@ export default async function ProductCatalogPage() {
         categories={opts.categories}
         productTypes={opts.productTypes}
         taxonomy={taxonomy}
+        canManageProducts={isCentralManagement(session)}
       />
     </AppShell>
   )

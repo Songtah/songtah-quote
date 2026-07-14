@@ -10,9 +10,8 @@
  */
 
 import { put } from '@vercel/blob'
-import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -41,10 +40,7 @@ const ALLOWED_TYPES = new Set([
   'application/octet-stream',   // some browsers send this for .docx/.xlsx
 ])
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   let formData: FormData
   try {
     formData = await req.formData()
@@ -82,4 +78,4 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '儲存服務未設定，請通知管理員。' }, { status: 503 })
     return NextResponse.json({ error: `上傳失敗：${msg.slice(0, 120)}` }, { status: 500 })
   }
-}
+})

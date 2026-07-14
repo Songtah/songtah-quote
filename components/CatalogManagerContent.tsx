@@ -106,6 +106,7 @@ interface Props {
   categories: string[]
   productTypes: string[]
   taxonomy: TaxonomyBrowser
+  canManageProducts: boolean
 }
 
 // 主分類→功能分類主樹(伺服器端由 data/product-taxonomy.json + catalog 計數而來)
@@ -1610,10 +1611,12 @@ function SkuRow({
   item,
   priceCache,
   onEdit,
+  canManageProducts,
 }: {
   item: CatalogItem
   priceCache: Map<string, number | null>
   onEdit: (item: CatalogItem) => void
+  canManageProducts: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [summary, setSummary] = useState<IntroData | null>(null)
@@ -1683,13 +1686,15 @@ function SkuRow({
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onEdit(item)}
-          className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs font-medium text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
-        >
-          編輯
-        </button>
+        {canManageProducts && (
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs font-medium text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
+          >
+            編輯
+          </button>
+        )}
       </div>
 
       <AnimatePresence initial={false}>
@@ -1741,12 +1746,14 @@ function FamilyCard({
   priceCache,
   onEdit,
   onOpenModal,
+  canManageProducts,
 }: {
   family: ProductFamily
   allItems: CatalogItem[]
   priceCache: Map<string, number | null>
   onEdit: (item: CatalogItem) => void
   onOpenModal?: () => void
+  canManageProducts: boolean
 }) {
   const [open,         setOpen]         = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -1971,13 +1978,15 @@ function FamilyCard({
                         ) : (
                           <span className="shrink-0 text-[11px] font-medium text-amber-600">待定價</span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => onEdit(item)}
-                          className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
-                        >
-                          編輯
-                        </button>
+                        {canManageProducts && (
+                          <button
+                            type="button"
+                            onClick={() => onEdit(item)}
+                            className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
+                          >
+                            編輯
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2005,7 +2014,7 @@ function FamilyCard({
 
 // ── Main Component ────────────────────────────────────────────
 
-export function CatalogManagerContent({ brands, categories, productTypes, taxonomy }: Props) {
+export function CatalogManagerContent({ brands, categories, productTypes, taxonomy, canManageProducts }: Props) {
   const reduceMotion = useReducedMotion()
 
   const [families,     setFamilies]     = useState<ProductFamily[]>([])
@@ -2173,6 +2182,15 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
   return (
     <>
+      {canManageProducts && (
+        <div className="card-soft mb-4 flex items-center gap-3 px-4 py-3 sm:px-5" role="status">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xl" aria-hidden="true">✎</span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-stone-800">中央管理編輯模式</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-stone-500">可維護商品內容、照片、規格、文件與系列介紹；貨號及 ERP 品名維持唯讀。</p>
+          </div>
+        </div>
+      )}
       {/* Search + Filters */}
       <div className="mb-6">
         {/* Row: search + filter toggle */}
@@ -2301,7 +2319,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
       {/* List guidance */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400">
         <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />已設售價</span>
-        <span>點品名展開介紹；「編輯」可維護照片、規格與文件</span>
+        <span>{canManageProducts ? '點品名展開介紹；「編輯」可維護照片、規格與文件' : '點品名展開介紹、照片、規格與文件'}</span>
       </div>
 
       {loading ? (
@@ -2356,6 +2374,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                     priceCache={priceCache}
                     onEdit={setEditingItem}
                     onOpenModal={() => setModalFamily(family)}
+                    canManageProducts={canManageProducts}
                   />
                 ))}
               </div>
@@ -2376,6 +2395,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                 item={item}
                 priceCache={priceCache}
                 onEdit={setEditingItem}
+                canManageProducts={canManageProducts}
               />
             ))}
             {standaloneSearchResults.length > 300 && (
@@ -2443,6 +2463,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                   priceCache={priceCache}
                   onEdit={setEditingItem}
                   onOpenModal={() => setModalFamily(family)}
+                  canManageProducts={canManageProducts}
                 />
               ))}
             </div>
@@ -2475,6 +2496,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                     item={item}
                     priceCache={priceCache}
                     onEdit={setEditingItem}
+                    canManageProducts={canManageProducts}
                   />
                 ))}
                 {standaloneVisibleCount < standaloneBrowseItems.length && (
@@ -2496,7 +2518,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
       {/* Edit Drawer */}
       <AnimatePresence>
-        {editingItem && (
+        {canManageProducts && editingItem && (
           <ProductEditDrawer
             key={editingItem.code}
             skuCode={editingItem.code}
@@ -2515,6 +2537,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
             allItems={allItems}
             onEdit={(item) => { setModalFamily(null); setEditingItem(item) }}
             onClose={() => setModalFamily(null)}
+            canManageProducts={canManageProducts}
           />
         )}
       </AnimatePresence>

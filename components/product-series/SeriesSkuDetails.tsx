@@ -81,7 +81,7 @@ export function SeriesSkuSummary({
   onEdit,
 }: {
   item: SeriesCatalogItem | null
-  onEdit: (item: SeriesCatalogItem) => void
+  onEdit?: (item: SeriesCatalogItem) => void
 }) {
   if (!item) {
     return (
@@ -105,13 +105,15 @@ export function SeriesSkuSummary({
           <span className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200/60">{item.productType}</span>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onEdit(item)}
-        className="hidden min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95 sm:flex"
-      >
-        編輯資料
-      </button>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="hidden min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95 sm:flex"
+        >
+          編輯資料
+        </button>
+      )}
     </div>
   )
 }

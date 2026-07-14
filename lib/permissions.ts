@@ -31,6 +31,10 @@ export function canEdit(session: Awaited<ReturnType<typeof requireSession>>, mod
   return perms[module]?.edit ?? false
 }
 
+export function isCentralManagement(session: Awaited<ReturnType<typeof requireSession>>): boolean {
+  return (session.user as any)?.accountType === '中央管理'
+}
+
 export async function requireViewPermission(module: ModuleKey) {
   const session = await requireSession()
   if (!canView(session, module)) redirect('/dashboard')
