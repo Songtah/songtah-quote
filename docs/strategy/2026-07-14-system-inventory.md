@@ -48,6 +48,7 @@
 - 已確認 live properties、relation 目標與前 20 筆客戶/產品/技術人員 relation 分布。
 - 已新增 `案件標題`、`聯絡人` 與單向 `設備資料` relation；`故障分類` 沿用既有 multi-select。
 - 程式已改用正確客戶 relation、設備 relation 及 multi-select 寫法，並保留舊 `案件類型` 讀取 fallback。
+- POST 已對案件類型、狀態、優先級、對口、業務窗口、生產商、relation ID 格式及日期格式做伺服器端驗證，無效輸入回 400，不送入 Notion。
 - 尚須確認：Notion automation 是否依現有 title 或 status 運作，避免 schema 調整造成連動故障。
 
 ### 設備 DB
@@ -73,4 +74,4 @@
 - 若工單有客戶 relation，同時清除該客戶的 `customer-tickets:*` 快取。
 - 不改 API contract、Notion schema、工單 payload、狀態或 UI。
 
-驗收結果：`npx tsc --noEmit` 與 `npm run build` 通過；fresh-context 驗證快取 key 與既有清單邏輯一致。由於正式建立工單會寫 Notion，本批未以正式資料做自動寫入 smoke。
+驗收結果：`npx tsc --noEmit` 與 `npm run build` 通過；fresh-context 驗證快取 key 與既有清單邏輯一致。後續經使用者明確授權，以一筆正式測試工單完成新舊欄位、relation、select/status、日期與文字欄位 read-back，測試單已結案保留。

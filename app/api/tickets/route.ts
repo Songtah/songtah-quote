@@ -4,6 +4,57 @@ import { createTicket, listSystemTickets } from '@/lib/system-notion'
 import type { CreateTicketPayload } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
+const TICKET_TYPES = ['技術支援', '維修', 'RMA', '換貨', '客訴', '安裝', '教育訓練']
+const TICKET_STATUSES = ['尚未處理', '👌 已受理', '🔍 診斷問題中', '🔧 維修中', '⚙️ 測試中', '🔍 後續追蹤', '✅ 結案']
+const PRIORITIES = ['P1', 'P2', 'P3', 'P4']
+const SUPPORT_OWNERS = ['小黃', 'Paul', 'Aaron', 'Ted', 'Luca', 'Brain', '致廷']
+const SALES_OWNERS = ['公司直營', 'Duncan', 'Gus', 'Hank', 'James', 'Eason', 'Amy', '小郭', 'Paul', 'Chloe']
+const MANUFACTURERS = ['ASIGA', 'Zirkonzahn', 'Zirkonzhan', '金泰', 'KO-MAX', 'BSM 貝施美', 'BSM', '普登', 'AR Loupe', 'ACTILINK', 'Graphy', 'HANAU']
+
+const NOTION_PAGE_ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
+
+function isValidDateOnly(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  )
+}
+
+function validateTicketPayload(body: CreateTicketPayload): string | null {
+  const optionChecks: Array<[string, string | undefined, string[]]> = [
+    ['案件類型', body.ticketType, TICKET_TYPES],
+    ['狀態', body.status || '尚未處理', TICKET_STATUSES],
+    ['優先級', body.priority || 'P2', PRIORITIES],
+    ['技術支援對口', body.supportOwner, SUPPORT_OWNERS],
+    ['業務窗口', body.salesOwner, SALES_OWNERS],
+    ['生產商', body.manufacturer, MANUFACTURERS],
+  ]
+  for (const [label, value, allowed] of optionChecks) {
+    if (value && !allowed.includes(value)) return `${label}不是有效選項`
+  }
+
+  const relationChecks: Array<[string, string | undefined]> = [
+    ['客戶', body.customerId],
+    ['設備', body.equipmentId],
+    ['產品', body.productId],
+  ]
+  for (const [label, value] of relationChecks) {
+    if (value && !NOTION_PAGE_ID.test(value)) return `${label} relation ID 格式錯誤`
+  }
+
+  if (body.scheduledDate && !isValidDateOnly(body.scheduledDate)) {
+    return '預計維修日期格式錯誤'
+  }
+  return null
+}
+
 function isRateLimited(error: unknown) {
   if (!error || typeof error !== 'object') return false
   const maybeError = error as { code?: string; status?: number; body?: { code?: string } }
@@ -43,6 +94,11 @@ export const POST = withApiAuth({ module: 'rma', action: 'edit' }, async (req: N
         { error: '客戶、案件標題、案件類型與問題描述為必填' },
         { status: 400 }
       )
+    }
+
+    const validationError = validateTicketPayload(body)
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
     const ticket = await createTicket({
