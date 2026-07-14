@@ -6,6 +6,7 @@
 
 - 四大主線、共同資料底座、分期路線圖與不破壞既有功能的交付原則：`docs/strategy/operating-system-roadmap.md`
 - 最新盤點與已確認的 live schema 風險：`docs/strategy/2026-07-14-system-inventory.md`、`docs/strategy/2026-07-14-ticket-schema-audit.md`
+- 產品分類主樹、商品型態、3D 列印公開分類與無破壞遷移規則：`docs/strategy/product-taxonomy-v1.md`
 - 原則：系統由「分頁功能集合」轉為「訊號 → 判斷 → 工作 → 負責人 → 期限 → 結果 → 指標」閉環；不得以策略改造為由破壞既有報價、訂貨、客情、技服、設備、行銷或行政流程。
 
 ## 設計語言(摘要;動任何 UI 前必讀 docs/rules/design-language.md 全文)

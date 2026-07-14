@@ -1,0 +1,929 @@
+{
+  "schemaVersion": "2026-07-14.v1",
+  "generatorSourceHash": "fe4bf7d55e2e1f4b2dbc92b91c657d575ddf8e9923e6cd0ff02ce397a08374a8",
+  "hierarchy": [
+    "businessCategory",
+    "functionCategory",
+    "seriesId",
+    "skuCode"
+  ],
+  "facets": [
+    "brand",
+    "productKind"
+  ],
+  "productKinds": [
+    "equipment",
+    "material",
+    "consumable",
+    "durable_tool",
+    "accessory",
+    "spare_part",
+    "software_license",
+    "service",
+    "other_review"
+  ],
+  "businessCategories": [
+    {
+      "id": "digital-manufacturing",
+      "label": "CAD/CAM 數位製造"
+    },
+    {
+      "id": "additive-manufacturing",
+      "label": "3D 列印"
+    },
+    {
+      "id": "fixed-restorative",
+      "label": "固定式修復材料"
+    },
+    {
+      "id": "removable-prosthetics",
+      "label": "活動義齒與人工牙"
+    },
+    {
+      "id": "color-characterization",
+      "label": "比色、染色與表面處理"
+    },
+    {
+      "id": "lab-production",
+      "label": "技工製程與耗材"
+    },
+    {
+      "id": "lab-equipment",
+      "label": "技工設備與基礎設施"
+    },
+    {
+      "id": "clinical-tools",
+      "label": "臨床／技工器械與輔助工具"
+    },
+    {
+      "id": "software-digital-service",
+      "label": "軟體與數位服務"
+    },
+    {
+      "id": "technical-service",
+      "label": "技術服務"
+    },
+    {
+      "id": "other-review",
+      "label": "待人工確認"
+    }
+  ],
+  "functionCategories": [
+    {
+      "id": "3d-printer",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [
+        "3D列印機"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "abrasive-media",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "研磨砂 / 拋光砂"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "acrylic-teeth",
+      "businessCategory": "removable-prosthetics",
+      "legacyCategories": [
+        "塑鋼牙"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "articulator",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "咬合器"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "articulator-accessory",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "咬合器 / 配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "bur-drill",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "車針 / 鑽針"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "casting-pressing-equipment",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "壓鑄 / 鑄造機"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "ceramic-brush",
+      "businessCategory": "color-characterization",
+      "legacyCategories": [
+        "瓷筆 / 刷具"
+      ],
+      "defaultProductKind": "durable_tool"
+    },
+    {
+      "id": "ceramic-furnace",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "瓷爐"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "ceramic-material",
+      "businessCategory": "fixed-restorative",
+      "legacyCategories": [
+        "瓷粉 / 陶瓷"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "ceramic-powder",
+      "businessCategory": "fixed-restorative",
+      "legacyCategories": [
+        "瓷粉"
+      ],
+      "defaultProductKind": "material",
+      "reviewRequired": true
+    },
+    {
+      "id": "cleaning-dust-control",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "清潔 / 吸塵"
+      ],
+      "defaultProductKind": "equipment",
+      "reviewRequired": true
+    },
+    {
+      "id": "cutting-disc",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "切片",
+        "切片 / 鋸片"
+      ],
+      "defaultProductKind": "consumable",
+      "reviewRequired": true
+    },
+    {
+      "id": "dental-instrument",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "牙科器材"
+      ],
+      "defaultProductKind": "durable_tool",
+      "reviewRequired": true
+    },
+    {
+      "id": "design-software",
+      "businessCategory": "software-digital-service",
+      "legacyCategories": [
+        "設計軟體"
+      ],
+      "defaultProductKind": "software_license"
+    },
+    {
+      "id": "die-model-accessory",
+      "businessCategory": "lab-production",
+      "legacyCategories": [],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "equipment-accessory",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "設備配件"
+      ],
+      "defaultProductKind": "accessory",
+      "reviewRequired": true
+    },
+    {
+      "id": "external-stain",
+      "businessCategory": "color-characterization",
+      "legacyCategories": [
+        "染液 - 外染"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "filter-consumable",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "過濾耗材"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "flasking-pressing-tool",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "煮模 / 壓模工具"
+      ],
+      "defaultProductKind": "durable_tool",
+      "reviewRequired": true
+    },
+    {
+      "id": "furnace-accessory",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "爐具配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "general-tool",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "工具"
+      ],
+      "defaultProductKind": "durable_tool",
+      "reviewRequired": true
+    },
+    {
+      "id": "generic-equipment",
+      "businessCategory": "other-review",
+      "legacyCategories": [
+        "設備"
+      ],
+      "defaultProductKind": "equipment",
+      "reviewRequired": true
+    },
+    {
+      "id": "glass-ceramic",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "玻璃陶瓷"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "glaze-material",
+      "businessCategory": "color-characterization",
+      "legacyCategories": [
+        "釉材"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "grinding-tool",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "磨石 / 研磨工具"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "implant-component",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "植體配件"
+      ],
+      "defaultProductKind": "accessory",
+      "reviewRequired": true
+    },
+    {
+      "id": "implant-surface-treatment-equipment",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "impression-material",
+      "businessCategory": "removable-prosthetics",
+      "legacyCategories": [
+        "印模材料"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "internal-stain",
+      "businessCategory": "color-characterization",
+      "legacyCategories": [
+        "染液 - 內染"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "investment-gypsum",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "包埋 / 石膏"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "kit-bundle",
+      "businessCategory": "other-review",
+      "legacyCategories": [
+        "套裝組"
+      ],
+      "defaultProductKind": "other_review",
+      "reviewRequired": true
+    },
+    {
+      "id": "light-curing-equipment",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "光固化機"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "metal-material",
+      "businessCategory": "fixed-restorative",
+      "legacyCategories": [
+        "金屬材料"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "milling-accessory",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "車機配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "milling-machine",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "車機 / 研磨機"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "model-accessory",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "模型配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "motor-accessory",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "馬達配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "motor-handpiece",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "馬達 / 手機"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "optical-equipment",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "光學設備"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "other-equipment",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "其他設備"
+      ],
+      "defaultProductKind": "equipment",
+      "reviewRequired": true
+    },
+    {
+      "id": "other-material",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "其他材料"
+      ],
+      "defaultProductKind": "material",
+      "reviewRequired": true
+    },
+    {
+      "id": "other-tool",
+      "businessCategory": "clinical-tools",
+      "legacyCategories": [
+        "其他工具"
+      ],
+      "defaultProductKind": "durable_tool",
+      "reviewRequired": true
+    },
+    {
+      "id": "pmma-blank",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "PMMA 塊"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "polishing-consumable",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "拋光 / 研磨"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "post-processing",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "print-resin",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "printer-accessory",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [
+        "3D列印機配件"
+      ],
+      "defaultProductKind": "accessory"
+    },
+    {
+      "id": "printer-spare-part",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [],
+      "defaultProductKind": "spare_part"
+    },
+    {
+      "id": "printing-consumable",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "printing-software-service",
+      "businessCategory": "additive-manufacturing",
+      "legacyCategories": [],
+      "defaultProductKind": "software_license"
+    },
+    {
+      "id": "process-liquid",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "專用液 / 藥劑"
+      ],
+      "defaultProductKind": "consumable"
+    },
+    {
+      "id": "resin-material",
+      "businessCategory": "removable-prosthetics",
+      "legacyCategories": [
+        "樹脂材料"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "scanner",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "掃描儀"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "shade-guide",
+      "businessCategory": "color-characterization",
+      "legacyCategories": [
+        "比色板"
+      ],
+      "defaultProductKind": "durable_tool"
+    },
+    {
+      "id": "sintering-furnace",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "燒結爐"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "uncategorized",
+      "businessCategory": "other-review",
+      "legacyCategories": [
+        "其他"
+      ],
+      "defaultProductKind": "other_review",
+      "reviewRequired": true
+    },
+    {
+      "id": "wax-blank",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "蠟塊"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "wax-equipment",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "蠟工設備"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "wax-pressing-material",
+      "businessCategory": "lab-production",
+      "legacyCategories": [
+        "蠟 / 壓鑄材"
+      ],
+      "defaultProductKind": "material"
+    },
+    {
+      "id": "workbench",
+      "businessCategory": "lab-equipment",
+      "legacyCategories": [
+        "技工桌"
+      ],
+      "defaultProductKind": "equipment"
+    },
+    {
+      "id": "zirconia-blank",
+      "businessCategory": "digital-manufacturing",
+      "legacyCategories": [
+        "氧化鋯塊"
+      ],
+      "defaultProductKind": "material"
+    }
+  ],
+  "legacyCategoryMapping": {
+    "3D列印機": {
+      "businessCategory": "additive-manufacturing",
+      "functionCategory": "3d-printer",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "3D列印機配件": {
+      "businessCategory": "additive-manufacturing",
+      "functionCategory": "printer-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    },
+    "PMMA 塊": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "pmma-blank",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "光固化機": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "light-curing-equipment",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "光學設備": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "optical-equipment",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "其他": {
+      "businessCategory": "other-review",
+      "functionCategory": "uncategorized",
+      "productKind": "other_review",
+      "reviewRequired": true
+    },
+    "其他工具": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "other-tool",
+      "productKind": "durable_tool",
+      "reviewRequired": true
+    },
+    "其他材料": {
+      "businessCategory": "lab-production",
+      "functionCategory": "other-material",
+      "productKind": "material",
+      "reviewRequired": true
+    },
+    "其他設備": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "other-equipment",
+      "productKind": "equipment",
+      "reviewRequired": true
+    },
+    "切片": {
+      "businessCategory": "lab-production",
+      "functionCategory": "cutting-disc",
+      "productKind": "consumable",
+      "reviewRequired": true
+    },
+    "切片 / 鋸片": {
+      "businessCategory": "lab-production",
+      "functionCategory": "cutting-disc",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "包埋 / 石膏": {
+      "businessCategory": "lab-production",
+      "functionCategory": "investment-gypsum",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "印模材料": {
+      "businessCategory": "removable-prosthetics",
+      "functionCategory": "impression-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "咬合器": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "articulator",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "咬合器 / 配件": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "articulator-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    },
+    "塑鋼牙": {
+      "businessCategory": "removable-prosthetics",
+      "functionCategory": "acrylic-teeth",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "壓鑄 / 鑄造機": {
+      "businessCategory": "lab-production",
+      "functionCategory": "casting-pressing-equipment",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "套裝組": {
+      "businessCategory": "other-review",
+      "functionCategory": "kit-bundle",
+      "productKind": "other_review",
+      "reviewRequired": true
+    },
+    "專用液 / 藥劑": {
+      "businessCategory": "lab-production",
+      "functionCategory": "process-liquid",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "工具": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "general-tool",
+      "productKind": "durable_tool",
+      "reviewRequired": true
+    },
+    "技工桌": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "workbench",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "拋光 / 研磨": {
+      "businessCategory": "lab-production",
+      "functionCategory": "polishing-consumable",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "掃描儀": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "scanner",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "染液 - 內染": {
+      "businessCategory": "color-characterization",
+      "functionCategory": "internal-stain",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "染液 - 外染": {
+      "businessCategory": "color-characterization",
+      "functionCategory": "external-stain",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "植體配件": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "implant-component",
+      "productKind": "accessory",
+      "reviewRequired": true
+    },
+    "模型配件": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "model-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    },
+    "樹脂材料": {
+      "businessCategory": "removable-prosthetics",
+      "functionCategory": "resin-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "比色板": {
+      "businessCategory": "color-characterization",
+      "functionCategory": "shade-guide",
+      "productKind": "durable_tool",
+      "reviewRequired": false
+    },
+    "氧化鋯塊": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "zirconia-blank",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "清潔 / 吸塵": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "cleaning-dust-control",
+      "productKind": "equipment",
+      "reviewRequired": true
+    },
+    "煮模 / 壓模工具": {
+      "businessCategory": "lab-production",
+      "functionCategory": "flasking-pressing-tool",
+      "productKind": "durable_tool",
+      "reviewRequired": true
+    },
+    "燒結爐": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "sintering-furnace",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "爐具配件": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "furnace-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    },
+    "牙科器材": {
+      "businessCategory": "clinical-tools",
+      "functionCategory": "dental-instrument",
+      "productKind": "durable_tool",
+      "reviewRequired": true
+    },
+    "玻璃陶瓷": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "glass-ceramic",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "瓷爐": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "ceramic-furnace",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "瓷筆 / 刷具": {
+      "businessCategory": "color-characterization",
+      "functionCategory": "ceramic-brush",
+      "productKind": "durable_tool",
+      "reviewRequired": false
+    },
+    "瓷粉": {
+      "businessCategory": "fixed-restorative",
+      "functionCategory": "ceramic-powder",
+      "productKind": "material",
+      "reviewRequired": true
+    },
+    "瓷粉 / 陶瓷": {
+      "businessCategory": "fixed-restorative",
+      "functionCategory": "ceramic-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "研磨砂 / 拋光砂": {
+      "businessCategory": "lab-production",
+      "functionCategory": "abrasive-media",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "磨石 / 研磨工具": {
+      "businessCategory": "lab-production",
+      "functionCategory": "grinding-tool",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "蠟 / 壓鑄材": {
+      "businessCategory": "lab-production",
+      "functionCategory": "wax-pressing-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "蠟塊": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "wax-blank",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "蠟工設備": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "wax-equipment",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "設備": {
+      "businessCategory": "other-review",
+      "functionCategory": "generic-equipment",
+      "productKind": "equipment",
+      "reviewRequired": true
+    },
+    "設備配件": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "equipment-accessory",
+      "productKind": "accessory",
+      "reviewRequired": true
+    },
+    "設計軟體": {
+      "businessCategory": "software-digital-service",
+      "functionCategory": "design-software",
+      "productKind": "software_license",
+      "reviewRequired": false
+    },
+    "車機 / 研磨機": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "milling-machine",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "車機配件": {
+      "businessCategory": "digital-manufacturing",
+      "functionCategory": "milling-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    },
+    "車針 / 鑽針": {
+      "businessCategory": "lab-production",
+      "functionCategory": "bur-drill",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "過濾耗材": {
+      "businessCategory": "lab-production",
+      "functionCategory": "filter-consumable",
+      "productKind": "consumable",
+      "reviewRequired": false
+    },
+    "釉材": {
+      "businessCategory": "color-characterization",
+      "functionCategory": "glaze-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "金屬材料": {
+      "businessCategory": "fixed-restorative",
+      "functionCategory": "metal-material",
+      "productKind": "material",
+      "reviewRequired": false
+    },
+    "馬達 / 手機": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "motor-handpiece",
+      "productKind": "equipment",
+      "reviewRequired": false
+    },
+    "馬達配件": {
+      "businessCategory": "lab-equipment",
+      "functionCategory": "motor-accessory",
+      "productKind": "accessory",
+      "reviewRequired": false
+    }
+  },
+  "seriesPolicy": {
+    "acceptedSources": [
+      "product_families.skuMap values",
+      "product_families.coveredSkuCodes"
+    ],
+    "matching": "exact SKU only",
+    "prefixMatching": false,
+    "conflictBehavior": "seriesId=null; reviewRequired=true; preserve all candidates"
+  },
+  "evidenceSources": {
+    "asigaMaxSpecification": "https://www.asiga.com/downloads/printers/Asiga-MAX-usen-web.pdf",
+    "asigaBuildTrayLifecycle": "https://support.asiga.com/maintaining-the-build-tray-max/",
+    "asigaMaxProductBreakdown": "https://support.asiga.com/product-breakdown-max/",
+    "detaxFreeprintModel": "https://www.detax.de/de-wAssets/docs/dental/IFU-dental/IFU_3D-Kunststoffe/IFU_Freeprint_dental_model-2.0.pdf",
+    "detaxMedicalprintShell": "https://www.detax.de/en/shop/produkte/medicalprint-shell.php",
+    "denkenDhPrintTray": "https://denken-highdental.co.jp/3d/dh-print-tray/",
+    "gcOptiglazeColor": "https://www.gc.dental/america/products/laboratory/indirect-composites/optiglaze-color",
+    "medifiveProductOverview": "https://medifive.gobizkorea.com/mini/site/miniSiteMain.do",
+    "songYoungDieLockTray": "https://songyoung.com.tw/product_detail.php?productID=230",
+    "actilinkRebornProductSheet": "https://kyushu-dentalshow.jp/2026/wp-content/uploads/2025/04/ACTILINK-Reborn_202502_Nxt.pdf"
+  }
+}
