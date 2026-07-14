@@ -13,8 +13,8 @@ export default async function ProductCatalogPage() {
 
   return (
     <AppShell
-      title="商品目錄管理"
-      description="瀏覽所有商品，編輯售價、圖片與商品介紹。分類體系:11 主分類 × 62 功能分類(2026-07-14 總表)。"
+      title="產品目錄"
+      description="依品牌、分類與商品型態快速查找；同系列規格集中顯示，可維護照片、介紹、售價與技術文件。"
       hidePhaseNote
     >
       <CatalogManagerContent

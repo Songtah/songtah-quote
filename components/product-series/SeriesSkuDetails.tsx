@@ -101,8 +101,8 @@ export function SeriesSkuSummary({
         <h3 className="mt-1 text-base font-bold leading-snug text-stone-800">{item.name}</h3>
         <p className="mt-1 truncate font-mono text-xs text-stone-400">{item.code}</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="chip">{item.category}</span>
-          <span className="chip">{item.productType}</span>
+          <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">{item.category}</span>
+          <span className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200/60">{item.productType}</span>
         </div>
       </div>
       <button
@@ -124,8 +124,11 @@ export function SeriesSkuDetails({
   const [rich, setRich] = useState<RichData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
+    setFailedImages(new Set())
     if (!item) {
       setRich(null)
       return
@@ -142,7 +145,7 @@ export function SeriesSkuDetails({
       .catch(() => { if (active) setError('暫時無法讀取此規格的詳細資料') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [item])
+  }, [item, loadAttempt])
 
   const specs = useMemo(() => parseSpecs(rich?.specsJson ?? ''), [rich?.specsJson])
   const gallery = useMemo(() => parseGallery(rich?.galleryJson ?? ''), [rich?.galleryJson])
@@ -155,6 +158,7 @@ export function SeriesSkuDetails({
         ...gallery,
       ].filter((image, index, all) => all.findIndex((candidate) => candidate.url === image.url) === index)
     : []
+  const visibleImages = images.filter((image) => !failedImages.has(image.url))
 
   if (!item) {
     return null
@@ -164,22 +168,37 @@ export function SeriesSkuDetails({
     <div className="space-y-3" data-testid="series-sku-details">
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="h-52 animate-pulse rounded-3xl bg-stone-100" />
-          <div className="h-52 animate-pulse rounded-3xl bg-stone-100" />
+          <div className="h-52 animate-pulse motion-reduce:animate-none rounded-3xl bg-stone-100" />
+          <div className="h-52 animate-pulse motion-reduce:animate-none rounded-3xl bg-stone-100" />
         </div>
       ) : error ? (
-        <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-2xl bg-red-50 px-4 py-4 text-sm text-red-700" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="mt-3 min-h-11 rounded-full bg-white px-4 text-xs font-semibold text-red-700 ring-1 ring-red-200 transition-all hover:bg-red-100 active:scale-95"
+          >
+            重新載入此規格
+          </button>
+        </div>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-5">
             <section className="card-soft overflow-hidden p-4 sm:col-span-3">
               <SectionTitle>商品照片</SectionTitle>
-              {images.length > 0 ? (
+              {visibleImages.length > 0 ? (
                 <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-1">
-                  {images.map((image, index) => (
+                  {visibleImages.map((image, index) => (
                     <div key={`${image.url}-${index}`} className="aspect-square w-[78%] max-w-64 shrink-0 snap-center overflow-hidden rounded-2xl bg-white ring-1 ring-stone-900/[0.06] sm:w-52">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image.url} alt={`${item.name} ${index + 1}`} className="h-full w-full object-contain" style={{ objectPosition: image.pos }} />
+                      <img
+                        src={image.url}
+                        alt={`${item.name} ${index + 1}`}
+                        className="h-full w-full object-contain"
+                        style={{ objectPosition: image.pos }}
+                        onError={() => setFailedImages((current) => new Set(current).add(image.url))}
+                      />
                     </div>
                   ))}
                 </div>

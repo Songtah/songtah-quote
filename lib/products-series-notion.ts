@@ -107,17 +107,13 @@ export async function listSeriesRecords(): Promise<SeriesRecord[]> {
 /** Get a single series record by seriesCode. Returns null if not found. */
 export async function getSeriesByCode(seriesCode: string): Promise<SeriesRecord | null> {
   const dbId = getSeriesDb()
-  try {
-    const response: any = await notion.databases.query({
-      database_id: dbId,
-      page_size: 1,
-      filter: { property: '系列代碼', rich_text: { equals: seriesCode } },
-    })
-    const first = response.results?.[0]
-    return first ? mapPage(first) : null
-  } catch {
-    return null
-  }
+  const response: any = await notion.databases.query({
+    database_id: dbId,
+    page_size: 1,
+    filter: { property: '系列代碼', rich_text: { equals: seriesCode } },
+  })
+  const first = response.results?.[0]
+  return first ? mapPage(first) : null
 }
 
 /** Create a new series record. */

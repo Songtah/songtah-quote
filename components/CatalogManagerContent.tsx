@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import { SeriesModal } from '@/components/SeriesModal'
 import { MainCategoryArtwork, SeriesArtwork } from '@/components/product-series/SeriesArtwork'
 import { buildExactFamilyIndex, explicitFamilySkuCodes } from '@/lib/product-family-members'
+import { useBodyScrollLock, useDialogFocus } from '@/lib/use-dialog-focus'
 import { useSession } from 'next-auth/react'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -251,15 +252,15 @@ function ImageUploadZone({
 
   return (
     <div>
-      <div className="flex gap-1 mb-3 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="mb-3 flex w-fit gap-1 rounded-full bg-stone-100 p-1">
         {(['upload', 'url'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={[
-              'px-4 py-1.5 rounded-lg text-xs font-semibold transition',
-              tab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700',
+              'min-h-10 rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95',
+              tab === t ? 'bg-white shadow text-stone-900' : 'text-stone-500 hover:text-stone-700',
             ].join(' ')}
           >
             {t === 'upload' ? '📁 上傳圖片' : '🔗 貼入網址'}
@@ -275,11 +276,20 @@ function ImageUploadZone({
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onClick={() => !disabled && !uploading && fileRef.current?.click()}
+            onKeyDown={(event) => {
+              if (disabled || uploading || (event.key !== 'Enter' && event.key !== ' ')) return
+              event.preventDefault()
+              fileRef.current?.click()
+            }}
+            role="button"
+            tabIndex={disabled || uploading ? -1 : 0}
+            aria-label={previewUrl ? '更換商品圖片' : '上傳商品圖片'}
+            aria-disabled={disabled || uploading}
             className={[
               'relative w-full rounded-2xl border-2 border-dashed transition cursor-pointer overflow-hidden',
               dragging  ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
-              uploading ? 'border-blue-300 bg-blue-50 cursor-default' :
-                          'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+              uploading ? 'border-brand-300 bg-brand-50 cursor-default' :
+                          'border-stone-200 bg-stone-50 hover:border-brand-300 hover:bg-brand-50/40',
               disabled  ? 'opacity-50 pointer-events-none' : '',
             ].join(' ')}
             style={{ minHeight: 180 }}
@@ -310,7 +320,7 @@ function ImageUploadZone({
               <div className="flex flex-col items-center justify-center gap-3 py-10 px-4">
                 {uploading ? (
                   <>
-                    <svg className="animate-spin h-8 w-8 text-brand-400" viewBox="0 0 24 24" fill="none">
+                    <svg className="animate-spin motion-reduce:animate-none h-8 w-8 text-brand-400" viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                     </svg>
@@ -323,12 +333,12 @@ function ImageUploadZone({
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl text-gray-300">🖼</span>
+                    <span className="text-4xl text-stone-300">🖼</span>
                     <div className="text-center">
-                      <p className="text-sm font-semibold text-gray-600">拖曳圖片到這裡</p>
-                      <p className="text-xs text-gray-400 mt-1">或點擊選擇檔案</p>
+                      <p className="text-sm font-semibold text-stone-600">拖曳圖片到這裡</p>
+                      <p className="text-xs text-stone-400 mt-1">或點擊選擇檔案</p>
                     </div>
-                    <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                    <span className="text-xs text-stone-300 bg-white border border-stone-200 px-3 py-1 rounded-full">
                       JPG / PNG / WebP · 最大 5 MB
                     </span>
                   </>
@@ -346,13 +356,13 @@ function ImageUploadZone({
           />
 
           {uploadErr && (
-            <p className="text-xs text-red-500 mt-2">{uploadErr}</p>
+            <p className="mt-2 text-xs text-red-500" role="alert">{uploadErr}</p>
           )}
           {previewUrl && !imgError && (
             <button
               type="button"
               onClick={() => { onUrlChange(''); setImgError(false) }}
-              className="mt-2 text-xs text-gray-400 hover:text-red-500 transition"
+              className="mt-2 text-xs text-stone-400 hover:text-red-500 transition"
             >
               ✕ 移除圖片
             </button>
@@ -362,7 +372,7 @@ function ImageUploadZone({
         /* URL tab */
         <>
           {previewUrl && !imgError && (
-            <div className="mb-3 w-full h-44 rounded-2xl overflow-hidden bg-gray-50 border border-gray-200">
+            <div className="mb-3 w-full h-44 rounded-2xl overflow-hidden bg-stone-50 border border-stone-200">
               <img src={previewUrl} alt="預覽" className="w-full h-full object-contain"
                 onError={() => setImgError(true)} />
             </div>
@@ -372,10 +382,11 @@ function ImageUploadZone({
             value={imageUrl}
             onChange={(e) => { onUrlChange(e.target.value); setImgError(false) }}
             placeholder="貼上圖片網址（https://…）"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+            aria-label="商品圖片網址"
+            className="input-soft min-h-11 w-full text-sm"
             disabled={disabled}
           />
-          <p className="text-xs text-gray-400 mt-1.5">
+          <p className="text-xs text-stone-400 mt-1.5">
             可貼入 Google Drive 公開連結、Notion 附件連結或任何公開圖片 URL。
           </p>
         </>
@@ -528,12 +539,21 @@ function MultiImageUploadZone({
         onDragLeave={() => setDragging(false)}
         onDrop={handleFileDrop}
         onClick={() => !disabled && !isUploading && fileRef.current?.click()}
+        onKeyDown={(event) => {
+          if (disabled || isUploading || (event.key !== 'Enter' && event.key !== ' ')) return
+          event.preventDefault()
+          fileRef.current?.click()
+        }}
+        role="button"
+        tabIndex={disabled || isUploading ? -1 : 0}
+        aria-label="上傳多張形象素材"
+        aria-disabled={disabled || isUploading}
         className={[
           'relative w-full rounded-2xl border-2 border-dashed transition',
           disabled || isUploading ? 'cursor-default' : 'cursor-pointer',
           dragging   ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
-          isUploading ? 'border-blue-300 bg-blue-50' :
-                        'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+          isUploading ? 'border-brand-300 bg-brand-50' :
+                        'border-stone-200 bg-stone-50 hover:border-brand-300 hover:bg-brand-50/40',
           disabled   ? 'opacity-50 pointer-events-none' : '',
         ].join(' ')}
         style={{ minHeight: isEmpty ? 140 : 64 }}
@@ -547,12 +567,12 @@ function MultiImageUploadZone({
               </>
             ) : (
               <>
-                <span className="text-4xl text-gray-300">🗂</span>
+                <span className="text-4xl text-stone-300">🗂</span>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-600">拖曳多張圖片到這裡</p>
-                  <p className="text-xs text-gray-400 mt-1">或點擊選擇檔案（可複選）</p>
+                  <p className="text-sm font-semibold text-stone-600">拖曳多張圖片到這裡</p>
+                  <p className="text-xs text-stone-400 mt-1">或點擊選擇檔案（可複選）</p>
                 </div>
-                <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                <span className="text-xs text-stone-300 bg-white border border-stone-200 px-3 py-1 rounded-full">
                   JPG / PNG / WebP · 支援批次上傳
                 </span>
               </>
@@ -562,7 +582,7 @@ function MultiImageUploadZone({
           <div className="flex items-center justify-center gap-2 py-4 px-4">
             {isUploading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin motion-reduce:animate-none h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
@@ -575,8 +595,8 @@ function MultiImageUploadZone({
               </>
             ) : (
               <>
-                <span className="text-base text-gray-400">＋</span>
-                <span className="text-sm font-medium text-gray-500">繼續新增圖片</span>
+                <span className="text-base text-stone-400">＋</span>
+                <span className="text-sm font-medium text-stone-500">繼續新增圖片</span>
               </>
             )}
           </div>
@@ -627,12 +647,12 @@ function MultiImageUploadZone({
                   isPosEdit
                     ? 'ring-2 ring-brand-500 border-brand-400 cursor-move'
                     : disabled
-                    ? 'cursor-default border-gray-200'
+                    ? 'cursor-default border-stone-200'
                     : dragSrc === i
                     ? 'opacity-40 scale-95 border-brand-300 border-dashed cursor-grabbing'
                     : dragOver === i
                     ? 'ring-2 ring-brand-400 ring-offset-1 scale-[1.04] border-brand-300 cursor-grab'
-                    : 'border-gray-200 cursor-grab active:cursor-grabbing',
+                    : 'border-stone-200 cursor-grab active:cursor-grabbing',
                 ].join(' ')}
               >
                 <img
@@ -647,7 +667,7 @@ function MultiImageUploadZone({
                   <>
                     {/* Drag handle (top-left) */}
                     <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                      <div className="bg-black/40 rounded px-1 py-0.5 text-white text-[10px] leading-none">⠿</div>
+                      <div className="rounded-full bg-black/40 px-1 py-0.5 text-[10px] leading-none text-white">⠿</div>
                     </div>
                     {/* Delete (top-right) */}
                     <button
@@ -669,7 +689,7 @@ function MultiImageUploadZone({
                                  hover:bg-brand-500 disabled:hidden"
                     >⊕</button>
                     {/* Order badge (bottom-left) */}
-                    <div className="absolute bottom-1 left-1 bg-black/40 text-white text-[9px] px-1 py-0.5 rounded pointer-events-none">
+                    <div className="pointer-events-none absolute bottom-1 left-1 rounded-full bg-black/40 px-1 py-0.5 text-[9px] text-white">
                       {i + 1}
                     </div>
                   </>
@@ -680,7 +700,7 @@ function MultiImageUploadZone({
                   <>
                     <div className="absolute inset-0 bg-brand-900/10 pointer-events-none" />
                     <div className="absolute top-1 left-1 right-1 flex items-center justify-between pointer-events-none">
-                      <span className="bg-brand-600/90 text-white text-[9px] px-1.5 py-0.5 rounded font-medium">
+                      <span className="rounded-full bg-brand-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white">
                         拖曳調整位置
                       </span>
                     </div>
@@ -701,7 +721,7 @@ function MultiImageUploadZone({
           {/* Uploading tasks */}
           {tasks.map((task) => (
             <div key={task.id}
-              className="relative aspect-square rounded-xl overflow-hidden bg-white border border-gray-200">
+              className="relative aspect-square rounded-xl overflow-hidden bg-white border border-stone-200">
               <img src={task.preview} alt="上傳中" className="w-full h-full object-cover" />
               {/* Status overlay */}
               <div className={[
@@ -711,7 +731,7 @@ function MultiImageUploadZone({
                                           'bg-black/55',
               ].join(' ')}>
                 {(task.status === 'compressing' || task.status === 'uploading') && (
-                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                  <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
@@ -744,7 +764,7 @@ function MultiImageUploadZone({
       )}
 
       {images.length > 0 && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
+        <p className="mt-1.5 text-[11px] text-stone-400">
           已上傳 {images.length} 張
           {images.length > 1 && '・拖曳排列順序'}
           ・點 ⊕ 調整顯示位置・PNG 自動轉白底
@@ -882,12 +902,21 @@ function DocUploadZone({
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => !disabled && !isUploading && fileRef.current?.click()}
+        onKeyDown={(event) => {
+          if (disabled || isUploading || (event.key !== 'Enter' && event.key !== ' ')) return
+          event.preventDefault()
+          fileRef.current?.click()
+        }}
+        role="button"
+        tabIndex={disabled || isUploading ? -1 : 0}
+        aria-label="上傳產品文件"
+        aria-disabled={disabled || isUploading}
         className={[
           'relative w-full rounded-2xl border-2 border-dashed transition',
           disabled || isUploading ? 'cursor-default' : 'cursor-pointer',
           dragging    ? 'border-brand-400 bg-brand-50 scale-[1.01]' :
-          isUploading ? 'border-blue-300 bg-blue-50' :
-                        'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+          isUploading ? 'border-brand-300 bg-brand-50' :
+                        'border-stone-200 bg-stone-50 hover:border-brand-300 hover:bg-brand-50/40',
           disabled    ? 'opacity-50 pointer-events-none' : '',
         ].join(' ')}
         style={{ minHeight: isEmpty ? 120 : 56 }}
@@ -901,12 +930,12 @@ function DocUploadZone({
               </>
             ) : (
               <>
-                <span className="text-3xl text-gray-300">📁</span>
+                <span className="text-3xl text-stone-300">📁</span>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-600">拖曳文件到這裡</p>
-                  <p className="text-xs text-gray-400 mt-0.5">或點擊選擇檔案</p>
+                  <p className="text-sm font-semibold text-stone-600">拖曳文件到這裡</p>
+                  <p className="text-xs text-stone-400 mt-0.5">或點擊選擇檔案</p>
                 </div>
-                <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                <span className="text-xs text-stone-300 bg-white border border-stone-200 px-3 py-1 rounded-full">
                   PDF · Word · Excel · PPT · ZIP · 最大 4 MB
                 </span>
               </>
@@ -916,7 +945,7 @@ function DocUploadZone({
           <div className="flex items-center justify-center gap-2 py-3.5 px-4">
             {isUploading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin motion-reduce:animate-none h-4 w-4 text-brand-400" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
@@ -929,8 +958,8 @@ function DocUploadZone({
               </>
             ) : (
               <>
-                <span className="text-gray-400">＋</span>
-                <span className="text-sm font-medium text-gray-500">繼續上傳文件</span>
+                <span className="text-stone-400">＋</span>
+                <span className="text-sm font-medium text-stone-500">繼續上傳文件</span>
               </>
             )}
           </div>
@@ -948,23 +977,23 @@ function DocUploadZone({
 
       {/* File list */}
       {(docs.length > 0 || tasks.length > 0) && (
-        <div className="mt-2 rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+        <div className="mt-2 rounded-xl border border-stone-200 overflow-hidden divide-y divide-stone-100">
           {/* Saved docs */}
           {docs.map((doc, i) => (
             <div key={`${doc.url}-${i}`}
-              className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 group transition">
+              className="flex items-center gap-3 px-3 py-2.5 hover:bg-stone-50 group transition">
               <span className="text-xl shrink-0">{docIcon(doc.name)}</span>
               <div className="flex-1 min-w-0">
                 <a
                   href={doc.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-gray-800 hover:text-brand-600 hover:underline truncate block"
+                  className="text-sm font-medium text-stone-800 hover:text-brand-600 hover:underline truncate block"
                   title={doc.name}
                 >
                   {doc.name}
                 </a>
-                <p className="text-[11px] text-gray-400 mt-0.5">{formatFileSize(doc.size)}</p>
+                <p className="text-[11px] text-stone-400 mt-0.5">{formatFileSize(doc.size)}</p>
               </div>
               {/* Download */}
               <a
@@ -972,7 +1001,7 @@ function DocUploadZone({
                 download={doc.name}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500
+                className="shrink-0 rounded-full border border-stone-200 px-2.5 py-1 text-xs text-stone-500
                            hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition"
                 title="下載"
               >
@@ -984,7 +1013,7 @@ function DocUploadZone({
                 onClick={() => onRemoveDoc(i)}
                 disabled={disabled}
                 className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-[11px]
-                           text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100
+                           text-stone-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100
                            transition disabled:hidden"
                 title="移除"
               >✕</button>
@@ -995,18 +1024,18 @@ function DocUploadZone({
           {tasks.map((task) => (
             <div key={task.id} className={[
               'flex items-center gap-3 px-3 py-2.5',
-              task.status === 'error' ? 'bg-red-50' : 'bg-blue-50/40',
+              task.status === 'error' ? 'bg-red-50' : 'bg-brand-50/40',
             ].join(' ')}>
               <span className="text-xl shrink-0">
                 {task.status === 'uploading' ? (
-                  <svg className="animate-spin h-5 w-5 text-brand-400 mt-0.5" viewBox="0 0 24 24" fill="none">
+                  <svg className="animate-spin motion-reduce:animate-none h-5 w-5 text-brand-400 mt-0.5" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
                 ) : task.status === 'done' ? '✅' : '❌'}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700 truncate">{task.name}</p>
+                <p className="text-sm font-medium text-stone-700 truncate">{task.name}</p>
                 <p className="text-[11px] mt-0.5">
                   {task.status === 'uploading' ? (
                     <span className="text-brand-500">上傳中…</span>
@@ -1019,7 +1048,7 @@ function DocUploadZone({
               </div>
               {task.status === 'error' && (
                 <button type="button" onClick={() => removeTask(task.id)}
-                  className="shrink-0 text-xs text-gray-400 hover:text-red-500 transition">
+                  className="shrink-0 text-xs text-stone-400 hover:text-red-500 transition">
                   移除
                 </button>
               )}
@@ -1029,7 +1058,7 @@ function DocUploadZone({
       )}
 
       {docs.length > 0 && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
+        <p className="mt-1.5 text-[11px] text-stone-400">
           {docs.length} 份文件・點擊檔名或 ↓ 下載
         </p>
       )}
@@ -1112,29 +1141,29 @@ function SpecsEditor({
 
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: `repeat(${colCount}, minmax(72px, 1fr)) 28px`,
+    gridTemplateColumns: `repeat(${colCount}, minmax(96px, 1fr)) 44px`,
   }
 
   const hdrInput = [
-    'w-full px-2.5 py-2 text-xs font-semibold text-slate-600 bg-transparent',
-    'border-0 focus:outline-none focus:bg-brand-50/70 rounded',
-    'placeholder:text-gray-300 disabled:opacity-50',
+    'w-full px-2.5 py-2 text-xs font-semibold text-stone-600 bg-transparent',
+    'min-h-11 rounded-2xl border-0 focus:outline-none focus:bg-brand-50/70',
+    'placeholder:text-stone-300 disabled:opacity-50',
   ].join(' ')
 
   const cellInput = [
-    'w-full px-2.5 py-2 text-sm text-gray-800 bg-transparent',
-    'border-0 focus:outline-none focus:bg-brand-50/70 rounded',
-    'placeholder:text-gray-300 disabled:opacity-50',
+    'w-full px-2.5 py-2 text-sm text-stone-800 bg-transparent',
+    'min-h-11 rounded-2xl border-0 focus:outline-none focus:bg-brand-50/70',
+    'placeholder:text-stone-300 disabled:opacity-50',
   ].join(' ')
 
   return (
     <div>
-      <div className="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
+      <div className="overflow-x-auto rounded-2xl ring-1 ring-stone-900/[0.06]">
 
         {/* ── Header row ─────────────────────────────────────── */}
-        <div style={gridStyle} className="bg-slate-50 border-b border-gray-200">
+        <div style={gridStyle} className="bg-stone-50 border-b border-stone-200">
           {specs.columns.map((col, ci) => (
-            <div key={ci} className="relative group flex items-center border-r border-gray-200"
+            <div key={ci} className="relative group flex items-center border-r border-stone-200"
               style={ci === colCount - 1 ? { borderRight: 'none' } : {}}>
               <input
                 value={col}
@@ -1150,24 +1179,25 @@ function SpecsEditor({
                   onClick={() => removeCol(ci)}
                   disabled={disabled}
                   title="刪除此欄"
-                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded flex items-center justify-center
-                             text-[10px] leading-none text-gray-300 hover:text-red-500 hover:bg-red-50
-                             opacity-0 group-hover:opacity-100 transition disabled:hidden"
+                  aria-label={`刪除第 ${ci + 1} 欄`}
+                  className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center rounded-full
+                             text-xs leading-none text-stone-300 transition-all hover:bg-red-50 hover:text-red-500
+                             opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 active:scale-95 disabled:hidden"
                 >✕</button>
               )}
             </div>
           ))}
           {/* Add column */}
-          <div className="flex items-center justify-center border-l border-gray-200">
+          <div className="flex items-center justify-center border-l border-stone-200">
             <button
               type="button"
               onClick={addCol}
               disabled={disabled}
               title="新增欄"
-              className="w-5 h-5 flex items-center justify-center rounded-full
-                         text-sm font-bold leading-none
-                         text-gray-400 hover:text-brand-600 hover:bg-brand-50
-                         transition disabled:opacity-30"
+              aria-label="新增規格欄"
+              className="flex h-11 w-11 items-center justify-center rounded-full
+                         text-sm font-bold leading-none text-stone-400 transition-all
+                         hover:bg-brand-50 hover:text-brand-600 active:scale-95 disabled:opacity-30"
             >＋</button>
           </div>
         </div>
@@ -1175,9 +1205,9 @@ function SpecsEditor({
         {/* ── Data rows ──────────────────────────────────────── */}
         {specs.rows.map((row, ri) => (
           <div key={ri} style={gridStyle}
-            className="group border-b border-gray-100 last:border-0 hover:bg-gray-50/60 transition-colors">
+            className="group border-b border-stone-100 last:border-0 hover:bg-stone-50/60 transition-colors">
             {row.map((cell, ci) => (
-              <div key={ci} className="border-r border-gray-100"
+              <div key={ci} className="border-r border-stone-100"
                 style={ci === colCount - 1 ? { borderRight: 'none' } : {}}>
                 <input
                   ref={el => regRef(ri, ci, el)}
@@ -1197,10 +1227,10 @@ function SpecsEditor({
                 onClick={() => removeRow(ri)}
                 disabled={disabled}
                 title="刪除此列"
-                className="w-5 h-5 flex items-center justify-center rounded-full
-                           text-[11px] leading-none
-                           text-gray-300 hover:text-red-500 hover:bg-red-50
-                           opacity-0 group-hover:opacity-100 transition disabled:hidden"
+                aria-label={`刪除第 ${ri + 1} 列`}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-[11px] leading-none
+                           text-stone-300 opacity-100 transition-all hover:bg-red-50 hover:text-red-500
+                           sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 focus:opacity-100 active:scale-95 disabled:hidden"
               >✕</button>
             </div>
           </div>
@@ -1208,7 +1238,7 @@ function SpecsEditor({
 
         {/* ── Empty state ────────────────────────────────────── */}
         {rowCount === 0 && (
-          <div className="py-5 text-center text-xs text-gray-400 select-none">
+          <div className="py-5 text-center text-xs text-stone-400 select-none">
             尚無規格，點擊下方「新增列」開始填寫
           </div>
         )}
@@ -1238,7 +1268,7 @@ function ProductEditDrawer({
 }: {
   skuCode: string
   onClose: () => void
-  onSaved: (skuCode: string, price: number | null, imageUrl: string) => void
+  onSaved: (skuCode: string, price: number | null) => void
   allFamilies: ProductFamily[]
 }) {
   const [catalog, setCatalog] = useState<CatalogItem | null>(null)
@@ -1259,6 +1289,11 @@ function ProductEditDrawer({
   const [familySaving,     setFamilySaving]      = useState(false)
   const [familySaved,      setFamilySaved]        = useState(false)
   const [familyError,      setFamilyError]        = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
+
+  useDialogFocus(dialogRef, onClose)
+  useBodyScrollLock()
 
   useEffect(() => {
     setLoading(true)
@@ -1348,63 +1383,61 @@ function ProductEditDrawer({
       return
     }
     setSaving(false)
-    onSaved(skuCode, priceNum, imageUrl.trim())
+    onSaved(skuCode, priceNum)
     onClose()
   }
-
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [onClose])
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <motion.div
         className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }} onClick={onClose}
+        initial={{ opacity: reduceMotion ? 1 : 0 }} animate={{ opacity: 1 }} exit={{ opacity: reduceMotion ? 1 : 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.2 }} onClick={onClose}
       />
 
       <motion.div
-        className="relative ml-auto w-full max-w-lg h-full bg-white shadow-2xl flex flex-col overflow-hidden"
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-        transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+        ref={dialogRef}
+        className="relative ml-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-l-3xl"
+        initial={{ x: reduceMotion ? 0 : '100%' }} animate={{ x: 0 }} exit={{ x: reduceMotion ? 0 : '100%' }}
+        transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-edit-title"
+        tabIndex={-1}
       >
         {/* Header */}
-        <div className="px-4 sm:px-6 pt-6 pb-4 sm:py-5 border-b border-gray-100 flex items-start justify-between gap-4">
+        <div className="glass-bar flex items-start justify-between gap-4 border-b border-stone-900/[0.06] px-4 pb-4 pt-5 sm:px-6 sm:py-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-500 mb-1">編輯商品</p>
-            <h2 className="text-lg font-bold text-slate-900 leading-snug">
+            <h2 id="product-edit-title" className="text-lg font-bold text-stone-800 leading-snug">
               {loading ? '載入中…' : (catalog?.name ?? skuCode)}
             </h2>
-            <p className="text-xs font-mono text-gray-400 mt-0.5">{skuCode}</p>
+            <p className="text-xs font-mono text-stone-400 mt-0.5">{skuCode}</p>
           </div>
-          <button onClick={onClose}
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
+          <button
+            type="button"
+            onClick={onClose}
+            data-dialog-initial-focus
+            aria-label="關閉商品編輯"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">
             ✕
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto px-4 py-5 sm:px-6">
           {error && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</div>
           )}
 
           {catalog && (
-            <div className="bg-gray-50 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">基本資料</p>
+            <div className="rounded-2xl bg-stone-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">基本資料</p>
               {[['品牌', catalog.brand], ['分類', catalog.category], ['商品類型', catalog.productType]].map(
                 ([label, val]) => val ? (
                   <div key={label} className="flex gap-3 text-sm py-1">
-                    <span className="text-slate-400 w-20 shrink-0">{label}</span>
-                    <span className="text-slate-700 font-medium">{val}</span>
+                    <span className="text-stone-400 w-20 shrink-0">{label}</span>
+                    <span className="text-stone-700 font-medium">{val}</span>
                   </div>
                 ) : null
               )}
@@ -1412,14 +1445,16 @@ function ProductEditDrawer({
           )}
 
           {/* 系列群組 — family assignment */}
-          <div className="bg-gray-50 rounded-xl p-4 mb-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">系列群組</p>
+          <div className="mb-0 rounded-2xl bg-stone-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">系列群組</p>
             <div className="space-y-3">
               <select
+                id="product-family-group"
                 value={selectedFamilyId}
                 onChange={(e) => setSelectedFamilyId(e.target.value)}
                 disabled={loading || familySaving}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent bg-white disabled:opacity-50"
+                aria-label="系列群組"
+                className="select-soft min-h-11 w-full text-sm disabled:opacity-50"
               >
                 <option value="">— 未指定（依貨號自動歸類）—</option>
                 {[...allFamilies].sort((a, b) => a.seriesName.localeCompare(b.seriesName, 'zh-TW')).map((f) => (
@@ -1428,7 +1463,7 @@ function ProductEditDrawer({
               </select>
 
               {familyError && (
-                <p className="text-xs text-red-500">{familyError}</p>
+                <p className="text-xs text-red-500" role="alert">{familyError}</p>
               )}
 
               <div className="flex items-center gap-2">
@@ -1436,11 +1471,11 @@ function ProductEditDrawer({
                   type="button"
                   onClick={() => handleSaveFamily(selectedFamilyId)}
                   disabled={loading || familySaving}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50 flex items-center gap-1.5"
+                  className="flex min-h-11 items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
                 >
                   {familySaving ? (
                     <>
-                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <svg className="animate-spin motion-reduce:animate-none h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
@@ -1454,7 +1489,7 @@ function ProductEditDrawer({
                     type="button"
                     onClick={() => handleSaveFamily('')}
                     disabled={loading || familySaving}
-                    className="px-4 py-2 rounded-lg text-xs font-medium border border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                    className="min-h-11 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-medium text-stone-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 active:scale-95 disabled:opacity-50"
                   >
                     清除手動指定
                   </button>
@@ -1465,16 +1500,17 @@ function ProductEditDrawer({
 
           {/* 售價 */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              售價 <span className="text-gray-400 font-normal text-xs">（NT$）</span>
+            <label htmlFor="product-price" className="mb-1.5 block text-sm font-semibold text-stone-700">
+              售價 <span className="text-stone-400 font-normal text-xs">（NT$）</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">NT$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400">NT$</span>
               <input
+                id="product-price"
                 type="number" min={0} value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="尚未設定"
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                className="input-soft min-h-11 w-full pl-10 text-sm"
                 disabled={loading}
               />
             </div>
@@ -1482,7 +1518,7 @@ function ProductEditDrawer({
 
           {/* 商品圖片 */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">商品圖片</label>
+            <label className="block text-sm font-semibold text-stone-700 mb-2">商品圖片</label>
             <ImageUploadZone
               imageUrl={imageUrl}
               onUrlChange={setImageUrl}
@@ -1493,8 +1529,8 @@ function ProductEditDrawer({
           {/* 形象素材 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-slate-700">形象素材</label>
-              <span className="text-[10px] text-gray-400">可上傳多張・拖曳或點選圖片複選</span>
+              <label className="block text-sm font-semibold text-stone-700">形象素材</label>
+              <span className="text-[10px] text-stone-400">可上傳多張・拖曳或點選圖片複選</span>
             </div>
             <MultiImageUploadZone
               images={galleryImages}
@@ -1508,8 +1544,8 @@ function ProductEditDrawer({
           {/* 文件資料 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-slate-700">文件資料</label>
-              <span className="text-[10px] text-gray-400">PDF / Word / Excel / PPT・最大 4 MB</span>
+              <label className="block text-sm font-semibold text-stone-700">文件資料</label>
+              <span className="text-[10px] text-stone-400">PDF / Word / Excel / PPT・最大 4 MB</span>
             </div>
             <DocUploadZone
               docs={docs}
@@ -1521,13 +1557,14 @@ function ProductEditDrawer({
 
           {/* 商品介紹 */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">商品介紹</label>
+            <label htmlFor="product-description" className="mb-1.5 block text-sm font-semibold text-stone-700">商品介紹</label>
             <textarea
+              id="product-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="填入產品特色、規格說明、使用注意事項…"
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent leading-relaxed"
+              className="input-soft w-full resize-none text-sm leading-relaxed"
               disabled={loading}
             />
           </div>
@@ -1535,8 +1572,8 @@ function ProductEditDrawer({
           {/* 技術規格 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-slate-700">技術規格</label>
-              <span className="text-[10px] text-gray-400">點擊欄位名稱可修改・Tab 鍵跳格・最後格自動新增列</span>
+              <label className="block text-sm font-semibold text-stone-700">技術規格</label>
+              <span className="text-[10px] text-stone-400">點擊欄位名稱可修改・Tab 鍵跳格・最後格自動新增列</span>
             </div>
             <SpecsEditor
               specs={specs}
@@ -1547,15 +1584,15 @@ function ProductEditDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
-          <button onClick={onClose} disabled={saving}
-            className="px-5 py-2 rounded-full text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+        <div className="glass-bar flex items-center justify-end gap-3 border-t border-stone-900/[0.06] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4">
+          <button type="button" onClick={onClose} disabled={saving}
+            className="min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-600 transition-all hover:bg-stone-50 active:scale-95 disabled:opacity-50">
             取消
           </button>
-          <button onClick={handleSave} disabled={loading || saving}
-            className="px-6 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 transition disabled:opacity-50 flex items-center gap-2">
+          <button type="button" onClick={handleSave} disabled={loading || saving}
+            className="flex min-h-11 items-center gap-2 rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
             {saving && (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <svg className="animate-spin motion-reduce:animate-none h-4 w-4" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
@@ -1573,20 +1610,18 @@ function ProductEditDrawer({
 function SkuRow({
   item,
   priceCache,
-  imageFlagCache,
   onEdit,
 }: {
   item: CatalogItem
   priceCache: Map<string, number | null>
-  imageFlagCache: Set<string>
   onEdit: (item: CatalogItem) => void
 }) {
   const [open, setOpen] = useState(false)
   const [summary, setSummary] = useState<IntroData | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const summaryFetched = useRef(false)
+  const reduceMotion = useReducedMotion()
   const hasPrice = priceCache.has(item.code)
-  const hasImage = imageFlagCache.has(item.code)
   const price    = priceCache.get(item.code)
 
   const handleToggle = () => {
@@ -1618,8 +1653,6 @@ function SkuRow({
           className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition-all active:scale-[0.99]"
           aria-expanded={open}
         >
-          <div className={`h-2 w-2 shrink-0 rounded-full ${hasImage ? 'bg-brand-500' : 'bg-stone-200'}`} />
-
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-medium text-stone-800">{item.name}</p>
@@ -1636,7 +1669,7 @@ function SkuRow({
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="truncate font-mono text-[11px] text-stone-400">{item.code}</p>
-              {item.brand && <span className="chip">{item.brand}</span>}
+              {item.brand && <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-medium text-stone-600">{item.brand}</span>}
               {item.category && <span className="hidden text-[10px] text-stone-400 sm:inline">{item.category}</span>}
             </div>
           </div>
@@ -1663,14 +1696,14 @@ function SkuRow({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            exit={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
             className="overflow-hidden"
           >
             <div className="mx-2 mb-2 flex flex-col gap-3 rounded-2xl bg-stone-50 p-3 sm:flex-row">
               {summaryLoading ? (
-                <div className="h-20 w-full animate-pulse rounded-2xl bg-stone-100" />
+                <div className="h-20 w-full animate-pulse motion-reduce:animate-none rounded-2xl bg-stone-100" />
               ) : (
                 <>
                   {summary?.imageUrl && (
@@ -1707,14 +1740,12 @@ function FamilyCard({
   family,
   allItems,
   priceCache,
-  imageFlagCache,
   onEdit,
   onOpenModal,
 }: {
   family: ProductFamily
   allItems: CatalogItem[]
   priceCache: Map<string, number | null>
-  imageFlagCache: Set<string>
   onEdit: (item: CatalogItem) => void
   onOpenModal?: () => void
 }) {
@@ -1725,6 +1756,7 @@ function FamilyCard({
   const [focusedSkuCode, setFocusedSkuCode] = useState('')
   const introFetched = useRef(false)
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const reduceMotion = useReducedMotion()
 
   // 系列成員只接受明確 SKU 對照，不用貨號前綴猜測。
   const skuCodes = explicitFamilySkuCodes(family)
@@ -1745,7 +1777,6 @@ function FamilyCard({
     : minPrice === maxPrice
       ? `NT$${minPrice.toLocaleString('zh-TW')}`
       : `NT$${minPrice.toLocaleString('zh-TW')}～${maxPrice!.toLocaleString('zh-TW')}`
-  const imageSetCount = items.filter((it) => imageFlagCache.has(it.code)).length
   const visibleItems  = items.slice(0, visibleCount)
   const remaining     = items.length - visibleCount
 
@@ -1814,14 +1845,14 @@ function FamilyCard({
       {/* Family header */}
       <div className="group flex w-full items-start gap-3 p-3 sm:items-center sm:px-5 sm:py-4">
         <SeriesArtwork category={representative.category} mainCategory={representative.mainCategory} label={family.seriesName} />
-        <button
+        <button type="button"
           onClick={handleToggle}
           className={`flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95 ${open ? 'rotate-90' : ''}`}
           aria-label={open ? '收合系列品項' : '展開系列品項'}
         >
           ▶
         </button>
-        <button
+        <button type="button"
           onClick={onOpenModal}
           className="min-w-0 flex-1 rounded-2xl px-1 py-1 text-left transition-all hover:bg-brand-50/50 active:scale-[0.99]"
         >
@@ -1836,7 +1867,6 @@ function FamilyCard({
             <span className="text-xs text-stone-400">{items.length} 個規格</span>
             <span className={minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
             {priceSetCount > 0 && priceSetCount < items.length && <span className="text-[11px] text-stone-400">{items.length - priceSetCount} 項待定價</span>}
-            {imageSetCount > 0 && <span className="text-xs font-medium text-brand-600">✓ {imageSetCount} 已設圖片</span>}
             <span className="text-[11px] font-medium text-brand-600">照片・規格・文件 ›</span>
           </div>
         </button>
@@ -1847,22 +1877,22 @@ function FamilyCard({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-gray-100 px-5 py-4 space-y-5">
+            <div className="border-t border-stone-100 px-5 py-4 space-y-5">
 
               {/* ── 介紹 ── */}
               {introLoading ? (
                 <div className="flex gap-4">
-                  <div className="w-24 h-24 rounded-xl bg-gray-100 animate-pulse shrink-0" />
+                  <div className="w-24 h-24 rounded-xl bg-stone-100 animate-pulse motion-reduce:animate-none shrink-0" />
                   <div className="flex-1 space-y-2 pt-1">
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                    <div className="h-3 w-3/4 animate-pulse motion-reduce:animate-none rounded-full bg-stone-100 motion-reduce:animate-none" />
+                    <div className="h-3 w-full animate-pulse motion-reduce:animate-none rounded-full bg-stone-100 motion-reduce:animate-none" />
+                    <div className="h-3 w-2/3 animate-pulse motion-reduce:animate-none rounded-full bg-stone-100 motion-reduce:animate-none" />
                   </div>
                 </div>
               ) : introData?.imageUrl || introData?.description ? (
@@ -1872,7 +1902,7 @@ function FamilyCard({
                     <img
                       src={introData.notionId ? `/api/notion-image?pageId=${introData.notionId}` : introData.imageUrl}
                       alt={family.seriesName}
-                      className="w-24 h-24 rounded-xl object-cover shrink-0 border border-gray-100 bg-gray-50"
+                      className="w-24 h-24 rounded-xl object-cover shrink-0 border border-stone-100 bg-stone-50"
                     />
                   )}
                   {introData.description && (
@@ -1881,7 +1911,7 @@ function FamilyCard({
                         {introData.description.split('|').map((part, i) => {
                           const t = part.trim()
                           return t ? (
-                            <li key={i} className="flex gap-2 text-sm text-gray-600 leading-relaxed">
+                            <li key={i} className="flex gap-2 text-sm text-stone-600 leading-relaxed">
                               <span className="text-brand-400 shrink-0 mt-0.5 select-none">·</span>
                               <span>{t}</span>
                             </li>
@@ -1889,7 +1919,7 @@ function FamilyCard({
                         })}
                       </ul>
                     ) : (
-                      <p className="text-sm text-gray-600 leading-relaxed">{introData.description}</p>
+                      <p className="text-sm text-stone-600 leading-relaxed">{introData.description}</p>
                     )
                   )}
                 </div>
@@ -1898,18 +1928,20 @@ function FamilyCard({
               {/* ── 規格選擇器（點選縮小範圍，確認此組合是否有貨） ── */}
               {family.skuMap && family.specs.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">規格查詢</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">規格查詢</p>
                   {family.uiVariant === 'ymh-tooth-grid' ? (
                     <YMHToothGridPanel
                       family={family}
                       onAdd={handleFocusSku}
                       actionLabel="定位此品項"
+                      resetAfterAction={false}
                     />
                   ) : (
                     <FamilySpecPanel
                       family={family}
                       onAdd={handleFocusSku}
                       actionLabel="定位此品項"
+                      resetAfterAction={false}
                     />
                   )}
                 </div>
@@ -1917,7 +1949,7 @@ function FamilyCard({
 
               {/* ── 品項清單 ── */}
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">
                   品項（{items.length}）
                 </p>
                 <div className="space-y-0.5">
@@ -1928,28 +1960,32 @@ function FamilyCard({
                         if (element) itemRefs.current.set(item.code, element)
                         else itemRefs.current.delete(item.code)
                       }}
-                      className={`group flex min-h-12 items-center gap-3 rounded-2xl px-2 py-2 transition-colors ${focusedSkuCode === item.code ? 'bg-brand-50 ring-1 ring-brand-200' : 'hover:bg-brand-50/40'}`}
+                      className={`group flex min-h-12 flex-col items-stretch gap-2 rounded-2xl px-2 py-2 transition-colors sm:flex-row sm:items-center sm:gap-3 ${focusedSkuCode === item.code ? 'bg-brand-50 ring-1 ring-brand-200' : 'hover:bg-brand-50/40'}`}
                     >
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${imageFlagCache.has(item.code) ? 'bg-brand-500' : 'bg-stone-200'}`} />
-                      <span className="w-24 shrink-0 truncate font-mono text-[11px] text-stone-400 sm:w-32">{item.code}</span>
-                      <span className="flex-1 truncate text-sm font-medium text-stone-700">{item.name}</span>
-                      {(item.price ?? priceCache.get(item.code)) != null ? (
-                        <span className="price-pill shrink-0">NT${(item.price ?? priceCache.get(item.code) as number).toLocaleString('zh-TW')}</span>
-                      ) : (
-                        <span className="shrink-0 text-[11px] font-medium text-amber-600">待定價</span>
-                      )}
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
-                      >
-                        編輯
-                      </button>
+                      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+                        <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0">{item.code}</span>
+                        <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                        {(item.price ?? priceCache.get(item.code)) != null ? (
+                          <span className="price-pill shrink-0">NT${(item.price ?? priceCache.get(item.code) as number).toLocaleString('zh-TW')}</span>
+                        ) : (
+                          <span className="shrink-0 text-[11px] font-medium text-amber-600">待定價</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onEdit(item)}
+                          className="flex min-h-11 shrink-0 items-center rounded-full border border-stone-200 bg-white px-3 text-xs text-stone-500 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
+                        >
+                          編輯
+                        </button>
+                      </div>
                     </div>
                   ))}
 
                   {remaining > 0 && (
                     <div className="pt-2 text-center">
-                      <button
+                      <button type="button"
                         onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
                         className="text-xs font-medium text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-4 py-1.5 rounded-full transition"
                       >
@@ -1987,18 +2023,18 @@ function FeaturedStrip({
 
   return (
     <div className="mb-6">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">常用系列</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-stone-400">常用系列</p>
       <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {featuredFamilies.map((f) => (
-          <button
+          <button type="button"
             key={f.id}
             onClick={() => onSelectFamily(f)}
-            className="shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-2xl border border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50 transition-colors text-left min-w-[140px] max-w-[180px]"
+            className="card-soft card-soft-hover flex min-h-20 min-w-[140px] max-w-[180px] shrink-0 flex-col items-start gap-1 rounded-2xl px-4 py-3 text-left transition-all active:scale-95"
           >
-            <span className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{f.seriesName}</span>
+            <span className="text-sm font-semibold text-stone-900 leading-tight line-clamp-2">{f.seriesName}</span>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {f.brand && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{f.brand}</span>}
-              {f.productType && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{f.productType}</span>}
+              {f.brand && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">{f.brand}</span>}
+              {f.productType && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-100">{f.productType}</span>}
             </div>
           </button>
         ))}
@@ -2023,6 +2059,8 @@ function FeaturedManager({
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const reduceMotion = useReducedMotion()
 
   // Sync initialIds when they change externally
   useEffect(() => { setSelected(new Set(initialIds)) }, [initialIds])
@@ -2046,16 +2084,20 @@ function FeaturedManager({
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError('')
     try {
       const ids = Array.from(selected)
-      await fetch('/api/products/featured-families', {
+      const response = await fetch('/api/products/featured-families', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ familyIds: ids }),
       })
+      if (!response.ok) throw new Error(`常用系列儲存失敗（HTTP ${response.status}）`)
       setSaved(true)
       onSaved(ids)
       setTimeout(() => setSaved(false), 2000)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : '常用系列暫時無法儲存')
     } finally {
       setSaving(false)
     }
@@ -2064,8 +2106,11 @@ function FeaturedManager({
   return (
     <div className="mb-4">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors"
+        aria-expanded={open}
+        aria-controls="featured-family-manager"
+        className="flex min-h-11 items-center gap-1.5 rounded-full px-2 text-xs text-stone-400 transition-all hover:bg-brand-50 hover:text-brand-600 active:scale-95"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -2078,42 +2123,45 @@ function FeaturedManager({
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={{ height: reduceMotion ? 'auto' : 0, opacity: reduceMotion ? 1 : 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-3 border border-gray-200 rounded-2xl p-4 bg-white space-y-3">
+            <div id="featured-family-manager" className="card-soft mt-3 space-y-3 p-4">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="搜尋系列名稱…"
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                aria-label="搜尋常用系列"
+                className="input-soft min-h-11 w-full text-sm"
               />
               <div className="max-h-60 overflow-y-auto space-y-1">
                 {filtered.map((f) => (
-                  <label key={f.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <label key={f.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-brand-50/50">
                     <input
                       type="checkbox"
                       checked={selected.has(f.id)}
                       onChange={() => toggle(f.id)}
-                      className="rounded border-gray-300 text-brand-500 focus:ring-brand-400"
+                      className="rounded border-stone-300 text-brand-500 focus:ring-brand-400"
                     />
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm text-gray-800">{f.seriesName}</span>
-                      <span className="text-xs text-gray-400 ml-2">{f.brand}</span>
+                      <span className="text-sm text-stone-800">{f.seriesName}</span>
+                      <span className="text-xs text-stone-400 ml-2">{f.brand}</span>
                     </div>
                   </label>
                 ))}
               </div>
+              {saveError && <p className="rounded-2xl bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{saveError}</p>}
               <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-gray-400">已選 {selected.size} 個系列</span>
+                <span className="text-xs text-stone-400" aria-live="polite">已選 {selected.size} 個系列</span>
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                  className="min-h-11 rounded-full bg-brand-500 px-4 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
                 >
                   {saving ? '儲存中…' : saved ? '✓ 已儲存' : '儲存設定'}
                 </button>
@@ -2132,10 +2180,13 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   const { data: session } = useSession()
   const sessionUser = session?.user as any
   const isAdmin = sessionUser?.role === 'admin' || sessionUser?.accountType === '行政'
+  const reduceMotion = useReducedMotion()
 
   const [families,     setFamilies]     = useState<ProductFamily[]>([])
   const [allItems,     setAllItems]     = useState<CatalogItem[]>([])
   const [loading,      setLoading]      = useState(true)
+  const [loadError,    setLoadError]    = useState('')
+  const [loadAttempt,  setLoadAttempt]  = useState(0)
 
   const [search,         setSearch]         = useState('')
   const [filterBrand,    setFilterBrand]    = useState('')
@@ -2148,20 +2199,26 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   const [featuredIds,  setFeaturedIds]  = useState<string[]>([])
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
 
-  // Cache: skuCode → price (and whether image is set)
-  // Populated lazily as users save products.
+  // Cache: skuCode → price. Populated from catalog and refreshed after edits.
   const [priceCache,     setPriceCache]     = useState<Map<string, number | null>>(new Map())
-  const [imageFlagCache, setImageFlagCache] = useState<Set<string>>(new Set())
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load families + full catalog on mount
   useEffect(() => {
+    setLoading(true)
+    setLoadError('')
     Promise.all([
-      fetch('/api/products/families').then((r) => r.json()),
+      fetch('/api/products/families').then(async (response) => {
+        if (!response.ok) throw new Error(`系列資料讀取失敗（HTTP ${response.status}）`)
+        return response.json()
+      }),
       // Dedicated endpoint: returns raw { code, name, brand, … } format,
       // no 200-item cap, 5-min browser cache.
-      fetch('/api/products/catalog-raw', { cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/products/catalog-raw', { cache: 'no-store' }).then(async (response) => {
+        if (!response.ok) throw new Error(`產品目錄讀取失敗（HTTP ${response.status}）`)
+        return response.json()
+      }),
     ])
       .then(([fams, raw]) => {
         setFamilies(Array.isArray(fams) ? fams : [])
@@ -2176,14 +2233,14 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
           return next
         })
       })
-      .catch(console.error)
+      .catch((error) => setLoadError(error instanceof Error ? error.message : '產品目錄暫時無法讀取'))
       .finally(() => setLoading(false))
 
     fetch('/api/products/featured-families')
       .then((r) => r.json())
       .then((data) => { if (data.familyIds) setFeaturedIds(data.familyIds) })
       .catch(() => {})
-  }, [])
+  }, [loadAttempt])
 
   // Debounced 關鍵字(全目錄已在記憶體,搜尋與篩選一律 client-side,含停售品)
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -2213,40 +2270,41 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   }, [isSearching, allItems, debouncedQ, filterBrand, filterMain, filterCategory, filterType])
 
   // After a save, update caches
-  const handleSaved = useCallback((skuCode: string, price: number | null, imageUrl: string) => {
+  const handleSaved = useCallback((skuCode: string, price: number | null) => {
     setPriceCache((prev) => {
       const next = new Map(prev)
       next.set(skuCode, price)
-      return next
-    })
-    setImageFlagCache((prev) => {
-      const next = new Set(prev)
-      if (imageUrl) next.add(skuCode)
-      else next.delete(skuCode)
       return next
     })
   }, [])
 
   // 系列的分類:product_families.json 內是舊分類快照,以成員 SKU 的新分類為準
   const familyTaxonomy = useMemo(() => {
-    const m = new Map<string, { main: string; category: string; type: string }>()
+    const m = new Map<string, { brands: Set<string>; mains: Set<string>; categories: Set<string>; types: Set<string> }>()
     const itemByCode = new Map(allItems.map((item) => [item.code, item]))
     for (const f of families) {
-      const member = explicitFamilySkuCodes(f)
+      const members = explicitFamilySkuCodes(f)
         .map((code) => itemByCode.get(code))
-        .find(Boolean)
-      if (member) m.set(f.id, { main: member.mainCategory || '', category: member.category, type: member.productType })
+        .filter((item): item is CatalogItem => Boolean(item))
+      if (members.length > 0) {
+        m.set(f.id, {
+          brands: new Set(members.map((item) => item.brand).filter(Boolean)),
+          mains: new Set(members.map((item) => item.mainCategory || '').filter(Boolean)),
+          categories: new Set(members.map((item) => item.category).filter(Boolean)),
+          types: new Set(members.map((item) => item.productType).filter(Boolean)),
+        })
+      }
     }
     return m
   }, [families, allItems])
 
   // Filter families by active filters(依成員 SKU 的新分類)
   const visibleFamilies = families.filter((f) => {
-    if (filterBrand && f.brand !== filterBrand) return false
     const tx = familyTaxonomy.get(f.id)
-    if (filterMain     && tx?.main     !== filterMain)     return false
-    if (filterCategory && tx?.category !== filterCategory) return false
-    if (filterType     && tx?.type     !== filterType)     return false
+    if (filterBrand    && !tx?.brands.has(filterBrand))            return false
+    if (filterMain     && !tx?.mains.has(filterMain))             return false
+    if (filterCategory && !tx?.categories.has(filterCategory))    return false
+    if (filterType     && !tx?.types.has(filterType))              return false
     return true
   })
 
@@ -2267,6 +2325,12 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
     ))
   )
   const standaloneSearchResults = searchResults.filter((item) => !exactFamilyIndex.familyIdBySku.has(item.code))
+  const standaloneBrowseItems = useMemo(
+    () => allItems.filter((item) => !exactFamilyIndex.familyIdBySku.has(item.code)),
+    [allItems, exactFamilyIndex],
+  )
+  const [standaloneOpen, setStandaloneOpen] = useState(false)
+  const [standaloneVisibleCount, setStandaloneVisibleCount] = useState(PAGE_SIZE)
 
   const activeFilterCount = (filterBrand ? 1 : 0) + (filterMain ? 1 : 0) + (filterCategory ? 1 : 0) + (filterType ? 1 : 0)
   const clearFilters = () => { setFilterBrand(''); setFilterMain(''); setFilterCategory(''); setFilterType('') }
@@ -2281,24 +2345,24 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
   const selectedMain = taxonomy.mains.find((m) => m.name === filterMain)
 
   const chip = (active: boolean) => [
-    'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+    'min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-all active:scale-95',
     active
       ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-      : 'bg-white border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+      : 'bg-white border-stone-300 text-stone-600 hover:border-brand-400 hover:text-brand-600',
   ].join(' ')
 
   return (
     <>
       {/* Featured strip (or admin onboarding card when empty) */}
-      {!isSearching && (
+      {!isSearching && !loadError && (
         featuredIds.length > 0
           ? <FeaturedStrip featuredIds={featuredIds} families={families} onSelectFamily={setModalFamily} />
           : isAdmin && !loading && (
-            <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 text-left">
+            <div className="card-soft mb-5 flex items-center gap-3 px-4 py-3 text-left">
               <span className="text-2xl shrink-0">⭐</span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-600">尚未設定常用系列</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-sm font-semibold text-stone-600">尚未設定常用系列</p>
+                <p className="text-xs text-stone-400 mt-0.5">
                   點擊下方「管理常用系列」，將常用產品系列釘選在頂部快速存取
                 </p>
               </div>
@@ -2307,7 +2371,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
       )}
 
       {/* Admin: manage featured series */}
-      {isAdmin && !isSearching && (
+      {isAdmin && !isSearching && !loadError && (
         <FeaturedManager
           families={families}
           initialIds={featuredIds}
@@ -2321,6 +2385,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
         <div className="flex items-center gap-2">
           <input
             type="search"
+            aria-label="搜尋產品目錄"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜尋貨號、品名、品牌…"
@@ -2329,6 +2394,8 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
+            aria-expanded={filtersOpen}
+            aria-controls="catalog-filter-panel"
             className={[
               'relative flex items-center gap-1.5 px-4 py-2.5 rounded-full border text-sm font-semibold transition-all active:scale-95 shrink-0',
               filtersOpen || activeFilterCount > 0
@@ -2352,21 +2419,22 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
         <AnimatePresence>
           {filtersOpen && (
             <motion.div
+              id="catalog-filter-panel"
               key="filter-panel"
-              initial={{ opacity: 0, height: 0 }}
+              initial={{ opacity: reduceMotion ? 1 : 0, height: reduceMotion ? 'auto' : 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              exit={{ opacity: reduceMotion ? 1 : 0, height: reduceMotion ? 'auto' : 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
               <div className="pt-3 space-y-2.5">
                 {/* 主分類(11,完整) */}
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">主分類</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">主分類</p>
                   <div className="flex flex-wrap gap-1.5">
-                    <button onClick={() => { setFilterMain(''); setFilterCategory('') }} className={chip(!filterMain)}>全部</button>
+                    <button type="button" aria-pressed={!filterMain} onClick={() => { setFilterMain(''); setFilterCategory('') }} className={chip(!filterMain)}>全部</button>
                     {taxonomy.mains.map((m) => (
-                      <button key={m.id} onClick={() => pickMain(m.name)} className={chip(filterMain === m.name)}>
+                      <button type="button" key={m.id} aria-pressed={filterMain === m.name} onClick={() => pickMain(m.name)} className={chip(filterMain === m.name)}>
                         {m.name} <span className="opacity-60">{m.count}</span>
                       </button>
                     ))}
@@ -2375,30 +2443,30 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
                 {/* 功能分類(選了主分類 → 顯示其完整功能分類;未選 → 提示) */}
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">
                     功能分類{selectedMain ? `(${selectedMain.name})` : ''}
                   </p>
                   {selectedMain ? (
                     <div className="flex flex-wrap gap-1.5">
-                      <button onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部</button>
+                      <button type="button" aria-pressed={!filterCategory} onClick={() => setFilterCategory('')} className={chip(!filterCategory)}>全部</button>
                       {selectedMain.funcs.map((f) => (
-                        <button key={f.id} onClick={() => setFilterCategory(filterCategory === f.name ? '' : f.name)} className={chip(filterCategory === f.name)}>
+                        <button type="button" key={f.id} aria-pressed={filterCategory === f.name} onClick={() => setFilterCategory(filterCategory === f.name ? '' : f.name)} className={chip(filterCategory === f.name)}>
                           {f.name} <span className="opacity-60">{f.count}</span>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">先選主分類,即顯示其下全部功能分類(共 62 類,亦可從下方「商品分類總覽」直接點選)</p>
+                    <p className="text-xs text-stone-400">先選主分類,即顯示其下全部功能分類(共 62 類,亦可從下方「商品分類總覽」直接點選)</p>
                   )}
                 </div>
 
                 {/* 商品型態(9) */}
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">商品型態</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">商品型態</p>
                   <div className="flex flex-wrap gap-1.5">
-                    <button onClick={() => setFilterType('')} className={chip(!filterType)}>全部</button>
+                    <button type="button" aria-pressed={!filterType} onClick={() => setFilterType('')} className={chip(!filterType)}>全部</button>
                     {taxonomy.productForms.map((t) => (
-                      <button key={t.name} onClick={() => setFilterType(filterType === t.name ? '' : t.name)} className={chip(filterType === t.name)}>
+                      <button type="button" key={t.name} aria-pressed={filterType === t.name} onClick={() => setFilterType(filterType === t.name ? '' : t.name)} className={chip(filterType === t.name)}>
                         {t.name} <span className="opacity-60">{t.count}</span>
                       </button>
                     ))}
@@ -2408,11 +2476,11 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                 {/* Brand filter */}
                 {brands.length > 0 && (
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">品牌</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">品牌</p>
                     <div className="flex flex-wrap gap-1.5">
-                      <button onClick={() => setFilterBrand('')} className={chip(!filterBrand)}>全部</button>
+                      <button type="button" aria-pressed={!filterBrand} onClick={() => setFilterBrand('')} className={chip(!filterBrand)}>全部</button>
                       {brands.map((b) => (
-                        <button key={b} onClick={() => setFilterBrand(filterBrand === b ? '' : b)} className={chip(filterBrand === b)}>
+                        <button type="button" key={b} aria-pressed={filterBrand === b} onClick={() => setFilterBrand(filterBrand === b ? '' : b)} className={chip(filterBrand === b)}>
                           {b}
                         </button>
                       ))}
@@ -2425,7 +2493,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="text-xs text-gray-400 hover:text-red-500 transition"
+                    className="text-xs text-stone-400 hover:text-red-500 transition"
                   >
                     ✕ 清除全部篩選
                   </button>
@@ -2436,19 +2504,30 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
         </AnimatePresence>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />已設圖片</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-200 inline-block" />未設圖片</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />已設售價</span>
-        <span className="text-gray-300">· 滑鼠移到商品列可見「編輯」按鈕</span>
+      {/* List guidance */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400">
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />已設售價</span>
+        <span>點品名展開介紹；「編輯」可維護照片、規格與文件</span>
       </div>
 
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
+            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none rounded-2xl bg-stone-100 motion-reduce:animate-none" />
           ))}
+        </div>
+      ) : loadError ? (
+        <div className="card-soft flex flex-col items-center px-5 py-10 text-center" role="alert">
+          <span className="text-3xl" aria-hidden="true">⚠️</span>
+          <h3 className="mt-3 text-base font-bold text-stone-800">產品目錄載入失敗</h3>
+          <p className="mt-1 max-w-md text-sm leading-relaxed text-stone-500">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="mt-5 min-h-11 rounded-full bg-brand-500 px-5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
+          >
+            重新載入
+          </button>
         </div>
       ) : isSearching ? (
         /* ── Search results mode：系列先聚合，未歸屬 SKU 再單列 ── */
@@ -2462,7 +2541,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                 </span>
               )}
             </span>
-            <button onClick={() => { setSearch(''); clearFilters() }}
+            <button type="button" onClick={() => { setSearch(''); clearFilters() }}
               className="min-h-11 rounded-full px-3 text-xs font-medium text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">
               清除篩選
             </button>
@@ -2481,7 +2560,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                     family={family}
                     allItems={allItems}
                     priceCache={priceCache}
-                    imageFlagCache={imageFlagCache}
                     onEdit={setEditingItem}
                     onOpenModal={() => setModalFamily(family)}
                   />
@@ -2503,7 +2581,6 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                 key={item.code}
                 item={item}
                 priceCache={priceCache}
-                imageFlagCache={imageFlagCache}
                 onEdit={setEditingItem}
               />
             ))}
@@ -2520,7 +2597,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
         /* ── Browse mode:商品分類總覽(11 主分類 × 62 功能分類完整呈現)+ 系列 ── */
         <div className="space-y-6">
           <div>
-            <div className="flex items-baseline gap-2 mb-3">
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
               <h3 className="text-sm font-bold text-stone-700">📂 商品分類總覽</h3>
               <span className="text-[11px] text-stone-400">11 主分類 × 62 功能分類・點分類直接瀏覽商品(總表 {taxonomy.version})</span>
             </div>
@@ -2528,7 +2605,7 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
               {taxonomy.mains.map((m) => (
                 <div key={m.id} className="card-soft min-w-[82vw] snap-center p-3 sm:min-w-0 sm:p-4">
                   <MainCategoryArtwork categoryId={m.id} />
-                  <button onClick={() => { pickMain(m.name); setFiltersOpen(true) }}
+                  <button type="button" onClick={() => { pickMain(m.name); setFiltersOpen(true) }}
                           className="group mt-2 flex min-h-11 w-full items-center gap-2 rounded-2xl px-1 text-left transition-all active:scale-[0.99]">
                     <span className="font-bold text-stone-800 group-hover:text-brand-600 transition-colors">{m.name}</span>
                     <span className="ml-auto text-xs text-stone-400">{m.count} 項</span>
@@ -2536,11 +2613,13 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {m.funcs.map((f) => (
                       <button key={f.id}
+                              type="button"
+                              disabled={f.count === 0}
                               onClick={() => { setFilterMain(m.name); setFilterCategory(f.name) }}
                               className={`min-h-10 rounded-full px-3 py-2 text-[11px] transition-all active:scale-95 ${
                                 f.count > 0
                                   ? 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
-                                  : 'bg-stone-50 text-stone-300'
+                                  : 'cursor-not-allowed bg-stone-50 text-stone-300'
                               }`}>
                         {f.name} <span className="opacity-60">{f.count}</span>
                       </button>
@@ -2554,13 +2633,13 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
 
           {/* Family browse */}
           <div>
-            <div className="flex items-baseline gap-2 mb-3">
+            <div className="mb-3 flex items-baseline gap-2">
               <h3 className="text-sm font-bold text-stone-700">🗂 產品系列</h3>
               <span className="text-[11px] text-stone-400">{visibleFamilies.length} 個系列</span>
             </div>
             <div className="space-y-3">
               {visibleFamilies.length === 0 && (
-                <p className="text-center py-12 text-sm text-gray-400">沒有符合條件的系列</p>
+                <p className="text-center py-12 text-sm text-stone-400">沒有符合條件的系列</p>
               )}
               {visibleFamilies.map((family) => (
                 <FamilyCard
@@ -2568,13 +2647,56 @@ export function CatalogManagerContent({ brands, categories, productTypes, taxono
                   family={family}
                   allItems={allItems}
                   priceCache={priceCache}
-                  imageFlagCache={imageFlagCache}
                   onEdit={setEditingItem}
                   onOpenModal={() => setModalFamily(family)}
                 />
               ))}
             </div>
           </div>
+
+          {/* Standalone products stay collapsed by default to keep 3,000+ rows manageable. */}
+          <section className="card-soft overflow-hidden p-0">
+            <button
+              type="button"
+              onClick={() => {
+                setStandaloneOpen((open) => !open)
+                if (standaloneOpen) setStandaloneVisibleCount(PAGE_SIZE)
+              }}
+              className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-all hover:bg-brand-50/40 active:scale-[0.99] sm:px-5"
+              aria-expanded={standaloneOpen}
+              aria-controls="standalone-product-list"
+            >
+              <span className={`text-stone-400 transition-transform ${standaloneOpen ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-stone-700">獨立單品</span>
+                <span className="mt-0.5 block text-xs text-stone-400">未歸入系列的 {standaloneBrowseItems.length} 個品項</span>
+              </span>
+              <span className="text-xs font-semibold text-brand-600">{standaloneOpen ? '收合' : '瀏覽'}</span>
+            </button>
+            {standaloneOpen && (
+              <div id="standalone-product-list" className="border-t border-stone-900/[0.06] px-3 py-2 sm:px-5">
+                {standaloneBrowseItems.slice(0, standaloneVisibleCount).map((item) => (
+                  <SkuRow
+                    key={item.code}
+                    item={item}
+                    priceCache={priceCache}
+                    onEdit={setEditingItem}
+                  />
+                ))}
+                {standaloneVisibleCount < standaloneBrowseItems.length && (
+                  <div className="py-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setStandaloneVisibleCount((count) => count + PAGE_SIZE)}
+                      className="min-h-11 rounded-full bg-brand-50 px-5 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95"
+                    >
+                      再顯示 {Math.min(PAGE_SIZE, standaloneBrowseItems.length - standaloneVisibleCount)} 筆
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         </div>
       )}
 

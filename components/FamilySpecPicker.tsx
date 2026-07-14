@@ -204,6 +204,16 @@ function ToothArchDiagram({
         return (
           <g key={t.id}
             onClick={() => isAvail && onSelect(t.id)}
+            onKeyDown={(event) => {
+              if (!isAvail || (event.key !== 'Enter' && event.key !== ' ')) return
+              event.preventDefault()
+              onSelect(t.id)
+            }}
+            role="button"
+            tabIndex={isAvail ? 0 : -1}
+            aria-label={`${jaw}${t.label}`}
+            aria-pressed={isSel}
+            aria-disabled={!isAvail}
             style={{ cursor: isAvail ? 'pointer' : 'default' }}
           >
             <rect x={t.x} y={ty} width={t.w} height={t.h} rx={5}
@@ -239,10 +249,12 @@ export function YMHToothGridPanel({
   family,
   onAdd,
   actionLabel,
+  resetAfterAction = true,
 }: {
   family: ProductFamily
   onAdd: (skuCode: string, skuName: string) => void
   actionLabel?: string
+  resetAfterAction?: boolean
 }) {
   const colorSpec = family.specs.find((s) => s.key === '顏色')
   const hasQty    = family.specs.some((s) => s.key === '數量')  // 目前僅 EFC-A
@@ -372,7 +384,7 @@ export function YMHToothGridPanel({
         <div className="text-xs font-semibold text-brand-600 mb-2">顏色 (Shade)</div>
         <div className="-mx-3 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {colorSpec?.options.map((c) => (
-            <button key={c} onClick={() => handleColor(c)} className={chip(color === c)}>{c}</button>
+            <button type="button" key={c} onClick={() => handleColor(c)} className={chip(color === c)}>{c}</button>
           ))}
         </div>
       </div>
@@ -383,7 +395,7 @@ export function YMHToothGridPanel({
           <div className="text-xs font-semibold text-brand-600 mb-2">上下顎</div>
           <div className="flex gap-2">
             {(['上顎','下顎'] as const).map((j) => (
-              <button key={j} onClick={() => handleJaw(j)} className={tab(jaw === j)}>{j}</button>
+              <button type="button" key={j} onClick={() => handleJaw(j)} className={tab(jaw === j)}>{j}</button>
             ))}
           </div>
         </div>
@@ -400,7 +412,7 @@ export function YMHToothGridPanel({
                   <span className="w-14 shrink-0 pt-3 text-right text-xs text-stone-400">{label}</span>
                   <div className="flex flex-wrap gap-2">
                     {items.map((item) => (
-                      <button key={item} onClick={() => handleBase(item)} className={toothBtn(base === item)}>
+                      <button type="button" key={item} onClick={() => handleBase(item)} className={toothBtn(base === item)}>
                         {item}
                       </button>
                     ))}
@@ -417,7 +429,7 @@ export function YMHToothGridPanel({
             <div className="text-xs font-semibold text-brand-600 mb-2">包裝數量</div>
             <div className="flex flex-wrap gap-2">
               {availableQtys.map((q) => (
-                <button key={q} onClick={() => handleQty(q)} className={chip(qty === q)}>
+                <button type="button" key={q} onClick={() => handleQty(q)} className={chip(qty === q)}>
                   {QTY_LABEL[q] ?? q}
                 </button>
               ))}
@@ -434,7 +446,7 @@ export function YMHToothGridPanel({
             {/* 整排選項：12顆混合（不指定單顆位置） */}
             {subPositions.includes('整排') && (
               <div className="mb-3">
-                <button
+                <button type="button"
                   onClick={() => setSubPos(subPos === '整排' ? '' : '整排')}
                   className={chip(subPos === '整排')}
                 >
@@ -481,10 +493,12 @@ export function YMHToothGridPanel({
               <div className="text-sm font-medium leading-snug text-stone-800">{skuName}</div>
               <div className="mt-0.5 truncate font-mono text-xs text-stone-400">{skuCode}</div>
             </div>
-            <button
+            <button type="button"
               onClick={() => {
                 onAdd(skuCode, skuName)
-                setBase(''); setSubPos(''); setQty('')
+                if (resetAfterAction) {
+                  setBase(''); setSubPos(''); setQty('')
+                }
               }}
               className="min-h-12 shrink-0 rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
             >
@@ -511,10 +525,12 @@ export function FamilySpecPanel({
   family,
   onAdd,
   actionLabel,
+  resetAfterAction = true,
 }: {
   family: ProductFamily
   onAdd: (skuCode: string, skuName: string) => void
   actionLabel?: string
+  resetAfterAction?: boolean
 }) {
   const [selected, setSelected] = useState<Record<string, string>>({})
 
@@ -610,7 +626,7 @@ export function FamilySpecPanel({
           return (
             <div key={spec.key} className="flex items-center gap-2">
               <span className="min-w-[2rem] max-w-[5rem] shrink-0 text-right text-xs leading-tight text-stone-400">{spec.label}</span>
-              <button
+              <button type="button"
                 onClick={() => handleChip(spec.key, specIdx, selected[spec.key])}
                 className="flex min-h-11 items-center gap-1.5 rounded-full border border-brand-500 bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all active:scale-95"
               >
@@ -626,7 +642,7 @@ export function FamilySpecPanel({
             <div className="text-xs font-semibold text-brand-600 mb-2">{spec.label}</div>
             <div className="-mx-3 flex snap-x gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
               {options.map((opt) => (
-                <button
+                <button type="button"
                   key={opt}
                   onClick={() => handleChip(spec.key, specIdx, opt)}
                   className="min-h-11 shrink-0 snap-start rounded-full border border-stone-200 bg-white px-4 py-2.5 text-xs font-medium text-stone-700 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95"
@@ -648,10 +664,10 @@ export function FamilySpecPanel({
                 <div className="text-sm font-medium leading-snug text-stone-800">{skuName}</div>
                 <div className="mt-0.5 truncate font-mono text-xs text-stone-400">{skuCode}</div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => {
                   onAdd(skuCode, skuName)
-                  setSelected({})
+                  if (resetAfterAction) setSelected({})
                 }}
                 className="min-h-12 shrink-0 rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
               >
@@ -659,7 +675,7 @@ export function FamilySpecPanel({
               </button>
             </div>
           ) : (
-            <div className="text-xs text-amber-600 bg-amber-50 rounded px-3 py-2">
+            <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-600" role="status">
               此規格組合無對應貨品，請重新選擇
             </div>
           )
