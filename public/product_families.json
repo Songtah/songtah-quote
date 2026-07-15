@@ -1971,7 +1971,27 @@
       "B": "DSD-STAIN-0086-B",
       "C": "DSD-STAIN-0086-C",
       "D": "DSD-STAIN-0086-D"
-    }
+    },
+    "coveredSkuCodes": [
+      "DSD-STAIN-0086",
+      "DSD-STAIN-01",
+      "DSD-STAIN-02",
+      "DSD-STAIN-03",
+      "DSD-STAIN-04",
+      "DSD-STAIN-05",
+      "DSD-STAIN-06",
+      "DSD-STAIN-07",
+      "DSD-STAIN-08",
+      "DSD-STAIN-09",
+      "DSD-STAIN-10",
+      "DSD-STAIN-11",
+      "DSD-STAIN-12",
+      "DSD-STAIN-13",
+      "DSD-STAIN-14",
+      "DSD-STAIN-15",
+      "DSD-STAIN-16",
+      "DSD-STAIN-SET"
+    ]
   },
   {
     "id": "SY-04114",
@@ -2910,7 +2930,12 @@
       "A3|上顎|T7-R2|12顆": "YMH-T03-T7-R2",
       "A3|上顎|T7-R3|12顆": "YMH-T03-T7-R3"
     },
-    "uiVariant": "ymh-tooth-grid"
+    "uiVariant": "ymh-tooth-grid",
+    "coveredSkuCodes": [
+      "YMH-T01-A3",
+      "YMH-T01-A3.5",
+      "YMH-T01-A4"
+    ]
   },
   {
     "id": "YMH-FX",
@@ -3071,7 +3096,15 @@
       "A4|上顎|T7": "YMH-T27-A4-T7",
       "A2|下顎|LA5": "YMH-T27-A2-LA45"
     },
-    "uiVariant": "ymh-tooth-grid"
+    "uiVariant": "ymh-tooth-grid",
+    "coveredSkuCodes": [
+      "YMH-T27-56",
+      "YMH-T27-A1",
+      "YMH-T27-A2",
+      "YMH-T27-A3",
+      "YMH-T27-A3.5",
+      "YMH-T27-A4"
+    ]
   },
   {
     "id": "YMH-CROWNPX",
@@ -3270,7 +3303,45 @@
       "A4|上顎|T61": "YMH-T60-A4-T61",
       "A4|上顎|T61S": "YMH-T60-A4-T61S"
     },
-    "uiVariant": "ymh-tooth-grid"
+    "uiVariant": "ymh-tooth-grid",
+    "coveredSkuCodes": [
+      "YMH-T60-A2",
+      "YMH-T60-A2-C41-1",
+      "YMH-T60-A2-N32-1",
+      "YMH-T60-A2-N61S-1",
+      "YMH-T60-A2-N81-1",
+      "YMH-T60-A2-O31S-1",
+      "YMH-T60-A2-O41-1",
+      "YMH-T60-A2-O51S-1",
+      "YMH-T60-A2-O61S-1",
+      "YMH-T60-A2-S41S-1",
+      "YMH-T60-A2-S42S-1",
+      "YMH-T60-A2-S43S-1",
+      "YMH-T60-A2-S51-1",
+      "YMH-T60-A3",
+      "YMH-T60-A3-C41-1",
+      "YMH-T60-A3-N31-1",
+      "YMH-T60-A3-N31S-1",
+      "YMH-T60-A3-N32-1",
+      "YMH-T60-A3-N41-1",
+      "YMH-T60-A3-N42-1",
+      "YMH-T60-A3-N61S-1",
+      "YMH-T60-A3-N71L-1",
+      "YMH-T60-A3-N81-1",
+      "YMH-T60-A3-O31S-1",
+      "YMH-T60-A3-O41-1",
+      "YMH-T60-A3-O51S-1",
+      "YMH-T60-A3-O61S-1",
+      "YMH-T60-A3-S41S-1",
+      "YMH-T60-A3-S42S-1",
+      "YMH-T60-A3-S43S-1",
+      "YMH-T60-A3-S51-1",
+      "YMH-T60-A3-S51S-1",
+      "YMH-T60-A3-S52S-1",
+      "YMH-T60-A3-S61S-1",
+      "YMH-T60-A3-S71-1",
+      "YMH-T60-A3-S81-1"
+    ]
   },
   {
     "id": "YMH-NEWACE",
@@ -3512,7 +3583,11 @@
     ],
     "skuMap": {
       "4號": "YMH-T38-1"
-    }
+    },
+    "coveredSkuCodes": [
+      "YMH-T38-2",
+      "YMH-T38-3"
+    ]
   },
   {
     "id": "YMH-EFCP",
@@ -4340,7 +4415,10 @@
       "MillFix|PMMA ZR|T43 · 1.0F": "GEN-T43-1.0F",
       "MillFix|PMMA ZR|T44 · 1.5R": "GEN-T44-1.5R",
       "MillFix|PMMA ZR|T45 · 1.5T": "GEN-T45-1.5T"
-    }
+    },
+    "coveredSkuCodes": [
+      "GEN-T28-A4.0C"
+    ]
   },
   {
     "id": "ZZ-BUR",
@@ -4624,7 +4702,11 @@
       "Matchmaker BODY D2/50g": "DSD-BD2-50",
       "Matchmaker BODY D3/50g": "DSD-BD3-50",
       "Matchmaker BODY D4/50g": "DSD-BD4-50"
-    }
+    },
+    "coveredSkuCodes": [
+      "DSD-BA2-250",
+      "DSD-BA3-250"
+    ]
   },
   {
     "id": "NAME-C36C111E7222",
@@ -4648,7 +4730,10 @@
     "skuMap": {
       "Matchmaker Enamel Clear/15g": "DSD-TCO1-15",
       "Matchmaker Enamel Clear/50g": "DSD-TCO1-50"
-    }
+    },
+    "coveredSkuCodes": [
+      "DSD-TCO1-250"
+    ]
   },
   {
     "id": "NAME-FAE733F82A32",
@@ -4760,7 +4845,10 @@
       "Matchmaker Opaque D2/50g": "DSD-OD2-50",
       "Matchmaker Opaque D3/50g": "DSD-OD3-50",
       "Matchmaker Opaque D4/50g": "DSD-OD4-50"
-    }
+    },
+    "coveredSkuCodes": [
+      "DSD-OC3-15"
+    ]
   },
   {
     "id": "NAME-A9FDA13733D8",
@@ -4870,7 +4958,10 @@
       "Propaque Paste D2 (3.2g)": "DSD-PRO-OD2",
       "Propaque Paste D3 (3.2g)": "DSD-PRO-OD3",
       "Propaque Paste D4 (3.2g)": "DSD-PRO-OD4"
-    }
+    },
+    "coveredSkuCodes": [
+      "DSD-PRO-1"
+    ]
   },
   {
     "id": "NAME-174FC1CFCA12",
@@ -5686,7 +5777,37 @@
       "AC 半塑鋼臼齒 A3.5-32": "YMH-T42-2",
       "AC 半塑鋼臼齒 A4-34": "YMH-T44-1",
       "AC 半塑鋼臼齒 A1-34": "YMH-T45-1"
-    }
+    },
+    "coveredSkuCodes": [
+      "YMH-T44-1-LL6",
+      "YMH-T44-1-LL6-1",
+      "YMH-T44-1-LL7",
+      "YMH-T44-1-LU6",
+      "YMH-T44-1-LU6-1",
+      "YMH-T44-1-LU7",
+      "YMH-T44-1-RL6",
+      "YMH-T44-1-RL6-1",
+      "YMH-T44-1-RL7",
+      "YMH-T44-1-RU6",
+      "YMH-T44-1-RU6-1",
+      "YMH-T44-1-RU7",
+      "YMH-T44-2-LL4",
+      "YMH-T44-2-LL4-1",
+      "YMH-T44-2-LL5",
+      "YMH-T44-2-LL5-1",
+      "YMH-T44-2-LU4",
+      "YMH-T44-2-LU4-1",
+      "YMH-T44-2-LU5",
+      "YMH-T44-2-LU5-1",
+      "YMH-T44-2-RL4",
+      "YMH-T44-2-RL4-1",
+      "YMH-T44-2-RL5",
+      "YMH-T44-2-RL5-1",
+      "YMH-T44-2-RU4",
+      "YMH-T44-2-RU4-1",
+      "YMH-T44-2-RU5",
+      "YMH-T44-2-RU5-1"
+    ]
   },
   {
     "id": "NAME-E22B653FC5B6",
@@ -6304,7 +6425,17 @@
       "Soluute PX 塑鋼牙A3-28": "YMH-T56-1",
       "Soluute PX 塑鋼牙A3-30": "YMH-T56-2",
       "Soluute PX 塑鋼牙A3-32": "YMH-T56-3"
-    }
+    },
+    "coveredSkuCodes": [
+      "YMH-T55-1-28L",
+      "YMH-T55-1-28U",
+      "YMH-T56-1-28L",
+      "YMH-T56-1-28U",
+      "YMH-T56-2-30L",
+      "YMH-T56-2-30U",
+      "YMH-T56-3-32L",
+      "YMH-T56-3-32U"
+    ]
   },
   {
     "id": "NAME-4BE9BD295555",
@@ -7006,6 +7137,1794 @@
       "Ultra Projector 50um": "AG-08110",
       "Ultra 平台列印偵測器": "AG-08111",
       "Ultra Front Panel觸控面板": "AG-08114"
+    }
+  },
+  {
+    "id": "CA-YD-GRINDING-TOOL",
+    "seriesCode": "CA-YD-GRINDING-TOOL",
+    "seriesName": "YD 磨石/研磨工具",
+    "brand": "CAM / 上海穩昊",
+    "productType": "耗材",
+    "category": "磨石/研磨工具",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "氧化鋯用磨石 RDH011(粉紅)",
+          "氧化鋯用磨石 RDH012(藍)",
+          "氧化鋯用磨石 RDH013(白)",
+          "氧化鋯用磨石 RDH014(黃)",
+          "氧化鋯用磨石 RDH015(灰)",
+          "氧化鋯用磨石 RDH021(棕)",
+          "氧化鋯用磨石 RDH022(棕)",
+          "氧化鋯用磨石 RDH023(藍)",
+          "氧化鋯用磨石 RDH024(粉紅)",
+          "氧化鋯用磨石 RDH025(灰)",
+          "氧化鋯用磨石 RDH031",
+          "氧化鋯用磨石 RDH032",
+          "氧化鋯用磨石 RDH033(藍)",
+          "氧化鋯用磨石 RDH034(粉紅)",
+          "氧化鋯用磨石 RDH035(白)",
+          "氧化鋯用磨石 RDH054(藍)",
+          "氧化鋯用磨石 RDH056",
+          "氧化鋯用磨石 RDH058",
+          "氧化鋯用磨石 RDH059",
+          "氧化鋯用磨石 RDH074(藍)",
+          "氧化鋯用磨石 RDH076",
+          "氧化鋯用磨石 RDH078",
+          "氧化鋯用磨石 RDH079 (白)",
+          "氧化鋯用磨石 RDH084(藍)",
+          "氧化鋯用磨石 RDH086",
+          "氧化鋯用磨石 RDH088",
+          "氧化鋯用磨石 RDH089 (白)",
+          "橡膠金剛石 RDH154(藍)",
+          "橡膠金剛石 RDH156(粉紅)",
+          "橡膠金剛石 RDH159",
+          "橡膠金剛石 RDH174(藍)",
+          "橡膠金剛石 RDH176(粉紅)",
+          "橡膠金剛石 RDH179",
+          "橡膠金剛石 RDH184(藍)",
+          "橡膠金剛石 RDH186(粉紅)",
+          "橡膠金剛石 RDH189",
+          "氧化鋯用磨石 SDH021",
+          "氧化鋯用磨石 SDH021D",
+          "氧化鋯用磨石 SDH031",
+          "氧化鋯用磨石 SDH031B",
+          "氧化鋯用磨石 SDH031D",
+          "氧化鋯用磨石 SDH031Y",
+          "氧化鋯用磨石 SDH041",
+          "氧化鋯用磨石 SDH051",
+          "氧化鋯用磨石 SDH071",
+          "氧化鋯用磨石 SDH081",
+          "氧化鋯用磨石 SDH091",
+          "氧化鋯用磨石 SDH111",
+          "氧化鋯用磨石 SDH111D",
+          "氧化鋯用磨石 SDH121",
+          "氧化鋯用磨石 SDH131",
+          "氧化鋯用磨石 SDH141",
+          "氧化鋯用磨石 SDH151",
+          "氧化鋯用磨石 SDH251",
+          "樹脂磨頭 SH061S",
+          "樹脂磨頭 SH062S",
+          "樹脂磨頭 SH063S",
+          "氧化鋯磨石HP套裝",
+          "氧化鋯磨石HP(9支)",
+          "氧化鋯磨石RA套裝",
+          "氧化鋯磨石RA"
+        ]
+      }
+    ],
+    "skuMap": {
+      "氧化鋯用磨石 RDH011(粉紅)": "CA-YD-RDH011",
+      "氧化鋯用磨石 RDH012(藍)": "CA-YD-RDH012",
+      "氧化鋯用磨石 RDH013(白)": "CA-YD-RDH013",
+      "氧化鋯用磨石 RDH014(黃)": "CA-YD-RDH014",
+      "氧化鋯用磨石 RDH015(灰)": "CA-YD-RDH015",
+      "氧化鋯用磨石 RDH021(棕)": "CA-YD-RDH021",
+      "氧化鋯用磨石 RDH022(棕)": "CA-YD-RDH022",
+      "氧化鋯用磨石 RDH023(藍)": "CA-YD-RDH023",
+      "氧化鋯用磨石 RDH024(粉紅)": "CA-YD-RDH024",
+      "氧化鋯用磨石 RDH025(灰)": "CA-YD-RDH025",
+      "氧化鋯用磨石 RDH031": "CA-YD-RDH031",
+      "氧化鋯用磨石 RDH032": "CA-YD-RDH032",
+      "氧化鋯用磨石 RDH033(藍)": "CA-YD-RDH033",
+      "氧化鋯用磨石 RDH034(粉紅)": "CA-YD-RDH034",
+      "氧化鋯用磨石 RDH035(白)": "CA-YD-RDH035",
+      "氧化鋯用磨石 RDH054(藍)": "CA-YD-RDH054",
+      "氧化鋯用磨石 RDH056": "CA-YD-RDH056",
+      "氧化鋯用磨石 RDH058": "CA-YD-RDH058",
+      "氧化鋯用磨石 RDH059": "CA-YD-RDH059",
+      "氧化鋯用磨石 RDH074(藍)": "CA-YD-RDH074",
+      "氧化鋯用磨石 RDH076": "CA-YD-RDH076",
+      "氧化鋯用磨石 RDH078": "CA-YD-RDH078",
+      "氧化鋯用磨石 RDH079 (白)": "CA-YD-RDH079",
+      "氧化鋯用磨石 RDH084(藍)": "CA-YD-RDH084",
+      "氧化鋯用磨石 RDH086": "CA-YD-RDH086",
+      "氧化鋯用磨石 RDH088": "CA-YD-RDH088",
+      "氧化鋯用磨石 RDH089 (白)": "CA-YD-RDH089",
+      "橡膠金剛石 RDH154(藍)": "CA-YD-RDH154",
+      "橡膠金剛石 RDH156(粉紅)": "CA-YD-RDH156",
+      "橡膠金剛石 RDH159": "CA-YD-RDH159",
+      "橡膠金剛石 RDH174(藍)": "CA-YD-RDH174",
+      "橡膠金剛石 RDH176(粉紅)": "CA-YD-RDH176",
+      "橡膠金剛石 RDH179": "CA-YD-RDH179",
+      "橡膠金剛石 RDH184(藍)": "CA-YD-RDH184",
+      "橡膠金剛石 RDH186(粉紅)": "CA-YD-RDH186",
+      "橡膠金剛石 RDH189": "CA-YD-RDH189",
+      "氧化鋯用磨石 SDH021": "CA-YD-SDH021",
+      "氧化鋯用磨石 SDH021D": "CA-YD-SDH021D",
+      "氧化鋯用磨石 SDH031": "CA-YD-SDH031",
+      "氧化鋯用磨石 SDH031B": "CA-YD-SDH031B",
+      "氧化鋯用磨石 SDH031D": "CA-YD-SDH031D",
+      "氧化鋯用磨石 SDH031Y": "CA-YD-SDH031Y",
+      "氧化鋯用磨石 SDH041": "CA-YD-SDH041",
+      "氧化鋯用磨石 SDH051": "CA-YD-SDH051",
+      "氧化鋯用磨石 SDH071": "CA-YD-SDH071",
+      "氧化鋯用磨石 SDH081": "CA-YD-SDH081",
+      "氧化鋯用磨石 SDH091": "CA-YD-SDH091",
+      "氧化鋯用磨石 SDH111": "CA-YD-SDH111",
+      "氧化鋯用磨石 SDH111D": "CA-YD-SDH111D",
+      "氧化鋯用磨石 SDH121": "CA-YD-SDH121",
+      "氧化鋯用磨石 SDH131": "CA-YD-SDH131",
+      "氧化鋯用磨石 SDH141": "CA-YD-SDH141",
+      "氧化鋯用磨石 SDH151": "CA-YD-SDH151",
+      "氧化鋯用磨石 SDH251": "CA-YD-SDH251",
+      "樹脂磨頭 SH061S": "CA-YD-SH061S",
+      "樹脂磨頭 SH062S": "CA-YD-SH062S",
+      "樹脂磨頭 SH063S": "CA-YD-SH063S",
+      "氧化鋯磨石HP套裝": "CA-YD-TH0301",
+      "氧化鋯磨石HP(9支)": "CA-YD-TH0901",
+      "氧化鋯磨石RA套裝": "CA-YD-TR0301",
+      "氧化鋯磨石RA": "CA-YD-TR0801"
+    }
+  },
+  {
+    "id": "BS-TTML",
+    "seriesCode": "BS-TTML",
+    "seriesName": "TTML 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "TTML 95H14-A2",
+          "TTML 95H14-A3",
+          "TTML 95H14-A3.5",
+          "TTML 95H16-A1",
+          "TTML 95H16-A2",
+          "TTML 95H16-A3",
+          "TTML 95H16-A3.5",
+          "TTML 95H18-A1",
+          "TTML 95H18-A2",
+          "TTML 95H18-A3",
+          "TTML 95H18-A3.5",
+          "TTML 95H20-A2",
+          "TTML 95H20-A3",
+          "TTML 95H22-A2",
+          "TTML 95H22-A3",
+          "TTML 98H12-A2",
+          "TTML 98H12-A3",
+          "TTML 98H12-A3.5",
+          "TTML 98H14-A1",
+          "TTML 98H14-A2",
+          "TTML 98H14-A3",
+          "TTML 98H14-A3.5",
+          "TTML 98H14-A4",
+          "TTML 98H16-A1",
+          "TTML 98H16-A2",
+          "TTML 98H16-A3",
+          "TTML 98H16-A3.5",
+          "TTML 98H16-A4",
+          "TTML 98H16-C1",
+          "TTML 98H16-C2",
+          "TTML 98H16-C3",
+          "TTML 98H18-A1",
+          "TTML 98H18-A2",
+          "TTML 98H18-A3",
+          "TTML 98H18-A3.5",
+          "TTML 98H18-A4",
+          "TTML 98H18-C2",
+          "TTML 98H20-A1",
+          "TTML 98H20-A2",
+          "TTML 98H20-A3",
+          "TTML 98H20-A3.5",
+          "TTML 98H20-A4",
+          "TTML 98H22-A1",
+          "TTML 98H22-A2",
+          "TTML 98H22-A3",
+          "TTML 98H22-A3.5"
+        ]
+      }
+    ],
+    "skuMap": {
+      "TTML 95H14-A2": "BS-TTML-95H14-A2",
+      "TTML 95H14-A3": "BS-TTML-95H14-A3",
+      "TTML 95H14-A3.5": "BS-TTML-95H14-A3.5",
+      "TTML 95H16-A1": "BS-TTML-95H16-A1",
+      "TTML 95H16-A2": "BS-TTML-95H16-A2",
+      "TTML 95H16-A3": "BS-TTML-95H16-A3",
+      "TTML 95H16-A3.5": "BS-TTML-95H16-A3.5",
+      "TTML 95H18-A1": "BS-TTML-95H18-A1",
+      "TTML 95H18-A2": "BS-TTML-95H18-A2",
+      "TTML 95H18-A3": "BS-TTML-95H18-A3",
+      "TTML 95H18-A3.5": "BS-TTML-95H18-A3.5",
+      "TTML 95H20-A2": "BS-TTML-95H20-A2",
+      "TTML 95H20-A3": "BS-TTML-95H20-A3",
+      "TTML 95H22-A2": "BS-TTML-95H22-A2",
+      "TTML 95H22-A3": "BS-TTML-95H22-A3",
+      "TTML 98H12-A2": "BS-TTML-98H12-A2",
+      "TTML 98H12-A3": "BS-TTML-98H12-A3",
+      "TTML 98H12-A3.5": "BS-TTML-98H12-A3.5",
+      "TTML 98H14-A1": "BS-TTML-98H14-A1",
+      "TTML 98H14-A2": "BS-TTML-98H14-A2",
+      "TTML 98H14-A3": "BS-TTML-98H14-A3",
+      "TTML 98H14-A3.5": "BS-TTML-98H14-A3.5",
+      "TTML 98H14-A4": "BS-TTML-98H14-A4",
+      "TTML 98H16-A1": "BS-TTML-98H16-A1",
+      "TTML 98H16-A2": "BS-TTML-98H16-A2",
+      "TTML 98H16-A3": "BS-TTML-98H16-A3",
+      "TTML 98H16-A3.5": "BS-TTML-98H16-A3.5",
+      "TTML 98H16-A4": "BS-TTML-98H16-A4",
+      "TTML 98H16-C1": "BS-TTML-98H16-C1",
+      "TTML 98H16-C2": "BS-TTML-98H16-C2",
+      "TTML 98H16-C3": "BS-TTML-98H16-C3",
+      "TTML 98H18-A1": "BS-TTML-98H18-A1",
+      "TTML 98H18-A2": "BS-TTML-98H18-A2",
+      "TTML 98H18-A3": "BS-TTML-98H18-A3",
+      "TTML 98H18-A3.5": "BS-TTML-98H18-A3.5",
+      "TTML 98H18-A4": "BS-TTML-98H18-A4",
+      "TTML 98H18-C2": "BS-TTML-98H18-C2",
+      "TTML 98H20-A1": "BS-TTML-98H20-A1",
+      "TTML 98H20-A2": "BS-TTML-98H20-A2",
+      "TTML 98H20-A3": "BS-TTML-98H20-A3",
+      "TTML 98H20-A3.5": "BS-TTML-98H20-A3.5",
+      "TTML 98H20-A4": "BS-TTML-98H20-A4",
+      "TTML 98H22-A1": "BS-TTML-98H22-A1",
+      "TTML 98H22-A2": "BS-TTML-98H22-A2",
+      "TTML 98H22-A3": "BS-TTML-98H22-A3",
+      "TTML 98H22-A3.5": "BS-TTML-98H22-A3.5"
+    }
+  },
+  {
+    "id": "YMH-T57",
+    "seriesCode": "YMH-T57",
+    "seriesName": "T57 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "EFUCERA PX 塑鋼牙A2-28下",
+          "EFUCERA PX 塑鋼牙A2-28上",
+          "EFUCERA PX 塑鋼牙A2-30下",
+          "EFUCERA PX 塑鋼牙A2-30上",
+          "EFUCERA PX 塑鋼牙A2-32下",
+          "EFUCERA PX 塑鋼牙A2-32上",
+          "EFUCERA PX 塑鋼牙A2-34下",
+          "EFUCERA PX 塑鋼牙A2-34上",
+          "EFUCERA PX 塑鋼牙A2-36下",
+          "EFUCERA PX 塑鋼牙A2-36上",
+          "EFUCERA PX 塑鋼牙A3-28下",
+          "EFUCERA PX 塑鋼牙A3-28上",
+          "EFUCERA PX 塑鋼牙A3-30下",
+          "EFUCERA PX 塑鋼牙A3-30上",
+          "EFUCERA PX 塑鋼牙A3-32下",
+          "EFUCERA PX 塑鋼牙A3-32上",
+          "EFUCERA PX 塑鋼牙A3-34下",
+          "EFUCERA PX 塑鋼牙A3-34上",
+          "EFUCERA PX 塑鋼牙A3-36下",
+          "EFUCERA PX 塑鋼牙A3-36上",
+          "EFUCERA PX 塑鋼牙A3.5-28下",
+          "EFUCERA PX 塑鋼牙A3.5-28上",
+          "EFUCERA PX 塑鋼牙A3.5-30下",
+          "EFUCERA PX 塑鋼牙A3.5-30上",
+          "EFUCERA PX 塑鋼牙A3.5-32下",
+          "EFUCERA PX 塑鋼牙A3.5-32上",
+          "EFUCERA PX 塑鋼牙A3.5-34下",
+          "EFUCERA PX 塑鋼牙A3.5-34上",
+          "EFUCERA PX 塑鋼牙A3.5-36下",
+          "EFUCERA PX 塑鋼牙A3.5-36上",
+          "EFUCERA PX 塑鋼牙A4-28下",
+          "EFUCERA PX 塑鋼牙A4-28上",
+          "EFUCERA PX 塑鋼牙A4-30下",
+          "EFUCERA PX 塑鋼牙A4-30上",
+          "EFUCERA PX 塑鋼牙A4-32下",
+          "EFUCERA PX 塑鋼牙A4-32上",
+          "EFUCERA PX 塑鋼牙A4-34下",
+          "EFUCERA PX 塑鋼牙A4-34上",
+          "EFUCERA PX 塑鋼牙A4-36下",
+          "EFUCERA PX 塑鋼牙A4-36上"
+        ]
+      }
+    ],
+    "skuMap": {
+      "EFUCERA PX 塑鋼牙A2-28下": "YMH-T57-A2-28L",
+      "EFUCERA PX 塑鋼牙A2-28上": "YMH-T57-A2-28U",
+      "EFUCERA PX 塑鋼牙A2-30下": "YMH-T57-A2-30L",
+      "EFUCERA PX 塑鋼牙A2-30上": "YMH-T57-A2-30U",
+      "EFUCERA PX 塑鋼牙A2-32下": "YMH-T57-A2-32L",
+      "EFUCERA PX 塑鋼牙A2-32上": "YMH-T57-A2-32U",
+      "EFUCERA PX 塑鋼牙A2-34下": "YMH-T57-A2-34L",
+      "EFUCERA PX 塑鋼牙A2-34上": "YMH-T57-A2-34U",
+      "EFUCERA PX 塑鋼牙A2-36下": "YMH-T57-A2-36L",
+      "EFUCERA PX 塑鋼牙A2-36上": "YMH-T57-A2-36U",
+      "EFUCERA PX 塑鋼牙A3-28下": "YMH-T57-A3-28L",
+      "EFUCERA PX 塑鋼牙A3-28上": "YMH-T57-A3-28U",
+      "EFUCERA PX 塑鋼牙A3-30下": "YMH-T57-A3-30L",
+      "EFUCERA PX 塑鋼牙A3-30上": "YMH-T57-A3-30U",
+      "EFUCERA PX 塑鋼牙A3-32下": "YMH-T57-A3-32L",
+      "EFUCERA PX 塑鋼牙A3-32上": "YMH-T57-A3-32U",
+      "EFUCERA PX 塑鋼牙A3-34下": "YMH-T57-A3-34L",
+      "EFUCERA PX 塑鋼牙A3-34上": "YMH-T57-A3-34U",
+      "EFUCERA PX 塑鋼牙A3-36下": "YMH-T57-A3-36L",
+      "EFUCERA PX 塑鋼牙A3-36上": "YMH-T57-A3-36U",
+      "EFUCERA PX 塑鋼牙A3.5-28下": "YMH-T57-A3.5-28L",
+      "EFUCERA PX 塑鋼牙A3.5-28上": "YMH-T57-A3.5-28U",
+      "EFUCERA PX 塑鋼牙A3.5-30下": "YMH-T57-A3.5-30L",
+      "EFUCERA PX 塑鋼牙A3.5-30上": "YMH-T57-A3.5-30U",
+      "EFUCERA PX 塑鋼牙A3.5-32下": "YMH-T57-A3.5-32L",
+      "EFUCERA PX 塑鋼牙A3.5-32上": "YMH-T57-A3.5-32U",
+      "EFUCERA PX 塑鋼牙A3.5-34下": "YMH-T57-A3.5-34L",
+      "EFUCERA PX 塑鋼牙A3.5-34上": "YMH-T57-A3.5-34U",
+      "EFUCERA PX 塑鋼牙A3.5-36下": "YMH-T57-A3.5-36L",
+      "EFUCERA PX 塑鋼牙A3.5-36上": "YMH-T57-A3.5-36U",
+      "EFUCERA PX 塑鋼牙A4-28下": "YMH-T57-A4-28L",
+      "EFUCERA PX 塑鋼牙A4-28上": "YMH-T57-A4-28U",
+      "EFUCERA PX 塑鋼牙A4-30下": "YMH-T57-A4-30L",
+      "EFUCERA PX 塑鋼牙A4-30上": "YMH-T57-A4-30U",
+      "EFUCERA PX 塑鋼牙A4-32下": "YMH-T57-A4-32L",
+      "EFUCERA PX 塑鋼牙A4-32上": "YMH-T57-A4-32U",
+      "EFUCERA PX 塑鋼牙A4-34下": "YMH-T57-A4-34L",
+      "EFUCERA PX 塑鋼牙A4-34上": "YMH-T57-A4-34U",
+      "EFUCERA PX 塑鋼牙A4-36下": "YMH-T57-A4-36L",
+      "EFUCERA PX 塑鋼牙A4-36上": "YMH-T57-A4-36U"
+    }
+  },
+  {
+    "id": "YM-STAIN",
+    "seriesCode": "YM-STAIN",
+    "seriesName": "STAIN 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Stain Glaze (3.5g)",
+          "ZEO Stain Light Orange 膏 (3.5g)",
+          "ZEO Stain Orange 膏 (3.5g)",
+          "ZEO Stain Gray 膏 (3.5g)",
+          "ZEO Stain Pink 膏 (3.5g)",
+          "ZEO Stain White (3.5g)",
+          "ZEO Stain Milky (3.5g)",
+          "ZEO Stain Brown (3.5g)",
+          "ZEO Stain Dark Brown (3.5g)",
+          "ZEO Stain Violet (3.5g)",
+          "ZEO Stain Blue (3.5g)",
+          "ZEO Stain Yellow (3.5g)",
+          "ZEO Stain Black (3.5g)",
+          "ZEO Stain Indigo (3.5g)",
+          "ZEO Stain Dark Pink (3.5g)",
+          "ZEO Stain Buff (3.5g)",
+          "ZEO Stain Amber (3.5g)",
+          "ZEO Stain Khaki (3.5g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Stain Glaze (3.5g)": "YM-STAIN-01",
+      "ZEO Stain Light Orange 膏 (3.5g)": "YM-STAIN-02",
+      "ZEO Stain Orange 膏 (3.5g)": "YM-STAIN-03",
+      "ZEO Stain Gray 膏 (3.5g)": "YM-STAIN-04",
+      "ZEO Stain Pink 膏 (3.5g)": "YM-STAIN-05",
+      "ZEO Stain White (3.5g)": "YM-STAIN-06",
+      "ZEO Stain Milky (3.5g)": "YM-STAIN-07",
+      "ZEO Stain Brown (3.5g)": "YM-STAIN-08",
+      "ZEO Stain Dark Brown (3.5g)": "YM-STAIN-09",
+      "ZEO Stain Violet (3.5g)": "YM-STAIN-10",
+      "ZEO Stain Blue (3.5g)": "YM-STAIN-11",
+      "ZEO Stain Yellow (3.5g)": "YM-STAIN-12",
+      "ZEO Stain Black (3.5g)": "YM-STAIN-13",
+      "ZEO Stain Indigo (3.5g)": "YM-STAIN-14",
+      "ZEO Stain Dark Pink (3.5g)": "YM-STAIN-15",
+      "ZEO Stain Buff (3.5g)": "YM-STAIN-16",
+      "ZEO Stain Amber (3.5g)": "YM-STAIN-17",
+      "ZEO Stain Khaki (3.5g)": "YM-STAIN-18"
+    }
+  },
+  {
+    "id": "YMH-T48",
+    "seriesCode": "YMH-T48",
+    "seriesName": "T48 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "FX 半塑鋼臼齒 A3-32 左下6",
+          "FX 半塑鋼臼齒 A3-32 左下6(20顆)",
+          "FX 半塑鋼臼齒 A3-32 左下7",
+          "FX 半塑鋼臼齒 A3-32 左上6",
+          "FX 半塑鋼臼齒 A3-32 左上6(20顆)",
+          "FX 半塑鋼臼齒 A3-32 左上7",
+          "FX 半塑鋼臼齒 A3-32 右下6",
+          "FX 半塑鋼臼齒 A3-32 右下6(20顆)",
+          "FX 半塑鋼臼齒 A3-32 右下7",
+          "FX 半塑鋼臼齒 A3-32 右上6",
+          "FX 半塑鋼臼齒 A3-32 右上6(20顆)",
+          "FX 半塑鋼臼齒 A3-32 右上7"
+        ]
+      }
+    ],
+    "skuMap": {
+      "FX 半塑鋼臼齒 A3-32 左下6": "YMH-T48-32-LL6",
+      "FX 半塑鋼臼齒 A3-32 左下6(20顆)": "YMH-T48-32-LL6-1",
+      "FX 半塑鋼臼齒 A3-32 左下7": "YMH-T48-32-LL7",
+      "FX 半塑鋼臼齒 A3-32 左上6": "YMH-T48-32-LU6",
+      "FX 半塑鋼臼齒 A3-32 左上6(20顆)": "YMH-T48-32-LU6-1",
+      "FX 半塑鋼臼齒 A3-32 左上7": "YMH-T48-32-LU7",
+      "FX 半塑鋼臼齒 A3-32 右下6": "YMH-T48-32-RL6",
+      "FX 半塑鋼臼齒 A3-32 右下6(20顆)": "YMH-T48-32-RL6-1",
+      "FX 半塑鋼臼齒 A3-32 右下7": "YMH-T48-32-RL7",
+      "FX 半塑鋼臼齒 A3-32 右上6": "YMH-T48-32-RU6",
+      "FX 半塑鋼臼齒 A3-32 右上6(20顆)": "YMH-T48-32-RU6-1",
+      "FX 半塑鋼臼齒 A3-32 右上7": "YMH-T48-32-RU7"
+    }
+  },
+  {
+    "id": "DSD-ZR-WAX-PRESSING-MATERIAL",
+    "seriesCode": "DSD-ZR-WAX-PRESSING-MATERIAL",
+    "seriesName": "ZR 蠟/壓鑄材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟/壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Matchmaker ZR A2 Kit",
+          "Matchmaker ZR A3 Kit",
+          "Matchmaker ZR 15g/Kit(全色系)",
+          "Matchmaker ZR 15g",
+          "Matchmaker ZR Essontials Kit(常用色系)",
+          "Press ZR A2 瓷錠",
+          "Press ZR A3 瓷錠",
+          "Matchmaker ZR Neck Den 15g ND3",
+          "Matchmaker ZR Neck Den 15g ND4"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Matchmaker ZR A2 Kit": "DSD-ZR-03-A2",
+      "Matchmaker ZR A3 Kit": "DSD-ZR-03-A3",
+      "Matchmaker ZR 15g/Kit(全色系)": "DSD-ZR-04",
+      "Matchmaker ZR 15g": "DSD-ZR-04-1",
+      "Matchmaker ZR Essontials Kit(常用色系)": "DSD-ZR-08",
+      "Press ZR A2 瓷錠": "DSD-ZR-21-A2",
+      "Press ZR A3 瓷錠": "DSD-ZR-21-A3",
+      "Matchmaker ZR Neck Den 15g ND3": "DSD-ZR-ND3",
+      "Matchmaker ZR Neck Den 15g ND4": "DSD-ZR-ND4"
+    }
+  },
+  {
+    "id": "DK-ZRCM-FURNACE-ACCESSORY",
+    "seriesCode": "DK-ZRCM-FURNACE-ACCESSORY",
+    "seriesName": "ZRCM 爐具配件",
+    "brand": "DENKEN",
+    "productType": "配件",
+    "category": "爐具配件",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "強化爐加熱棒組Heater",
+          "強化爐感溫棒Thermocouple",
+          "快速燒付盤 蓋子 Quick Firing Cover",
+          "快速燒付盤 Quick Firing Tray S",
+          "快速燒付盤架 Quick Firing Tray Stand",
+          "極速燒付盤蓋 High-Speed Firing Plate H"
+        ]
+      }
+    ],
+    "skuMap": {
+      "強化爐加熱棒組Heater": "DK-ZRCM-020901",
+      "強化爐感溫棒Thermocouple": "DK-ZRCM-021001",
+      "快速燒付盤 蓋子 Quick Firing Cover": "DK-ZRCM-021212",
+      "快速燒付盤 Quick Firing Tray S": "DK-ZRCM-021213",
+      "快速燒付盤架 Quick Firing Tray Stand": "DK-ZRCM-021214",
+      "極速燒付盤蓋 High-Speed Firing Plate H": "DK-ZRCM-021216"
+    }
+  },
+  {
+    "id": "YM-CO",
+    "seriesCode": "YM-CO",
+    "seriesName": "CO 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Color Opq CO-Brown (3.5g)",
+          "Color Opq CO-Orange (3.5g)",
+          "Color Opq CO-Pink (3.5g)",
+          "Color Opq CO-Violet (3.5g)",
+          "Color Opq CO-Yellow (3.5g)",
+          "Color Opq CO-Gray (3.5g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Color Opq CO-Brown (3.5g)": "YM-CO-01",
+      "Color Opq CO-Orange (3.5g)": "YM-CO-02",
+      "Color Opq CO-Pink (3.5g)": "YM-CO-03",
+      "Color Opq CO-Violet (3.5g)": "YM-CO-04",
+      "Color Opq CO-Yellow (3.5g)": "YM-CO-05",
+      "Color Opq CO-Gray (3.5g)": "YM-CO-06"
+    }
+  },
+  {
+    "id": "BS-TT",
+    "seriesCode": "BS-TT",
+    "seriesName": "TT 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "TT 95H18",
+          "TT 98H12",
+          "TT 98H14",
+          "TT 98H16",
+          "TT 98H18"
+        ]
+      }
+    ],
+    "skuMap": {
+      "TT 95H18": "BS-TT-95H18",
+      "TT 98H12": "BS-TT-98H12",
+      "TT 98H14": "BS-TT-98H14",
+      "TT 98H16": "BS-TT-98H16",
+      "TT 98H18": "BS-TT-98H18"
+    }
+  },
+  {
+    "id": "DSD-OPAL",
+    "seriesCode": "DSD-OPAL",
+    "seriesName": "OPAL 瓷粉/陶瓷材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Opal OPAL Neutralk 蛋青加強色(50g)",
+          "Opal Luster OL10 蛋青加強色(15g)",
+          "Opal Luster OL7 蛋青加強色(15g)",
+          "Opal Luster OL8 蛋青加強色(15g)",
+          "Opal Luster OL9 蛋青加強色(15g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Opal OPAL Neutralk 蛋青加強色(50g)": "DSD-OPAL-Neutral",
+      "Opal Luster OL10 蛋青加強色(15g)": "DSD-OPAL-OL10",
+      "Opal Luster OL7 蛋青加強色(15g)": "DSD-OPAL-OL7",
+      "Opal Luster OL8 蛋青加強色(15g)": "DSD-OPAL-OL8",
+      "Opal Luster OL9 蛋青加強色(15g)": "DSD-OPAL-OL9"
+    }
+  },
+  {
+    "id": "CA-YD-IMPRESSION-MATERIAL",
+    "seriesCode": "CA-YD-IMPRESSION-MATERIAL",
+    "seriesName": "YD 印模材料",
+    "brand": "CAM / 上海穩昊",
+    "productType": "材料",
+    "category": "印模材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Silicone Point 灰（CA-YD-HP021）",
+          "Silicone Point 灰（CA-YD-SH011）",
+          "Silicone Point 紅",
+          "Silicone Point 藍"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Silicone Point 灰（CA-YD-HP021）": "CA-YD-HP021",
+      "Silicone Point 灰（CA-YD-SH011）": "CA-YD-SH011",
+      "Silicone Point 紅": "CA-YD-SH012",
+      "Silicone Point 藍": "CA-YD-SH013"
+    }
+  },
+  {
+    "id": "DK-DH",
+    "seriesCode": "DK-DH",
+    "seriesName": "DH 3D 列印材料/樹脂",
+    "brand": "DENKEN",
+    "productType": "材料",
+    "category": "3D 列印材料/樹脂",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "DH Print Provisional CB (type:A2)",
+          "DH Print Cast",
+          "DH Print Model",
+          "DH Print Tray"
+        ]
+      }
+    ],
+    "skuMap": {
+      "DH Print Provisional CB (type:A2)": "DK-DH-1",
+      "DH Print Cast": "DK-DH-2",
+      "DH Print Model": "DK-DH-3",
+      "DH Print Tray": "DK-DH-4"
+    }
+  },
+  {
+    "id": "YM-CM",
+    "seriesCode": "YM-CM",
+    "seriesName": "CM 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Color Margin CM-Natural (5g)",
+          "ZEO Color Margin CM-Salmon (5g)",
+          "ZEO Color Margin CM-Orange (5g)",
+          "ZEO Color Margin CM-Brown (5g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Color Margin CM-Natural (5g)": "YM-CM-1",
+      "ZEO Color Margin CM-Salmon (5g)": "YM-CM-2",
+      "ZEO Color Margin CM-Orange (5g)": "YM-CM-3",
+      "ZEO Color Margin CM-Brown (5g)": "YM-CM-4"
+    }
+  },
+  {
+    "id": "DSD-E9",
+    "seriesCode": "DSD-E9",
+    "seriesName": "E9 瓷粉/陶瓷材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Matchmaker Enamel E9/15g",
+          "Matchmaker MC Enamel E9/250g",
+          "Matchmaker Enamel E9/50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Matchmaker Enamel E9/15g": "DSD-E9-15",
+      "Matchmaker MC Enamel E9/250g": "DSD-E9-250",
+      "Matchmaker Enamel E9/50g": "DSD-E9-50"
+    }
+  },
+  {
+    "id": "RD-TI",
+    "seriesCode": "RD-TI",
+    "seriesName": "TI 車針/鑽針",
+    "brand": "Redon",
+    "productType": "耗材",
+    "category": "車針/鑽針",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Milling Bur Ti T22",
+          "Milling Bur Ti T24",
+          "Milling Bur Ti T29"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Milling Bur Ti T22": "RD-Ti-T22",
+      "Milling Bur Ti T24": "RD-Ti-T24",
+      "Milling Bur Ti T29": "RD-Ti-T29"
+    }
+  },
+  {
+    "id": "RD-ZR",
+    "seriesCode": "RD-ZR",
+    "seriesName": "ZR 車針/鑽針",
+    "brand": "Redon",
+    "productType": "耗材",
+    "category": "車針/鑽針",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Milling Bur ZR T1",
+          "Milling Bur ZR T2",
+          "Milling Bur ZR T3"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Milling Bur ZR T1": "RD-ZR-T1",
+      "Milling Bur ZR T2": "RD-ZR-T2",
+      "Milling Bur ZR T3": "RD-ZR-T3"
+    }
+  },
+  {
+    "id": "YM-E2",
+    "seriesCode": "YM-E2",
+    "seriesName": "E2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel E2 (20g)",
+          "ZEO Enamel E2 (200g)",
+          "ZEO Enamel E2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel E2 (20g)": "YM-E2-20",
+      "ZEO Enamel E2 (200g)": "YM-E2-200",
+      "ZEO Enamel E2 (50g)": "YM-E2-50"
+    }
+  },
+  {
+    "id": "YM-E3",
+    "seriesCode": "YM-E3",
+    "seriesName": "E3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel E3 (20g)",
+          "ZEO Enamel E3 (200g)",
+          "ZEO Enamel E3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel E3 (20g)": "YM-E3-20",
+      "ZEO Enamel E3 (200g)": "YM-E3-200",
+      "ZEO Enamel E3 (50g)": "YM-E3-50"
+    }
+  },
+  {
+    "id": "YM-GUM",
+    "seriesCode": "YM-GUM",
+    "seriesName": "GUM 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO GUM-1 (20g)",
+          "ZEO GUM-2 (20g)",
+          "ZEO GUM-3 (20g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO GUM-1 (20g)": "YM-GUM-1",
+      "ZEO GUM-2 (20g)": "YM-GUM-2",
+      "ZEO GUM-3 (20g)": "YM-GUM-3"
+    }
+  },
+  {
+    "id": "YM-OA2",
+    "seriesCode": "YM-OA2",
+    "seriesName": "OA2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OA2 (20g)",
+          "ZEO Opaque Dentine OA2 (200g)",
+          "ZEO Opaque Dentine OA2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OA2 (20g)": "YM-OA2-20",
+      "ZEO Opaque Dentine OA2 (200g)": "YM-OA2-200",
+      "ZEO Opaque Dentine OA2 (50g)": "YM-OA2-50"
+    }
+  },
+  {
+    "id": "YM-OA3",
+    "seriesCode": "YM-OA3",
+    "seriesName": "OA3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OA3 (20g)",
+          "ZEO Opaque Dentine OA3 (200g)",
+          "ZEO Opaque Dentine OA3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OA3 (20g)": "YM-OA3-20",
+      "ZEO Opaque Dentine OA3 (200g)": "YM-OA3-200",
+      "ZEO Opaque Dentine OA3 (50g)": "YM-OA3-50"
+    }
+  },
+  {
+    "id": "YM-OE2",
+    "seriesCode": "YM-OE2",
+    "seriesName": "OE2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel Opal E2 (20g)",
+          "ZEO Enamel Opal E2 (200g)",
+          "ZEO Enamel Opal E2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel Opal E2 (20g)": "YM-OE2-20",
+      "ZEO Enamel Opal E2 (200g)": "YM-OE2-200",
+      "ZEO Enamel Opal E2 (50g)": "YM-OE2-50"
+    }
+  },
+  {
+    "id": "YM-OE3",
+    "seriesCode": "YM-OE3",
+    "seriesName": "OE3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel Opal E3 (20g)",
+          "ZEO Enamel Opal E3 (200g)",
+          "ZEO Enamel Opal E3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel Opal E3 (20g)": "YM-OE3-20",
+      "ZEO Enamel Opal E3 (200g)": "YM-OE3-200",
+      "ZEO Enamel Opal E3 (50g)": "YM-OE3-50"
+    }
+  },
+  {
+    "id": "YM-SUP",
+    "seriesCode": "YM-SUP",
+    "seriesName": "SUP 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Supplement SUP-D (5g)",
+          "ZEO Supplement SUP-E (5g)",
+          "ZEO Supplement SUP-T (5g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Supplement SUP-D (5g)": "YM-SUP-D",
+      "ZEO Supplement SUP-E (5g)": "YM-SUP-E",
+      "ZEO Supplement SUP-T (5g)": "YM-SUP-T"
+    }
+  },
+  {
+    "id": "YMH-T49",
+    "seriesCode": "YMH-T49",
+    "seriesName": "T49 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "RH 塑鋼臼齒單顆綜合(孔) A2-28 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A2-30 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A2-32 (16包)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "RH 塑鋼臼齒單顆綜合(孔) A2-28 (16包)": "YMH-T49-1",
+      "RH 塑鋼臼齒單顆綜合(孔) A2-30 (16包)": "YMH-T49-2",
+      "RH 塑鋼臼齒單顆綜合(孔) A2-32 (16包)": "YMH-T49-3"
+    }
+  },
+  {
+    "id": "YMH-T50",
+    "seriesCode": "YMH-T50",
+    "seriesName": "T50 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "RH 塑鋼臼齒單顆綜合(孔) A3-28 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A3-30 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A3-32 (16包)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "RH 塑鋼臼齒單顆綜合(孔) A3-28 (16包)": "YMH-T50-1",
+      "RH 塑鋼臼齒單顆綜合(孔) A3-30 (16包)": "YMH-T50-2",
+      "RH 塑鋼臼齒單顆綜合(孔) A3-32 (16包)": "YMH-T50-3"
+    }
+  },
+  {
+    "id": "YMH-T51",
+    "seriesCode": "YMH-T51",
+    "seriesName": "T51 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "RH 塑鋼臼齒單顆綜合(孔) A3.5-28 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A3.5-30 (16包)",
+          "RH 塑鋼臼齒單顆綜合(孔) A3.5-32 (16包)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "RH 塑鋼臼齒單顆綜合(孔) A3.5-28 (16包)": "YMH-T51-1",
+      "RH 塑鋼臼齒單顆綜合(孔) A3.5-30 (16包)": "YMH-T51-2",
+      "RH 塑鋼臼齒單顆綜合(孔) A3.5-32 (16包)": "YMH-T51-3"
+    }
+  },
+  {
+    "id": "YMH-T54",
+    "seriesCode": "YMH-T54",
+    "seriesName": "T54 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "RH 塑鋼臼齒單顆(孔) A3-28 (20顆)",
+          "RH 塑鋼臼齒單顆(孔) A3-30 (20顆)",
+          "RH 塑鋼臼齒單顆(孔) A3-32 (20顆)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "RH 塑鋼臼齒單顆(孔) A3-28 (20顆)": "YMH-T54-1",
+      "RH 塑鋼臼齒單顆(孔) A3-30 (20顆)": "YMH-T54-2",
+      "RH 塑鋼臼齒單顆(孔) A3-32 (20顆)": "YMH-T54-3"
+    }
+  },
+  {
+    "id": "YMH-T61",
+    "seriesCode": "YMH-T61",
+    "seriesName": "T61 塑鋼牙/人工牙",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "塑鋼牙/人工牙",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Crown PX A2 全口",
+          "Crown PX A3 全口",
+          "Crown PX A3.5 全口"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Crown PX A2 全口": "YMH-T61-A2",
+      "Crown PX A3 全口": "YMH-T61-A3",
+      "Crown PX A3.5 全口": "YMH-T61-A3.5"
+    }
+  },
+  {
+    "id": "BS-ULTRA",
+    "seriesCode": "BS-ULTRA",
+    "seriesName": "ULTRA 氧化鋯塊",
+    "brand": "貝施美",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "3D Ultra 98H16-A2",
+          "3D Ultra 98H16-OM1"
+        ]
+      }
+    ],
+    "skuMap": {
+      "3D Ultra 98H16-A2": "BS-Ultra-98H16-A2",
+      "3D Ultra 98H16-OM1": "BS-Ultra-98H16-OM1"
+    }
+  },
+  {
+    "id": "DK-ZRCM-EQUIPMENT-ACCESSORY",
+    "seriesCode": "DK-ZRCM-EQUIPMENT-ACCESSORY",
+    "seriesName": "ZRCM 設備配件",
+    "brand": "DENKEN",
+    "productType": "配件",
+    "category": "設備配件",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "強化爐溫度開關",
+          "強化爐Under Cooling Fan"
+        ]
+      }
+    ],
+    "skuMap": {
+      "強化爐溫度開關": "DK-ZRCM-020902",
+      "強化爐Under Cooling Fan": "DK-ZRCM-021102"
+    }
+  },
+  {
+    "id": "DK-ZRCM-SINTERING-FURNACE",
+    "seriesCode": "DK-ZRCM-SINTERING-FURNACE",
+    "seriesName": "ZRCM 燒結爐",
+    "brand": "DENKEN",
+    "productType": "設備",
+    "category": "燒結爐",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "極速燒付盤 Firing Tray for High-Speed Sintering",
+          "極速燒付架 Setter for High-Speed Sintering"
+        ]
+      }
+    ],
+    "skuMap": {
+      "極速燒付盤 Firing Tray for High-Speed Sintering": "DK-ZRCM-021217",
+      "極速燒付架 Setter for High-Speed Sintering": "DK-ZRCM-021218"
+    }
+  },
+  {
+    "id": "DSD-E8",
+    "seriesCode": "DSD-E8",
+    "seriesName": "E8 瓷粉/陶瓷材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Matchmaker MC Enamel E8/250g",
+          "Matchmaker Enamel E8/50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Matchmaker MC Enamel E8/250g": "DSD-E8-250",
+      "Matchmaker Enamel E8/50g": "DSD-E8-50"
+    }
+  },
+  {
+    "id": "DSD-L0564",
+    "seriesCode": "DSD-L0564",
+    "seriesName": "L0564 瓷粉/陶瓷材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Matchmaster E9 (15g)",
+          "Matchmaster Clear (15g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Matchmaster E9 (15g)": "DSD-L0564-E9",
+      "Matchmaster Clear (15g)": "DSD-L0564-TC01"
+    }
+  },
+  {
+    "id": "DSD-TCO2",
+    "seriesCode": "DSD-TCO2",
+    "seriesName": "TCO2 瓷粉/陶瓷材料",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Matchmaker MC Enamel Neutral/250g",
+          "Matchmaker Enamel Neutral/50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Matchmaker MC Enamel Neutral/250g": "DSD-TCO2-250",
+      "Matchmaker Enamel Neutral/50g": "DSD-TCO2-50"
+    }
+  },
+  {
+    "id": "DSD-ZR-PROCESS-LIQUID",
+    "seriesCode": "DSD-ZR-PROCESS-LIQUID",
+    "seriesName": "ZR 專用液/藥劑",
+    "brand": "Davis Schottlander",
+    "productType": "耗材",
+    "category": "專用液/藥劑",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZR Modelling Liquid (60ml)",
+          "ZR Stain Luquid 15ml"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZR Modelling Liquid (60ml)": "DSD-ZR-01",
+      "ZR Stain Luquid 15ml": "DSD-ZR-02"
+    }
+  },
+  {
+    "id": "RD-WAX",
+    "seriesCode": "RD-WAX",
+    "seriesName": "WAX 車針/鑽針",
+    "brand": "Redon",
+    "productType": "耗材",
+    "category": "車針/鑽針",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Milling Bur WAX T4",
+          "Milling Bur WAX T5"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Milling Bur WAX T4": "RD-WAX-T4",
+      "Milling Bur WAX T5": "RD-WAX-T5"
+    }
+  },
+  {
+    "id": "SY-02100H",
+    "seriesCode": "SY-02100H",
+    "seriesName": "02100H 咬合器配件",
+    "brand": "Song Young",
+    "productType": "配件",
+    "category": "咬合器配件",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "LABO-MATE 500H 半調節咬合器",
+          "LABO-MATE 500H 半調節咬合器(黑金色)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "LABO-MATE 500H 半調節咬合器": "SY-02100H-TW",
+      "LABO-MATE 500H 半調節咬合器(黑金色)": "SY-02100H-TW(GD)"
+    }
+  },
+  {
+    "id": "SY-02820A",
+    "seriesCode": "SY-02820A",
+    "seriesName": "02820A 馬達/手機",
+    "brand": "Song Young",
+    "productType": "設備",
+    "category": "馬達/手機",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "吸塵器馬達 110V(新)",
+          "吸塵器馬達 230V(新)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "吸塵器馬達 110V(新)": "SY-02820A-1",
+      "吸塵器馬達 230V(新)": "SY-02820A-2"
+    }
+  },
+  {
+    "id": "YM-E1",
+    "seriesCode": "YM-E1",
+    "seriesName": "E1 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel E1 (20g)",
+          "ZEO Enamel E1 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel E1 (20g)": "YM-E1-20",
+      "ZEO Enamel E1 (50g)": "YM-E1-50"
+    }
+  },
+  {
+    "id": "YM-E4",
+    "seriesCode": "YM-E4",
+    "seriesName": "E4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel E4 (20g)",
+          "ZEO Enamel E4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel E4 (20g)": "YM-E4-20",
+      "ZEO Enamel E4 (50g)": "YM-E4-50"
+    }
+  },
+  {
+    "id": "YM-OA1",
+    "seriesCode": "YM-OA1",
+    "seriesName": "OA1 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OA1 (20g)",
+          "ZEO Opaque Dentine OA1 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OA1 (20g)": "YM-OA1-20",
+      "ZEO Opaque Dentine OA1 (50g)": "YM-OA1-50"
+    }
+  },
+  {
+    "id": "YM-OA4",
+    "seriesCode": "YM-OA4",
+    "seriesName": "OA4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OA4 (20g)",
+          "ZEO Opaque Dentine OA4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OA4 (20g)": "YM-OA4-20",
+      "ZEO Opaque Dentine OA4 (50g)": "YM-OA4-50"
+    }
+  },
+  {
+    "id": "YM-OB1",
+    "seriesCode": "YM-OB1",
+    "seriesName": "OB1 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OB1 (20g)",
+          "ZEO Opaque Dentine OB1 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OB1 (20g)": "YM-OB1-20",
+      "ZEO Opaque Dentine OB1 (50g)": "YM-OB1-50"
+    }
+  },
+  {
+    "id": "YM-OB2",
+    "seriesCode": "YM-OB2",
+    "seriesName": "OB2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OB2 (20g)",
+          "ZEO Opaque Dentine OB2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OB2 (20g)": "YM-OB2-20",
+      "ZEO Opaque Dentine OB2 (50g)": "YM-OB2-50"
+    }
+  },
+  {
+    "id": "YM-OB3",
+    "seriesCode": "YM-OB3",
+    "seriesName": "OB3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OB3 (20g)",
+          "ZEO Opaque Dentine OB3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OB3 (20g)": "YM-OB3-20",
+      "ZEO Opaque Dentine OB3 (50g)": "YM-OB3-50"
+    }
+  },
+  {
+    "id": "YM-OB4",
+    "seriesCode": "YM-OB4",
+    "seriesName": "OB4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OB4 (20g)",
+          "ZEO Opaque Dentine OB4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OB4 (20g)": "YM-OB4-20",
+      "ZEO Opaque Dentine OB4 (50g)": "YM-OB4-50"
+    }
+  },
+  {
+    "id": "YM-OC1",
+    "seriesCode": "YM-OC1",
+    "seriesName": "OC1 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OC1 (20g)",
+          "ZEO Opaque Dentine OC1 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OC1 (20g)": "YM-OC1-20",
+      "ZEO Opaque Dentine OC1 (50g)": "YM-OC1-50"
+    }
+  },
+  {
+    "id": "YM-OC2",
+    "seriesCode": "YM-OC2",
+    "seriesName": "OC2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OC2 (20g)",
+          "ZEO Opaque Dentine OC2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OC2 (20g)": "YM-OC2-20",
+      "ZEO Opaque Dentine OC2 (50g)": "YM-OC2-50"
+    }
+  },
+  {
+    "id": "YM-OC3",
+    "seriesCode": "YM-OC3",
+    "seriesName": "OC3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OC3 (20g)",
+          "ZEO Opaque Dentine OC3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OC3 (20g)": "YM-OC3-20",
+      "ZEO Opaque Dentine OC3 (50g)": "YM-OC3-50"
+    }
+  },
+  {
+    "id": "YM-OC4",
+    "seriesCode": "YM-OC4",
+    "seriesName": "OC4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OC4 (20g)",
+          "ZEO Opaque Dentine OC4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OC4 (20g)": "YM-OC4-20",
+      "ZEO Opaque Dentine OC4 (50g)": "YM-OC4-50"
+    }
+  },
+  {
+    "id": "YM-OD2",
+    "seriesCode": "YM-OD2",
+    "seriesName": "OD2 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OD2 (20g)",
+          "ZEO Opaque Dentine OD2 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OD2 (20g)": "YM-OD2-20",
+      "ZEO Opaque Dentine OD2 (50g)": "YM-OD2-50"
+    }
+  },
+  {
+    "id": "YM-OD3",
+    "seriesCode": "YM-OD3",
+    "seriesName": "OD3 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OD3 (20g)",
+          "ZEO Opaque Dentine OD3 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OD3 (20g)": "YM-OD3-20",
+      "ZEO Opaque Dentine OD3 (50g)": "YM-OD3-50"
+    }
+  },
+  {
+    "id": "YM-OD4",
+    "seriesCode": "YM-OD4",
+    "seriesName": "OD4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Opaque Dentine OD4 (20g)",
+          "ZEO Opaque Dentine OD4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Opaque Dentine OD4 (20g)": "YM-OD4-20",
+      "ZEO Opaque Dentine OD4 (50g)": "YM-OD4-50"
+    }
+  },
+  {
+    "id": "YM-OE1",
+    "seriesCode": "YM-OE1",
+    "seriesName": "OE1 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel Opal E1 (20g)",
+          "ZEO Enamel Opal E1 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel Opal E1 (20g)": "YM-OE1-20",
+      "ZEO Enamel Opal E1 (50g)": "YM-OE1-50"
+    }
+  },
+  {
+    "id": "YM-OE4",
+    "seriesCode": "YM-OE4",
+    "seriesName": "OE4 瓷粉/陶瓷材料",
+    "brand": "YAMAKIN",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "ZEO Enamel Opal E4 (20g)",
+          "ZEO Enamel Opal E4 (50g)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ZEO Enamel Opal E4 (20g)": "YM-OE4-20",
+      "ZEO Enamel Opal E4 (50g)": "YM-OE4-50"
+    }
+  },
+  {
+    "id": "YMH-T80",
+    "seriesCode": "YMH-T80",
+    "seriesName": "T80 瓷粉/陶瓷材料",
+    "brand": "YAMAHACHI",
+    "productType": "材料",
+    "category": "瓷粉/陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Crown NS A2 全口",
+          "Crown NS A3 全口"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Crown NS A2 全口": "YMH-T80-A2",
+      "Crown NS A3 全口": "YMH-T80-A3"
     }
   }
 ]
