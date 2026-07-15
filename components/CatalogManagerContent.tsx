@@ -1779,12 +1779,14 @@ function SkuRow({
           </div>
 
           <div className="shrink-0 text-right">
-            {hasPrice && price != null ? (
+            {item.discontinued ? (
+              <span className="text-[11px] font-medium text-stone-300">未販售</span>
+            ) : hasPrice && price != null ? (
               <span className="price-pill">NT${price.toLocaleString('zh-TW')}</span>
             ) : (
               <span className="text-[11px] font-medium text-amber-600">待定價</span>
             )}
-            {item.priceSource === 'override' && (
+            {!item.discontinued && item.priceSource === 'override' && (
               <span className="ml-1 inline-flex rounded-full bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-700">後台價</span>
             )}
             <span className={`ml-2 inline-block text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">›</span>
@@ -1877,13 +1879,18 @@ function FamilyCard({
 
   if (items.length === 0) return null
 
-  const priceSetCount = items.filter((it) => priceCache.has(it.code) && priceCache.get(it.code) != null).length
-  const priceValues = items
+  const sellableItems = items.filter((item) => !item.discontinued)
+  const discontinuedCount = items.length - sellableItems.length
+  const priceSetCount = sellableItems.filter((it) => priceCache.has(it.code) && priceCache.get(it.code) != null).length
+  const priceValues = sellableItems
     .map((item) => item.price ?? priceCache.get(item.code))
     .filter((price): price is number => typeof price === 'number')
   const minPrice = priceValues.length > 0 ? Math.min(...priceValues) : null
   const maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : null
-  const priceSummary = minPrice == null
+  const allDiscontinued = sellableItems.length === 0
+  const priceSummary = allDiscontinued
+    ? '未販售'
+    : minPrice == null
     ? '待定價'
     : minPrice === maxPrice
       ? `NT$${minPrice.toLocaleString('zh-TW')}`
@@ -1966,8 +1973,9 @@ function FamilyCard({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="text-xs text-stone-400">{items.length} 個品項</span>
-            <span className={minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
-            {priceSetCount > 0 && priceSetCount < items.length && <span className="text-[11px] text-stone-400">{items.length - priceSetCount} 項待定價</span>}
+            <span className={allDiscontinued ? 'text-xs font-medium text-stone-300' : minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
+            {priceSetCount > 0 && priceSetCount < sellableItems.length && <span className="text-[11px] text-stone-400">{sellableItems.length - priceSetCount} 項待定價</span>}
+            {discontinuedCount > 0 && <span className="text-[11px] font-medium text-stone-300">{discontinuedCount} 項未販售</span>}
             <span className="text-[11px] font-medium text-brand-600">照片・規格・文件 ›</span>
           </div>
         </button>
@@ -2039,7 +2047,9 @@ function FamilyCard({
                         <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.name}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 sm:justify-end">
-                        {(item.price ?? priceCache.get(item.code)) != null ? (
+                        {item.discontinued ? (
+                          <span className="shrink-0 text-[11px] font-medium text-stone-300">未販售</span>
+                        ) : (item.price ?? priceCache.get(item.code)) != null ? (
                           <span className="price-pill shrink-0">NT${(item.price ?? priceCache.get(item.code) as number).toLocaleString('zh-TW')}</span>
                         ) : (
                           <span className="shrink-0 text-[11px] font-medium text-amber-600">待定價</span>
