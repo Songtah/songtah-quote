@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getCatalogProduct } from '@/lib/products-catalog'
-import { getProductRichData, listDisabledSkuCodes, updateDisabledSkuCache, upsertProductRichData } from '@/lib/products-notion'
+import {
+  getProductRichData,
+  invalidateProductPriceOverrideCache,
+  listDisabledSkuCodes,
+  listProductPriceOverrides,
+  updateDisabledSkuCache,
+  upsertProductRichData,
+} from '@/lib/products-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { getManagedFamilies, getManagedFamilyById } from '@/lib/products-managed-families'
 
@@ -31,7 +38,9 @@ export const GET = withApiAuth<Ctx>('session', async (_req, { params }) => {
       brand:       catalog.brand,
       productType: catalog.productType,
       category:    catalog.category,
-      price:       catalog.price ?? null,
+      price:       rich?.price ?? catalog.price ?? null,
+      basePrice:   catalog.price ?? null,
+      priceSource: rich?.price != null ? 'override' : catalog.price != null ? 'catalog' : 'unset',
       discontinued: Boolean(catalog.discontinued),
       status:      catalog.status ?? '',
       disabled:    Boolean(rich?.disabled),
@@ -47,7 +56,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
 
-  let body: { imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string; docsJson?: string; familyId?: string; disabled?: boolean }
+  let body: { price?: number | null; imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string; docsJson?: string; familyId?: string; disabled?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -61,9 +70,15 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
   if (body.disabled !== undefined && typeof body.disabled !== 'boolean') {
     return NextResponse.json({ error: 'disabled 必須是布林值' }, { status: 400 })
   }
+  if (body.price !== undefined && body.price !== null && (
+    typeof body.price !== 'number' || !Number.isFinite(body.price) || body.price <= 0
+  )) {
+    return NextResponse.json({ error: '售價必須是大於 0 的數字，或留空以清除後台覆寫' }, { status: 400 })
+  }
 
   try {
     const disabledSnapshot = body.disabled !== undefined ? await listDisabledSkuCodes() : null
+    if (body.price !== undefined) await listProductPriceOverrides()
     if (body.familyId !== undefined) {
       if (body.familyId) {
         const targetFamily = await getManagedFamilyById(body.familyId, true)
@@ -82,6 +97,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
         productType: catalog.productType,
       },
       {
+        price:       body.price,
         imageUrl:    body.imageUrl,
         description: body.description,
         specsJson:   body.specsJson,
@@ -94,6 +110,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
     const after = await getProductRichData(skuCode)
     if (!after) throw new Error('產品資料寫入後無法讀回')
     const expectedFields = {
+      ...(body.price !== undefined ? { price: body.price } : {}),
       ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
       ...(body.specsJson !== undefined ? { specsJson: body.specsJson } : {}),
@@ -109,6 +126,20 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
     if (body.disabled !== undefined && disabledSnapshot) {
       await updateDisabledSkuCache(skuCode, body.disabled, disabledSnapshot)
     }
+    let priceCacheStatus: 'unchanged' | 'refreshed' | 'invalidated' = 'unchanged'
+    if (body.price !== undefined) {
+      // Re-read the full override set so concurrent edits cannot be lost by
+      // publishing a stale pre-write snapshot. If that refresh fails after the
+      // durable write/read-back, invalidate instead of reporting a false save failure.
+      try {
+        await listProductPriceOverrides(true)
+        priceCacheStatus = 'refreshed'
+      } catch (error) {
+        invalidateProductPriceOverrideCache()
+        priceCacheStatus = 'invalidated'
+        console.warn('[PUT /api/products/sku] price cache refresh failed; cache invalidated:', error)
+      }
+    }
     await logAuditEvent({
       module: 'products',
       action: 'update',
@@ -120,9 +151,14 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
       request: getAuditRequestContext(req),
       before,
       after,
-      metadata: { readBack: 'passed' },
+      metadata: { readBack: 'passed', priceCache: priceCacheStatus },
     }).catch((error) => console.error('audit product update error:', error))
-    return NextResponse.json({ ok: true, notionId })
+    return NextResponse.json({
+      ok: true,
+      notionId,
+      price: after.price ?? catalog.price ?? null,
+      priceSource: after.price != null ? 'override' : catalog.price != null ? 'catalog' : 'unset',
+    })
   } catch (err: any) {
     const msg: string = err?.message ?? String(err)
     const code: string = err?.code ?? ''

@@ -303,6 +303,8 @@ type FamilyMember = {
   brand: string
   category: string
   productType: string
+  price: number | null
+  salePrice: number | null
 }
 
 // ── Family Card (browse mode) ─────────────────────────────────────────────────
@@ -779,8 +781,8 @@ export function ProductsContent({
                       manufacturer: m.brand,
                       productType: m.productType,
                       category: m.category,
-                      price: null,
-                      salePrice: null,
+                      price: m.price,
+                      salePrice: m.salePrice,
                       notes: '',
                       skuCode: m.code,
                     })

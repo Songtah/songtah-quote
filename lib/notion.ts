@@ -1,6 +1,7 @@
 import { Client } from '@notionhq/client'
 import type { Product, Customer, Quote, QuoteItem } from '@/types'
 import { getCatalogProduct } from '@/lib/products-catalog'
+import { listProductPriceOverrides } from '@/lib/products-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -150,6 +151,8 @@ export async function getProducts(): Promise<Product[]> {
     cursor = resp.has_more ? resp.next_cursor : undefined
   } while (cursor)
 
+  const priceOverrides = await listProductPriceOverrides()
+
   return pages.map((p) => {
     // Title field is 'Name' in this DB
     let name = ''
@@ -168,7 +171,9 @@ export async function getProducts(): Promise<Product[]> {
       category: getSelect(p, '分類'),
       spec:     getSelect(p, '商品類型'),
       unit:     '個',
-      price:    getNumber(p, '價格'),
+      price:    skuCode
+        ? priceOverrides[skuCode] ?? catalog?.price ?? null
+        : getNumber(p, '價格'),
       series:   '',
       active:   !getCheckbox(p, '中央停用') && !catalog?.discontinued,
       imageUrl: '',

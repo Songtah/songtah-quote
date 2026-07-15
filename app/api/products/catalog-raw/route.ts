@@ -12,16 +12,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getCatalog } from '@/lib/products-catalog'
 import { listDisabledSkuCodes } from '@/lib/products-notion'
+import { getEffectiveCatalog } from '@/lib/products-availability'
 import { withApiAuth } from '@/lib/api-auth'
 import { isCentralManagement } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
 export const GET = withApiAuth('session', async (_req: NextRequest, _ctx, session) => {
-  const disabledCodes = new Set(await listDisabledSkuCodes())
-  const allItems = getCatalog().map((item) => ({
+  const [effectiveCatalog, disabledSkuCodes] = await Promise.all([
+    getEffectiveCatalog(true),
+    listDisabledSkuCodes(),
+  ])
+  const disabledCodes = new Set(disabledSkuCodes)
+  const allItems = effectiveCatalog.map((item) => ({
     ...item,
     disabled: disabledCodes.has(item.code),
   }))

@@ -1,10 +1,15 @@
 import { explicitFamilySkuCodes } from '@/lib/product-family-members'
 import { getCatalog, type CatalogProduct } from '@/lib/products-catalog'
 import { getManagedFamilies, type ManagedProductFamily } from '@/lib/products-managed-families'
-import { listDisabledSkuCodes } from '@/lib/products-notion'
+import { listDisabledSkuCodes, listProductPriceOverrides } from '@/lib/products-notion'
 
 export interface AvailableProductFamily extends ManagedProductFamily {
   unavailableSkuCodes?: string[]
+}
+
+export interface EffectiveCatalogProduct extends CatalogProduct {
+  basePrice: number | null
+  priceSource: 'override' | 'catalog' | 'unset'
 }
 
 /** Static discontinued rows and central-management overrides share one picker exclusion set. */
@@ -18,9 +23,26 @@ export async function getUnavailableSkuCodes(refresh = false): Promise<Set<strin
   return unavailable
 }
 
-export async function getAvailableCatalog(): Promise<CatalogProduct[]> {
-  const unavailable = await getUnavailableSkuCodes()
-  return getCatalog().filter((product) => !unavailable.has(product.code))
+export async function getEffectiveCatalog(includeUnavailable = false): Promise<EffectiveCatalogProduct[]> {
+  const [unavailable, overrides] = await Promise.all([
+    includeUnavailable ? Promise.resolve<Set<string> | null>(null) : getUnavailableSkuCodes(),
+    listProductPriceOverrides(),
+  ])
+  return getCatalog()
+    .filter((product) => includeUnavailable || !unavailable?.has(product.code))
+    .map((product) => {
+      const override = overrides[product.code]
+      return {
+        ...product,
+        basePrice: product.price ?? null,
+        price: override ?? product.price,
+        priceSource: override != null ? 'override' : product.price != null ? 'catalog' : 'unset',
+      }
+    })
+}
+
+export async function getAvailableCatalog(): Promise<EffectiveCatalogProduct[]> {
+  return getEffectiveCatalog(false)
 }
 
 function filterFamily(

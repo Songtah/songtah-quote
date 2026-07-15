@@ -1060,8 +1060,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
       if (!item.skuCode) return
       fetch(`/api/products/sku/${encodeURIComponent(item.skuCode)}`)
         .then((r) => r.ok ? r.json() : null)
-        .then((data: { rich?: { price?: number | null } } | null) => {
-          const actualPrice = data?.rich?.price ?? 0
+        .then((data: { catalog?: { price?: number | null } } | null) => {
+          const actualPrice = data?.catalog?.price ?? 0
           if (!actualPrice) return
 
           const promoItem = matchPromoItem(item, promoItems)
@@ -1145,13 +1145,13 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
 
       // ── 非同步補查定價 ────────────────────────────────────────
       // FamilySpecPanel 選品時 unitPrice=0（靜態 catalog 無價格）。
-      // 使用 /api/products/sku/[skuCode] 查 Notion 中的實際售價（rich.price）。
+      // 使用 /api/products/sku/[skuCode] 查有效售價（中央覆寫優先、目錄基準價次之）。
       // 查到後：若有促銷條件 → 以實際定價重新套折扣；否則直接更新單價。
       if ((partial.unitPrice ?? 0) === 0 && partial.skuCode) {
         fetch(`/api/products/sku/${encodeURIComponent(partial.skuCode)}`)
           .then((r) => r.ok ? r.json() : null)
-          .then((data: { rich?: { price?: number | null } } | null) => {
-            const actualPrice = data?.rich?.price ?? 0
+          .then((data: { catalog?: { price?: number | null } } | null) => {
+            const actualPrice = data?.catalog?.price ?? 0
             if (!actualPrice) return
 
             if (promoItem?.conditionType) {

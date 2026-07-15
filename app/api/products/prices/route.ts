@@ -7,18 +7,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { getCatalog } from '@/lib/products-catalog'
+import { withApiAuth } from '@/lib/api-auth'
+import { getAvailableCatalog } from '@/lib/products-availability'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (_req: NextRequest) => {
   const map: Record<string, { p: number; s?: number }> = {}
-  for (const item of getCatalog()) {
+  for (const item of await getAvailableCatalog()) {
     if (item.price == null) continue
     map[item.code] = item.salePrice != null
       ? { p: item.price, s: item.salePrice }
@@ -26,6 +22,6 @@ export async function GET(_req: NextRequest) {
   }
 
   return NextResponse.json(map, {
-    headers: { 'Cache-Control': 'private, max-age=300' },
+    headers: { 'Cache-Control': 'private, no-store' },
   })
-}
+})

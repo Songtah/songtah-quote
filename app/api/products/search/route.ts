@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchCatalog } from '@/lib/products-catalog'
-import { listDisabledSkuCodes } from '@/lib/products-notion'
 import { withApiAuth } from '@/lib/api-auth'
+import { getAvailableCatalog } from '@/lib/products-availability'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,15 +13,14 @@ export const GET = withApiAuth('session', async (req: NextRequest) => {
   const limitParam  = req.nextUrl.searchParams.get('limit')       ?? '50'
   const limit       = Math.min(parseInt(limitParam, 10) || 50, 200)
 
-  const disabledCodes = new Set(await listDisabledSkuCodes())
+  const availableCatalog = await getAvailableCatalog()
   const products = searchCatalog({
     q,
     brand:       brand       || undefined,
     productType: productType || undefined,
     category:    category    || undefined,
     limit,
-    excludeCodes: disabledCodes,
-  })
+  }, availableCatalog)
 
   // Map to the shape the existing UI expects (OrderForm / QuoteForm)
   return NextResponse.json(

@@ -64,7 +64,9 @@ interface CatalogItem {
   mainCategory?: string // 主分類(11 種)
   seriesName?: string   // 總表系列
   needsReview?: boolean // 分類待覆核
-  price?: number      // 售價（products_catalog.json 靜態維護）
+  price?: number      // 有效售價（中央覆寫優先、目錄基準價次之）
+  basePrice?: number | null
+  priceSource?: 'override' | 'catalog' | 'unset'
   salePrice?: number
   spec?: string
   discontinued?: boolean
@@ -1275,7 +1277,7 @@ function ProductEditDrawer({
 }: {
   skuCode: string
   onClose: () => void
-  onSaved: (skuCode: string, price: number | null, disabled: boolean) => void
+  onSaved: (skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource']) => void
   onFamilyChanged: () => Promise<void>
   allFamilies: ProductFamily[]
 }) {
@@ -1291,6 +1293,7 @@ function ProductEditDrawer({
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [docs,          setDocs]          = useState<DocFile[]>([])
   const [centralDisabled, setCentralDisabled] = useState(false)
+  const [priceOverrideInput, setPriceOverrideInput] = useState('')
 
   // Family assignment state
   const [selectedFamilyId, setSelectedFamilyId] = useState('')
@@ -1315,6 +1318,7 @@ function ProductEditDrawer({
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
         setCentralDisabled(Boolean(data.catalog.disabled ?? data.rich.disabled))
+        setPriceOverrideInput(data.rich.price != null ? String(data.rich.price) : '')
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
         setGalleryImages(parseGallery(data.rich.galleryJson ?? '[]'))
         const manualFamilyId = data.rich.familyId ?? ''
@@ -1378,6 +1382,12 @@ function ProductEditDrawer({
       setError('產品資料尚未完整載入，請重新整理後再試')
       return
     }
+    const trimmedPrice = priceOverrideInput.trim()
+    const priceOverride = trimmedPrice ? Number(trimmedPrice) : null
+    if (priceOverride != null && (!Number.isFinite(priceOverride) || priceOverride <= 0)) {
+      setError('售價必須是大於 0 的數字；若要回到主檔售價請清空欄位')
+      return
+    }
     setSaving(true)
     setError('')
     // Only save specs if there's actual data (at least one non-empty row)
@@ -1390,7 +1400,7 @@ function ProductEditDrawer({
       res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson, disabled: centralDisabled }),
+        body: JSON.stringify({ price: priceOverride, imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson, disabled: centralDisabled }),
       })
     } catch (err: any) {
       setError(err.message ?? '網路中斷，請稍後再試')
@@ -1406,8 +1416,14 @@ function ProductEditDrawer({
       setSaving(false)
       return
     }
+    const saved = await res.json().catch(() => null)
     setSaving(false)
-    onSaved(skuCode, catalog?.price ?? null, centralDisabled)
+    onSaved(
+      skuCode,
+      saved?.price ?? priceOverride ?? catalog.basePrice ?? null,
+      centralDisabled,
+      saved?.priceSource ?? (priceOverride != null ? 'override' : catalog.basePrice != null ? 'catalog' : 'unset'),
+    )
     onClose()
   }
 
@@ -1554,13 +1570,47 @@ function ProductEditDrawer({
             </div>
           </div>
 
-          {/* 售價由產品價格主檔維護，後台僅顯示。 */}
-          <div className="rounded-2xl bg-stone-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">售價（唯讀）</p>
-            <p className="mt-1 text-base font-bold text-stone-800">
-              {catalog?.price != null ? `NT$${catalog.price.toLocaleString('zh-TW')}` : '尚未定價'}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-stone-500">價格需由 Excel 主檔合併與驗證後部署，避免已成立單據與正式目錄不同步。</p>
+          {/* 中央管理售價覆寫；清空後回到 Excel/目錄主檔售價。 */}
+          <div className="rounded-2xl bg-stone-50 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="product-price-override" className="text-xs font-semibold uppercase tracking-widest text-stone-400">後台售價覆寫</label>
+                <div className="relative mt-2">
+                  <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-semibold text-stone-400">NT$</span>
+                  <input
+                    id="product-price-override"
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    step="1"
+                    value={priceOverrideInput}
+                    onChange={(event) => setPriceOverrideInput(event.target.value)}
+                    placeholder={catalog?.basePrice != null ? String(catalog.basePrice) : '輸入售價'}
+                    disabled={loading || saving || !catalog}
+                    className="input-soft min-h-12 w-full pl-14 text-base font-bold"
+                  />
+                </div>
+              </div>
+              {priceOverrideInput && (
+                <button
+                  type="button"
+                  onClick={() => setPriceOverrideInput('')}
+                  disabled={loading || saving || !catalog}
+                  className="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-brand-400 hover:text-brand-600 active:scale-95 disabled:opacity-50"
+                >
+                  清除覆寫
+                </button>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
+              <span>主檔售價：{catalog?.basePrice != null ? `NT$${catalog.basePrice.toLocaleString('zh-TW')}` : '尚未定價'}</span>
+              <span className="font-semibold text-brand-700">
+                儲存後售價：{priceOverrideInput.trim() && Number(priceOverrideInput) > 0
+                  ? `NT$${Number(priceOverrideInput).toLocaleString('zh-TW')}`
+                  : catalog?.basePrice != null ? `NT$${catalog.basePrice.toLocaleString('zh-TW')}` : '待定價'}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-stone-400">留空會回到 Excel／產品目錄主檔售價；新售價只影響之後選入的品項，既有單據仍保留原價格快照。</p>
           </div>
 
           {/* 商品圖片 */}
@@ -1733,6 +1783,9 @@ function SkuRow({
               <span className="price-pill">NT${price.toLocaleString('zh-TW')}</span>
             ) : (
               <span className="text-[11px] font-medium text-amber-600">待定價</span>
+            )}
+            {item.priceSource === 'override' && (
+              <span className="ml-1 inline-flex rounded-full bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-700">後台價</span>
             )}
             <span className={`ml-2 inline-block text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">›</span>
           </div>
@@ -2290,13 +2343,13 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   }
 
   // After a save, update caches
-  const handleSaved = useCallback((skuCode: string, price: number | null, disabled: boolean) => {
+  const handleSaved = useCallback((skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource']) => {
     setPriceCache((prev) => {
       const next = new Map(prev)
       next.set(skuCode, price)
       return next
     })
-    setAllItems((items) => items.map((item) => item.code === skuCode ? { ...item, disabled } : item))
+    setAllItems((items) => items.map((item) => item.code === skuCode ? { ...item, disabled, price: price ?? undefined, priceSource } : item))
   }, [])
 
   const exactFamilyIndex = useMemo(() => buildExactFamilyIndex(families), [families])

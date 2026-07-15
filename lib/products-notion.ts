@@ -8,7 +8,7 @@
  */
 
 import { Client } from '@notionhq/client'
-import { getRedisValue, setRedisValue } from '@/lib/notion/shared'
+import { deleteRedisValue, getRedisValue, setRedisValue } from '@/lib/notion/shared'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_PRODUCTS = process.env.NOTION_PRODUCTS_DB!
@@ -44,6 +44,10 @@ const DISABLED_SKUS_CACHE_KEY = 'products:central-disabled-skus:v1'
 const DISABLED_SKUS_CACHE_TTL = 60_000
 let lastDisabledSkuCodes: string[] | null = null
 let lastDisabledSkuCodesAt = 0
+const PRICE_OVERRIDES_CACHE_KEY = 'products:price-overrides:v1'
+const PRICE_OVERRIDES_CACHE_TTL = 60_000
+let lastPriceOverrides: Record<string, number> | null = null
+let lastPriceOverridesAt = 0
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -223,6 +227,59 @@ export async function updateDisabledSkuCache(
   lastDisabledSkuCodes = codes
   lastDisabledSkuCodesAt = Date.now()
   await setRedisValue(DISABLED_SKUS_CACHE_KEY, codes, DISABLED_SKUS_CACHE_TTL)
+}
+
+/** Central-management price overrides keyed by SKU. Empty/cleared values are omitted. */
+export async function listProductPriceOverrides(refresh = false): Promise<Record<string, number>> {
+  if (!refresh && lastPriceOverrides && Date.now() - lastPriceOverridesAt < PRICE_OVERRIDES_CACHE_TTL) {
+    return lastPriceOverrides
+  }
+  if (!refresh) {
+    const cached = await getRedisValue<Record<string, number>>(PRICE_OVERRIDES_CACHE_KEY)
+    if (cached) {
+      lastPriceOverrides = cached
+      lastPriceOverridesAt = Date.now()
+      return cached
+    }
+  }
+
+  try {
+    const results: any[] = []
+    let cursor: string | undefined
+    do {
+      const resp: any = await notion.databases.query({
+        database_id: DB_PRODUCTS,
+        filter: { property: '售價', number: { is_not_empty: true } },
+        sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+      results.push(...resp.results)
+      cursor = resp.has_more ? resp.next_cursor : undefined
+    } while (cursor)
+
+    const overrides: Record<string, number> = {}
+    for (const page of results) {
+      const skuCode = readRichText(page, '貨號')
+      const price = readNumber(page, '售價')
+      if (skuCode && price != null && price > 0 && overrides[skuCode] === undefined) overrides[skuCode] = price
+    }
+    lastPriceOverrides = overrides
+    lastPriceOverridesAt = Date.now()
+    await setRedisValue(PRICE_OVERRIDES_CACHE_KEY, overrides, PRICE_OVERRIDES_CACHE_TTL)
+    return overrides
+  } catch (error) {
+    console.error('[products-notion] price overrides unavailable:', error)
+    if (!refresh && lastPriceOverrides) return lastPriceOverrides
+    throw new Error('產品售價覆寫暫時無法讀取，已停止產品定價以避免使用錯誤價格')
+  }
+}
+
+/** Clear both cache layers so the next price read must re-query Notion. */
+export function invalidateProductPriceOverrideCache(): void {
+  lastPriceOverrides = null
+  lastPriceOverridesAt = 0
+  deleteRedisValue(PRICE_OVERRIDES_CACHE_KEY)
 }
 
 // ── Query by family ID ────────────────────────────────────────

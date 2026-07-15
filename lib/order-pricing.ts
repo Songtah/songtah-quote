@@ -39,6 +39,11 @@ export interface PromoViolation {
   reason: string
 }
 
+export interface PromotionValidationOptions {
+  /** Existing unchanged rows keep their saved unit-price snapshot on order edits. */
+  skipUnitPriceValidation?: (line: PricingLine, index: number) => boolean
+}
+
 // 系列級促銷：才允許用 seriesId 比對；其餘一律只認 skuCode（避免同系列其他產品被誤觸發）
 export const SERIES_CONDITION_TYPES = new Set(['series_discount', 'series_buy_n_get_m'])
 
@@ -142,12 +147,14 @@ export function validateOrderPromotions(
   lines: PricingLine[],
   rules: PromoRule[],
   catalogPriceOf?: (skuCode: string) => number | null,
+  options: PromotionValidationOptions = {},
 ): PromoViolation[] {
   const violations: PromoViolation[] = []
 
   // ── 一般購買行：驗證促銷帶的單價 ──────────────────────────────────────────
   lines.forEach((line, index) => {
     if (isGift(line)) return
+    if (options.skipUnitPriceValidation?.(line, index)) return
     const rule = matchPromoRule(line, rules)
     const expected = expectedPromoUnitPrice(line, rule, catalogPriceOf)
     if (expected != null && line.unitPrice !== expected) {

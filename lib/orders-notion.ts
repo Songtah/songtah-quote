@@ -3,15 +3,20 @@ import { getCatalogProduct } from './products-catalog'
 import { listItemsByPromotion } from './promotion-items-notion'
 import { validateOrderPromotions, type PromoRule } from './order-pricing'
 import { getUnavailableSkuCodes } from './products-availability'
+import { listProductPriceOverrides } from './products-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 /**
  * 伺服器端促銷把關：依訂單綁定的 promotionId 重抓「已確認」促銷品項，
  * 用共用引擎驗證前端宣稱的促銷帶價與免費贈品是否成立。不符則 throw（路由映射 400）。
- * 目錄價作為 rate 型折扣的權威折前基準，防止灌高基準。
+ * 有效售價（中央覆寫優先、目錄基準價次之）作為 rate 型折扣的權威折前基準，防止灌高基準。
  */
-async function assertPromotionValid(promotionId: string | undefined, items: OrderItem[]): Promise<void> {
+async function assertPromotionValid(
+  promotionId: string | undefined,
+  items: OrderItem[],
+  options: { skipUnitPriceValidation?: (item: OrderItem, index: number) => boolean } = {},
+): Promise<void> {
   if (!promotionId) return
   let rules: PromoRule[]
   try {
@@ -24,10 +29,16 @@ async function assertPromotionValid(promotionId: string | undefined, items: Orde
     // 交由 validateOrderItems 的贈品量比例防線兜底。
     return
   }
+  const overrides = await listProductPriceOverrides()
   const violations = validateOrderPromotions(
     items,
     rules,
-    (sku) => getCatalogProduct(sku)?.price ?? null,
+    (sku) => overrides[sku] ?? getCatalogProduct(sku)?.price ?? null,
+    {
+      skipUnitPriceValidation: options.skipUnitPriceValidation
+        ? (_line, index) => options.skipUnitPriceValidation!(items[index], index)
+        : undefined,
+    },
   )
   if (violations.length > 0) {
     const detail = violations.map((v) => `「${v.skuCode}」${v.reason}`).join('；')
@@ -507,7 +518,28 @@ export async function updateOrder(id: string, data: {
     await validateOrderItems(data.items, existingSkuCodes)
     // 促銷把關：promotionId 未隨更新帶入時，回查既有訂單綁定的促銷再驗
     const effectivePromotionId = data.promotionId ?? existingOrder?.promotionId
-    await assertPromotionValid(effectivePromotionId, data.items)
+    const existingItemsById = new Map(existingOrder?.items.map((item) => [item.id, item]) ?? [])
+    const consumedExistingItemIds = new Set<string>()
+    const keepsSamePromotion = effectivePromotionId === existingOrder?.promotionId
+    await assertPromotionValid(effectivePromotionId, data.items, {
+      // A central/base price change must not invalidate an untouched historical
+      // promotion row. New or materially changed rows still use the current
+      // effective price and receive full server-side promotion validation.
+      skipUnitPriceValidation: (item) => {
+        if (!keepsSamePromotion || consumedExistingItemIds.has(item.id)) return false
+        const previous = existingItemsById.get(item.id)
+        const unchanged = Boolean(
+          previous &&
+          previous.skuCode === item.skuCode &&
+          previous.seriesName === item.seriesName &&
+          previous.itemType === item.itemType &&
+          previous.quantity === item.quantity &&
+          previous.unitPrice === item.unitPrice
+        )
+        if (unchanged) consumedExistingItemIds.add(item.id)
+        return unchanged
+      },
+    })
     // Replace all item pages
     await deleteOrderItems(formatted)
     await createOrderItems(formatted, data.items)

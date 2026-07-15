@@ -152,7 +152,7 @@ export function SeriesSkuDetails({
   const specs = useMemo(() => parseSpecs(rich?.specsJson ?? ''), [rich?.specsJson])
   const gallery = useMemo(() => parseGallery(rich?.galleryJson ?? ''), [rich?.galleryJson])
   const docs = useMemo(() => parseJsonArray<DocFile>(rich?.docsJson ?? ''), [rich?.docsJson])
-  // 售價權威來源是 products_catalog.json；Notion rich.price 不作回退。
+  // item.price 由 catalog-raw 提供有效售價（中央覆寫優先、目錄基準價次之）。
   const price = item?.price ?? null
   const images = item && rich
     ? [
