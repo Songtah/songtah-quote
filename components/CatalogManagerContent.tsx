@@ -2062,7 +2062,7 @@ function CategoryBrowserModal({
               {families.length > 0 && (
                 <section>
                   <div className="mb-3 flex items-baseline gap-2 px-1">
-                    <h3 className="text-sm font-bold text-stone-700">產品系列</h3>
+                    <h3 className="text-sm font-bold text-stone-700">產品清單</h3>
                     <span className="text-[11px] text-stone-400">{families.length} 個系列</span>
                   </div>
                   <div className="space-y-3">
@@ -2131,6 +2131,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   const [loadAttempt,  setLoadAttempt]  = useState(0)
 
   const [search, setSearch] = useState('')
+  const [browseMode, setBrowseMode] = useState<'categories' | 'products'>('categories')
   const [categorySelection, setCategorySelection] = useState<CategorySelection | null>(null)
   // 產品系列分組收合(依主分類):113 個系列全平鋪會把瀏覽頁撐到近 2 萬 px,
   // 且首載重渲染會凍結頁面進場動畫;預設收合、展開才渲染該組卡片。
@@ -2318,7 +2319,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       )}
       {seriesAdminError && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{seriesAdminError}</div>}
       {/* Keyword search stays available; category browsing happens in dedicated cards below. */}
-      <div className="mb-6">
+      <div className="mb-3">
         <input
           type="search"
           aria-label="搜尋產品目錄"
@@ -2329,11 +2330,40 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         />
       </div>
 
-      {/* List guidance */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400">
-        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />已設售價</span>
-        <span>{canManageProducts ? '點品名展開介紹；「編輯」可維護照片、規格與文件' : '點品名展開介紹、照片、規格與文件'}</span>
+      <div className="mb-6 grid grid-cols-2 gap-1 rounded-full bg-stone-100 p-1 sm:inline-grid sm:min-w-96" role="group" aria-label="選擇產品瀏覽模式">
+        <button
+          type="button"
+          aria-pressed={browseMode === 'categories'}
+          onClick={() => setBrowseMode('categories')}
+          className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 ${
+            browseMode === 'categories'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
+              : 'text-stone-500 hover:bg-white hover:text-brand-700'
+          }`}
+        >
+          商品分類總覽
+        </button>
+        <button
+          type="button"
+          aria-pressed={browseMode === 'products'}
+          onClick={() => setBrowseMode('products')}
+          className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 ${
+            browseMode === 'products'
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
+              : 'text-stone-500 hover:bg-white hover:text-brand-700'
+          }`}
+        >
+          產品清單
+        </button>
       </div>
+
+      {/* List guidance */}
+      {(isSearching || browseMode === 'products') && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400">
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />已設售價</span>
+          <span>{canManageProducts ? '點品名展開介紹；「編輯」可維護照片、規格與文件' : '點品名展開介紹、照片、規格與文件'}</span>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -2370,8 +2400,8 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           {groupedSearchFamilies.length > 0 && (
             <section>
               <div className="mb-2 flex items-baseline gap-2 px-1">
-                <h3 className="text-sm font-bold text-stone-700">產品系列</h3>
-                <span className="text-[11px] text-stone-400">相同系列規格已收合</span>
+                <h3 className="text-sm font-bold text-stone-700">產品清單</h3>
+                <span className="text-[11px] text-stone-400">同系列品項已收合</span>
               </div>
               <div className="space-y-3">
                 {groupedSearchFamilies.map((family) => (
@@ -2416,9 +2446,10 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           </section>
         </div>
       ) : (
-        /* ── Browse mode:商品分類總覽(11 主分類 × 62 功能分類完整呈現)+ 系列 ── */
+        /* ── Browse mode：商品分類總覽／產品清單擇一呈現 ── */
         <div className="space-y-6">
-          <div>
+          {browseMode === 'categories' ? (
+            <div>
             <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
               <h3 className="text-sm font-bold text-stone-700">📂 商品分類總覽</h3>
               <span className="text-[11px] text-stone-400">11 主分類 × 62 功能分類・點分類直接瀏覽商品(總表 {taxonomy.version})</span>
@@ -2451,16 +2482,18 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          ) : (
+            <>
 
-          {/* Family browse:依主分類分組收合(避免 113 張卡全平鋪) */}
-          <div>
+              {/* Product list:依主分類分組收合，避免大量卡片同時渲染。 */}
+              <div>
             <div className="mb-3 flex items-baseline gap-2">
-              <h3 className="text-sm font-bold text-stone-700">🗂 產品系列</h3>
+              <h3 className="text-sm font-bold text-stone-700">🗂 產品清單</h3>
               <span className="text-[11px] text-stone-400">{families.length} 個系列・依主分類分組,點開瀏覽</span>
             </div>
             {families.length === 0 ? (
-              <p className="text-center py-12 text-sm text-stone-400">目前沒有產品系列</p>
+              <p className="text-center py-12 text-sm text-stone-400">目前沒有產品清單</p>
             ) : (
               <div className="space-y-3">
                 {familyGroups.map(({ main, families: groupFamilies }) => {
@@ -2500,10 +2533,10 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                 })}
               </div>
             )}
-          </div>
+              </div>
 
           {/* Standalone products stay collapsed by default to keep 3,000+ rows manageable. */}
-          <section className="card-soft overflow-hidden p-0">
+              <section className="card-soft overflow-hidden p-0">
             <button
               type="button"
               onClick={() => {
@@ -2545,7 +2578,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                 )}
               </div>
             )}
-          </section>
+              </section>
+            </>
+          )}
         </div>
       )}
 
