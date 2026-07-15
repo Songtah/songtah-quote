@@ -1,5 +1,6 @@
 import { Client } from '@notionhq/client'
 import type { Product, Customer, Quote, QuoteItem } from '@/types'
+import { getCatalogProduct } from '@/lib/products-catalog'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -158,6 +159,8 @@ export async function getProducts(): Promise<Product[]> {
         break
       }
     }
+    const skuCode = getText(p, '貨號')
+    const catalog = skuCode ? getCatalogProduct(skuCode) : undefined
     return {
       id:       p.id,
       name,
@@ -167,10 +170,10 @@ export async function getProducts(): Promise<Product[]> {
       unit:     '個',
       price:    getNumber(p, '價格'),
       series:   '',
-      active:   true,
+      active:   !getCheckbox(p, '中央停用') && !catalog?.discontinued,
       imageUrl: '',
     }
-  })
+  }).filter((product) => product.active)
 }
 
 // ── customers ────────────────────────────────────────────────

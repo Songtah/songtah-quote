@@ -6,6 +6,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { getCatalog } from '@/lib/products-catalog'
 import { getManagedFamilyById } from '@/lib/products-managed-families'
 import { explicitFamilySkuCodes } from '@/lib/product-family-members'
+import { getUnavailableSkuCodes } from '@/lib/products-availability'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,8 +16,8 @@ export const GET = withApiAuth<Ctx>('session', async (_req, { params }) => {
   const family = await getManagedFamilyById(params.id)
   if (!family) return NextResponse.json({ error: 'Family not found' }, { status: 404 })
 
-  const catalog = getCatalog()
-  const codeSet = new Set(explicitFamilySkuCodes(family))
+  const [catalog, unavailable] = [getCatalog(), await getUnavailableSkuCodes()]
+  const codeSet = new Set(explicitFamilySkuCodes(family).filter((code) => !unavailable.has(code)))
 
   // Build member list from catalog
   const codeMap = new Map(catalog.map((p) => [p.code, p]))

@@ -12,22 +12,26 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { getCatalog } from '@/lib/products-catalog'
+import { listDisabledSkuCodes } from '@/lib/products-notion'
+import { withApiAuth } from '@/lib/api-auth'
+import { isCentralManagement } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const items = getCatalog()   // module-level cache, no disk re-read
+export const GET = withApiAuth('session', async (_req: NextRequest, _ctx, session) => {
+  const disabledCodes = new Set(await listDisabledSkuCodes())
+  const allItems = getCatalog().map((item) => ({
+    ...item,
+    disabled: disabledCodes.has(item.code),
+  }))
+  const items = isCentralManagement(session)
+    ? allItems
+    : allItems.filter((item) => !item.discontinued && !item.disabled)
 
   return NextResponse.json(items, {
     headers: {
-      // Allow the browser to cache this for 5 min (catalog changes rarely)
-      'Cache-Control': 'private, max-age=300',
+      'Cache-Control': 'private, no-store',
     },
   })
-}
+})

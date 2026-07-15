@@ -2,6 +2,7 @@ import { Client } from '@notionhq/client'
 import { getCatalogProduct } from './products-catalog'
 import { listItemsByPromotion } from './promotion-items-notion'
 import { validateOrderPromotions, type PromoRule } from './order-pricing'
+import { getUnavailableSkuCodes } from './products-availability'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -191,7 +192,8 @@ export interface Order {
  *    先有實際購買才換贈品，這個比例上限可擋「整單只下贈品、沒有任何實際購買」的核心手法，
  *    且不需要在後端重建完整促銷比對邏輯（系列/條件型促銷仍由前端 OrderForm 計算）。
  */
-function validateOrderItems(items: OrderItem[]): void {
+async function validateOrderItems(items: OrderItem[], allowedUnavailableCodes = new Set<string>()): Promise<void> {
+  const unavailableCodes = await getUnavailableSkuCodes()
   let normalQty = 0
   let giftQty = 0
   for (const it of items) {
@@ -200,6 +202,9 @@ function validateOrderItems(items: OrderItem[]): void {
     }
     if (typeof it.unitPrice === 'number' && it.unitPrice < 0) {
       throw new Error(`品項「${it.skuName || it.skuCode}」單價不可為負數`)
+    }
+    if (it.skuCode && unavailableCodes.has(it.skuCode) && !allowedUnavailableCodes.has(it.skuCode)) {
+      throw new Error(`品項「${it.skuName || it.skuCode}」已停用，請重新選擇商品`)
     }
     if (it.itemType === 'gift' || it.itemType === 'sample') {
       giftQty += it.quantity
@@ -416,7 +421,7 @@ export async function createOrder(data: {
   promotionId?:   string
   promotionName?: string
 }): Promise<Order> {
-  validateOrderItems(data.items)
+  await validateOrderItems(data.items)
   await assertPromotionValid(data.promotionId, data.items)
   await ensureOrderFields()
   const orderNumber = await generateOrderNumber()
@@ -497,9 +502,11 @@ export async function updateOrder(id: string, data: {
   if (data.promotionName !== undefined)    props['促銷活動名稱'] = { rich_text: richText(data.promotionName ?? '') }
 
   if (data.items) {
-    validateOrderItems(data.items)
+    const existingOrder = await getOrderById(id)
+    const existingSkuCodes = new Set(existingOrder?.items.map((item) => item.skuCode).filter(Boolean) ?? [])
+    await validateOrderItems(data.items, existingSkuCodes)
     // 促銷把關：promotionId 未隨更新帶入時，回查既有訂單綁定的促銷再驗
-    const effectivePromotionId = data.promotionId ?? (await getOrderById(id))?.promotionId
+    const effectivePromotionId = data.promotionId ?? existingOrder?.promotionId
     await assertPromotionValid(effectivePromotionId, data.items)
     // Replace all item pages
     await deleteOrderItems(formatted)

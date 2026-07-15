@@ -26,6 +26,8 @@ export interface ProductFamily {
   coveredSkuCodes?: string[]
   /** 後台人工指定的系列成員；可能不在規格矩陣 skuMap 中。 */
   manualAssignedSkuCodes?: string[]
+  /** 已停售或中央停用的 SKU；pattern 系列用於阻止選到停用品。 */
+  unavailableSkuCodes?: string[]
   source?: 'catalog' | 'notion'
   /** 特殊 UI 變體。'ymh-tooth-grid' = YAMAHACHI 牙型座標格 */
   uiVariant?: string
@@ -618,7 +620,8 @@ export function FamilySpecPanel({
         ? buildFromPattern(family.namePattern, selected)
         : visibleRows.map((r) => selected[r.spec.key]).filter(Boolean).join(' · '))
     : ''
-  const isValid = allSelected && skuCode !== ''
+  const isUnavailable = Boolean(skuCode && family.unavailableSkuCodes?.includes(skuCode))
+  const isValid = allSelected && skuCode !== '' && !isUnavailable
 
   return (
     <div className="border-t border-stone-900/[0.05] bg-stone-50/80 px-5 py-4 space-y-4">
@@ -679,7 +682,7 @@ export function FamilySpecPanel({
             </div>
           ) : (
             <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-600" role="status">
-              此規格組合無對應貨品，請重新選擇
+              {isUnavailable ? '此品項已停用，請選擇其他規格' : '此規格組合無對應貨品，請重新選擇'}
             </div>
           )
         ) : (

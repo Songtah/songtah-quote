@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getCatalogProduct } from '@/lib/products-catalog'
-import { getProductRichData, upsertProductRichData } from '@/lib/products-notion'
+import { getProductRichData, listDisabledSkuCodes, updateDisabledSkuCache, upsertProductRichData } from '@/lib/products-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { getManagedFamilies, getManagedFamilyById } from '@/lib/products-managed-families'
 
@@ -16,7 +16,13 @@ export const GET = withApiAuth<Ctx>('session', async (_req, { params }) => {
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
 
-  const rich = await getProductRichData(skuCode).catch(() => null)
+  let rich
+  try {
+    rich = await getProductRichData(skuCode)
+  } catch (error) {
+    console.error('[GET /api/products/sku] rich data unavailable:', skuCode, error)
+    return NextResponse.json({ error: '產品資料暫時無法完整讀取，為避免誤改停用狀態已停止編輯' }, { status: 503 })
+  }
 
   return NextResponse.json({
     catalog: {
@@ -26,8 +32,11 @@ export const GET = withApiAuth<Ctx>('session', async (_req, { params }) => {
       productType: catalog.productType,
       category:    catalog.category,
       price:       catalog.price ?? null,
+      discontinued: Boolean(catalog.discontinued),
+      status:      catalog.status ?? '',
+      disabled:    Boolean(rich?.disabled),
     },
-    rich: rich ?? { notionId: null, price: null, imageUrl: '', description: '', specsJson: '', galleryJson: '', docsJson: '', familyId: '' },
+    rich: rich ?? { notionId: null, price: null, imageUrl: '', description: '', specsJson: '', galleryJson: '', docsJson: '', familyId: '', disabled: false },
   })
 })
 
@@ -38,7 +47,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
   const catalog = getCatalogProduct(skuCode)
   if (!catalog) return NextResponse.json({ error: 'SKU not found' }, { status: 404 })
 
-  let body: { imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string; docsJson?: string; familyId?: string }
+  let body: { imageUrl?: string; description?: string; specsJson?: string; galleryJson?: string; docsJson?: string; familyId?: string; disabled?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -49,8 +58,12 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
       return NextResponse.json({ error: `${field} 必須是字串` }, { status: 400 })
     }
   }
+  if (body.disabled !== undefined && typeof body.disabled !== 'boolean') {
+    return NextResponse.json({ error: 'disabled 必須是布林值' }, { status: 400 })
+  }
 
   try {
+    const disabledSnapshot = body.disabled !== undefined ? await listDisabledSkuCodes() : null
     if (body.familyId !== undefined) {
       if (body.familyId) {
         const targetFamily = await getManagedFamilyById(body.familyId, true)
@@ -75,6 +88,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
         galleryJson: body.galleryJson,
         docsJson:    body.docsJson,
         familyId:    body.familyId,
+        disabled:    body.disabled,
       }
     )
     const after = await getProductRichData(skuCode)
@@ -86,11 +100,15 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
       ...(body.galleryJson !== undefined ? { galleryJson: body.galleryJson } : {}),
       ...(body.docsJson !== undefined ? { docsJson: body.docsJson } : {}),
       ...(body.familyId !== undefined ? { familyId: body.familyId } : {}),
+      ...(body.disabled !== undefined ? { disabled: body.disabled } : {}),
     }
     const mismatchedFields = Object.entries(expectedFields)
       .filter(([field, value]) => after[field as keyof typeof after] !== value)
       .map(([field]) => field)
     if (mismatchedFields.length > 0) throw new Error(`產品資料讀回不一致：${mismatchedFields.join(', ')}`)
+    if (body.disabled !== undefined && disabledSnapshot) {
+      await updateDisabledSkuCache(skuCode, body.disabled, disabledSnapshot)
+    }
     await logAuditEvent({
       module: 'products',
       action: 'update',

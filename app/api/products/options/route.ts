@@ -1,13 +1,14 @@
-import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
-import { getCatalogFilterOptions } from '@/lib/products-catalog'
+import { withApiAuth } from '@/lib/api-auth'
+import { getAvailableCatalog } from '@/lib/products-availability'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  return NextResponse.json(getCatalogFilterOptions())
-}
+export const GET = withApiAuth('session', async () => {
+  const products = await getAvailableCatalog()
+  return NextResponse.json({
+    brands: Array.from(new Set(products.map((product) => product.brand).filter(Boolean))).sort(),
+    productTypes: Array.from(new Set(products.map((product) => product.productType).filter(Boolean))).sort(),
+    categories: Array.from(new Set(products.map((product) => product.category).filter(Boolean))).sort(),
+  })
+})

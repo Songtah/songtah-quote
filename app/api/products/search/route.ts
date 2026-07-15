@@ -1,14 +1,11 @@
-import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
 import { searchCatalog } from '@/lib/products-catalog'
+import { listDisabledSkuCodes } from '@/lib/products-notion'
+import { withApiAuth } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withApiAuth('session', async (req: NextRequest) => {
   const q           = req.nextUrl.searchParams.get('q')           ?? ''
   const brand       = req.nextUrl.searchParams.get('brand')       ?? ''
   const productType = req.nextUrl.searchParams.get('type')        ?? ''
@@ -16,12 +13,14 @@ export async function GET(req: NextRequest) {
   const limitParam  = req.nextUrl.searchParams.get('limit')       ?? '50'
   const limit       = Math.min(parseInt(limitParam, 10) || 50, 200)
 
+  const disabledCodes = new Set(await listDisabledSkuCodes())
   const products = searchCatalog({
     q,
     brand:       brand       || undefined,
     productType: productType || undefined,
     category:    category    || undefined,
     limit,
+    excludeCodes: disabledCodes,
   })
 
   // Map to the shape the existing UI expects (OrderForm / QuoteForm)
@@ -39,4 +38,4 @@ export async function GET(req: NextRequest) {
       notes:        '',
     }))
   )
-}
+})

@@ -69,6 +69,7 @@ interface CatalogItem {
   spec?: string
   discontinued?: boolean
   status?: string   // 已停售／未販售
+  disabled?: boolean // 中央管理人工停用（可恢復）
 }
 
 interface FamilySpec {
@@ -91,6 +92,7 @@ interface ProductFamily {
   uiVariant?: string
   coveredSkuCodes?: string[]
   manualAssignedSkuCodes?: string[]
+  unavailableSkuCodes?: string[]
   source?: 'catalog' | 'notion'
 }
 
@@ -1273,7 +1275,7 @@ function ProductEditDrawer({
 }: {
   skuCode: string
   onClose: () => void
-  onSaved: (skuCode: string, price: number | null) => void
+  onSaved: (skuCode: string, price: number | null, disabled: boolean) => void
   onFamilyChanged: () => Promise<void>
   allFamilies: ProductFamily[]
 }) {
@@ -1288,6 +1290,7 @@ function ProductEditDrawer({
   const [specs,         setSpecs]         = useState<SpecTable>(defaultSpecs())
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [docs,          setDocs]          = useState<DocFile[]>([])
+  const [centralDisabled, setCentralDisabled] = useState(false)
 
   // Family assignment state
   const [selectedFamilyId, setSelectedFamilyId] = useState('')
@@ -1311,6 +1314,7 @@ function ProductEditDrawer({
         setCatalog(data.catalog)
         setImageUrl(data.rich.imageUrl ?? '')
         setDescription(data.rich.description ?? '')
+        setCentralDisabled(Boolean(data.catalog.disabled ?? data.rich.disabled))
         setSpecs(parseSpecs(data.rich.specsJson ?? ''))
         setGalleryImages(parseGallery(data.rich.galleryJson ?? '[]'))
         const manualFamilyId = data.rich.familyId ?? ''
@@ -1370,6 +1374,10 @@ function ProductEditDrawer({
   }
 
   const handleSave = async () => {
+    if (!catalog) {
+      setError('產品資料尚未完整載入，請重新整理後再試')
+      return
+    }
     setSaving(true)
     setError('')
     // Only save specs if there's actual data (at least one non-empty row)
@@ -1382,7 +1390,7 @@ function ProductEditDrawer({
       res = await fetch(`/api/products/sku/${encodeURIComponent(skuCode)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson }),
+        body: JSON.stringify({ imageUrl: imageUrl.trim(), description, specsJson, galleryJson, docsJson, disabled: centralDisabled }),
       })
     } catch (err: any) {
       setError(err.message ?? '網路中斷，請稍後再試')
@@ -1399,7 +1407,7 @@ function ProductEditDrawer({
       return
     }
     setSaving(false)
-    onSaved(skuCode, catalog?.price ?? null)
+    onSaved(skuCode, catalog?.price ?? null, centralDisabled)
     onClose()
   }
 
@@ -1460,6 +1468,38 @@ function ProductEditDrawer({
             </div>
           )}
 
+          <div className={`rounded-2xl p-4 ${centralDisabled ? 'bg-red-50' : 'bg-emerald-50/70'}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">商品使用狀態</p>
+                <p className={`mt-1 text-sm font-bold ${centralDisabled ? 'text-red-700' : 'text-emerald-700'}`}>
+                  {centralDisabled ? '中央停用' : '使用中'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={centralDisabled}
+                aria-label={centralDisabled ? '恢復使用此商品' : '停用此商品'}
+                onClick={() => setCentralDisabled((current) => !current)}
+                disabled={loading || saving || !catalog}
+                className={`relative min-h-11 w-20 shrink-0 rounded-full p-1 transition-all active:scale-95 disabled:opacity-50 ${
+                  centralDisabled ? 'bg-brand-500' : 'bg-stone-300'
+                }`}
+              >
+                <span className={`block h-9 w-9 rounded-full bg-white shadow-md transition-transform ${centralDisabled ? 'translate-x-9' : 'translate-x-0'}`} />
+              </button>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-stone-600">
+              停用後會從一般產品頁、訂購、報價及促銷選品器隱藏；既有單據與產品資料不會刪除，可隨時恢復。
+            </p>
+            {catalog?.discontinued && (
+              <p className="mt-2 rounded-2xl bg-white/70 px-3 py-2 text-xs text-red-600">
+                此品項另有主檔狀態「{catalog.status || '已停售'}」，恢復中央停用不會解除主檔停售。
+              </p>
+            )}
+          </div>
+
           {/* 系列群組 — family assignment */}
           <div className="mb-0 rounded-2xl bg-stone-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">系列群組</p>
@@ -1468,7 +1508,7 @@ function ProductEditDrawer({
                 id="product-family-group"
                 value={selectedFamilyId}
                 onChange={(e) => setSelectedFamilyId(e.target.value)}
-                disabled={loading || familySaving}
+                disabled={loading || familySaving || !catalog}
                 aria-label="系列群組"
                 className="select-soft min-h-11 w-full text-sm disabled:opacity-50"
               >
@@ -1486,7 +1526,7 @@ function ProductEditDrawer({
                 <button
                   type="button"
                   onClick={() => handleSaveFamily(selectedFamilyId)}
-                  disabled={loading || familySaving}
+                  disabled={loading || familySaving || !catalog}
                   className="flex min-h-11 items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
                 >
                   {familySaving ? (
@@ -1504,7 +1544,7 @@ function ProductEditDrawer({
                   <button
                     type="button"
                     onClick={() => handleSaveFamily('')}
-                    disabled={loading || familySaving}
+                    disabled={loading || familySaving || !catalog}
                     className="min-h-11 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-medium text-stone-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 active:scale-95 disabled:opacity-50"
                   >
                     清除手動指定
@@ -1596,7 +1636,7 @@ function ProductEditDrawer({
             className="min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-600 transition-all hover:bg-stone-50 active:scale-95 disabled:opacity-50">
             取消
           </button>
-          <button type="button" onClick={handleSave} disabled={loading || saving}
+          <button type="button" onClick={handleSave} disabled={loading || saving || !catalog}
             className="flex min-h-11 items-center gap-2 rounded-full bg-brand-500 px-6 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
             {saving && (
               <svg className="animate-spin motion-reduce:animate-none h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -1668,6 +1708,11 @@ function SkuRow({
               {item.discontinued && (
                 <span className="shrink-0 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
                   {item.status || '未販售'}
+                </span>
+              )}
+              {item.disabled && (
+                <span className="shrink-0 rounded-full bg-stone-700 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  中央停用
                 </span>
               )}
               {item.needsReview && (
@@ -2152,7 +2197,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     setLoading(true)
     setLoadError('')
     Promise.all([
-      fetch('/api/products/families').then(async (response) => {
+      fetch(canManageProducts ? '/api/products/families?includeDisabled=1' : '/api/products/families').then(async (response) => {
         if (!response.ok) throw new Error(`系列資料讀取失敗（HTTP ${response.status}）`)
         return response.json()
       }),
@@ -2178,7 +2223,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       })
       .catch((error) => setLoadError(error instanceof Error ? error.message : '產品目錄暫時無法讀取'))
       .finally(() => setLoading(false))
-  }, [loadAttempt])
+  }, [canManageProducts, loadAttempt])
 
   const refreshFamilies = useCallback(async () => {
     const response = await fetch('/api/products/families/manage', { cache: 'no-store' })
@@ -2245,12 +2290,13 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   }
 
   // After a save, update caches
-  const handleSaved = useCallback((skuCode: string, price: number | null) => {
+  const handleSaved = useCallback((skuCode: string, price: number | null, disabled: boolean) => {
     setPriceCache((prev) => {
       const next = new Map(prev)
       next.set(skuCode, price)
       return next
     })
+    setAllItems((items) => items.map((item) => item.code === skuCode ? { ...item, disabled } : item))
   }, [])
 
   const exactFamilyIndex = useMemo(() => buildExactFamilyIndex(families), [families])

@@ -80,10 +80,11 @@ export interface CatalogSearchOptions {
   productType?: string
   category?: string
   limit?: number
+  excludeCodes?: ReadonlySet<string>
 }
 
 export function searchCatalog(opts: CatalogSearchOptions = {}): CatalogProduct[] {
-  const { q = '', brand, productType, category, limit = 50 } = opts
+  const { q = '', brand, productType, category, limit = 50, excludeCodes } = opts
   const keyword = q.trim().toLowerCase()
 
   // 訂貨/報價選品器不顯示已停售／未販售品項（管理頁仍可見，走 getCatalog）
@@ -100,6 +101,7 @@ export function searchCatalog(opts: CatalogSearchOptions = {}): CatalogProduct[]
   if (brand)       results = results.filter((p) => p.brand       === brand)
   if (productType) results = results.filter((p) => p.productType === productType)
   if (category)    results = results.filter((p) => p.category    === category)
+  if (excludeCodes?.size) results = results.filter((p) => !excludeCodes.has(p.code))
 
   return results.slice(0, limit)
 }
