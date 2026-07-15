@@ -27,6 +27,7 @@ interface SeriesData {
 interface SeriesModalProps {
   family: ProductFamily
   allItems: CatalogItem[]
+  allowedSkuCodes?: ReadonlySet<string>
   onEdit: (item: CatalogItem) => void
   onClose: () => void
   canManageProducts: boolean
@@ -320,18 +321,27 @@ function MemberListContent({
 
 // ── Main SeriesModal ──────────────────────────────────────────
 
-export function SeriesModal({ family, allItems, onEdit, onClose, canManageProducts }: SeriesModalProps) {
+export function SeriesModal({ family, allItems, allowedSkuCodes, onEdit, onClose, canManageProducts }: SeriesModalProps) {
 
   const [seriesData, setSeriesData] = useState<SeriesData | null>(null)
   const [seriesLoading, setSeriesLoading] = useState(true)
   const [seriesError, setSeriesError] = useState('')
   const [seriesLoadAttempt, setSeriesLoadAttempt] = useState(0)
+  const scopedFamily = useMemo(() => {
+    if (!allowedSkuCodes) return family
+    const unavailable = new Set(family.unavailableSkuCodes ?? [])
+    for (const code of explicitFamilySkuCodes(family)) {
+      if (!allowedSkuCodes.has(code)) unavailable.add(code)
+    }
+    return { ...family, unavailableSkuCodes: Array.from(unavailable) }
+  }, [allowedSkuCodes, family])
   const memberItems = useMemo(() => {
     const itemByCode = new Map(allItems.map((item) => [item.code, item]))
     return explicitFamilySkuCodes(family)
+      .filter((code) => !allowedSkuCodes || allowedSkuCodes.has(code))
       .map((code) => itemByCode.get(code))
       .filter((item): item is CatalogItem => Boolean(item))
-  }, [allItems, family])
+  }, [allItems, allowedSkuCodes, family])
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const reduceMotion = useReducedMotion()
@@ -431,10 +441,10 @@ export function SeriesModal({ family, allItems, onEdit, onClose, canManageProduc
             </div>
             {isYMH ? (
               <div className="px-1 pb-3 sm:px-2">
-                <YMHToothGridPanel family={family} onAdd={selectSku} actionLabel="查看此規格" resetAfterAction={false} />
+                <YMHToothGridPanel family={scopedFamily} onAdd={selectSku} actionLabel="查看此規格" resetAfterAction={false} />
               </div>
             ) : hasSpecDriven ? (
-              <FamilySpecPanel family={family} onAdd={selectSku} actionLabel="查看此規格" resetAfterAction={false} />
+              <FamilySpecPanel family={scopedFamily} onAdd={selectSku} actionLabel="查看此規格" resetAfterAction={false} />
             ) : (
               <div className="px-4 pb-4 pt-3 sm:px-5">
                 <MemberListContent members={memberItems} selectedCode={selectedItem?.code} onSelect={setSelectedItem} />

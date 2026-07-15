@@ -82,7 +82,6 @@ interface FamilySpec {
 
 interface ProductFamily {
   id: string
-  collectionName?: string
   seriesCode: string
   seriesName: string
   brand: string
@@ -112,27 +111,6 @@ interface RichData {
 interface Props {
   taxonomy: TaxonomyBrowser
   canManageProducts: boolean
-}
-
-function splitFamilyCollections(families: ProductFamily[]): {
-  collections: { name: string; families: ProductFamily[] }[]
-  ungrouped: ProductFamily[]
-} {
-  const byName = new Map<string, ProductFamily[]>()
-  const ungrouped: ProductFamily[] = []
-  for (const family of families) {
-    if (!family.collectionName) {
-      ungrouped.push(family)
-      continue
-    }
-    const group = byName.get(family.collectionName) ?? []
-    group.push(family)
-    byName.set(family.collectionName, group)
-  }
-  return {
-    collections: Array.from(byName.entries()).map(([name, groupedFamilies]) => ({ name, families: groupedFamilies })),
-    ungrouped,
-  }
 }
 
 // 主分類→功能分類主樹(伺服器端由 data/product-taxonomy.json + catalog 計數而來)
@@ -1989,11 +1967,6 @@ function FamilyCard({
         >
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-bold text-stone-800 group-hover:text-brand-700 transition-colors">{family.seriesName}</span>
-            {family.collectionName && (
-              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-200/60">
-                {family.collectionName} 集合
-              </span>
-            )}
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">{family.brand}</span>
             {family.productType && (
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-medium">{family.productType}</span>
@@ -2267,6 +2240,11 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   const [loadAttempt,  setLoadAttempt]  = useState(0)
 
   const [search, setSearch] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [brandFilter, setBrandFilter] = useState('')
+  const [mainCategoryFilter, setMainCategoryFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [productTypeFilter, setProductTypeFilter] = useState('')
   const [browseMode, setBrowseMode] = useState<'categories' | 'products'>('categories')
   const [categorySelection, setCategorySelection] = useState<CategorySelection | null>(null)
   // 產品系列分組收合(依主分類):113 個系列全平鋪會把瀏覽頁撐到近 2 萬 px,
@@ -2275,6 +2253,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
 
   const [editingItem,  setEditingItem]  = useState<CatalogItem | null>(null)
   const [modalFamily,  setModalFamily]  = useState<ProductFamily | null>(null)
+  const [modalAllowedSkuCodes, setModalAllowedSkuCodes] = useState<Set<string> | null>(null)
   const [seriesAdminOpen, setSeriesAdminOpen] = useState(false)
   const [seriesAdminError, setSeriesAdminError] = useState('')
 
@@ -2340,21 +2319,64 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     timerRef.current = setTimeout(() => setDebouncedQ(search.trim().toLowerCase()), 250)
   }, [search])
 
-  const isSearching = Boolean(debouncedQ)
+  const filterOptions = useMemo(() => {
+    const sortedUnique = (values: string[]) =>
+      Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+
+    return {
+      brands: sortedUnique(allItems.map((item) => item.brand)),
+      mainCategories: sortedUnique(allItems.map((item) => item.mainCategory ?? '')),
+      categories: sortedUnique(
+        allItems
+          .filter((item) => !mainCategoryFilter || item.mainCategory === mainCategoryFilter)
+          .map((item) => item.category),
+      ),
+      productTypes: sortedUnique(allItems.map((item) => item.productType)),
+    }
+  }, [allItems, mainCategoryFilter])
+
+  const activeFilterCount = [brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter].filter(Boolean).length
+  const hasFilters = activeFilterCount > 0
+  const isSearching = Boolean(debouncedQ) || hasFilters
   const searchResults = useMemo(() => {
     if (!isSearching) return []
-    return allItems.filter((p) =>
-      p.code.toLowerCase().includes(debouncedQ) ||
-      p.name.toLowerCase().includes(debouncedQ) ||
-      (p.brand || '').toLowerCase().includes(debouncedQ) ||
-      (p.seriesName || '').toLowerCase().includes(debouncedQ))
-  }, [isSearching, allItems, debouncedQ])
+    return allItems.filter((item) => {
+      const matchesKeyword = !debouncedQ ||
+        item.code.toLowerCase().includes(debouncedQ) ||
+        item.name.toLowerCase().includes(debouncedQ) ||
+        (item.brand || '').toLowerCase().includes(debouncedQ) ||
+        (item.seriesName || '').toLowerCase().includes(debouncedQ)
 
-  // 有 collectionName 的系列先組成跨分類產品集合；其餘再依主分類分組。
-  const familyCollections = useMemo(
-    () => splitFamilyCollections(families).collections,
-    [families],
+      return matchesKeyword &&
+        (!brandFilter || item.brand === brandFilter) &&
+        (!mainCategoryFilter || item.mainCategory === mainCategoryFilter) &&
+        (!categoryFilter || item.category === categoryFilter) &&
+        (!productTypeFilter || item.productType === productTypeFilter)
+    })
+  }, [isSearching, allItems, debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter])
+
+  const filteredResultCodes = useMemo(
+    () => new Set(searchResults.map((item) => item.code)),
+    [searchResults],
   )
+
+  const openFamilyModal = (family: ProductFamily, allowedSkuCodes?: ReadonlySet<string>) => {
+    setModalAllowedSkuCodes(allowedSkuCodes ? new Set(allowedSkuCodes) : null)
+    setModalFamily(family)
+  }
+
+  const closeFamilyModal = () => {
+    setModalFamily(null)
+    setModalAllowedSkuCodes(null)
+  }
+
+  const clearSearchAndFilters = () => {
+    setSearch('')
+    setBrandFilter('')
+    setMainCategoryFilter('')
+    setCategoryFilter('')
+    setProductTypeFilter('')
+  }
 
   // 系列依主分類分組(以第一個成員 SKU 的主分類為準),照總表主分類順序排。
   // 成員判定三層:coveredSkuCodes(新群組)→ skuMap 值(pattern 型舊系列,seriesCode 非真實前綴)
@@ -2363,7 +2385,6 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     const byCode = new Map(allItems.map((p) => [p.code, p]))
     const byMain = new Map<string, ProductFamily[]>()
     for (const f of families) {
-      if (f.collectionName) continue
       const member =
         f.coveredSkuCodes?.map((c) => byCode.get(c)).find(Boolean) ??
         Object.values(f.skuMap ?? {}).map((c) => byCode.get(c)).find(Boolean) ??
@@ -2408,7 +2429,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   }, [exactFamilyIndex, searchResults])
   const groupedSearchFamilies = families.filter((family) =>
     searchFamilyIds.has(family.id) ||
-    (!!debouncedQ && (
+    (!hasFilters && !!debouncedQ && (
       family.seriesName.toLowerCase().includes(debouncedQ) ||
       family.seriesCode.toLowerCase().includes(debouncedQ)
     ))
@@ -2462,16 +2483,94 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         </div>
       )}
       {seriesAdminError && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{seriesAdminError}</div>}
-      {/* Keyword search stays available; category browsing happens in dedicated cards below. */}
-      <div className="mb-3">
+      {/* 搜尋與篩選：手機先顯示精簡工具列，平板以上直接展開條件。 */}
+      <div className="mb-3 flex items-center gap-2">
         <input
           type="search"
           aria-label="搜尋產品目錄"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜尋貨號、品名、品牌…"
-          className="input-soft w-full rounded-full px-5 sm:max-w-lg"
+          className="input-soft min-w-0 flex-1 rounded-full px-5 sm:max-w-lg"
         />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="catalog-filters"
+          className={`relative flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 sm:hidden ${
+            hasFilters
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
+              : 'bg-white text-stone-600 ring-1 ring-stone-900/[0.06] shadow-sm'
+          }`}
+        >
+          篩選
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-brand-700">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div id="catalog-filters" className={`${filtersOpen ? 'block' : 'hidden'} card-soft mb-4 p-3 sm:block sm:p-4`}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">篩選商品</p>
+            <p className="mt-0.5 text-xs text-stone-500">品牌、主分類、細分類與商品類型可組合使用</p>
+          </div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearSearchAndFilters}
+              className="min-h-11 shrink-0 rounded-full px-3 text-xs font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
+            >
+              清除全部
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <label className="min-w-0">
+            <span className="sr-only">品牌</span>
+            <select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)} className="select-soft w-full">
+              <option value="">全部品牌</option>
+              {filterOptions.brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="sr-only">主分類</span>
+            <select
+              value={mainCategoryFilter}
+              onChange={(event) => {
+                setMainCategoryFilter(event.target.value)
+                setCategoryFilter('')
+              }}
+              className="select-soft w-full"
+            >
+              <option value="">全部主分類</option>
+              {filterOptions.mainCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="sr-only">細分類</span>
+            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="select-soft w-full">
+              <option value="">全部細分類</option>
+              {filterOptions.categories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="sr-only">商品類型</span>
+            <select value={productTypeFilter} onChange={(event) => setProductTypeFilter(event.target.value)} className="select-soft w-full">
+              <option value="">全部商品類型</option>
+              {filterOptions.productTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </label>
+        </div>
+        {hasFilters && (
+          <p className="mt-3 text-xs font-medium text-brand-700" role="status">
+            已套用 {activeFilterCount} 個條件，符合 {searchResults.length} 個品項
+          </p>
+        )}
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-1 rounded-full bg-stone-100 p-1 sm:inline-grid sm:min-w-96" role="group" aria-label="選擇產品瀏覽模式">
@@ -2535,9 +2634,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             <span className="text-sm font-semibold text-stone-700">
               找到 {groupedSearchFamilies.length} 個系列、{standaloneSearchResults.length} 個單品
             </span>
-            <button type="button" onClick={() => setSearch('')}
+            <button type="button" onClick={clearSearchAndFilters}
               className="min-h-11 rounded-full px-3 text-xs font-medium text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">
-              清除搜尋
+              清除搜尋與篩選
             </button>
           </div>
 
@@ -2555,8 +2654,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                     allItems={allItems}
                     priceCache={priceCache}
                     onEdit={setEditingItem}
-                    onOpenModal={() => setModalFamily(family)}
+                    onOpenModal={() => openFamilyModal(family, hasFilters ? filteredResultCodes : undefined)}
                     canManageProducts={canManageProducts}
+                    allowedSkuCodes={hasFilters ? filteredResultCodes : undefined}
                   />
                 ))}
               </div>
@@ -2640,49 +2740,6 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               <p className="text-center py-12 text-sm text-stone-400">目前沒有產品清單</p>
             ) : (
               <div className="space-y-3">
-                {familyCollections.map((collection) => {
-                  const groupKey = `collection:${collection.name}`
-                  const open = openFamilyGroups.has(groupKey)
-                  const itemCount = collection.families.reduce(
-                    (count, family) => count + explicitFamilySkuCodes(family).length,
-                    0,
-                  )
-                  return (
-                    <section key={groupKey} className="card-soft overflow-hidden p-0 ring-1 ring-brand-200/50">
-                      <button
-                        type="button"
-                        onClick={() => toggleFamilyGroup(groupKey)}
-                        className="flex min-h-16 w-full items-center gap-3 bg-brand-50/50 px-4 py-3 text-left transition-all hover:bg-brand-50 active:scale-[0.99] sm:px-5"
-                        aria-expanded={open}
-                      >
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm" aria-hidden="true">◫</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[11px] font-bold uppercase tracking-widest text-brand-600">產品集合</span>
-                          <span className="block truncate text-base font-bold text-stone-800">{collection.name}</span>
-                          <span className="mt-0.5 block text-xs text-stone-500">{collection.families.length} 個子系列・{itemCount} 個品項</span>
-                        </span>
-                        <span className="hidden text-xs text-stone-500 sm:block">先選子系列，再選色號與重量／容量</span>
-                        <span className={`text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
-                      </button>
-                      {open && (
-                        <div className="space-y-3 border-t border-stone-900/[0.06] bg-stone-50/50 p-3 sm:p-4">
-                          <p className="px-1 text-xs leading-relaxed text-stone-500 sm:hidden">先選子系列，再選色號與重量／容量。</p>
-                          {collection.families.map((family) => (
-                            <FamilyCard
-                              key={family.id}
-                              family={family}
-                              allItems={allItems}
-                              priceCache={priceCache}
-                              onEdit={setEditingItem}
-                              onOpenModal={() => setModalFamily(family)}
-                              canManageProducts={canManageProducts}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )
-                })}
                 {familyGroups.map(({ main, families: groupFamilies }) => {
                   const open = openFamilyGroups.has(main)
                   return (
@@ -2709,7 +2766,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                               allItems={allItems}
                               priceCache={priceCache}
                               onEdit={setEditingItem}
-                              onOpenModal={() => setModalFamily(family)}
+                              onOpenModal={() => openFamilyModal(family)}
                               canManageProducts={canManageProducts}
                             />
                           ))}
@@ -2785,7 +2842,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             priceCache={priceCache}
             canManageProducts={canManageProducts}
             onClose={() => setCategorySelection(null)}
-            onOpenFamily={setModalFamily}
+            onOpenFamily={(family) => openFamilyModal(family, categoryItemCodes)}
             onEdit={setEditingItem}
           />
         )}
@@ -2811,8 +2868,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           <SeriesModal
             family={modalFamily}
             allItems={allItems}
-            onEdit={(item) => { setModalFamily(null); setEditingItem(item) }}
-            onClose={() => setModalFamily(null)}
+            allowedSkuCodes={modalAllowedSkuCodes ?? undefined}
+            onEdit={(item) => { closeFamilyModal(); setEditingItem(item) }}
+            onClose={closeFamilyModal}
             canManageProducts={canManageProducts}
           />
         )}

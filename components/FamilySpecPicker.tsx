@@ -355,6 +355,7 @@ export function YMHToothGridPanel({
   }, [color, jaw, base, qty, subPos, hasQty, isSingleQty])
 
   const skuCode = skuKey && family.skuMap ? (family.skuMap[skuKey] ?? '') : ''
+  const isUnavailable = Boolean(skuCode && family.unavailableSkuCodes?.includes(skuCode))
   const skuName = skuCode && family.namePattern
     ? buildFromPattern(family.namePattern, {
         顏色:  color,
@@ -503,14 +504,16 @@ export function YMHToothGridPanel({
             </div>
             <button type="button"
               onClick={() => {
+                if (isUnavailable) return
                 onAdd(skuCode, skuName)
                 if (resetAfterAction) {
                   setBase(''); setSubPos(''); setQty('')
                 }
               }}
-              className="min-h-12 shrink-0 rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
+              disabled={isUnavailable}
+              className="min-h-12 shrink-0 rounded-full bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none"
             >
-              {actionLabel ?? '+ 加入'}
+              {isUnavailable ? '不符合目前篩選' : (actionLabel ?? '+ 加入')}
             </button>
           </div>
         ) : (
