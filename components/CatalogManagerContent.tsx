@@ -131,28 +131,36 @@ interface CategorySelection {
 
 /**
  * Compress image before upload.
- * - Resizes to maxPx on the long edge
+ * - Normalizes every upload to a 1200 × 1200 square canvas
+ * - Keeps the full image visible with contain-style scaling (no crop)
  * - Fills white background (so PNG transparency becomes white, not black/transparent)
  * - Outputs as JPEG at the given quality
  * Always runs (even on small files) so the white-background conversion always applies.
  */
-async function compressForUpload(file: File, maxPx = 1800, quality = 0.85): Promise<File> {
+async function compressForUpload(file: File, quality = 0.85): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new window.Image()
     img.onload = () => {
       URL.revokeObjectURL(img.src)
-      const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      if (Math.min(img.width, img.height) < 600) {
+        reject(new Error('圖片解析度不足，寬與高都需要至少 600px'))
+        return
+      }
+      const outputSize = 1200
+      const scale = Math.min(outputSize / img.width, outputSize / img.height)
       const w = Math.round(img.width  * scale)
       const h = Math.round(img.height * scale)
+      const x = Math.round((outputSize - w) / 2)
+      const y = Math.round((outputSize - h) / 2)
       const canvas = document.createElement('canvas')
-      canvas.width  = w
-      canvas.height = h
+      canvas.width  = outputSize
+      canvas.height = outputSize
       const ctx = canvas.getContext('2d')!
       // ① White background — handles PNG transparency
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, w, h)
-      // ② Draw the image on top
-      ctx.drawImage(img, 0, 0, w, h)
+      ctx.fillRect(0, 0, outputSize, outputSize)
+      // ② Center the complete image on the square canvas without cropping
+      ctx.drawImage(img, x, y, w, h)
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))

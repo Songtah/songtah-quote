@@ -1,0 +1,67 @@
+{
+  "version": "2026-07-15-asiga-1",
+  "approval": {
+    "reuseAuthorized": true,
+    "confirmedBy": "user",
+    "confirmedAt": "2026-07-15"
+  },
+  "allowedHostsByBrand": {
+    "ASIGA": [
+      "www.asiga.com",
+      "support.asiga.com",
+      "myaccount.asiga.com"
+    ]
+  },
+  "items": [
+    {
+      "code": "AG-02391",
+      "name": "MAX UV 3D Printer",
+      "brand": "ASIGA",
+      "sourcePageUrl": "https://support.asiga.com/receiving-and-unboxing-your-max/",
+      "sourceImageUrl": "https://support.asiga.com/wp-content/uploads/2022/07/asiga-printers-max.jpg",
+      "confidence": "high",
+      "decision": "approved",
+      "matchEvidence": ["official MAX page", "image alt MAX", "official MAX specification identifies UV model"]
+    },
+    {
+      "code": "AG-01329",
+      "name": "FusionGRAY V2 1kg Bottle",
+      "brand": "ASIGA",
+      "sourcePageUrl": "https://www.asiga.com/materials-industrial/#fusiongray",
+      "sourceImageUrl": "https://www.asiga.com/wp-content/uploads/2023/06/Asiga-FusionGRAY-web-1.jpg",
+      "confidence": "high",
+      "decision": "approved",
+      "matchEvidence": ["official FusionGRAY product section", "official IFU part number 01329"]
+    },
+    {
+      "code": "AG-03000",
+      "name": "DentaModel",
+      "brand": "ASIGA",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/#dentamodel",
+      "sourceImageUrl": "https://www.asiga.com/wp-content/uploads/2025/06/Dentamodel-1000-1334.png",
+      "confidence": "high",
+      "decision": "approved",
+      "matchEvidence": ["official DentaMODEL section", "official image caption DentaMODEL"]
+    },
+    {
+      "code": "AG-03569",
+      "name": "Denta BASE N1 1kg Bottle",
+      "brand": "ASIGA",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/#dentabase",
+      "sourceImageUrl": "https://www.asiga.com/wp-content/uploads/2025/06/Dentabase-1000-1334-1.png",
+      "confidence": "high",
+      "decision": "approved",
+      "matchEvidence": ["official DentaBASE section", "official image caption DentaBASE", "official page lists N1"]
+    },
+    {
+      "code": "AG-03624",
+      "name": "Denta TOOTH A1 1kg Bottle",
+      "brand": "ASIGA",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/#dentatooth",
+      "sourceImageUrl": "https://www.asiga.com/wp-content/uploads/2025/06/Dentatooth-1000-1334.png",
+      "confidence": "high",
+      "decision": "approved",
+      "matchEvidence": ["official DentaTOOTH section", "official image caption DentaTOOTH", "official page lists A1"]
+    }
+  ]
+}
