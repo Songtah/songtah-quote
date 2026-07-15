@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { FamilySpecPanel, YMHToothGridPanel } from '@/components/FamilySpecPicker'
 import { SeriesModal } from '@/components/SeriesModal'
 import { ProductSeriesAdminDrawer } from '@/components/ProductSeriesAdminDrawer'
 import { MainCategoryArtwork, SeriesArtwork } from '@/components/product-series/SeriesArtwork'
@@ -1769,9 +1768,7 @@ function FamilyCard({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [introLoading, setIntroLoading] = useState(false)
   const [introData,    setIntroData]    = useState<IntroData | null>(null)
-  const [focusedSkuCode, setFocusedSkuCode] = useState('')
   const introFetched = useRef(false)
-  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const reduceMotion = useReducedMotion()
 
   // 系列成員只接受明確 SKU 對照，不用貨號前綴猜測。
@@ -1846,16 +1843,6 @@ function FamilyCard({
   }
 
   const representative = items[0]
-  const handleFocusSku = (skuCode: string) => {
-    const index = items.findIndex((item) => item.code === skuCode)
-    if (index < 0) return
-    setFocusedSkuCode(skuCode)
-    setVisibleCount((count) => Math.max(count, index + 1))
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => itemRefs.current.get(skuCode)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
-    })
-  }
-
   return (
     <div className="card-soft card-soft-hover overflow-hidden" data-testid="series-result-card">
       {/* Family header */}
@@ -1880,7 +1867,7 @@ function FamilyCard({
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-stone-400">{items.length} 個規格</span>
+            <span className="text-xs text-stone-400">{items.length} 個品項</span>
             <span className={minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
             {priceSetCount > 0 && priceSetCount < items.length && <span className="text-[11px] text-stone-400">{items.length - priceSetCount} 項待定價</span>}
             <span className="text-[11px] font-medium text-brand-600">照片・規格・文件 ›</span>
@@ -1941,28 +1928,6 @@ function FamilyCard({
                 </div>
               ) : null}
 
-              {/* ── 規格選擇器（點選縮小範圍，確認此組合是否有貨） ── */}
-              {family.skuMap && family.specs.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">規格查詢</p>
-                  {family.uiVariant === 'ymh-tooth-grid' ? (
-                    <YMHToothGridPanel
-                      family={family}
-                      onAdd={handleFocusSku}
-                      actionLabel="定位此品項"
-                      resetAfterAction={false}
-                    />
-                  ) : (
-                    <FamilySpecPanel
-                      family={family}
-                      onAdd={handleFocusSku}
-                      actionLabel="定位此品項"
-                      resetAfterAction={false}
-                    />
-                  )}
-                </div>
-              )}
-
               {/* ── 品項清單 ── */}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">
@@ -1970,14 +1935,7 @@ function FamilyCard({
                 </p>
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => (
-                    <div
-                      key={item.code}
-                      ref={(element) => {
-                        if (element) itemRefs.current.set(item.code, element)
-                        else itemRefs.current.delete(item.code)
-                      }}
-                      className={`group flex min-h-12 flex-col items-stretch gap-2 rounded-2xl px-2 py-2 transition-colors sm:flex-row sm:items-center sm:gap-3 ${focusedSkuCode === item.code ? 'bg-brand-50 ring-1 ring-brand-200' : 'hover:bg-brand-50/40'}`}
-                    >
+                    <div key={item.code} className="group flex min-h-12 flex-col items-stretch gap-2 rounded-2xl px-2 py-2 transition-colors hover:bg-brand-50/40 sm:flex-row sm:items-center sm:gap-3">
                       <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
                         <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0">{item.code}</span>
                         <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.name}</span>
