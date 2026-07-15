@@ -32,7 +32,10 @@ export function canEdit(session: Awaited<ReturnType<typeof requireSession>>, mod
 }
 
 export function isCentralManagement(session: Awaited<ReturnType<typeof requireSession>>): boolean {
-  return (session.user as any)?.accountType === '中央管理'
+  // admin 放行:與 api-auth 的 central-management 規則一致(admin=系統最高權限;
+  // 並避免 env admin 舊 JWT 缺 accountType 時整個產品後台被鎖)。
+  const u = session.user as any
+  return u?.role === 'admin' || u?.accountType === '中央管理'
 }
 
 export async function requireViewPermission(module: ModuleKey) {

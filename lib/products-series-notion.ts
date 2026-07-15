@@ -177,3 +177,8 @@ export async function updateSeriesRecord(
 
   await notion.pages.update({ page_id: pageId, properties } as any)
 }
+
+/** 封存(刪除)系列紀錄。僅供 DELETE /api/products/series/[seriesCode] 使用,呼叫端須先清空成員歸屬。 */
+export async function archiveSeriesRecord(pageId: string): Promise<void> {
+  await notion.pages.update({ page_id: pageId, archived: true } as any)
+}

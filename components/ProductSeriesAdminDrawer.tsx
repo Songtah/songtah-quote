@@ -158,6 +158,33 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
     }
   }
 
+  async function deleteSeries() {
+    if (!selected || selected.source !== 'notion') return
+    const memberCount = explicitFamilySkuCodes(selected).length
+    const confirmed = window.confirm(
+      `確定刪除系列「${selected.seriesName}」?\n\n` +
+      (memberCount > 0 ? `其中 ${memberCount} 個品項會退回「獨立單品」(商品本身不會被刪除)。\n\n` : '') +
+      '此操作會封存系列紀錄,無法從後台復原。'
+    )
+    if (!confirmed) return
+    setBusy('delete')
+    setError('')
+    setNotice('')
+    try {
+      const response = await fetch(`/api/products/series/${encodeURIComponent(selected.seriesCode)}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error(await readError(response, '刪除系列失敗'))
+      const result = await response.json()
+      await onChanged()
+      setSelectedId('')
+      setSelectedSkuCodes(new Set())
+      setNotice(`已刪除系列「${selected.seriesName}」${result.releasedMembers ? `,${result.releasedMembers} 個品項退回獨立單品` : ''}`)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '刪除系列失敗')
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function assignSku(skuCode: string, familyId: string, previousFamily?: ProductFamily) {
     if (familyId && previousFamily && previousFamily.id !== familyId) {
       const confirmed = window.confirm(`此品項目前屬於「${previousFamily.seriesName}」。確定要移到「${selected?.seriesName ?? familyId}」嗎？`)
@@ -297,6 +324,14 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
                       <input className="input-soft min-h-11 flex-1" value={renaming} onChange={(event) => setRenaming(event.target.value)} placeholder="輸入新的系列名稱" aria-label="新的系列名稱" />
                       <button type="button" onClick={renameSeries} disabled={Boolean(busy)} className="min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-600 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95 disabled:opacity-50">{busy === 'rename' ? '儲存中…' : '儲存名稱'}</button>
                     </div>
+                    {selected.source === 'notion' ? (
+                      <button type="button" onClick={deleteSeries} disabled={Boolean(busy)}
+                              className="mt-2 min-h-11 rounded-full border border-stone-200 bg-white px-4 text-sm font-medium text-stone-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95 disabled:opacity-50">
+                        {busy === 'delete' ? '刪除中…' : '🗑 刪除此系列(品項退回獨立單品)'}
+                      </button>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-stone-400">目錄系列(規格矩陣)由部署檔維護,不可從後台刪除。</p>
+                    )}
                   </div>
 
                   <div>

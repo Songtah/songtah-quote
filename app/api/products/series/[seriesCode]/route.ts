@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { getSeriesByCode, updateSeriesRecord, createSeriesRecord } from '@/lib/products-series-notion'
+import { getSeriesByCode, updateSeriesRecord, createSeriesRecord, archiveSeriesRecord } from '@/lib/products-series-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
-import { getAllFamilies } from '@/lib/products-catalog'
+import { getAllFamilies, getCatalogProduct } from '@/lib/products-catalog'
+import { listSkusByFamilyId, upsertProductRichData } from '@/lib/products-notion'
 
 /** GET /api/products/series/[seriesCode] — get series info by code */
 export const GET = withApiAuth<{ params: { seriesCode: string } }>('session', async (
@@ -84,5 +85,70 @@ export const PATCH = withApiAuth<{ params: { seriesCode: string } }>('central-ma
   } catch (e: any) {
     console.error('PATCH /api/products/series/[code] error:', e)
     return NextResponse.json({ error: '更新失敗' }, { status: 500 })
+  }
+})
+
+/**
+ * DELETE /api/products/series/[seriesCode] — 刪除(封存)後台自建系列。
+ * Central management only。
+ *
+ * 限制:只允許刪 Notion 自建系列;部署內建系列(product_families.json 規格矩陣)不可刪。
+ * 流程:成員 SKU 的「系列群組」歸屬先清空(退回獨立單品)→ read-back 確認 0 成員 →
+ *       封存 Notion 系列紀錄 → read-back 確認查無此系列 → 稽核。任何一步失敗即中止(fail-closed)。
+ */
+export const DELETE = withApiAuth<{ params: { seriesCode: string } }>('central-management', async (
+  req: NextRequest,
+  { params }: { params: { seriesCode: string } },
+  session,
+) => {
+  try {
+    const seriesCode = decodeURIComponent(params.seriesCode ?? '').trim()
+    if (!seriesCode) return NextResponse.json({ error: '缺少系列代碼' }, { status: 400 })
+
+    const record = await getSeriesByCode(seriesCode)
+    if (!record) return NextResponse.json({ error: '系列不存在' }, { status: 404 })
+
+    if (getAllFamilies().some((family) => family.seriesCode === seriesCode)) {
+      return NextResponse.json({ error: '此為部署內建系列(規格矩陣),不可刪除;僅後台自建系列可刪' }, { status: 400 })
+    }
+
+    // 成員退回獨立單品(清空「系列群組」)
+    const familyId = `custom:${seriesCode}`
+    const memberSkus = await listSkusByFamilyId(familyId)
+    for (const skuCode of memberSkus) {
+      const catalog = getCatalogProduct(skuCode)
+      if (!catalog) continue
+      await upsertProductRichData(
+        skuCode,
+        { name: catalog.name, brand: catalog.brand, category: catalog.category, productType: catalog.productType },
+        { familyId: '' },
+      )
+    }
+    const remaining = await listSkusByFamilyId(familyId)
+    if (remaining.length > 0) {
+      return NextResponse.json({ error: `成員歸屬清除不完全(剩 ${remaining.length} 筆),已中止刪除` }, { status: 500 })
+    }
+
+    await archiveSeriesRecord(record.id)
+    const after = await getSeriesByCode(seriesCode)
+    if (after) return NextResponse.json({ error: '系列封存後仍可讀取,請重試' }, { status: 500 })
+
+    await logAuditEvent({
+      module: 'products',
+      action: 'delete',
+      entityType: 'product-series',
+      entityId: seriesCode,
+      entityTitle: record.seriesName,
+      summary: `刪除產品系列:${record.seriesName}(${memberSkus.length} 個成員退回獨立單品)`,
+      actor: getAuditActor(session),
+      request: getAuditRequestContext(req),
+      before: record,
+      metadata: { releasedMembers: memberSkus.length, readBack: 'passed' },
+    }).catch((error) => console.error('audit series delete error:', error))
+
+    return NextResponse.json({ deleted: seriesCode, releasedMembers: memberSkus.length })
+  } catch (e: any) {
+    console.error('DELETE /api/products/series/[code] error:', e)
+    return NextResponse.json({ error: '刪除失敗' }, { status: 500 })
   }
 })

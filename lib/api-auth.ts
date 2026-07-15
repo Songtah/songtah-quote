@@ -34,7 +34,9 @@ function passes(session: Session, rule: ApiAuthRule): boolean {
   const user = session.user as any
   if (rule === 'session') return true
   if (rule === 'admin') return user?.role === 'admin'
-  if (rule === 'central-management') return user?.accountType === '中央管理'
+  // admin 放行:role==='admin' 是系統最高權限(與 {roles} 規則慣例一致);
+  // 亦避免 env admin 帳號因舊 JWT 缺 accountType 而被整個產品後台鎖死。
+  if (rule === 'central-management') return user?.role === 'admin' || user?.accountType === '中央管理'
   if ('roles' in rule) return user?.role === 'admin' || rule.roles.includes(user?.accountType)
   if ('module' in rule) {
     return rule.action === 'edit' ? canEdit(session, rule.module) : canView(session, rule.module)
