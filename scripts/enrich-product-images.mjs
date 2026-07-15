@@ -5,7 +5,7 @@ import net from 'node:net'
 import path from 'node:path'
 import process from 'node:process'
 import { Redis } from '@upstash/redis'
-import { get, head, put } from '@vercel/blob'
+import { put } from '@vercel/blob'
 import sharp from 'sharp'
 
 const ROOT = process.cwd()
@@ -171,38 +171,8 @@ async function notionRequest(apiPath, options = {}) {
 }
 
 async function updateProductImageIndex(item, imageUrl) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is required to update the product image index')
-  {
-    try {
-      const indexUrl = 'https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/image-index.json'
-      let updated = false
-      let lastError
-      for (let attempt = 1; attempt <= 3 && !updated; attempt += 1) {
-        try {
-          const current = await head(indexUrl, { token: process.env.BLOB_READ_WRITE_TOKEN })
-          const currentBlob = await get(indexUrl, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN })
-          if (!currentBlob) throw new Error('Blob image index not found')
-          const data = await new Response(currentBlob.stream).json()
-          const images = data?.images && typeof data.images === 'object' ? { ...data.images } : {}
-          images[item.code] = imageUrl
-          await put('products/catalog/image-index.json', Buffer.from(JSON.stringify({ version: new Date().toISOString(), images })), {
-            access: 'public', allowOverwrite: true, cacheControlMaxAge: 60, contentType: 'application/json',
-            ifMatch: current.etag, token: process.env.BLOB_READ_WRITE_TOKEN,
-          })
-          const readBackBlob = await get(indexUrl, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN })
-          if (!readBackBlob) throw new Error('Blob image index read-back not found')
-          const readBack = await new Response(readBackBlob.stream).json()
-          if (readBack.images?.[item.code] !== imageUrl) throw new Error(`Blob image index read-back mismatch: ${item.code}`)
-          updated = true
-        } catch (error) {
-          lastError = error
-        }
-      }
-      if (!updated) throw lastError
-    } catch (error) {
-      throw new Error(`Blob image index projection update failed: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  }
+  // Blob is rebuilt once from authoritative Notion after the batch. Per-item
+  // read-modify-write is unsafe while the public Blob CDN may serve an older body.
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
   if (!url || !token) return

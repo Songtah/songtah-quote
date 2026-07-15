@@ -162,12 +162,18 @@ if (process.env.BLOB_READ_WRITE_TOKEN) {
     access: 'public', allowOverwrite: true, cacheControlMaxAge: 60, contentType: 'application/json',
     ifMatch: initialBlobHead?.etag, token: process.env.BLOB_READ_WRITE_TOKEN,
   })
-  const blobReadBackResult = await get(blobIndexUrl, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN })
-  if (!blobReadBackResult) throw new Error('Blob read-back not found')
-  const blobReadBack = await new Response(blobReadBackResult.stream).json()
-  const readBackImages = Object.fromEntries(Object.entries(blobReadBack.images ?? {}).sort(([left], [right]) => left.localeCompare(right)))
-  const readBackDigest = crypto.createHash('sha256').update(JSON.stringify(readBackImages)).digest('hex')
-  if (blobReadBack.sha256 !== imageDigest || readBackDigest !== imageDigest) throw new Error('Blob read-back digest mismatch')
+  let blobReadBackVerified = false
+  for (let readAttempt = 1; readAttempt <= 13 && !blobReadBackVerified; readAttempt += 1) {
+    const blobReadBackResult = await get(blobIndexUrl, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN })
+    if (blobReadBackResult) {
+      const blobReadBack = await new Response(blobReadBackResult.stream).json()
+      const readBackImages = Object.fromEntries(Object.entries(blobReadBack.images ?? {}).sort(([left], [right]) => left.localeCompare(right)))
+      const readBackDigest = crypto.createHash('sha256').update(JSON.stringify(readBackImages)).digest('hex')
+      blobReadBackVerified = blobReadBack.sha256 === imageDigest && readBackDigest === imageDigest
+    }
+    if (!blobReadBackVerified) await new Promise((resolve) => setTimeout(resolve, 5_000))
+  }
+  if (!blobReadBackVerified) throw new Error('Blob read-back digest mismatch after committed write')
   blobUrl = blob.url
 }
 

@@ -9,3 +9,9 @@
 - 根因：以資料庫 filter query 當作新增後的即時 read-back，受到 Notion 搜尋索引延遲影響；失敗發生在正式寫入之後、稽核之前。
 - 新規則：Notion create／update 後以回傳的 page ID 直接 GET read-back；批次一旦開始外部寫入，後續任何錯誤都 fail-stop，重跑時必須能補登缺失稽核。
 - 寫回：暫不升級
+
+## 2026-07-15 公開 Blob 覆寫後立即讀到舊索引
+- 現象：產品圖片索引 `put` 成功後，立即 `get` 仍回傳前一版內容，造成 `Blob image index read-back mismatch` 並讓批次在正式 Notion 寫入後中止。
+- 根因：Vercel 公開 Blob CDN 在覆寫後有快取更新窗；`cache: no-store` 與 query string 不能保證避開舊內容，逐筆 read-modify-write 可能以舊 body 覆蓋新索引。
+- 新規則：公開 Blob RMW 前必須核對 GET response ETag 與控制面 HEAD ETag；批次匯入不逐筆改 Blob 索引，完成後由 Notion 權威資料全量重建並做 SHA-256 read-back。
+- 寫回：暫不升級

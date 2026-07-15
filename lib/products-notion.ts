@@ -371,15 +371,22 @@ async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): P
   const operation = blobImageIndexUpdateQueue.then(async () => {
     let lastError: unknown
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      let writeCommitted = false
       try {
         const current = await head(PRODUCT_IMAGE_BLOB_INDEX_URL, { token })
-        const currentBlob = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
-        if (!currentBlob) throw new Error('Blob image index not found')
+        let currentBlob = null
+        for (let readAttempt = 1; readAttempt <= 12 && !currentBlob; readAttempt += 1) {
+          const candidate = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
+          const responseEtag = candidate?.headers.get('etag')?.replace(/^W\//, '')
+          if (candidate && responseEtag === current.etag) currentBlob = candidate
+          else await new Promise((resolve) => setTimeout(resolve, 5_000))
+        }
+        if (!currentBlob) throw new Error('Blob image index current version was not readable')
         const data = await new Response(currentBlob.stream).json()
         const images = data?.images && typeof data.images === 'object' ? { ...data.images } : {}
         if (imageUrl) images[skuCode] = imageUrl
         else delete images[skuCode]
-        await put('products/catalog/image-index.json', Buffer.from(JSON.stringify({ version: new Date().toISOString(), images })), {
+        const blob = await put('products/catalog/image-index.json', Buffer.from(JSON.stringify({ version: new Date().toISOString(), images })), {
           access: 'public',
           allowOverwrite: true,
           cacheControlMaxAge: 60,
@@ -387,13 +394,13 @@ async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): P
           ifMatch: current.etag,
           token,
         })
-        const readBackBlob = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
-        if (!readBackBlob) throw new Error('Blob image index read-back not found')
-        const readBack = await new Response(readBackBlob.stream).json()
-        if ((readBack.images?.[skuCode] ?? '') !== imageUrl) throw new Error(`Blob image index read-back mismatch: ${skuCode}`)
+        writeCommitted = true
+        const committed = await head(PRODUCT_IMAGE_BLOB_INDEX_URL, { token })
+        if (committed.etag !== blob.etag) throw new Error(`Blob image index ETag mismatch after committed write: ${skuCode}`)
         return
       } catch (error) {
         lastError = error
+        if (writeCommitted) throw error
         if (attempt < 3) continue
       }
     }
