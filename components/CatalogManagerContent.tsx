@@ -82,6 +82,7 @@ interface FamilySpec {
 
 interface ProductFamily {
   id: string
+  collectionName?: string
   seriesCode: string
   seriesName: string
   brand: string
@@ -89,6 +90,7 @@ interface ProductFamily {
   category: string
   specs: FamilySpec[]
   skuMap?: Record<string, string>
+  skuNameMap?: Record<string, string>
   skuPattern?: string
   namePattern?: string
   uiVariant?: string
@@ -110,6 +112,27 @@ interface RichData {
 interface Props {
   taxonomy: TaxonomyBrowser
   canManageProducts: boolean
+}
+
+function splitFamilyCollections(families: ProductFamily[]): {
+  collections: { name: string; families: ProductFamily[] }[]
+  ungrouped: ProductFamily[]
+} {
+  const byName = new Map<string, ProductFamily[]>()
+  const ungrouped: ProductFamily[] = []
+  for (const family of families) {
+    if (!family.collectionName) {
+      ungrouped.push(family)
+      continue
+    }
+    const group = byName.get(family.collectionName) ?? []
+    group.push(family)
+    byName.set(family.collectionName, group)
+  }
+  return {
+    collections: Array.from(byName.entries()).map(([name, groupedFamilies]) => ({ name, families: groupedFamilies })),
+    ungrouped,
+  }
 }
 
 // 主分類→功能分類主樹(伺服器端由 data/product-taxonomy.json + catalog 計數而來)
@@ -1966,6 +1989,11 @@ function FamilyCard({
         >
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-bold text-stone-800 group-hover:text-brand-700 transition-colors">{family.seriesName}</span>
+            {family.collectionName && (
+              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-200/60">
+                {family.collectionName} 集合
+              </span>
+            )}
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">{family.brand}</span>
             {family.productType && (
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-medium">{family.productType}</span>
@@ -2322,6 +2350,12 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       (p.seriesName || '').toLowerCase().includes(debouncedQ))
   }, [isSearching, allItems, debouncedQ])
 
+  // 有 collectionName 的系列先組成跨分類產品集合；其餘再依主分類分組。
+  const familyCollections = useMemo(
+    () => splitFamilyCollections(families).collections,
+    [families],
+  )
+
   // 系列依主分類分組(以第一個成員 SKU 的主分類為準),照總表主分類順序排。
   // 成員判定三層:coveredSkuCodes(新群組)→ skuMap 值(pattern 型舊系列,seriesCode 非真實前綴)
   // → seriesCode 前綴。孤兒系列(目錄查無成員)落「其他」。
@@ -2329,6 +2363,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     const byCode = new Map(allItems.map((p) => [p.code, p]))
     const byMain = new Map<string, ProductFamily[]>()
     for (const f of families) {
+      if (f.collectionName) continue
       const member =
         f.coveredSkuCodes?.map((c) => byCode.get(c)).find(Boolean) ??
         Object.values(f.skuMap ?? {}).map((c) => byCode.get(c)).find(Boolean) ??
@@ -2605,6 +2640,49 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               <p className="text-center py-12 text-sm text-stone-400">目前沒有產品清單</p>
             ) : (
               <div className="space-y-3">
+                {familyCollections.map((collection) => {
+                  const groupKey = `collection:${collection.name}`
+                  const open = openFamilyGroups.has(groupKey)
+                  const itemCount = collection.families.reduce(
+                    (count, family) => count + explicitFamilySkuCodes(family).length,
+                    0,
+                  )
+                  return (
+                    <section key={groupKey} className="card-soft overflow-hidden p-0 ring-1 ring-brand-200/50">
+                      <button
+                        type="button"
+                        onClick={() => toggleFamilyGroup(groupKey)}
+                        className="flex min-h-16 w-full items-center gap-3 bg-brand-50/50 px-4 py-3 text-left transition-all hover:bg-brand-50 active:scale-[0.99] sm:px-5"
+                        aria-expanded={open}
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm" aria-hidden="true">◫</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[11px] font-bold uppercase tracking-widest text-brand-600">產品集合</span>
+                          <span className="block truncate text-base font-bold text-stone-800">{collection.name}</span>
+                          <span className="mt-0.5 block text-xs text-stone-500">{collection.families.length} 個子系列・{itemCount} 個品項</span>
+                        </span>
+                        <span className="hidden text-xs text-stone-500 sm:block">先選子系列，再選色號與重量／容量</span>
+                        <span className={`text-stone-400 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
+                      </button>
+                      {open && (
+                        <div className="space-y-3 border-t border-stone-900/[0.06] bg-stone-50/50 p-3 sm:p-4">
+                          <p className="px-1 text-xs leading-relaxed text-stone-500 sm:hidden">先選子系列，再選色號與重量／容量。</p>
+                          {collection.families.map((family) => (
+                            <FamilyCard
+                              key={family.id}
+                              family={family}
+                              allItems={allItems}
+                              priceCache={priceCache}
+                              onEdit={setEditingItem}
+                              onOpenModal={() => setModalFamily(family)}
+                              canManageProducts={canManageProducts}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  )
+                })}
                 {familyGroups.map(({ main, families: groupFamilies }) => {
                   const open = openFamilyGroups.has(main)
                   return (

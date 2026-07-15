@@ -1924,76 +1924,6 @@
     }
   },
   {
-    "id": "DSD-STAIN",
-    "seriesCode": "DSD-STAIN",
-    "seriesName": "Matchmaker Stain 上色材",
-    "brand": "Davis Schottlander",
-    "productType": "藥液",
-    "category": "染液 / 色料",
-    "skuPattern": "",
-    "namePattern": "Matchmaker Stain {色號}",
-    "specs": [
-      {
-        "key": "色號",
-        "label": "色號",
-        "options": [
-          "01 (White)",
-          "02 (Yellow)",
-          "03 (Peach)",
-          "04 (Orange Brown)",
-          "05 (Dark Brown)",
-          "06 (Light Pink)",
-          "07 (Blue)",
-          "08 (Grey)",
-          "09 (Dark Pink)",
-          "10 (Blue Pink)",
-          "11 (Violet)",
-          "A",
-          "B",
-          "C",
-          "D"
-        ]
-      }
-    ],
-    "skuMap": {
-      "01 (White)": "DSD-STAIN-0086-01",
-      "02 (Yellow)": "DSD-STAIN-0086-02",
-      "03 (Peach)": "DSD-STAIN-0086-03",
-      "04 (Orange Brown)": "DSD-STAIN-0086-04",
-      "05 (Dark Brown)": "DSD-STAIN-0086-05",
-      "06 (Light Pink)": "DSD-STAIN-0086-06",
-      "07 (Blue)": "DSD-STAIN-0086-07",
-      "08 (Grey)": "DSD-STAIN-0086-08",
-      "09 (Dark Pink)": "DSD-STAIN-0086-09",
-      "10 (Blue Pink)": "DSD-STAIN-0086-10",
-      "11 (Violet)": "DSD-STAIN-0086-11",
-      "A": "DSD-STAIN-0086-A",
-      "B": "DSD-STAIN-0086-B",
-      "C": "DSD-STAIN-0086-C",
-      "D": "DSD-STAIN-0086-D"
-    },
-    "coveredSkuCodes": [
-      "DSD-STAIN-0086",
-      "DSD-STAIN-01",
-      "DSD-STAIN-02",
-      "DSD-STAIN-03",
-      "DSD-STAIN-04",
-      "DSD-STAIN-05",
-      "DSD-STAIN-06",
-      "DSD-STAIN-07",
-      "DSD-STAIN-08",
-      "DSD-STAIN-09",
-      "DSD-STAIN-10",
-      "DSD-STAIN-11",
-      "DSD-STAIN-12",
-      "DSD-STAIN-13",
-      "DSD-STAIN-14",
-      "DSD-STAIN-15",
-      "DSD-STAIN-16",
-      "DSD-STAIN-SET"
-    ]
-  },
-  {
     "id": "SY-04114",
     "seriesCode": "SY-04114",
     "seriesName": "矽膠模型石膏底座",
@@ -4649,242 +4579,6 @@
     }
   },
   {
-    "id": "NAME-B25F85717E86",
-    "seriesCode": "NAME-B25F85717E86",
-    "seriesName": "Matchmaker BODY 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker BODY A1/50g",
-          "Matchmaker BODY A2/50g",
-          "Matchmaker BODY A3/50g",
-          "Matchmaker BODY A3.5/15g",
-          "Matchmaker BODY A3.5/50g",
-          "Matchmaker BODY A4/50g",
-          "Matchmaker BODY B1/50g",
-          "Matchmaker BODY B2/50g",
-          "Matchmaker BODY B3/50g",
-          "Matchmaker BODY B4/50g",
-          "Matchmaker BODY C1/50g",
-          "Matchmaker BODY C2/50g",
-          "Matchmaker BODY C3/50g",
-          "Matchmaker BODY C4/50g",
-          "Matchmaker BODY D2/15g",
-          "Matchmaker BODY D2/50g",
-          "Matchmaker BODY D3/50g",
-          "Matchmaker BODY D4/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker BODY A1/50g": "DSD-BA1-50",
-      "Matchmaker BODY A2/50g": "DSD-BA2-50",
-      "Matchmaker BODY A3/50g": "DSD-BA3-50",
-      "Matchmaker BODY A3.5/15g": "DSD-BA3.5-15",
-      "Matchmaker BODY A3.5/50g": "DSD-BA3.5-50",
-      "Matchmaker BODY A4/50g": "DSD-BA4-50",
-      "Matchmaker BODY B1/50g": "DSD-BB1-50",
-      "Matchmaker BODY B2/50g": "DSD-BB2-50",
-      "Matchmaker BODY B3/50g": "DSD-BB3-50",
-      "Matchmaker BODY B4/50g": "DSD-BB4-50",
-      "Matchmaker BODY C1/50g": "DSD-BC1-50",
-      "Matchmaker BODY C2/50g": "DSD-BC2-50",
-      "Matchmaker BODY C3/50g": "DSD-BC3-50",
-      "Matchmaker BODY C4/50g": "DSD-BC4-50",
-      "Matchmaker BODY D2/15g": "DSD-BD2-15",
-      "Matchmaker BODY D2/50g": "DSD-BD2-50",
-      "Matchmaker BODY D3/50g": "DSD-BD3-50",
-      "Matchmaker BODY D4/50g": "DSD-BD4-50"
-    },
-    "coveredSkuCodes": [
-      "DSD-BA2-250",
-      "DSD-BA3-250"
-    ]
-  },
-  {
-    "id": "NAME-C36C111E7222",
-    "seriesCode": "NAME-C36C111E7222",
-    "seriesName": "Matchmaker Enamel Clear 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker Enamel Clear/15g",
-          "Matchmaker Enamel Clear/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker Enamel Clear/15g": "DSD-TCO1-15",
-      "Matchmaker Enamel Clear/50g": "DSD-TCO1-50"
-    },
-    "coveredSkuCodes": [
-      "DSD-TCO1-250"
-    ]
-  },
-  {
-    "id": "NAME-FAE733F82A32",
-    "seriesCode": "NAME-FAE733F82A32",
-    "seriesName": "Matchmaker MC Enhancer 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker MC Enhancer A1/50g",
-          "Matchmaker MC Enhancer A2/50g",
-          "Matchmaker MC Enhancer A3/50g",
-          "Matchmaker MC Enhancer A3.5/15g",
-          "Matchmaker MC Enhancer A3.5/50g",
-          "Matchmaker MC Enhancer A4/15g",
-          "Matchmaker MC Enhancer A4/50g",
-          "Matchmaker MC Enhancer B1/50g",
-          "Matchmaker MC Enhancer B2/50g",
-          "Matchmaker MC Enhancer B3/50g",
-          "Matchmaker MC Enhancer B4/50g",
-          "Matchmaker MC Enhancer C1/50g",
-          "Matchmaker MC Enhancer C2/50g",
-          "Matchmaker MC Enhancer C3/15g",
-          "Matchmaker MC Enhancer C3/50g",
-          "Matchmaker MC Enhancer C4/50g",
-          "Matchmaker MC Enhancer D2/50g",
-          "Matchmaker MC Enhancer D3/50g",
-          "Matchmaker MC Enhancer D4/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker MC Enhancer A1/50g": "DSD-EA1-50",
-      "Matchmaker MC Enhancer A2/50g": "DSD-EA2-50",
-      "Matchmaker MC Enhancer A3/50g": "DSD-EA3-50",
-      "Matchmaker MC Enhancer A3.5/15g": "DSD-EA3.5-15",
-      "Matchmaker MC Enhancer A3.5/50g": "DSD-EA3.5-50",
-      "Matchmaker MC Enhancer A4/15g": "DSD-EA4-15",
-      "Matchmaker MC Enhancer A4/50g": "DSD-EA4-50",
-      "Matchmaker MC Enhancer B1/50g": "DSD-EB1-50",
-      "Matchmaker MC Enhancer B2/50g": "DSD-EB2-50",
-      "Matchmaker MC Enhancer B3/50g": "DSD-EB3-50",
-      "Matchmaker MC Enhancer B4/50g": "DSD-EB4-50",
-      "Matchmaker MC Enhancer C1/50g": "DSD-EC1-50",
-      "Matchmaker MC Enhancer C2/50g": "DSD-EC2-50",
-      "Matchmaker MC Enhancer C3/15g": "DSD-EC3-15",
-      "Matchmaker MC Enhancer C3/50g": "DSD-EC3-50",
-      "Matchmaker MC Enhancer C4/50g": "DSD-EC4-50",
-      "Matchmaker MC Enhancer D2/50g": "DSD-ED2-50",
-      "Matchmaker MC Enhancer D3/50g": "DSD-ED3-50",
-      "Matchmaker MC Enhancer D4/50g": "DSD-ED4-50"
-    }
-  },
-  {
-    "id": "NAME-EDEF29C3669F",
-    "seriesCode": "NAME-EDEF29C3669F",
-    "seriesName": "Matchmaker Opaque 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker Opaque A1/50g",
-          "Matchmaker Opaque A2/50g",
-          "Matchmaker Opaque A3/50g",
-          "Matchmaker Opaque A3.5/50g",
-          "Matchmaker Opaque A4/15g",
-          "Matchmaker Opaque A4/50g",
-          "Matchmaker Opaque B1/50g",
-          "Matchmaker Opaque B2/50g",
-          "Matchmaker Opaque B3/50g",
-          "Matchmaker Opaque B4/50g",
-          "Matchmaker Opaque C1/50g",
-          "Matchmaker Opaque C2/50g",
-          "Matchmaker Opaque C3/50g",
-          "Matchmaker Opaque C4/50g",
-          "Matchmaker Opaque D2/50g",
-          "Matchmaker Opaque D3/50g",
-          "Matchmaker Opaque D4/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker Opaque A1/50g": "DSD-OA1-50",
-      "Matchmaker Opaque A2/50g": "DSD-OA2-50",
-      "Matchmaker Opaque A3/50g": "DSD-OA3-50",
-      "Matchmaker Opaque A3.5/50g": "DSD-OA3.5-50",
-      "Matchmaker Opaque A4/15g": "DSD-OA4-15",
-      "Matchmaker Opaque A4/50g": "DSD-OA4-50",
-      "Matchmaker Opaque B1/50g": "DSD-OB1-50",
-      "Matchmaker Opaque B2/50g": "DSD-OB2-50",
-      "Matchmaker Opaque B3/50g": "DSD-OB3-50",
-      "Matchmaker Opaque B4/50g": "DSD-OB4-50",
-      "Matchmaker Opaque C1/50g": "DSD-OC1-50",
-      "Matchmaker Opaque C2/50g": "DSD-OC2-50",
-      "Matchmaker Opaque C3/50g": "DSD-OC3-50",
-      "Matchmaker Opaque C4/50g": "DSD-OC4-50",
-      "Matchmaker Opaque D2/50g": "DSD-OD2-50",
-      "Matchmaker Opaque D3/50g": "DSD-OD3-50",
-      "Matchmaker Opaque D4/50g": "DSD-OD4-50"
-    },
-    "coveredSkuCodes": [
-      "DSD-OC3-15"
-    ]
-  },
-  {
-    "id": "NAME-A9FDA13733D8",
-    "seriesCode": "NAME-A9FDA13733D8",
-    "seriesName": "Matchmaker Shoulder 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker Shoulder A2 /15g",
-          "Matchmaker Shoulder A3 /15g",
-          "Matchmaker Shoulder A3.5 /15g",
-          "Matchmaker Shoulder A4 /15g",
-          "Matchmaker Shoulder B3 /15g",
-          "Matchmaker Shoulder C2 /15g",
-          "Matchmaker Shoulder D3 /15g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker Shoulder A2 /15g": "DSD-SA2-15",
-      "Matchmaker Shoulder A3 /15g": "DSD-SA3-15",
-      "Matchmaker Shoulder A3.5 /15g": "DSD-SA3.5-15",
-      "Matchmaker Shoulder A4 /15g": "DSD-SA4-15",
-      "Matchmaker Shoulder B3 /15g": "DSD-SB3-15",
-      "Matchmaker Shoulder C2 /15g": "DSD-SC2-15",
-      "Matchmaker Shoulder D3 /15g": "DSD-SD3-15"
-    }
-  },
-  {
     "id": "NAME-9C559651C46B",
     "seriesCode": "NAME-9C559651C46B",
     "seriesName": "PR Press Ring 系列",
@@ -4906,197 +4600,6 @@
     "skuMap": {
       "PR Press Ring 100g": "DSD-14-1",
       "PR Press Ring 200g": "DSD-14-2"
-    }
-  },
-  {
-    "id": "NAME-6A0E9A5CE163",
-    "seriesCode": "NAME-6A0E9A5CE163",
-    "seriesName": "Propaque Paste 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Propaque Paste A1 (3.2g)",
-          "Propaque Paste A2 (3.2g)",
-          "Propaque Paste A3 (3.2g)",
-          "Propaque Paste A3.5 (3.2g)",
-          "Propaque Paste A4 (3.2g)",
-          "Propaque Paste B1 (3.2g)",
-          "Propaque Paste B2 (3.2g)",
-          "Propaque Paste B3 (3.2g)",
-          "Propaque Paste B4 (3.2g)",
-          "Propaque Paste C1 (3.2g)",
-          "Propaque Paste C2 (3.2g)",
-          "Propaque Paste C3 (3.2g)",
-          "Propaque Paste C4 (3.2g)",
-          "Propaque Paste D2 (3.2g)",
-          "Propaque Paste D3 (3.2g)",
-          "Propaque Paste D4 (3.2g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Propaque Paste A1 (3.2g)": "DSD-PRO-OA1",
-      "Propaque Paste A2 (3.2g)": "DSD-PRO-OA2",
-      "Propaque Paste A3 (3.2g)": "DSD-PRO-OA3",
-      "Propaque Paste A3.5 (3.2g)": "DSD-PRO-OA3.5",
-      "Propaque Paste A4 (3.2g)": "DSD-PRO-OA4",
-      "Propaque Paste B1 (3.2g)": "DSD-PRO-OB1",
-      "Propaque Paste B2 (3.2g)": "DSD-PRO-OB2",
-      "Propaque Paste B3 (3.2g)": "DSD-PRO-OB3",
-      "Propaque Paste B4 (3.2g)": "DSD-PRO-OB4",
-      "Propaque Paste C1 (3.2g)": "DSD-PRO-OC1",
-      "Propaque Paste C2 (3.2g)": "DSD-PRO-OC2",
-      "Propaque Paste C3 (3.2g)": "DSD-PRO-OC3",
-      "Propaque Paste C4 (3.2g)": "DSD-PRO-OC4",
-      "Propaque Paste D2 (3.2g)": "DSD-PRO-OD2",
-      "Propaque Paste D3 (3.2g)": "DSD-PRO-OD3",
-      "Propaque Paste D4 (3.2g)": "DSD-PRO-OD4"
-    },
-    "coveredSkuCodes": [
-      "DSD-PRO-1"
-    ]
-  },
-  {
-    "id": "NAME-174FC1CFCA12",
-    "seriesCode": "NAME-174FC1CFCA12",
-    "seriesName": "ZR Dentin 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Dentin A1 (15g)",
-          "ZR Dentin A2 (15g)",
-          "ZR Dentin A2 (50g)",
-          "ZR Dentin A3 (50g)",
-          "ZR Dentin A3.5(15g)",
-          "ZR Dentin A3.5 (50g)",
-          "ZR Dentin A4(15g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Dentin A1 (15g)": "DSD-ZR-A1",
-      "ZR Dentin A2 (15g)": "DSD-ZR-A2",
-      "ZR Dentin A2 (50g)": "DSD-ZR-A2-50",
-      "ZR Dentin A3 (50g)": "DSD-ZR-A3-50",
-      "ZR Dentin A3.5(15g)": "DSD-ZR-A3.5",
-      "ZR Dentin A3.5 (50g)": "DSD-ZR-A3.5-50",
-      "ZR Dentin A4(15g)": "DSD-ZR-A4"
-    }
-  },
-  {
-    "id": "NAME-3D632DD7F71D",
-    "seriesCode": "NAME-3D632DD7F71D",
-    "seriesName": "ZR Detin 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Detin A3 (15g)",
-          "ZR Detin B1 (15g)",
-          "ZR Detin B2 (15g)",
-          "ZR Detin B3 (15g)",
-          "ZR Detin B4 (15g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Detin A3 (15g)": "DSD-ZR-A3",
-      "ZR Detin B1 (15g)": "DSD-ZR-B1",
-      "ZR Detin B2 (15g)": "DSD-ZR-B2",
-      "ZR Detin B3 (15g)": "DSD-ZR-B3",
-      "ZR Detin B4 (15g)": "DSD-ZR-B4"
-    }
-  },
-  {
-    "id": "NAME-A632F0748101",
-    "seriesCode": "NAME-A632F0748101",
-    "seriesName": "ZR Emamel Clear 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Emamel Clear (15g)",
-          "ZR Emamel Clear (50g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Emamel Clear (15g)": "DSD-ZR-TC01",
-      "ZR Emamel Clear (50g)": "DSD-ZR-TC01-50"
-    }
-  },
-  {
-    "id": "NAME-4791772678DF",
-    "seriesCode": "NAME-4791772678DF",
-    "seriesName": "ZR Emamel Neutral 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Emamel Neutral (15g)",
-          "ZR Emamel Neutral (50g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Emamel Neutral (15g)": "DSD-ZR-TC02",
-      "ZR Emamel Neutral (50g)": "DSD-ZR-TC02-50"
-    }
-  },
-  {
-    "id": "NAME-7D1D10A68861",
-    "seriesCode": "NAME-7D1D10A68861",
-    "seriesName": "ZR Emamel OT 系列",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉／陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Emamel OT (15g)",
-          "ZR Emamel OT (50g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Emamel OT (15g)": "DSD-ZR-TC03",
-      "ZR Emamel OT (50g)": "DSD-ZR-TC03-50"
     }
   },
   {
@@ -7594,44 +7097,6 @@
     }
   },
   {
-    "id": "DSD-ZR-WAX-PRESSING-MATERIAL",
-    "seriesCode": "DSD-ZR-WAX-PRESSING-MATERIAL",
-    "seriesName": "ZR 蠟/壓鑄材料",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "蠟/壓鑄材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker ZR A2 Kit",
-          "Matchmaker ZR A3 Kit",
-          "Matchmaker ZR 15g/Kit(全色系)",
-          "Matchmaker ZR 15g",
-          "Matchmaker ZR Essontials Kit(常用色系)",
-          "Press ZR A2 瓷錠",
-          "Press ZR A3 瓷錠",
-          "Matchmaker ZR Neck Den 15g ND3",
-          "Matchmaker ZR Neck Den 15g ND4"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker ZR A2 Kit": "DSD-ZR-03-A2",
-      "Matchmaker ZR A3 Kit": "DSD-ZR-03-A3",
-      "Matchmaker ZR 15g/Kit(全色系)": "DSD-ZR-04",
-      "Matchmaker ZR 15g": "DSD-ZR-04-1",
-      "Matchmaker ZR Essontials Kit(常用色系)": "DSD-ZR-08",
-      "Press ZR A2 瓷錠": "DSD-ZR-21-A2",
-      "Press ZR A3 瓷錠": "DSD-ZR-21-A3",
-      "Matchmaker ZR Neck Den 15g ND3": "DSD-ZR-ND3",
-      "Matchmaker ZR Neck Den 15g ND4": "DSD-ZR-ND4"
-    }
-  },
-  {
     "id": "DK-ZRCM-FURNACE-ACCESSORY",
     "seriesCode": "DK-ZRCM-FURNACE-ACCESSORY",
     "seriesName": "ZRCM 爐具配件",
@@ -7726,36 +7191,6 @@
     }
   },
   {
-    "id": "DSD-OPAL",
-    "seriesCode": "DSD-OPAL",
-    "seriesName": "OPAL 瓷粉/陶瓷材料",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉/陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Opal OPAL Neutralk 蛋青加強色(50g)",
-          "Opal Luster OL10 蛋青加強色(15g)",
-          "Opal Luster OL7 蛋青加強色(15g)",
-          "Opal Luster OL8 蛋青加強色(15g)",
-          "Opal Luster OL9 蛋青加強色(15g)"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Opal OPAL Neutralk 蛋青加強色(50g)": "DSD-OPAL-Neutral",
-      "Opal Luster OL10 蛋青加強色(15g)": "DSD-OPAL-OL10",
-      "Opal Luster OL7 蛋青加強色(15g)": "DSD-OPAL-OL7",
-      "Opal Luster OL8 蛋青加強色(15g)": "DSD-OPAL-OL8",
-      "Opal Luster OL9 蛋青加強色(15g)": "DSD-OPAL-OL9"
-    }
-  },
-  {
     "id": "CA-YD-IMPRESSION-MATERIAL",
     "seriesCode": "CA-YD-IMPRESSION-MATERIAL",
     "seriesName": "YD 印模材料",
@@ -7837,32 +7272,6 @@
       "ZEO Color Margin CM-Salmon (5g)": "YM-CM-2",
       "ZEO Color Margin CM-Orange (5g)": "YM-CM-3",
       "ZEO Color Margin CM-Brown (5g)": "YM-CM-4"
-    }
-  },
-  {
-    "id": "DSD-E9",
-    "seriesCode": "DSD-E9",
-    "seriesName": "E9 瓷粉/陶瓷材料",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉/陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker Enamel E9/15g",
-          "Matchmaker MC Enamel E9/250g",
-          "Matchmaker Enamel E9/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker Enamel E9/15g": "DSD-E9-15",
-      "Matchmaker MC Enamel E9/250g": "DSD-E9-250",
-      "Matchmaker Enamel E9/50g": "DSD-E9-50"
     }
   },
   {
@@ -8328,30 +7737,6 @@
     }
   },
   {
-    "id": "DSD-E8",
-    "seriesCode": "DSD-E8",
-    "seriesName": "E8 瓷粉/陶瓷材料",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉/陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker MC Enamel E8/250g",
-          "Matchmaker Enamel E8/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker MC Enamel E8/250g": "DSD-E8-250",
-      "Matchmaker Enamel E8/50g": "DSD-E8-50"
-    }
-  },
-  {
     "id": "DSD-L0564",
     "seriesCode": "DSD-L0564",
     "seriesName": "L0564 瓷粉/陶瓷材料",
@@ -8373,54 +7758,6 @@
     "skuMap": {
       "Matchmaster E9 (15g)": "DSD-L0564-E9",
       "Matchmaster Clear (15g)": "DSD-L0564-TC01"
-    }
-  },
-  {
-    "id": "DSD-TCO2",
-    "seriesCode": "DSD-TCO2",
-    "seriesName": "TCO2 瓷粉/陶瓷材料",
-    "brand": "Davis Schottlander",
-    "productType": "材料",
-    "category": "瓷粉/陶瓷材料",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "Matchmaker MC Enamel Neutral/250g",
-          "Matchmaker Enamel Neutral/50g"
-        ]
-      }
-    ],
-    "skuMap": {
-      "Matchmaker MC Enamel Neutral/250g": "DSD-TCO2-250",
-      "Matchmaker Enamel Neutral/50g": "DSD-TCO2-50"
-    }
-  },
-  {
-    "id": "DSD-ZR-PROCESS-LIQUID",
-    "seriesCode": "DSD-ZR-PROCESS-LIQUID",
-    "seriesName": "ZR 專用液/藥劑",
-    "brand": "Davis Schottlander",
-    "productType": "耗材",
-    "category": "專用液/藥劑",
-    "skuPattern": "",
-    "namePattern": "{規格}",
-    "specs": [
-      {
-        "key": "規格",
-        "label": "規格 / 型號",
-        "options": [
-          "ZR Modelling Liquid (60ml)",
-          "ZR Stain Luquid 15ml"
-        ]
-      }
-    ],
-    "skuMap": {
-      "ZR Modelling Liquid (60ml)": "DSD-ZR-01",
-      "ZR Stain Luquid 15ml": "DSD-ZR-02"
     }
   },
   {
@@ -8925,6 +8262,1882 @@
     "skuMap": {
       "Crown NS A2 全口": "YMH-T80-A2",
       "Crown NS A3 全口": "YMH-T80-A3"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-KIT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-KIT",
+    "seriesName": "Matchmaker 套裝組",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "外染液",
+    "skuPattern": "",
+    "namePattern": "{套裝}",
+    "specs": [
+      {
+        "key": "套裝",
+        "label": "套裝",
+        "options": [
+          "Stain（DSD-STAIN-0086）",
+          "Stain（DSD-STAIN-SET）"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Stain（DSD-STAIN-0086）": "DSD-STAIN-0086",
+      "Stain（DSD-STAIN-SET）": "DSD-STAIN-SET"
+    },
+    "skuNameMap": {
+      "DSD-STAIN-0086": "Matchmaker Stain Kit",
+      "DSD-STAIN-SET": "Matchmaker Stain SET"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-LIQUID",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-LIQUID",
+    "seriesName": "Matchmaker 專用液",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{用途} {包裝}",
+    "specs": [
+      {
+        "key": "用途",
+        "label": "用途",
+        "options": [
+          "Body",
+          "Body Plus",
+          "Opaque"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "200ml"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Body|200ml": "DSD-01",
+      "Body Plus|200ml": "DSD-01-1",
+      "Opaque|200ml": "DSD-02"
+    },
+    "skuNameMap": {
+      "DSD-01": "Matchmaker Body 專用液/200ml",
+      "DSD-01-1": "Matchmaker Body Plus 專用液/200ml",
+      "DSD-02": "Matchmaker Opaque專用液/200ml"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-DENTINE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-DENTINE",
+    "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4",
+          "TA3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g",
+          "250g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A1|50g": "DSD-BA1-50",
+      "A2|50g": "DSD-BA2-50",
+      "A2|250g": "DSD-BA2-250",
+      "A3|50g": "DSD-BA3-50",
+      "A3|250g": "DSD-BA3-250",
+      "A3.5|15g": "DSD-BA3.5-15",
+      "A3.5|50g": "DSD-BA3.5-50",
+      "A3.5|250g": "DSD-BA3.5-250",
+      "A4|50g": "DSD-BA4-50",
+      "B1|50g": "DSD-BB1-50",
+      "B2|50g": "DSD-BB2-50",
+      "B3|50g": "DSD-BB3-50",
+      "B4|50g": "DSD-BB4-50",
+      "C1|50g": "DSD-BC1-50",
+      "C2|50g": "DSD-BC2-50",
+      "C3|50g": "DSD-BC3-50",
+      "C4|50g": "DSD-BC4-50",
+      "D2|15g": "DSD-BD2-15",
+      "D2|50g": "DSD-BD2-50",
+      "D3|50g": "DSD-BD3-50",
+      "D4|50g": "DSD-BD4-50",
+      "TA3|50g": "DSD-TA3-50"
+    },
+    "skuNameMap": {
+      "DSD-BA1-50": "Matchmaker BODY A1/50g",
+      "DSD-BA2-50": "Matchmaker BODY A2/50g",
+      "DSD-BA2-250": "Matchmaker Dentine A2/250g",
+      "DSD-BA3-50": "Matchmaker BODY A3/50g",
+      "DSD-BA3-250": "Matchmaker Dentine A3/250g",
+      "DSD-BA3.5-15": "Matchmaker BODY A3.5/15g",
+      "DSD-BA3.5-50": "Matchmaker BODY A3.5/50g",
+      "DSD-BA3.5-250": "Matchmaker Dentine A3.5/250g",
+      "DSD-BA4-50": "Matchmaker BODY A4/50g",
+      "DSD-BB1-50": "Matchmaker BODY B1/50g",
+      "DSD-BB2-50": "Matchmaker BODY B2/50g",
+      "DSD-BB3-50": "Matchmaker BODY B3/50g",
+      "DSD-BB4-50": "Matchmaker BODY B4/50g",
+      "DSD-BC1-50": "Matchmaker BODY C1/50g",
+      "DSD-BC2-50": "Matchmaker BODY C2/50g",
+      "DSD-BC3-50": "Matchmaker BODY C3/50g",
+      "DSD-BC4-50": "Matchmaker BODY C4/50g",
+      "DSD-BD2-15": "Matchmaker BODY D2/15g",
+      "DSD-BD2-50": "Matchmaker BODY D2/50g",
+      "DSD-BD3-50": "Matchmaker BODY D3/50g",
+      "DSD-BD4-50": "Matchmaker BODY D4/50g",
+      "DSD-TA3-50": "Matchmaker Dentine TA3/50g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-EFFECT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-EFFECT",
+    "seriesName": "Matchmaker Effect 效果瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟／壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "M4 Rye",
+          "OC4 Amber"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "M4 Rye|15g": "DSD-M4-15",
+      "OC4 Amber|15g": "DSD-OC4-15"
+    },
+    "skuNameMap": {
+      "DSD-M4-15": "Matchmaker M4 Rye /15g",
+      "DSD-OC4-15": "Matchmaker OC4 Amber /15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-GINGIVAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-GINGIVAL",
+    "seriesName": "Matchmaker Gingival 牙齦瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟／壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "MG1",
+          "MG2",
+          "MG3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "MG1|15g": "DSD-MG1-15",
+      "MG2|15g": "DSD-MG2-15",
+      "MG3|15g": "DSD-MG3-15"
+    },
+    "skuNameMap": {
+      "DSD-MG1-15": "Matchmaker Gingival MG1 /15g",
+      "DSD-MG2-15": "Matchmaker Gingival MG2 /15g",
+      "DSD-MG3-15": "Matchmaker Gingival MG3 /15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-GLAZE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-GLAZE",
+    "seriesName": "Matchmaker Glaze 釉材",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "釉材／表面塗層",
+    "skuPattern": "",
+    "namePattern": "{品項} {包裝}",
+    "specs": [
+      {
+        "key": "品項",
+        "label": "品項",
+        "options": [
+          "Liquid 釉水",
+          "Powder 釉粉"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "10g",
+          "15ml"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Liquid 釉水|15ml": "DSD-05",
+      "Powder 釉粉|10g": "DSD-04"
+    },
+    "skuNameMap": {
+      "DSD-05": "Matchmaker Glaze Liquid 釉水/15ml",
+      "DSD-04": "Matchmaker Glaze Powder 釉粉/10g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-KIT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-KIT",
+    "seriesName": "Matchmaker MC 套裝組",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{套裝}",
+    "specs": [
+      {
+        "key": "套裝",
+        "label": "套裝",
+        "options": [
+          "A3"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A3": "DSD-19"
+    },
+    "skuNameMap": {
+      "DSD-19": "Matchmaker MC A3 Kit"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-TRANSLUCENT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-TRANSLUCENT",
+    "seriesName": "Matchmaker MC Coloured Translucent 透明瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "CT1（DSD-CT1-15）",
+          "CT1（DSD-CT2-15）",
+          "CT3",
+          "CT5",
+          "CT7"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "CT1（DSD-CT1-15）|15g": "DSD-CT1-15",
+      "CT1（DSD-CT2-15）|15g": "DSD-CT2-15",
+      "CT3|15g": "DSD-CT3-15",
+      "CT5|15g": "DSD-CT5-15",
+      "CT7|15g": "DSD-CT7-15"
+    },
+    "skuNameMap": {
+      "DSD-CT1-15": "Translucent CT1 藍 /15g",
+      "DSD-CT2-15": "Translucent CT1 白 /15g",
+      "DSD-CT3-15": "Translucent CT3 紅/15g",
+      "DSD-CT5-15": "Translucent CT5 橘 /15g",
+      "DSD-CT7-15": "Translucent CT7 灰 /15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-ENAMEL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-ENAMEL",
+    "seriesName": "Matchmaker MC Enamel 琺瑯質瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "Clear",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "Neutral",
+          "TE8",
+          "Ultra Clear"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g",
+          "250g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Clear|15g": "DSD-TCO1-15",
+      "Clear|50g": "DSD-TCO1-50",
+      "Clear|250g": "DSD-TCO1-250",
+      "E7|50g": "DSD-E7-50",
+      "E8|50g": "DSD-E8-50",
+      "E8|250g": "DSD-E8-250",
+      "E9|15g": "DSD-E9-15",
+      "E9|50g": "DSD-E9-50",
+      "E9|250g": "DSD-E9-250",
+      "E10|50g": "DSD-E10-50",
+      "Neutral|50g": "DSD-TCO2-50",
+      "Neutral|250g": "DSD-TCO2-250",
+      "TE8|50g": "DSD-TE8-50",
+      "Ultra Clear|50g": "DSD-TCO0-50"
+    },
+    "skuNameMap": {
+      "DSD-TCO1-15": "Matchmaker Enamel Clear/15g",
+      "DSD-TCO1-50": "Matchmaker Enamel Clear/50g",
+      "DSD-TCO1-250": "Matchmaker MC Enamel Clear/250g",
+      "DSD-E7-50": "Matchmaker Enamel E7/50g",
+      "DSD-E8-50": "Matchmaker Enamel E8/50g",
+      "DSD-E8-250": "Matchmaker MC Enamel E8/250g",
+      "DSD-E9-15": "Matchmaker Enamel E9/15g",
+      "DSD-E9-50": "Matchmaker Enamel E9/50g",
+      "DSD-E9-250": "Matchmaker MC Enamel E9/250g",
+      "DSD-E10-50": "Matchmaker Enamel E10/50g",
+      "DSD-TCO2-50": "Matchmaker Enamel Neutral/50g",
+      "DSD-TCO2-250": "Matchmaker MC Enamel Neutral/250g",
+      "DSD-TE8-50": "Matchmaker Enamel TE8/50g",
+      "DSD-TCO0-50": "Matchmaker Enamel Ultra Clear/50g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-ENHANCER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-ENHANCER",
+    "seriesName": "Matchmaker MC Enhancer 增強瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A1|50g": "DSD-EA1-50",
+      "A2|50g": "DSD-EA2-50",
+      "A3|50g": "DSD-EA3-50",
+      "A3.5|15g": "DSD-EA3.5-15",
+      "A3.5|50g": "DSD-EA3.5-50",
+      "A4|15g": "DSD-EA4-15",
+      "A4|50g": "DSD-EA4-50",
+      "B1|50g": "DSD-EB1-50",
+      "B2|50g": "DSD-EB2-50",
+      "B3|50g": "DSD-EB3-50",
+      "B4|50g": "DSD-EB4-50",
+      "C1|50g": "DSD-EC1-50",
+      "C2|50g": "DSD-EC2-50",
+      "C3|15g": "DSD-EC3-15",
+      "C3|50g": "DSD-EC3-50",
+      "C4|50g": "DSD-EC4-50",
+      "D2|50g": "DSD-ED2-50",
+      "D3|50g": "DSD-ED3-50",
+      "D4|50g": "DSD-ED4-50"
+    },
+    "skuNameMap": {
+      "DSD-EA1-50": "Matchmaker MC Enhancer A1/50g",
+      "DSD-EA2-50": "Matchmaker MC Enhancer A2/50g",
+      "DSD-EA3-50": "Matchmaker MC Enhancer A3/50g",
+      "DSD-EA3.5-15": "Matchmaker MC Enhancer A3.5/15g",
+      "DSD-EA3.5-50": "Matchmaker MC Enhancer A3.5/50g",
+      "DSD-EA4-15": "Matchmaker MC Enhancer A4/15g",
+      "DSD-EA4-50": "Matchmaker MC Enhancer A4/50g",
+      "DSD-EB1-50": "Matchmaker MC Enhancer B1/50g",
+      "DSD-EB2-50": "Matchmaker MC Enhancer B2/50g",
+      "DSD-EB3-50": "Matchmaker MC Enhancer B3/50g",
+      "DSD-EB4-50": "Matchmaker MC Enhancer B4/50g",
+      "DSD-EC1-50": "Matchmaker MC Enhancer C1/50g",
+      "DSD-EC2-50": "Matchmaker MC Enhancer C2/50g",
+      "DSD-EC3-15": "Matchmaker MC Enhancer C3/15g",
+      "DSD-EC3-50": "Matchmaker MC Enhancer C3/50g",
+      "DSD-EC4-50": "Matchmaker MC Enhancer C4/50g",
+      "DSD-ED2-50": "Matchmaker MC Enhancer D2/50g",
+      "DSD-ED3-50": "Matchmaker MC Enhancer D3/50g",
+      "DSD-ED4-50": "Matchmaker MC Enhancer D4/50g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-MODIFIER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-MODIFIER",
+    "seriesName": "Matchmaker MC Modifier 修飾瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "MM1",
+          "MM2",
+          "MM3",
+          "MM4",
+          "MM5",
+          "MM6",
+          "MM7",
+          "MM8",
+          "MM9"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "MM1|15g": "DSD-MM1-15",
+      "MM2|15g": "DSD-MM2-15",
+      "MM3|15g": "DSD-MM3-15",
+      "MM4|15g": "DSD-MM4-15",
+      "MM5|15g": "DSD-MM5-15",
+      "MM6|15g": "DSD-MM6-15",
+      "MM7|15g": "DSD-MM7-15",
+      "MM8|15g": "DSD-MM8-15",
+      "MM9|15g": "DSD-MM9-15"
+    },
+    "skuNameMap": {
+      "DSD-MM1-15": "Master Modifiers MM1 (White)/15g",
+      "DSD-MM2-15": "Master Modifiers MM2 (Yellow)/15g",
+      "DSD-MM3-15": "Master Modifiers MM3 (Intense Yellow)/15g",
+      "DSD-MM4-15": "Master Modifiers MM4 (Light Brown)/15g",
+      "DSD-MM5-15": "Master Modifiers MM5 (Dark Brown)/15g",
+      "DSD-MM6-15": "Master Modifiers MM6 (Pink)/15g",
+      "DSD-MM7-15": "Master Modifiers MM7 (Blue)/15g",
+      "DSD-MM8-15": "Master Modifiers MM8 (Green)/15g",
+      "DSD-MM9-15": "Master Modifiers MM9 (Gray)/15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-OCCLUSAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-OCCLUSAL",
+    "seriesName": "Matchmaker MC Occlusal 咬合面瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "OC3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "OC3|15g": "DSD-OC3-15"
+    },
+    "skuNameMap": {
+      "DSD-OC3-15": "Occlusal OC3 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-OPACIOUS-DENTINE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-OPACIOUS-DENTINE",
+    "seriesName": "Matchmaker MC Opacious Dentine 高遮色牙本質瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "OD31",
+          "OD32",
+          "OD33",
+          "OD34",
+          "OD35",
+          "OD36",
+          "OD37"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "OD31|15g": "DSD-OD31-15",
+      "OD32|15g": "DSD-OD32-15",
+      "OD33|15g": "DSD-OD33-15",
+      "OD34|15g": "DSD-OD34-15",
+      "OD35|15g": "DSD-OD35-15",
+      "OD36|15g": "DSD-OD36-15",
+      "OD37|15g": "DSD-OD37-15"
+    },
+    "skuNameMap": {
+      "DSD-OD31-15": "MM OPA Body 加強色 OD31/15g",
+      "DSD-OD32-15": "MM OPA Body 加強色 OD32/15g",
+      "DSD-OD33-15": "MM OPA Body 加強色 OD33/15g",
+      "DSD-OD34-15": "MM OPA Body 加強色 OD34/15g",
+      "DSD-OD35-15": "MM OPA Body 加強色 OD35/15g",
+      "DSD-OD36-15": "MM OPA Body 加強色 OD36/15g",
+      "DSD-OD37-15": "MM OPA Body 加強色 OD37/15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-OPAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-OPAL",
+    "seriesName": "Matchmaker MC Opal 乳光瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "Neutral",
+          "OL7",
+          "OL8（DSD-OL8-15）",
+          "OL8（DSD-OPAL-OL8）",
+          "OL9（DSD-OL9-15）",
+          "OL9（DSD-OPAL-OL9）",
+          "OL10"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Neutral|50g": "DSD-OPAL-Neutral",
+      "OL7|15g": "DSD-OPAL-OL7",
+      "OL8（DSD-OL8-15）|15g": "DSD-OL8-15",
+      "OL8（DSD-OPAL-OL8）|15g": "DSD-OPAL-OL8",
+      "OL9（DSD-OL9-15）|15g": "DSD-OL9-15",
+      "OL9（DSD-OPAL-OL9）|15g": "DSD-OPAL-OL9",
+      "OL10|15g": "DSD-OPAL-OL10"
+    },
+    "skuNameMap": {
+      "DSD-OPAL-Neutral": "Opal OPAL Neutralk 蛋青加強色(50g)",
+      "DSD-OPAL-OL7": "Opal Luster OL7 蛋青加強色(15g)",
+      "DSD-OL8-15": "Matchmaker MC Opal OL8/15g",
+      "DSD-OPAL-OL8": "Opal Luster OL8 蛋青加強色(15g)",
+      "DSD-OL9-15": "Matchmaker MC Opal OL9/15g",
+      "DSD-OPAL-OL9": "Opal Luster OL9 蛋青加強色(15g)",
+      "DSD-OPAL-OL10": "Opal Luster OL10 蛋青加強色(15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-PONTIC-FILL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-PONTIC-FILL",
+    "seriesName": "Matchmaker MC Pontic Fill",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{品項} {包裝}",
+    "specs": [
+      {
+        "key": "品項",
+        "label": "品項",
+        "options": [
+          "Pontic Fill"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Pontic Fill|15g": "DSD-0438"
+    },
+    "skuNameMap": {
+      "DSD-0438": "Matchmaker MC Pontic Fill(15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-MC-PROPAQUE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-MC-PROPAQUE",
+    "seriesName": "Matchmaker MC Propaque Paste Opaque 遮色膏",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "Blossom",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "3.2g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A1|3.2g": "DSD-PRO-OA1",
+      "A2|3.2g": "DSD-PRO-OA2",
+      "A3|3.2g": "DSD-PRO-OA3",
+      "A3.5|3.2g": "DSD-PRO-OA3.5",
+      "A4|3.2g": "DSD-PRO-OA4",
+      "B1|3.2g": "DSD-PRO-OB1",
+      "B2|3.2g": "DSD-PRO-OB2",
+      "B3|3.2g": "DSD-PRO-OB3",
+      "B4|3.2g": "DSD-PRO-OB4",
+      "Blossom|3.2g": "DSD-PRO-1",
+      "C1|3.2g": "DSD-PRO-OC1",
+      "C2|3.2g": "DSD-PRO-OC2",
+      "C3|3.2g": "DSD-PRO-OC3",
+      "C4|3.2g": "DSD-PRO-OC4",
+      "D2|3.2g": "DSD-PRO-OD2",
+      "D3|3.2g": "DSD-PRO-OD3",
+      "D4|3.2g": "DSD-PRO-OD4"
+    },
+    "skuNameMap": {
+      "DSD-PRO-OA1": "Propaque Paste A1 (3.2g)",
+      "DSD-PRO-OA2": "Propaque Paste A2 (3.2g)",
+      "DSD-PRO-OA3": "Propaque Paste A3 (3.2g)",
+      "DSD-PRO-OA3.5": "Propaque Paste A3.5 (3.2g)",
+      "DSD-PRO-OA4": "Propaque Paste A4 (3.2g)",
+      "DSD-PRO-OB1": "Propaque Paste B1 (3.2g)",
+      "DSD-PRO-OB2": "Propaque Paste B2 (3.2g)",
+      "DSD-PRO-OB3": "Propaque Paste B3 (3.2g)",
+      "DSD-PRO-OB4": "Propaque Paste B4 (3.2g)",
+      "DSD-PRO-1": "Propaque Paste Blosson (3.2g)",
+      "DSD-PRO-OC1": "Propaque Paste C1 (3.2g)",
+      "DSD-PRO-OC2": "Propaque Paste C2 (3.2g)",
+      "DSD-PRO-OC3": "Propaque Paste C3 (3.2g)",
+      "DSD-PRO-OC4": "Propaque Paste C4 (3.2g)",
+      "DSD-PRO-OD2": "Propaque Paste D2 (3.2g)",
+      "DSD-PRO-OD3": "Propaque Paste D3 (3.2g)",
+      "DSD-PRO-OD4": "Propaque Paste D4 (3.2g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-OPAQUE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-OPAQUE",
+    "seriesName": "Matchmaker Opaque 遮色瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A1|50g": "DSD-OA1-50",
+      "A2|50g": "DSD-OA2-50",
+      "A3|50g": "DSD-OA3-50",
+      "A3.5|50g": "DSD-OA3.5-50",
+      "A4|15g": "DSD-OA4-15",
+      "A4|50g": "DSD-OA4-50",
+      "B1|50g": "DSD-OB1-50",
+      "B2|50g": "DSD-OB2-50",
+      "B3|50g": "DSD-OB3-50",
+      "B4|50g": "DSD-OB4-50",
+      "C1|50g": "DSD-OC1-50",
+      "C2|50g": "DSD-OC2-50",
+      "C3|50g": "DSD-OC3-50",
+      "C4|50g": "DSD-OC4-50",
+      "D2|50g": "DSD-OD2-50",
+      "D3|50g": "DSD-OD3-50",
+      "D4|50g": "DSD-OD4-50"
+    },
+    "skuNameMap": {
+      "DSD-OA1-50": "Matchmaker Opaque A1/50g",
+      "DSD-OA2-50": "Matchmaker Opaque A2/50g",
+      "DSD-OA3-50": "Matchmaker Opaque A3/50g",
+      "DSD-OA3.5-50": "Matchmaker Opaque A3.5/50g",
+      "DSD-OA4-15": "Matchmaker Opaque A4/15g",
+      "DSD-OA4-50": "Matchmaker Opaque A4/50g",
+      "DSD-OB1-50": "Matchmaker Opaque B1/50g",
+      "DSD-OB2-50": "Matchmaker Opaque B2/50g",
+      "DSD-OB3-50": "Matchmaker Opaque B3/50g",
+      "DSD-OB4-50": "Matchmaker Opaque B4/50g",
+      "DSD-OC1-50": "Matchmaker Opaque C1/50g",
+      "DSD-OC2-50": "Matchmaker Opaque C2/50g",
+      "DSD-OC3-50": "Matchmaker Opaque C3/50g",
+      "DSD-OC4-50": "Matchmaker Opaque C4/50g",
+      "DSD-OD2-50": "Matchmaker Opaque D2/50g",
+      "DSD-OD3-50": "Matchmaker Opaque D3/50g",
+      "DSD-OD4-50": "Matchmaker Opaque D4/50g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-PRESS-ZR-PRESS-INGOT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-PRESS-ZR-PRESS-INGOT",
+    "seriesName": "Matchmaker Press Zr 瓷錠",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟／壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{色號}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A2",
+          "A3"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A2": "DSD-ZR-21-A2",
+      "A3": "DSD-ZR-21-A3"
+    },
+    "skuNameMap": {
+      "DSD-ZR-21-A2": "Press ZR A2 瓷錠",
+      "DSD-ZR-21-A3": "Press ZR A3 瓷錠"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-SHOULDER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-SHOULDER",
+    "seriesName": "Matchmaker Shoulder 肩台瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B3",
+          "C2",
+          "D3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A2|15g": "DSD-SA2-15",
+      "A3|15g": "DSD-SA3-15",
+      "A3.5|15g": "DSD-SA3.5-15",
+      "A4|15g": "DSD-SA4-15",
+      "B3|15g": "DSD-SB3-15",
+      "C2|15g": "DSD-SC2-15",
+      "D3|15g": "DSD-SD3-15"
+    },
+    "skuNameMap": {
+      "DSD-SA2-15": "Matchmaker Shoulder A2 /15g",
+      "DSD-SA3-15": "Matchmaker Shoulder A3 /15g",
+      "DSD-SA3.5-15": "Matchmaker Shoulder A3.5 /15g",
+      "DSD-SA4-15": "Matchmaker Shoulder A4 /15g",
+      "DSD-SB3-15": "Matchmaker Shoulder B3 /15g",
+      "DSD-SC2-15": "Matchmaker Shoulder C2 /15g",
+      "DSD-SD3-15": "Matchmaker Shoulder D3 /15g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-STAIN-0086",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-STAIN-0086",
+    "seriesName": "Matchmaker Stain 0086 色組",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "外染液",
+    "skuPattern": "",
+    "namePattern": "{色號}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "01 (White)",
+          "02 (Yellow)",
+          "03 (Peach)",
+          "04 (Orange Brown)",
+          "05 (Dark Brown)",
+          "06 (Light Pink)",
+          "07 (Blue)",
+          "08 (Grey)",
+          "09 (Dark Pink)",
+          "10 (Blue Pink)",
+          "11 (Violet)",
+          "A",
+          "B",
+          "C",
+          "D"
+        ]
+      }
+    ],
+    "skuMap": {
+      "01 (White)": "DSD-STAIN-0086-01",
+      "02 (Yellow)": "DSD-STAIN-0086-02",
+      "03 (Peach)": "DSD-STAIN-0086-03",
+      "04 (Orange Brown)": "DSD-STAIN-0086-04",
+      "05 (Dark Brown)": "DSD-STAIN-0086-05",
+      "06 (Light Pink)": "DSD-STAIN-0086-06",
+      "07 (Blue)": "DSD-STAIN-0086-07",
+      "08 (Grey)": "DSD-STAIN-0086-08",
+      "09 (Dark Pink)": "DSD-STAIN-0086-09",
+      "10 (Blue Pink)": "DSD-STAIN-0086-10",
+      "11 (Violet)": "DSD-STAIN-0086-11",
+      "A": "DSD-STAIN-0086-A",
+      "B": "DSD-STAIN-0086-B",
+      "C": "DSD-STAIN-0086-C",
+      "D": "DSD-STAIN-0086-D"
+    },
+    "skuNameMap": {
+      "DSD-STAIN-0086-01": "Matchmaker Stain 01 (White)",
+      "DSD-STAIN-0086-02": "Matchmaker Stain 02 (Yellow)",
+      "DSD-STAIN-0086-03": "Matchmaker Stain 03 (Peach)",
+      "DSD-STAIN-0086-04": "Matchmaker Stain 04 (Orange Brown)",
+      "DSD-STAIN-0086-05": "Matchmaker Stain 05 (Dark Brown)",
+      "DSD-STAIN-0086-06": "Matchmaker Stain 06 (Light Pink)",
+      "DSD-STAIN-0086-07": "Matchmaker Stain 07 (Blue)",
+      "DSD-STAIN-0086-08": "Matchmaker Stain 08 (Grey)",
+      "DSD-STAIN-0086-09": "Matchmaker Stain 09 (Dark Pink)",
+      "DSD-STAIN-0086-10": "Matchmaker Stain 10 (Blue Pink)",
+      "DSD-STAIN-0086-11": "Matchmaker Stain 11 (Violet)",
+      "DSD-STAIN-0086-A": "Matchmaker Stain A",
+      "DSD-STAIN-0086-B": "Matchmaker Stain B",
+      "DSD-STAIN-0086-C": "Matchmaker Stain C",
+      "DSD-STAIN-0086-D": "Matchmaker Stain D"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-BASE-STAIN-16",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-BASE-STAIN-16",
+    "seriesName": "Matchmaker Stain 16 色組",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "外染液",
+    "skuPattern": "",
+    "namePattern": "{色號}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "01 (White)",
+          "02 (Light Yellow)",
+          "03 (Yellow)",
+          "04 (Oramge)",
+          "05 (Ochre)黃土色",
+          "06 (Mid Red Brn)",
+          "07 (Red Brown)",
+          "08 (Black)",
+          "09 (Yellow Olive)",
+          "10 (Brown Olive)",
+          "11 (Brown Grey)",
+          "12 (Dark Brown Grey)",
+          "13 (Grey)",
+          "14 (Pink)",
+          "15 (Blue)",
+          "16 (Light Blue)"
+        ]
+      }
+    ],
+    "skuMap": {
+      "01 (White)": "DSD-STAIN-01",
+      "02 (Light Yellow)": "DSD-STAIN-02",
+      "03 (Yellow)": "DSD-STAIN-03",
+      "04 (Oramge)": "DSD-STAIN-04",
+      "05 (Ochre)黃土色": "DSD-STAIN-05",
+      "06 (Mid Red Brn)": "DSD-STAIN-06",
+      "07 (Red Brown)": "DSD-STAIN-07",
+      "08 (Black)": "DSD-STAIN-08",
+      "09 (Yellow Olive)": "DSD-STAIN-09",
+      "10 (Brown Olive)": "DSD-STAIN-10",
+      "11 (Brown Grey)": "DSD-STAIN-11",
+      "12 (Dark Brown Grey)": "DSD-STAIN-12",
+      "13 (Grey)": "DSD-STAIN-13",
+      "14 (Pink)": "DSD-STAIN-14",
+      "15 (Blue)": "DSD-STAIN-15",
+      "16 (Light Blue)": "DSD-STAIN-16"
+    },
+    "skuNameMap": {
+      "DSD-STAIN-01": "Matchmaker Stain 01 (White)",
+      "DSD-STAIN-02": "Matchmaker Stain 02 (Light Yellow)",
+      "DSD-STAIN-03": "Matchmaker Stain 03 (Yellow)",
+      "DSD-STAIN-04": "Matchmaker Stain 04 (Oramge)",
+      "DSD-STAIN-05": "Matchmaker Stain 05 (Ochre)黃土色",
+      "DSD-STAIN-06": "Matchmaker Stain 06 (Mid Red Brn)",
+      "DSD-STAIN-07": "Matchmaker Stain 07 (Red Brown)",
+      "DSD-STAIN-08": "Matchmaker Stain 08 (Black)",
+      "DSD-STAIN-09": "Matchmaker Stain 09 (Yellow Olive)",
+      "DSD-STAIN-10": "Matchmaker Stain 10 (Brown Olive)",
+      "DSD-STAIN-11": "Matchmaker Stain 11 (Brown Grey)",
+      "DSD-STAIN-12": "Matchmaker Stain 12 (Dark Brown Grey)",
+      "DSD-STAIN-13": "Matchmaker Stain 13 (Grey)",
+      "DSD-STAIN-14": "Matchmaker Stain 14 (Pink)",
+      "DSD-STAIN-15": "Matchmaker Stain 15 (Blue)",
+      "DSD-STAIN-16": "Matchmaker Stain 16 (Light Blue)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-KIT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-KIT",
+    "seriesName": "Matchmaker Zr 套裝組",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟／壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{套裝} {包裝}",
+    "specs": [
+      {
+        "key": "套裝",
+        "label": "套裝",
+        "options": [
+          "/ 全色系",
+          "全色系補充品",
+          "A2",
+          "A3",
+          "Bleach Shade 美白色系",
+          "Essontials 常用色系",
+          "Stain"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "/ 全色系|15g": "DSD-ZR-04",
+      "全色系補充品|15g": "DSD-ZR-04-1",
+      "A2": "DSD-ZR-03-A2",
+      "A3": "DSD-ZR-03-A3",
+      "Bleach Shade 美白色系": "DSD-ZR-07",
+      "Essontials 常用色系": "DSD-ZR-08",
+      "Stain": "DSD-ZR-06"
+    },
+    "skuNameMap": {
+      "DSD-ZR-04": "Matchmaker ZR 15g/Kit(全色系)",
+      "DSD-ZR-04-1": "Matchmaker ZR 15g",
+      "DSD-ZR-03-A2": "Matchmaker ZR A2 Kit",
+      "DSD-ZR-03-A3": "Matchmaker ZR A3 Kit",
+      "DSD-ZR-07": "ZR Bleach Shade Kit(美白色系)",
+      "DSD-ZR-08": "Matchmaker ZR Essontials Kit(常用色系)",
+      "DSD-ZR-06": "ZR Stain Kit"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-LIQUID",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-LIQUID",
+    "seriesName": "Matchmaker Zr 專用液",
+    "brand": "Davis Schottlander",
+    "productType": "耗材",
+    "category": "專用液／藥劑",
+    "skuPattern": "",
+    "namePattern": "{用途} {包裝}",
+    "specs": [
+      {
+        "key": "用途",
+        "label": "用途",
+        "options": [
+          "Modelling",
+          "Stain"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15ml",
+          "60ml"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Modelling|60ml": "DSD-ZR-01",
+      "Stain|15ml": "DSD-ZR-02"
+    },
+    "skuNameMap": {
+      "DSD-ZR-01": "ZR Modelling Liquid (60ml)",
+      "DSD-ZR-02": "ZR Stain Luquid 15ml"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-TRANSLUCENT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-TRANSLUCENT",
+    "seriesName": "Matchmaker Zr Coloured Translucent 透明瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "CT1",
+          "CT2",
+          "CT3",
+          "CT4",
+          "CT5",
+          "CT7"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "CT1|15g": "DSD-ZR-CT1",
+      "CT2|15g": "DSD-ZR-CT2",
+      "CT3|15g": "DSD-ZR-CT3",
+      "CT4|15g": "DSD-ZR-CT4",
+      "CT5|15g": "DSD-ZR-CT5",
+      "CT7|15g": "DSD-ZR-CT7"
+    },
+    "skuNameMap": {
+      "DSD-ZR-CT1": "ZR Col Tran CT1 (15g)",
+      "DSD-ZR-CT2": "ZR Col Tran CT2 (15g)",
+      "DSD-ZR-CT3": "ZR Col Tran CT3 (15g)",
+      "DSD-ZR-CT4": "ZR Col Tran CT4 (15g)",
+      "DSD-ZR-CT5": "ZR Col Tran CT5 (15g)",
+      "DSD-ZR-CT7": "ZR Col Tran CT7 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-DENTINE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-DENTINE",
+    "seriesName": "Matchmaker Zr Dentine / Body 牙本質瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "A1",
+          "A2",
+          "A3",
+          "A3.5",
+          "A4",
+          "B1",
+          "B2",
+          "B3",
+          "B4",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "D2",
+          "D3",
+          "D4",
+          "HA0",
+          "HB0",
+          "HB00"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "A1|15g": "DSD-ZR-A1",
+      "A2|15g": "DSD-ZR-A2",
+      "A2|50g": "DSD-ZR-A2-50",
+      "A3|15g": "DSD-ZR-A3",
+      "A3|50g": "DSD-ZR-A3-50",
+      "A3.5|15g": "DSD-ZR-A3.5",
+      "A3.5|50g": "DSD-ZR-A3.5-50",
+      "A4|15g": "DSD-ZR-A4",
+      "B1|15g": "DSD-ZR-B1",
+      "B2|15g": "DSD-ZR-B2",
+      "B3|15g": "DSD-ZR-B3",
+      "B4|15g": "DSD-ZR-B4",
+      "C1|15g": "DSD-ZR-C1",
+      "C2|15g": "DSD-ZR-C2",
+      "C3|15g": "DSD-ZR-C3",
+      "C4|15g": "DSD-ZR-C4",
+      "D2|15g": "DSD-ZR-D2",
+      "D3|15g": "DSD-ZR-D3",
+      "D4|15g": "DSD-ZR-D4",
+      "HA0|15g": "DSD-ZR-HA0",
+      "HB0|15g": "DSD-ZR-HB0",
+      "HB00|15g": "DSD-ZR-HB00"
+    },
+    "skuNameMap": {
+      "DSD-ZR-A1": "ZR Dentin A1 (15g)",
+      "DSD-ZR-A2": "ZR Dentin A2 (15g)",
+      "DSD-ZR-A2-50": "ZR Dentin A2 (50g)",
+      "DSD-ZR-A3": "ZR Detin A3 (15g)",
+      "DSD-ZR-A3-50": "ZR Dentin A3 (50g)",
+      "DSD-ZR-A3.5": "ZR Dentin A3.5(15g)",
+      "DSD-ZR-A3.5-50": "ZR Dentin A3.5 (50g)",
+      "DSD-ZR-A4": "ZR Dentin A4(15g)",
+      "DSD-ZR-B1": "ZR Detin B1 (15g)",
+      "DSD-ZR-B2": "ZR Detin B2 (15g)",
+      "DSD-ZR-B3": "ZR Detin B3 (15g)",
+      "DSD-ZR-B4": "ZR Detin B4 (15g)",
+      "DSD-ZR-C1": "ZR Dentine C1 (15g)",
+      "DSD-ZR-C2": "ZR Dentine C2 (15g)",
+      "DSD-ZR-C3": "ZR Dentine C3 (15g)",
+      "DSD-ZR-C4": "ZR Dentine C4 (15g)",
+      "DSD-ZR-D2": "ZR Dentine D2 (15g)",
+      "DSD-ZR-D3": "ZR Dentine D3 (15g)",
+      "DSD-ZR-D4": "ZR Dentine D4 (15g)",
+      "DSD-ZR-HA0": "ZR Dentine HA0 (15g)",
+      "DSD-ZR-HB0": "ZR Dentine HB0 (15g)",
+      "DSD-ZR-HB00": "ZR Dentine HB00 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-ENAMEL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-ENAMEL",
+    "seriesName": "Matchmaker Zr Enamel 琺瑯質瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "Clear",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "Neutral",
+          "OT"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g",
+          "50g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Clear|15g": "DSD-ZR-TC01",
+      "Clear|50g": "DSD-ZR-TC01-50",
+      "E6|15g": "DSD-ZR-E6",
+      "E7|15g": "DSD-ZR-E7",
+      "E8|15g": "DSD-ZR-E8",
+      "E8|50g": "DSD-ZR-E8-50",
+      "E9|15g": "DSD-ZR-E9",
+      "E9|50g": "DSD-ZR-E9-50",
+      "E10|15g": "DSD-ZR-E10",
+      "Neutral|15g": "DSD-ZR-TC02",
+      "Neutral|50g": "DSD-ZR-TC02-50",
+      "OT|15g": "DSD-ZR-TC03",
+      "OT|50g": "DSD-ZR-TC03-50"
+    },
+    "skuNameMap": {
+      "DSD-ZR-TC01": "ZR Emamel Clear (15g)",
+      "DSD-ZR-TC01-50": "ZR Emamel Clear (50g)",
+      "DSD-ZR-E6": "ZR Emamel E6 (15g)",
+      "DSD-ZR-E7": "ZR Emamel E7 (15g)",
+      "DSD-ZR-E8": "ZR Emamel E8 (15g)",
+      "DSD-ZR-E8-50": "ZR Emamel E8 (50g)",
+      "DSD-ZR-E9": "ZR Emamel E9 (15g)",
+      "DSD-ZR-E9-50": "ZR Emamel E9 (50g)",
+      "DSD-ZR-E10": "ZR Emamel E10 (15g)",
+      "DSD-ZR-TC02": "ZR Emamel Neutral (15g)",
+      "DSD-ZR-TC02-50": "ZR Emamel Neutral (50g)",
+      "DSD-ZR-TC03": "ZR Emamel OT (15g)",
+      "DSD-ZR-TC03-50": "ZR Emamel OT (50g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-FLUORESCENT",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-FLUORESCENT",
+    "seriesName": "Matchmaker Zr Fluorescent 螢光瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "Neutral"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Neutral|15g": "DSD-ZR-FN"
+    },
+    "skuNameMap": {
+      "DSD-ZR-FN": "ZR Fluorescent Nertral (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-GINGIVAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-GINGIVAL",
+    "seriesName": "Matchmaker Zr Gingival 牙齦瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "G1",
+          "G2"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "G1|15g": "DSD-ZR-G1",
+      "G2|15g": "DSD-ZR-G2"
+    },
+    "skuNameMap": {
+      "DSD-ZR-G1": "ZR Gingival G1 (15g)",
+      "DSD-ZR-G2": "ZR Gingival G2 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-GLAZE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-GLAZE",
+    "seriesName": "Matchmaker Zr Glaze 釉材",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "釉材／表面塗層",
+    "skuPattern": "",
+    "namePattern": "{品項} {包裝}",
+    "specs": [
+      {
+        "key": "品項",
+        "label": "品項",
+        "options": [
+          "Glaze 釉材"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "10g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Glaze 釉材|10g": "DSD-ZR-05"
+    },
+    "skuNameMap": {
+      "DSD-ZR-05": "ZR Glaze 10g"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-LINER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-LINER",
+    "seriesName": "Matchmaker Zr Liner 襯底瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "FL1",
+          "FL2",
+          "FL3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "FL1|15g": "DSD-ZR-FL1",
+      "FL2|15g": "DSD-ZR-FL2",
+      "FL3|15g": "DSD-ZR-FL3"
+    },
+    "skuNameMap": {
+      "DSD-ZR-FL1": "ZR Liner FL1 (15g)",
+      "DSD-ZR-FL2": "ZR Liner FL2 (15g)",
+      "DSD-ZR-FL3": "ZR Liner FL3(15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-MAMELON",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-MAMELON",
+    "seriesName": "Matchmaker Zr Mamelon 牙本質效果瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "M2",
+          "M4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "M2|15g": "DSD-ZR-M2",
+      "M4|15g": "DSD-ZR-M4"
+    },
+    "skuNameMap": {
+      "DSD-ZR-M2": "ZR Mamelon M2 (15g)",
+      "DSD-ZR-M4": "ZR Mamelon M4 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-MODIFIER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-MODIFIER",
+    "seriesName": "Matchmaker Zr Modifier 修飾瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "MM3",
+          "MM4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "MM3|15g": "DSD-ZR-MM3",
+      "MM4|15g": "DSD-ZR-MM4"
+    },
+    "skuNameMap": {
+      "DSD-ZR-MM3": "ZR Mast Modifier MM3 (15g)",
+      "DSD-ZR-MM4": "ZR Mast Modifier MM4 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-NECK-DENTINE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-NECK-DENTINE",
+    "seriesName": "Matchmaker Zr Neck Dentine 頸部瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "蠟／壓鑄材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "ND2",
+          "ND3",
+          "ND4"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "ND2|15g": "DSD-ZR-ND2",
+      "ND3|15g": "DSD-ZR-ND3",
+      "ND4|15g": "DSD-ZR-ND4"
+    },
+    "skuNameMap": {
+      "DSD-ZR-ND2": "ZR Neck Den ND2 (15g)",
+      "DSD-ZR-ND3": "Matchmaker ZR Neck Den 15g ND3",
+      "DSD-ZR-ND4": "Matchmaker ZR Neck Den 15g ND4"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-OCCLUSAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-OCCLUSAL",
+    "seriesName": "Matchmaker Zr Occlusal 咬合面瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "OC1",
+          "OC3"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "OC1|15g": "DSD-ZR-OC1",
+      "OC3|15g": "DSD-ZR-OC3"
+    },
+    "skuNameMap": {
+      "DSD-ZR-OC1": "ZR Occlusal OC1 (15g)",
+      "DSD-ZR-OC3": "ZR Occlusal OC3 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-OPAL",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-OPAL",
+    "seriesName": "Matchmaker Zr Opal 乳光瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "Blue",
+          "OL7",
+          "OL8",
+          "OL9",
+          "OL10",
+          "Orange",
+          "White"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Blue|15g": "DSD-ZR-OP-B",
+      "OL7|15g": "DSD-ZR-OP-OL7",
+      "OL8|15g": "DSD-ZR-OP-OL8",
+      "OL9|15g": "DSD-ZR-OP-OL9",
+      "OL10|15g": "DSD-ZR-OP-OL10",
+      "Orange|15g": "DSD-ZR-OP-O",
+      "White|15g": "DSD-ZR-OP-W"
+    },
+    "skuNameMap": {
+      "DSD-ZR-OP-B": "ZR Opal Blue (15g)",
+      "DSD-ZR-OP-OL7": "ZR Opal OL7 (15g)",
+      "DSD-ZR-OP-OL8": "ZR Opal OL8 (15g)",
+      "DSD-ZR-OP-OL9": "ZR Opal OL9 (15g)",
+      "DSD-ZR-OP-OL10": "ZR Opal OL10 (15g)",
+      "DSD-ZR-OP-O": "ZR Opal Orange (15g)",
+      "DSD-ZR-OP-W": "ZR Opal White (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-OPAQUE",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-OPAQUE",
+    "seriesName": "Matchmaker Zr Opaque 遮色瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "SD1",
+          "SD2",
+          "SD3",
+          "SD4",
+          "SD5"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "SD1|15g": "DSD-ZR-SD1",
+      "SD2|15g": "DSD-ZR-SD2",
+      "SD3|15g": "DSD-ZR-SD3",
+      "SD4|15g": "DSD-ZR-SD4",
+      "SD5|15g": "DSD-ZR-SD5"
+    },
+    "skuNameMap": {
+      "DSD-ZR-SD1": "ZR Opac Den SD1 (15g)",
+      "DSD-ZR-SD2": "ZR Opac Den SD2 (15g)",
+      "DSD-ZR-SD3": "ZR Opac Den SD3 (15g)",
+      "DSD-ZR-SD4": "ZR Opac Den SD4 (15g)",
+      "DSD-ZR-SD5": "ZR Opac Den SD5 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-SHOULDER",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-SHOULDER",
+    "seriesName": "Matchmaker Zr Shoulder 肩台瓷粉",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "S32",
+          "S33",
+          "S35"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "15g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "S32|15g": "DSD-ZR-S32",
+      "S33|15g": "DSD-ZR-S33",
+      "S35|15g": "DSD-ZR-S35"
+    },
+    "skuNameMap": {
+      "DSD-ZR-S32": "ZR Shoulder S32 (15g)",
+      "DSD-ZR-S33": "ZR Shoulder S33 (15g)",
+      "DSD-ZR-S35": "ZR Shoulder S35 (15g)"
+    }
+  },
+  {
+    "id": "DSD-MATCHMAKER-ZR-STAIN",
+    "collectionName": "Matchmaker",
+    "seriesCode": "DSD-MATCHMAKER-ZR-STAIN",
+    "seriesName": "Matchmaker Zr Stain 上色材",
+    "brand": "Davis Schottlander",
+    "productType": "材料",
+    "category": "瓷粉／陶瓷材料",
+    "skuPattern": "",
+    "namePattern": "{色號} {包裝}",
+    "specs": [
+      {
+        "key": "色號",
+        "label": "色號",
+        "options": [
+          "#1(White)",
+          "#4(Orange Brown)",
+          "#7(Blue)",
+          "#A",
+          "#B",
+          "#C",
+          "D",
+          "Yellow #2"
+        ]
+      },
+      {
+        "key": "包裝",
+        "label": "重量 / 容量",
+        "options": [
+          "2.5g"
+        ]
+      }
+    ],
+    "skuMap": {
+      "#1(White)|2.5g": "DSD-ZR-STAIN-1",
+      "#4(Orange Brown)|2.5g": "DSD-ZR-STAIN-4",
+      "#7(Blue)|2.5g": "DSD-ZR-STAIN-7",
+      "#A|2.5g": "DSD-ZR-STAIN-A",
+      "#B|2.5g": "DSD-ZR-STAIN-B",
+      "#C|2.5g": "DSD-ZR-STAIN-C",
+      "D|2.5g": "DSD-ZR-STAIN-D",
+      "Yellow #2|2.5g": "DSD-ZR-STAIN-2"
+    },
+    "skuNameMap": {
+      "DSD-ZR-STAIN-1": "ZR STAIN #1(White)2.5g",
+      "DSD-ZR-STAIN-4": "ZR STAIN #4(Orange Brown)2.5g",
+      "DSD-ZR-STAIN-7": "ZR STAIN #7(Blue)2.5g",
+      "DSD-ZR-STAIN-A": "ZR STAIN #A(2.5g)",
+      "DSD-ZR-STAIN-B": "ZR STAIN #B(2.5g)",
+      "DSD-ZR-STAIN-C": "ZR STAIN #C (2.5g)",
+      "DSD-ZR-STAIN-D": "ZR STAIN D(2.5g)",
+      "DSD-ZR-STAIN-2": "ZR STAIN Yellow #2 (2.5g)"
     }
   }
 ]

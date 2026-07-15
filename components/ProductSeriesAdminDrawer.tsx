@@ -13,10 +13,12 @@ interface CatalogItem {
 
 interface ProductFamily {
   id: string
+  collectionName?: string
   seriesCode: string
   seriesName: string
   brand: string
   skuMap?: Record<string, string>
+  skuNameMap?: Record<string, string>
   coveredSkuCodes?: string[]
   manualAssignedSkuCodes?: string[]
   source?: 'catalog' | 'notion'

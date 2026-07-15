@@ -37,6 +37,7 @@ export interface SpecDefinition {
 
 export interface ProductFamily {
   id: string          // unique family ID
+  collectionName?: string // optional parent collection, e.g. "Matchmaker"
   seriesCode: string  // code prefix, e.g. "BS-STML"
   seriesName: string  // display name, e.g. "3D Master 氧化鋯塊"
   brand: string
@@ -47,6 +48,8 @@ export interface ProductFamily {
   specs: SpecDefinition[]
   /** 貨品碼不規則時，用查表取代 pattern。key 格式：各規格值以 "|" 串接 */
   skuMap?: Record<string, string>
+  /** 規格選入單據時回傳 ERP 原名；由 catalog 機械產生，不是另一份可編輯主檔。 */
+  skuNameMap?: Record<string, string>
   /** 特殊 UI 變體（前端用）。'ymh-tooth-grid' = YAMAHACHI 牙型座標格 */
   uiVariant?: string
 }

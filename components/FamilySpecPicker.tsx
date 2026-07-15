@@ -12,6 +12,7 @@ export interface FamilySpec {
 
 export interface ProductFamily {
   id: string
+  collectionName?: string
   seriesCode: string
   seriesName: string
   brand: string
@@ -22,6 +23,8 @@ export interface ProductFamily {
   specs: FamilySpec[]
   /** 規格選項不規則時，用查表取代 pattern 生成 SKU。key 格式：spec值以 "|" 串接 */
   skuMap?: Record<string, string>
+  /** SKU → ERP 原始品名；規格顯示可簡化，但加入單據時不得改寫品名快照。 */
+  skuNameMap?: Record<string, string>
   /** 無法由規格表完整表達時，明確列出的系列成員 SKU。 */
   coveredSkuCodes?: string[]
   /** 後台人工指定的系列成員；可能不在規格矩陣 skuMap 中。 */
@@ -616,9 +619,9 @@ export function FamilySpecPanel({
     ? (family.skuMap ? (family.skuMap[skuKey] ?? '') : (family.skuPattern ? buildFromPattern(family.skuPattern, selected) : skuKey))
     : ''
   const skuName = allSelected
-    ? (family.namePattern
+    ? (family.skuNameMap?.[skuCode] ?? (family.namePattern
         ? buildFromPattern(family.namePattern, selected)
-        : visibleRows.map((r) => selected[r.spec.key]).filter(Boolean).join(' · '))
+        : visibleRows.map((r) => selected[r.spec.key]).filter(Boolean).join(' · ')))
     : ''
   const isUnavailable = Boolean(skuCode && family.unavailableSkuCodes?.includes(skuCode))
   const isValid = allSelected && skuCode !== '' && !isUnavailable
