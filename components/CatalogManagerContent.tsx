@@ -72,6 +72,7 @@ interface CatalogItem {
   discontinued?: boolean
   status?: string   // 已停售／未販售
   disabled?: boolean // 中央管理人工停用（可恢復）
+  imageUrl?: string   // Notion 富內容圖片索引
 }
 
 interface FamilySpec {
@@ -1286,7 +1287,7 @@ function ProductEditDrawer({
 }: {
   skuCode: string
   onClose: () => void
-  onSaved: (skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource']) => void
+  onSaved: (skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource'], imageUrl: string) => void
   onFamilyChanged: () => Promise<void>
   allFamilies: ProductFamily[]
 }) {
@@ -1432,6 +1433,7 @@ function ProductEditDrawer({
       saved?.price ?? priceOverride ?? catalog.basePrice ?? null,
       centralDisabled,
       saved?.priceSource ?? (priceOverride != null ? 'override' : catalog.basePrice != null ? 'catalog' : 'unset'),
+      imageUrl.trim(),
     )
     onClose()
   }
@@ -1761,6 +1763,14 @@ function SkuRow({
           className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition-all active:scale-[0.99]"
           aria-expanded={open}
         >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-50 ring-1 ring-stone-900/[0.05]">
+            {item.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-lg text-stone-300" aria-hidden="true">◇</span>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-medium text-stone-800">{item.name}</p>
@@ -2052,6 +2062,14 @@ function FamilyCard({
                   {visibleItems.map((item) => (
                     <div key={item.code} className="group flex min-h-12 flex-col items-stretch gap-2 rounded-2xl px-2 py-2 transition-colors hover:bg-brand-50/40 sm:flex-row sm:items-center sm:gap-3">
                       <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+                        <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-50 ring-1 ring-stone-900/[0.05] sm:mb-0">
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-contain" />
+                          ) : (
+                            <span className="text-lg text-stone-300" aria-hidden="true">◇</span>
+                          )}
+                        </div>
                         <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0">{item.code}</span>
                         <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.name}</span>
                       </div>
@@ -2417,13 +2435,13 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   }
 
   // After a save, update caches
-  const handleSaved = useCallback((skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource']) => {
+  const handleSaved = useCallback((skuCode: string, price: number | null, disabled: boolean, priceSource: CatalogItem['priceSource'], imageUrl: string) => {
     setPriceCache((prev) => {
       const next = new Map(prev)
       next.set(skuCode, price)
       return next
     })
-    setAllItems((items) => items.map((item) => item.code === skuCode ? { ...item, disabled, price: price ?? undefined, priceSource } : item))
+    setAllItems((items) => items.map((item) => item.code === skuCode ? { ...item, disabled, price: price ?? undefined, priceSource, imageUrl } : item))
   }, [])
 
   const exactFamilyIndex = useMemo(() => buildExactFamilyIndex(families), [families])

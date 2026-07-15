@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { listDisabledSkuCodes } from '@/lib/products-notion'
+import { listDisabledSkuCodes, listProductImageIndex } from '@/lib/products-notion'
 import { getEffectiveCatalog } from '@/lib/products-availability'
 import { withApiAuth } from '@/lib/api-auth'
 import { isCentralManagement } from '@/lib/permissions'
@@ -24,10 +24,12 @@ export const GET = withApiAuth('session', async (_req: NextRequest, _ctx, sessio
     getEffectiveCatalog(true),
     listDisabledSkuCodes(),
   ])
+  const imageIndex = await listProductImageIndex(effectiveCatalog.map((item) => item.brand || '__empty__'))
   const disabledCodes = new Set(disabledSkuCodes)
   const allItems = effectiveCatalog.map((item) => ({
     ...item,
     disabled: disabledCodes.has(item.code),
+    imageUrl: imageIndex[item.code] ?? '',
   }))
   const items = isCentralManagement(session)
     ? allItems

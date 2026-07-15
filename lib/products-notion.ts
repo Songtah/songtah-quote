@@ -8,7 +8,7 @@
  */
 
 import { Client } from '@notionhq/client'
-import { deleteRedisValue, getRedisValue, setRedisValue } from '@/lib/notion/shared'
+import { deleteRedisValue, getRedis, getRedisValue, setRedisValue } from '@/lib/notion/shared'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_PRODUCTS = process.env.NOTION_PRODUCTS_DB!
@@ -48,6 +48,10 @@ const PRICE_OVERRIDES_CACHE_KEY = 'products:price-overrides:v1'
 const PRICE_OVERRIDES_CACHE_TTL = 60_000
 let lastPriceOverrides: Record<string, number> | null = null
 let lastPriceOverridesAt = 0
+const IMAGE_INDEX_VERSION_KEY = 'products:image-index:active-version'
+const IMAGE_INDEX_BUILDING_VERSION_KEY = 'products:image-index:building-version'
+const IMAGE_INDEX_DIRTY_KEY = 'products:image-index:dirty'
+const IMAGE_INDEX_KEY_PREFIX = 'products:image-index'
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -120,6 +124,7 @@ export async function upsertProductRichData(
     disabled?:    boolean
   }
 ): Promise<string> {
+  if (data.imageUrl !== undefined) await markProductImageIndexDirty(skuCode)
   // Build the properties patch
   const props: Record<string, any> = {}
   if (data.price !== undefined)
@@ -147,6 +152,7 @@ export async function upsertProductRichData(
       page_id: existing.notionId,
       properties: props,
     } as any)
+    if (data.imageUrl !== undefined) await updateProductImageIndex(skuCode, catalog.brand, data.imageUrl)
     return existing.notionId
   }
 
@@ -167,6 +173,7 @@ export async function upsertProductRichData(
     },
   } as any) as any
 
+  if (data.imageUrl !== undefined) await updateProductImageIndex(skuCode, catalog.brand, data.imageUrl)
   return page.id
 }
 
@@ -280,6 +287,69 @@ export function invalidateProductPriceOverrideCache(): void {
   lastPriceOverrides = null
   lastPriceOverridesAt = 0
   deleteRedisValue(PRICE_OVERRIDES_CACHE_KEY)
+}
+
+function imageIndexShardKey(version: string | number, manufacturer: string): string {
+  return `${IMAGE_INDEX_KEY_PREFIX}:${version}:${encodeURIComponent(manufacturer || '__empty__')}`
+}
+
+/** Read only the versioned Redis projection. User requests never rebuild from Notion. */
+export async function listProductImageIndex(manufacturers: string[]): Promise<Record<string, string>> {
+  const redis = getRedis()
+  if (!redis) return {}
+  try {
+    const version = await redis.get<string | number>(IMAGE_INDEX_VERSION_KEY)
+    if (version === null || version === undefined) return {}
+    const uniqueManufacturers = Array.from(new Set(manufacturers.map((name) => name || '__empty__')))
+    const pipeline = redis.pipeline()
+    for (const manufacturer of uniqueManufacturers) {
+      pipeline.hgetall<Record<string, string>>(imageIndexShardKey(version, manufacturer))
+    }
+    const shards = await pipeline.exec() as Array<Record<string, string> | null>
+    return Object.assign({}, ...shards.filter(Boolean))
+  } catch (error) {
+    console.error('[products-notion] Redis image index unavailable:', error)
+    return {}
+  }
+}
+
+/** Best-effort atomic projection update after the authoritative Notion write succeeds. */
+async function updateProductImageIndex(skuCode: string, manufacturer: string, imageUrl: string): Promise<void> {
+  const redis = getRedis()
+  if (!redis) return
+  try {
+    const [activeVersion, buildingVersion] = await redis.mget<(string | number | null)[]>(
+      IMAGE_INDEX_VERSION_KEY,
+      IMAGE_INDEX_BUILDING_VERSION_KEY,
+    )
+    const versions = Array.from(new Set([activeVersion, buildingVersion].filter((version) => version !== null && version !== undefined)))
+    if (versions.length === 0) return
+    const pipeline = redis.pipeline()
+    for (const version of versions) {
+      const key = imageIndexShardKey(version as string | number, manufacturer)
+      if (imageUrl) pipeline.hset(key, { [skuCode]: imageUrl })
+      else pipeline.hdel(key, skuCode)
+    }
+    pipeline.hdel(IMAGE_INDEX_DIRTY_KEY, skuCode)
+    await pipeline.exec()
+  } catch (error) {
+    console.warn('[products-notion] image index projection update failed:', error)
+  }
+}
+
+async function markProductImageIndexDirty(skuCode: string): Promise<void> {
+  const redis = getRedis()
+  if (!redis) return
+  try {
+    const rebuildLock = await redis.get('products:image-index:rebuild-lock')
+    if (rebuildLock !== null && rebuildLock !== undefined) {
+      throw new Error('產品圖片索引維護中，請稍後再儲存')
+    }
+    await redis.hset(IMAGE_INDEX_DIRTY_KEY, { [skuCode]: new Date().toISOString() })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('索引維護中')) throw error
+    console.warn('[products-notion] image index dirty marker failed:', error)
+  }
 }
 
 // ── Query by family ID ────────────────────────────────────────

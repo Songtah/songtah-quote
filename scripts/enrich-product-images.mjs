@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
 import process from 'node:process'
+import { Redis } from '@upstash/redis'
 import { put } from '@vercel/blob'
 import sharp from 'sharp'
 
@@ -167,6 +168,45 @@ async function notionRequest(apiPath, options = {}) {
   const data = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(`Notion ${apiPath} failed: ${response.status} ${data.message ?? ''}`.trim())
   return data
+}
+
+async function updateProductImageIndex(item, imageUrl) {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return
+  try {
+    const redis = new Redis({ url, token })
+    const [activeVersion, buildingVersion] = await redis.mget(
+      'products:image-index:active-version',
+      'products:image-index:building-version',
+    )
+    const versions = Array.from(new Set([activeVersion, buildingVersion].filter((version) => version !== null && version !== undefined)))
+    if (versions.length === 0) return
+    const pipeline = redis.pipeline()
+    for (const version of versions) {
+      const shard = `products:image-index:${version}:${encodeURIComponent(item.brand || '__empty__')}`
+      pipeline.hset(shard, { [item.code]: imageUrl })
+    }
+    pipeline.hdel('products:image-index:dirty', item.code)
+    await pipeline.exec()
+  } catch (error) {
+    console.warn('[product-images] image index projection update failed:', error instanceof Error ? error.message : String(error))
+  }
+}
+
+async function markProductImageIndexDirty(item) {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return
+  try {
+    const redis = new Redis({ url, token })
+    const rebuildLock = await redis.get('products:image-index:rebuild-lock')
+    if (rebuildLock !== null && rebuildLock !== undefined) throw new Error('Product image index rebuild is running')
+    await redis.hset('products:image-index:dirty', { [item.code]: new Date().toISOString() })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('rebuild is running')) throw error
+    console.warn('[product-images] image index dirty marker failed:', error instanceof Error ? error.message : String(error))
+  }
 }
 
 async function getProductPage(code) {
@@ -378,7 +418,9 @@ for (const item of selected) {
     })
     mutationStarted = true
     result.blobUrl = blob.url
+    await markProductImageIndexDirty(item)
     const pageId = await writeProductImage(item, catalogByCode.get(item.code), blob.url, existingPage)
+    await updateProductImageIndex(item, blob.url)
     const afterPage = await notionRequest(`/pages/${pageId}`)
     const after = productSnapshot(afterPage)
     result.after = after
