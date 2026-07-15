@@ -8,6 +8,7 @@
  */
 
 import { Client } from '@notionhq/client'
+import { get, head, put } from '@vercel/blob'
 import { deleteRedisValue, getRedis, getRedisValue, setRedisValue } from '@/lib/notion/shared'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -52,6 +53,9 @@ const IMAGE_INDEX_VERSION_KEY = 'products:image-index:active-version'
 const IMAGE_INDEX_BUILDING_VERSION_KEY = 'products:image-index:building-version'
 const IMAGE_INDEX_DIRTY_KEY = 'products:image-index:dirty'
 const IMAGE_INDEX_KEY_PREFIX = 'products:image-index'
+const PRODUCT_IMAGE_BLOB_INDEX_URL = process.env.PRODUCT_IMAGE_BLOB_INDEX_URL
+  || 'https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/image-index.json'
+let blobImageIndexUpdateQueue: Promise<void> = Promise.resolve()
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -124,6 +128,9 @@ export async function upsertProductRichData(
     disabled?:    boolean
   }
 ): Promise<string> {
+  if (data.imageUrl !== undefined && !process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is required before updating a product image')
+  }
   if (data.imageUrl !== undefined) await markProductImageIndexDirty(skuCode)
   // Build the properties patch
   const props: Record<string, any> = {}
@@ -296,10 +303,10 @@ function imageIndexShardKey(version: string | number, manufacturer: string): str
 /** Read only the versioned Redis projection. User requests never rebuild from Notion. */
 export async function listProductImageIndex(manufacturers: string[]): Promise<Record<string, string>> {
   const redis = getRedis()
-  if (!redis) return {}
+  if (!redis) return readBlobProductImageIndex()
   try {
     const version = await redis.get<string | number>(IMAGE_INDEX_VERSION_KEY)
-    if (version === null || version === undefined) return {}
+    if (version === null || version === undefined) return readBlobProductImageIndex()
     const uniqueManufacturers = Array.from(new Set(manufacturers.map((name) => name || '__empty__')))
     const pipeline = redis.pipeline()
     for (const manufacturer of uniqueManufacturers) {
@@ -309,13 +316,14 @@ export async function listProductImageIndex(manufacturers: string[]): Promise<Re
     return Object.assign({}, ...shards.filter(Boolean))
   } catch (error) {
     console.error('[products-notion] Redis image index unavailable:', error)
-    return {}
+    return readBlobProductImageIndex()
   }
 }
 
 /** Best-effort atomic projection update after the authoritative Notion write succeeds. */
 async function updateProductImageIndex(skuCode: string, manufacturer: string, imageUrl: string): Promise<void> {
   const redis = getRedis()
+  await updateBlobProductImageIndex(skuCode, imageUrl)
   if (!redis) return
   try {
     const [activeVersion, buildingVersion] = await redis.mget<(string | number | null)[]>(
@@ -337,18 +345,79 @@ async function updateProductImageIndex(skuCode: string, manufacturer: string, im
   }
 }
 
+async function readBlobProductImageIndex(): Promise<Record<string, string>> {
+  try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (token) {
+      const result = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
+      if (!result) return {}
+      const data = await new Response(result.stream).json()
+      return data?.images && typeof data.images === 'object' ? data.images : {}
+    }
+    const cacheBucket = Math.floor(Date.now() / 60_000)
+    const response = await fetch(`${PRODUCT_IMAGE_BLOB_INDEX_URL}?v=${cacheBucket}`, { cache: 'no-store' })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return data?.images && typeof data.images === 'object' ? data.images : {}
+  } catch (error) {
+    console.warn('[products-notion] Blob image index unavailable:', error)
+    return {}
+  }
+}
+
+async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): Promise<void> {
+  const token = process.env.BLOB_READ_WRITE_TOKEN
+  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN is required to update the product image index')
+  const operation = blobImageIndexUpdateQueue.then(async () => {
+    let lastError: unknown
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const current = await head(PRODUCT_IMAGE_BLOB_INDEX_URL, { token })
+        const currentBlob = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
+        if (!currentBlob) throw new Error('Blob image index not found')
+        const data = await new Response(currentBlob.stream).json()
+        const images = data?.images && typeof data.images === 'object' ? { ...data.images } : {}
+        if (imageUrl) images[skuCode] = imageUrl
+        else delete images[skuCode]
+        await put('products/catalog/image-index.json', Buffer.from(JSON.stringify({ version: new Date().toISOString(), images })), {
+          access: 'public',
+          allowOverwrite: true,
+          cacheControlMaxAge: 60,
+          contentType: 'application/json',
+          ifMatch: current.etag,
+          token,
+        })
+        const readBackBlob = await get(PRODUCT_IMAGE_BLOB_INDEX_URL, { access: 'public', token })
+        if (!readBackBlob) throw new Error('Blob image index read-back not found')
+        const readBack = await new Response(readBackBlob.stream).json()
+        if ((readBack.images?.[skuCode] ?? '') !== imageUrl) throw new Error(`Blob image index read-back mismatch: ${skuCode}`)
+        return
+      } catch (error) {
+        lastError = error
+        if (attempt < 3) continue
+      }
+    }
+    throw lastError
+  })
+  blobImageIndexUpdateQueue = operation.catch((error) => {
+    console.warn('[products-notion] Blob image index projection update failed:', error)
+  })
+  await operation
+}
+
 async function markProductImageIndexDirty(skuCode: string): Promise<void> {
   const redis = getRedis()
   if (!redis) return
   try {
-    const rebuildLock = await redis.get('products:image-index:rebuild-lock')
-    if (rebuildLock !== null && rebuildLock !== undefined) {
-      throw new Error('產品圖片索引維護中，請稍後再儲存')
-    }
-    await redis.hset(IMAGE_INDEX_DIRTY_KEY, { [skuCode]: new Date().toISOString() })
+    const marked = await redis.eval(
+      "if redis.call('exists', KEYS[1]) == 0 then redis.call('hset', KEYS[2], ARGV[1], ARGV[2]); return 1 else return 0 end",
+      ['products:image-index:rebuild-lock', IMAGE_INDEX_DIRTY_KEY],
+      [skuCode, new Date().toISOString()],
+    )
+    if (Number(marked) !== 1) throw new Error('產品圖片索引維護中，請稍後再儲存')
   } catch (error) {
     if (error instanceof Error && error.message.includes('索引維護中')) throw error
-    console.warn('[products-notion] image index dirty marker failed:', error)
+    throw new Error('產品圖片索引無法安全標記更新，已停止寫入', { cause: error })
   }
 }
 

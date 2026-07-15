@@ -1,7 +1,9 @@
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import path from 'node:path'
 import process from 'node:process'
 import { Redis } from '@upstash/redis'
+import { get, head, put } from '@vercel/blob'
 
 const ROOT = process.cwd()
 const VERSION_KEY = 'products:image-index:active-version'
@@ -52,22 +54,39 @@ async function notionRequest(apiPath, options = {}) {
 loadEnv()
 const execute = process.argv.includes('--execute')
 if (!process.env.NOTION_TOKEN || !process.env.NOTION_PRODUCTS_DB) throw new Error('Notion product configuration is missing')
-if (execute && (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)) {
-  throw new Error('Redis configuration is missing')
+const hasRedis = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+if (execute && !hasRedis && !process.env.BLOB_READ_WRITE_TOKEN) {
+  throw new Error('Redis and Blob configurations are both missing')
 }
 
-const redis = execute
+const redis = execute && hasRedis
   ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
   : null
 const version = Date.now().toString()
+const blobIndexUrl = 'https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/image-index.json'
+const initialBlobHead = execute && process.env.BLOB_READ_WRITE_TOKEN
+  ? await head(blobIndexUrl, { token: process.env.BLOB_READ_WRITE_TOKEN })
+  : null
 let lockAcquired = false
 let switchedVersion = false
+async function renewRebuildLease() {
+  if (!redis) return
+  const renewed = await redis.eval(
+    "if redis.call('get', KEYS[1]) == ARGV[1] and redis.call('get', KEYS[2]) == ARGV[1] then redis.call('expire', KEYS[1], ARGV[2]); redis.call('expire', KEYS[2], ARGV[2]); return 1 else return 0 end",
+    [REBUILD_LOCK_KEY, BUILDING_VERSION_KEY],
+    [version, '600'],
+  )
+  if (Number(renewed) !== 1) throw new Error('Product image index rebuild lease was lost; refusing to continue')
+}
 try {
 if (redis) {
-  const lock = await redis.set(REBUILD_LOCK_KEY, version, { nx: true, ex: 600 })
-  if (lock !== 'OK') throw new Error('Another product image index rebuild is already running')
+  const lock = await redis.eval(
+    "if redis.call('exists', KEYS[1]) == 0 and redis.call('hlen', KEYS[3]) == 0 then redis.call('set', KEYS[1], ARGV[1], 'EX', ARGV[2]); redis.call('set', KEYS[2], ARGV[1], 'EX', ARGV[2]); return 1 else return 0 end",
+    [REBUILD_LOCK_KEY, BUILDING_VERSION_KEY, DIRTY_KEY],
+    [version, '600'],
+  )
+  if (Number(lock) !== 1) throw new Error('Another rebuild is running or product image updates still require repair')
   lockAcquired = true
-  await redis.set(BUILDING_VERSION_KEY, version, { ex: 600 })
   // Let writes that started before the lock finish dual-writing the building version.
   await new Promise((resolve) => setTimeout(resolve, 2_000))
 }
@@ -91,6 +110,7 @@ for (const partition of partitions) {
   let cursor
   let partitionRows = 0
   do {
+    await renewRebuildLease()
     const response = await notionRequest(`/databases/${databaseId}/query`, {
       method: 'POST',
       body: JSON.stringify({
@@ -130,24 +150,50 @@ const summary = {
 console.log(JSON.stringify(summary, null, 2))
 if (!execute) process.exit(0)
 
+const blobImages = Object.fromEntries(
+  Object.entries(Object.assign({}, ...Array.from(shards.values()))).sort(([left], [right]) => left.localeCompare(right)),
+)
+let blobUrl = null
+if (process.env.BLOB_READ_WRITE_TOKEN) {
+  await renewRebuildLease()
+  const imageDigest = crypto.createHash('sha256').update(JSON.stringify(blobImages)).digest('hex')
+  const payload = Buffer.from(JSON.stringify({ version: new Date().toISOString(), sha256: imageDigest, images: blobImages }))
+  const blob = await put('products/catalog/image-index.json', payload, {
+    access: 'public', allowOverwrite: true, cacheControlMaxAge: 60, contentType: 'application/json',
+    ifMatch: initialBlobHead?.etag, token: process.env.BLOB_READ_WRITE_TOKEN,
+  })
+  const blobReadBackResult = await get(blobIndexUrl, { access: 'public', token: process.env.BLOB_READ_WRITE_TOKEN })
+  if (!blobReadBackResult) throw new Error('Blob read-back not found')
+  const blobReadBack = await new Response(blobReadBackResult.stream).json()
+  const readBackImages = Object.fromEntries(Object.entries(blobReadBack.images ?? {}).sort(([left], [right]) => left.localeCompare(right)))
+  const readBackDigest = crypto.createHash('sha256').update(JSON.stringify(readBackImages)).digest('hex')
+  if (blobReadBack.sha256 !== imageDigest || readBackDigest !== imageDigest) throw new Error('Blob read-back digest mismatch')
+  blobUrl = blob.url
+}
+
+if (redis) {
 const oldVersion = await redis.get(VERSION_KEY)
 const oldShards = await redis.get(SHARDS_KEY)
 const pipeline = redis.pipeline()
 for (const [manufacturer, shard] of shards) pipeline.hset(shardKey(version, manufacturer), shard)
 await pipeline.exec()
 const readBackPipeline = redis.pipeline()
-for (const manufacturer of shards.keys()) readBackPipeline.hlen(shardKey(version, manufacturer))
-const readBackCounts = await readBackPipeline.exec()
-const readBackTotal = readBackCounts.reduce((total, count) => total + Number(count ?? 0), 0)
-if (readBackTotal !== summary.uniqueSkuImages) throw new Error(`Redis read-back mismatch: ${readBackTotal} !== ${summary.uniqueSkuImages}`)
+for (const manufacturer of shards.keys()) readBackPipeline.hgetall(shardKey(version, manufacturer))
+const readBackShards = await readBackPipeline.exec()
+const redisImages = Object.fromEntries(
+  Object.entries(Object.assign({}, ...readBackShards.filter(Boolean))).sort(([left], [right]) => left.localeCompare(right)),
+)
+const redisDigest = crypto.createHash('sha256').update(JSON.stringify(redisImages)).digest('hex')
+const expectedRedisDigest = crypto.createHash('sha256').update(JSON.stringify(blobImages)).digest('hex')
+const readBackTotal = Object.keys(redisImages).length
+if (redisDigest !== expectedRedisDigest) throw new Error('Redis read-back digest mismatch')
 
-const switchVersion = redis.multi()
-switchVersion.set(SHARDS_KEY, Array.from(shards.keys()))
-switchVersion.set(VERSION_KEY, version)
-switchVersion.del(BUILDING_VERSION_KEY)
-switchVersion.del(REBUILD_LOCK_KEY)
-switchVersion.del(DIRTY_KEY)
-await switchVersion.exec()
+const switched = await redis.eval(
+  "if redis.call('get', KEYS[1]) == ARGV[1] and redis.call('get', KEYS[2]) == ARGV[1] then redis.call('set', KEYS[3], ARGV[2]); redis.call('set', KEYS[4], ARGV[1]); redis.call('del', KEYS[2], KEYS[1], KEYS[5]); return 1 else return 0 end",
+  [REBUILD_LOCK_KEY, BUILDING_VERSION_KEY, SHARDS_KEY, VERSION_KEY, DIRTY_KEY],
+  [version, JSON.stringify(Array.from(shards.keys()))],
+)
+if (Number(switched) !== 1) throw new Error('Product image index rebuild lease was lost before version switch')
 switchedVersion = true
 
 if (oldVersion !== null && oldVersion !== undefined && oldVersion !== version && Array.isArray(oldShards)) {
@@ -156,16 +202,18 @@ if (oldVersion !== null && oldVersion !== undefined && oldVersion !== version &&
   await cleanup.exec()
 }
 console.log(JSON.stringify({ activeVersion: version, readBackTotal, status: 'complete' }, null, 2))
+} else {
+  switchedVersion = true
+  console.log(JSON.stringify({ blobUrl, readBackTotal: summary.uniqueSkuImages, status: 'complete' }, null, 2))
+}
 } finally {
   if (redis && lockAcquired && !switchedVersion) {
     try {
-      const currentLock = await redis.get(REBUILD_LOCK_KEY)
-      if (currentLock === version) {
-        const cleanupFailedRebuild = redis.multi()
-        cleanupFailedRebuild.del(BUILDING_VERSION_KEY)
-        cleanupFailedRebuild.del(REBUILD_LOCK_KEY)
-        await cleanupFailedRebuild.exec()
-      }
+      await redis.eval(
+        "if redis.call('get', KEYS[1]) == ARGV[1] then if redis.call('get', KEYS[2]) == ARGV[1] then redis.call('del', KEYS[2]) end; return redis.call('del', KEYS[1]) else return 0 end",
+        [REBUILD_LOCK_KEY, BUILDING_VERSION_KEY],
+        [version],
+      )
     } catch (cleanupError) {
       console.warn('[product-image-index] failed rebuild lock cleanup failed:', cleanupError instanceof Error ? cleanupError.message : String(cleanupError))
     }
