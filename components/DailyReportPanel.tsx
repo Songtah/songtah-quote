@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { LineImportContent } from '@/components/LineImportContent'
 
 // ── helpers ────────────────────────────────────────────────────
 
@@ -124,9 +125,9 @@ function parseDailyReportText(raw: string): ParsedReport {
 
 // ── Main Component ─────────────────────────────────────────────
 
-export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function DailyReportPanel() {
   // Tab
-  const [tab, setTab] = useState<'push' | 'import'>('push')
+  const [tab, setTab] = useState<'paste' | 'line'>('paste')
 
   // Salesperson list (從帳號管理拉，全部業務帳號；停用的排後面並標示)
   const [spNames,      setSpNames]      = useState<string[]>([])
@@ -155,69 +156,7 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
       .catch(() => {})
   }, [])
 
-  // ── 推播 tab ────────────────────────────────────────────────
-  const [period,      setPeriod]      = useState<'AM' | 'PM' | 'FULL'>('FULL')
-  const [date,        setDate]        = useState(todayLocal)
-  const [salesperson, setSalesperson] = useState('')
-  const [title,       setTitle]       = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('dailyReportTitle') ?? '' : ''
-  )
-  const [text,    setText]    = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [result,  setResult]  = useState('')
-
-  const handleTitleChange = (v: string) => {
-    setTitle(v)
-    try { localStorage.setItem('dailyReportTitle', v) } catch {}
-  }
-
-  // 當 API 回傳新業務名單，合併進去
-  const mergeSpNames = (names: string[]) => {
-    setSpNames((prev) => {
-      const seen = new Set(prev)
-      const merged = [...prev]
-      for (const n of names) { if (!seen.has(n)) { seen.add(n); merged.push(n) } }
-      return merged
-    })
-  }
-
-  const loadPreview = useCallback(async () => {
-    setLoading(true); setResult('')
-    try {
-      const params = new URLSearchParams({ period, date })
-      if (salesperson) params.set('salesperson', salesperson)
-      if (title)       params.set('title', title)
-      const res  = await fetch(`/api/daily-report?${params}`)
-      const data = await res.json()
-      if (data.error) { setText(data.error); return }
-      setText(data.text ?? '')
-      if (Array.isArray(data.salespersonNames)) mergeSpNames(data.salespersonNames)
-    } catch { setText('預覽失敗，請重試') }
-    finally  { setLoading(false) }
-  }, [period, date, salesperson, title])
-
-  const sendReport = async () => {
-    setSending(true); setResult('')
-    try {
-      const res = await fetch('/api/daily-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          period,
-          date,
-          salesperson: salesperson || undefined,
-          title:       title || undefined,
-          text:        text  || undefined,
-        }),
-      })
-      const data = await res.json()
-      setResult(data.message ?? data.error ?? '完成')
-    } catch { setResult('推播失敗，請確認 LINE 設定') }
-    finally  { setSending(false) }
-  }
-
-  // ── 匯入 tab ────────────────────────────────────────────────
+  // ── 貼上文字匯入 tab ────────────────────────────────────────────────
   const [rawText,      setRawText]      = useState('')
   const [matchedVisits, setMatchedVisits] = useState<MatchedVisit[]>([])
   const [impSp,        setImpSp]        = useState('')
@@ -365,8 +304,8 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
       {/* Tab switcher */}
       <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-fit">
         {([
-          { id: 'push',   label: '📤 LINE 推播' },
-          { id: 'import', label: '📥 匯入客情紀錄' },
+          { id: 'paste', label: '📝 貼上日報文字' },
+          { id: 'line',  label: '📥 LINE 聊天記錄' },
         ] as const).map((t) => (
           <button
             key={t.id}
@@ -380,98 +319,11 @@ export default function DailyReportPanel({ isAdmin = false }: { isAdmin?: boolea
         ))}
       </div>
 
-      {/* ── 推播 Tab ── */}
-      {tab === 'push' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+      {/* ── LINE 聊天記錄匯入 Tab ── */}
+      {tab === 'line' && <LineImportContent />}
 
-          {/* Period */}
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800">日報設定</h3>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-              {(['AM', 'PM', 'FULL'] as const).map((p) => (
-                <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${period === p ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
-                  {p === 'AM' ? '上午' : p === 'PM' ? '下午' : '全日'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* 職稱 */}
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-gray-500">職稱（顯示於日報開頭）</label>
-              <input type="text" value={title} onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="e.g. 北區業務" className={ic} />
-            </div>
-
-            {/* Date */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">日期</label>
-              <input type="date" value={date} max={todayLocal()} onChange={(e) => setDate(e.target.value)} className={ic} />
-            </div>
-
-            {/* Salesperson */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">業務</label>
-              <select value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={ic}>
-                <option value="">全部業務</option>
-                {spNames.map((n) => (
-                  <option key={n} value={n}>
-                    {inactiveNames.has(n) ? `${n}（已停用）` : n}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Editable textarea */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-gray-500">
-                日報內容
-                {text && <span className="ml-1.5 text-blue-400 font-normal">（可直接編輯）</span>}
-              </label>
-              {text && (
-                <button onClick={() => setText('')} className="text-xs text-gray-300 hover:text-gray-500">清除</button>
-              )}
-            </div>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={14}
-              placeholder={`點擊「預覽」載入日報內容，可在此直接修改後再推播…`}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-gray-300 transition"
-            />
-            <p className="text-xs text-gray-400 text-right">{text ? `${text.length} 字元` : '尚無內容'}</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <button onClick={loadPreview} disabled={loading}
-              className="button-secondary px-4 py-2 text-sm rounded-xl disabled:opacity-50">
-              {loading ? '載入中…' : '🔍 預覽'}
-            </button>
-            {isAdmin ? (
-              <button onClick={sendReport} disabled={sending || !text}
-                className="button-primary px-4 py-2 text-sm rounded-xl disabled:opacity-50 flex items-center gap-1.5">
-                {sending ? '傳送中…' : '📲 推播至 LINE'}
-              </button>
-            ) : (
-              <p className="text-xs text-gray-400">需要行政帳號才能推播</p>
-            )}
-          </div>
-
-          {result && (
-            <p className={`text-sm px-4 py-2.5 rounded-xl ${result.includes('失敗') || result.includes('尚未') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-              {result}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── 匯入 Tab ── */}
-      {tab === 'import' && (
+      {/* ── 貼上文字匯入 Tab ── */}
+      {tab === 'paste' && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
 
           <div>

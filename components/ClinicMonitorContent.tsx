@@ -1075,6 +1075,25 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {/* Stats */}
       {stats && (
         <>
+          <div className="bg-brand-500 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3 text-white">
+            <div>
+              <p className="text-xs font-medium text-white/70 uppercase tracking-wide">公司總客戶數</p>
+              <p className="text-3xl font-bold tabular-nums mt-1">
+                {(stats.customerWithCode + stats.customerNoCode).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex gap-6 text-sm">
+              <div className="text-right">
+                <p className="text-white/70 text-xs">有機構代碼（納入監控）</p>
+                <p className="font-semibold tabular-nums">{stats.customerWithCode.toLocaleString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white/70 text-xs">無機構代碼（公司自建）</p>
+                <p className="font-semibold tabular-nums">{stats.customerNoCode.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

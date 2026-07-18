@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { AppShell } from '@/components/AppShell'
 import { MarketingContent } from '@/components/MarketingContent'
-import { isAssetsDbConfigured } from '@/lib/assets-notion'
 import { canEdit } from '@/lib/permissions'
 
 export default async function MarketingPage() {
@@ -12,12 +11,11 @@ export default async function MarketingPage() {
 
   const user = session.user as any
   const isPromotionsAdmin = canEdit(session as any, 'promotions')
-  const assetsSetupNeeded = !isAssetsDbConfigured()
 
   return (
     <AppShell
       title="行銷管理"
-      description="統合促銷活動、活動管理、活動規劃、素材庫與行程規劃。"
+      description="統合促銷活動、活動管理與活動規劃。"
       hidePhaseNote
       sessionUser={{
         role:        user?.role,
@@ -25,10 +23,7 @@ export default async function MarketingPage() {
         permissions: user?.permissions,
       }}
     >
-      <MarketingContent
-        isPromotionsAdmin={isPromotionsAdmin}
-        assetsSetupNeeded={assetsSetupNeeded}
-      />
+      <MarketingContent isPromotionsAdmin={isPromotionsAdmin} />
     </AppShell>
   )
 }
