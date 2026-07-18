@@ -225,3 +225,72 @@ export async function buildVisitSuggestions(params: {
     mapsBuiltAt: maps.builtAt,
   }
 }
+
+// ── 建議採納追蹤(可追溯:這批建議之後有沒有真的被拜訪)──────────────
+//
+// 不動 Notion 拜訪紀錄 schema(databases.update 對這個 DB 已知會清掉既有選項,見上方
+// ensureVisitDbFields 註解教訓)。改用 Redis 存「複製拜訪單」事件 log,
+// 事後拿 scanVisitRecency() 的實際拜訪日回頭核對:複製後 N 天內該客戶有沒有新拜訪紀錄。
+
+export type SuggestionCopyLogEntry = {
+  at: string            // 複製時間 ISO
+  salesperson: string
+  city: string
+  district: string
+  customerIds: string[] // 這批被複製的客戶(依 group 分開存,方便算各組採納率)
+  groups: Record<string, 'A' | 'B' | 'C'>  // customerId → group
+}
+
+const COPY_LOG_KEY = 'visit-suggestions:copy-log-v1'
+const COPY_LOG_MAX = 300 // 約可覆蓋數月份
+
+export async function logSuggestionCopy(entry: Omit<SuggestionCopyLogEntry, 'at'>): Promise<void> {
+  if (!entry.customerIds.length) return
+  const list = (await getRedisValue<SuggestionCopyLogEntry[]>(COPY_LOG_KEY)) ?? []
+  list.unshift({ ...entry, at: new Date().toISOString() })
+  await setRedisValue(COPY_LOG_KEY, list.slice(0, COPY_LOG_MAX), 400 * 24 * 60 * 60_000) // 約 13 個月
+}
+
+export type AdoptionStats = {
+  totalCopies: number       // 複製拜訪單次數
+  totalSuggested: number    // 累計被建議的客戶人次(含重複)
+  totalVisited: number      // 其中複製後確實有被拜訪的人次
+  rate: number              // totalVisited / totalSuggested(0~1,無資料回 0)
+  byGroup: Record<'A' | 'B' | 'C', { suggested: number; visited: number }>
+}
+
+/** 某業務(或全部)近 N 天的建議採納率:複製建議後,該客戶是否在複製日之後被拜訪過。 */
+export async function getSuggestionAdoptionStats(params: { salesperson?: string; sinceDays?: number } = {}): Promise<AdoptionStats> {
+  const sinceDays = params.sinceDays ?? 30
+  const sinceDate = new Date(Date.now() - sinceDays * 86400e3).toISOString().slice(0, 10)
+  const [log, visitRecency] = await Promise.all([
+    getRedisValue<SuggestionCopyLogEntry[]>(COPY_LOG_KEY),
+    scanVisitRecency(),
+  ])
+  const entries = (log ?? []).filter((e) => e.at.slice(0, 10) >= sinceDate && (!params.salesperson || e.salesperson === params.salesperson))
+
+  let totalSuggested = 0, totalVisited = 0
+  const byGroup: AdoptionStats['byGroup'] = { A: { suggested: 0, visited: 0 }, B: { suggested: 0, visited: 0 }, C: { suggested: 0, visited: 0 } }
+  for (const e of entries) {
+    const copyDate = e.at.slice(0, 10)
+    for (const cid of e.customerIds) {
+      const key = cid.replace(/-/g, '')
+      const g = e.groups[cid] ?? 'A'
+      totalSuggested++
+      byGroup[g].suggested++
+      const lastVisit = visitRecency[key]
+      if (lastVisit && lastVisit >= copyDate) {
+        totalVisited++
+        byGroup[g].visited++
+      }
+    }
+  }
+
+  return {
+    totalCopies: entries.length,
+    totalSuggested,
+    totalVisited,
+    rate: totalSuggested > 0 ? totalVisited / totalSuggested : 0,
+    byGroup,
+  }
+}

@@ -17,6 +17,10 @@ type SuggestionResult = {
   mapsBuiltAt: string
 }
 type RegionRow = { city: string; district: string; salesperson: string; count: number }
+type AdoptionStats = {
+  totalCopies: number; totalSuggested: number; totalVisited: number; rate: number
+  byGroup: Record<'A' | 'B' | 'C', { suggested: number; visited: number }>
+}
 
 const GROUP_META = {
   A: { title: '商品興趣追蹤', icon: '🔥', hint: '有明確事由,優先跑' },
@@ -41,6 +45,15 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
   const [error, setError] = useState('')
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
+  const [adoption, setAdoption] = useState<AdoptionStats | null>(null)
+
+  const loadAdoption = () => {
+    fetch('/api/bd/visit-suggestions/adoption?mine=1&days=30')
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setAdoption(d) })
+      .catch(() => {})
+  }
+  useEffect(() => { loadAdoption() }, [])
 
   // 區域/業務選項:吃區域統計快取(即時)
   useEffect(() => {
@@ -79,11 +92,13 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
   }, [rows, sp])
 
   // 預設區 = 該業務客戶最多的區
+  // 必須等業務確定(sp 有值)才設,否則會被「業務未定前的全域最大區」搶先鎖住 city,
+  // 之後 districtOptions 換成該業務轄區也因 city 已有值而不再修正(race)。
   useEffect(() => {
-    if (city || !districtOptions.length) return
+    if (city || !sp || !districtOptions.length) return
     const top = districtOptions[0]
     setCity(top.city); setDistrict(top.district)
-  }, [districtOptions, city])
+  }, [districtOptions, city, sp])
 
   useEffect(() => {
     if (!sp || !city || !district) return
@@ -119,9 +134,31 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
       ...picked.map((x, i) =>
         `${i + 1}. ${GROUP_META[x.group].icon} ${x.name}\n   ${x.reason}${x.phone ? `\n   ☎ ${x.phone}` : ''}${x.address ? `\n   📍 ${x.address}` : ''}`),
     ]
-    await navigator.clipboard.writeText(lines.join('\n'))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    const text = lines.join('\n')
+    // 記錄這批建議被複製(可追溯用):失敗不擋複製動作,純背景記錄。
+    fetch('/api/bd/visit-suggestions/adoption', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, district, items: picked.map((x) => ({ id: x.id, group: x.group })) }),
+    }).then(loadAdoption).catch(() => {})
+    // clipboard API 在手機 webview / 非 HTTPS / 權限受限時會拋錯,需 fallback,
+    // 否則使用者點了沒反應、按鈕也不變「已複製」,會誤以為壞掉。
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2000) }
+    try {
+      await navigator.clipboard.writeText(text)
+      done()
+    } catch {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'; ta.style.opacity = '0'
+        document.body.appendChild(ta); ta.focus(); ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        done()
+      } catch {
+        setError('複製失敗,請手動長按選取拜訪單文字')
+      }
+    }
   }
 
   const total = allItems.length
@@ -155,6 +192,13 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
           建議一日 8 家上下,依現場彈性調整;資料每晚更新{data ? `(${data.mapsBuiltAt.slice(0, 10)})` : ''}
         </p>
       </div>
+
+      {/* 建議採納率(近30天,可追溯:複製建議後這些客戶事後有沒有真的被拜訪) */}
+      {adoption && adoption.totalSuggested > 0 && (
+        <p className="text-xs text-stone-400 -mt-2">
+          📊 近 30 天你複製了 {adoption.totalCopies} 次拜訪單,建議的 {adoption.totalSuggested} 家中有 {adoption.totalVisited} 家事後真的拜訪了(採納率 {(adoption.rate * 100).toFixed(0)}%)
+        </p>
+      )}
 
       {error && <div className="card-soft p-4 text-sm text-red-600">{error}</div>}
       {loading && (
