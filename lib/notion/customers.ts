@@ -535,11 +535,15 @@ export async function listPipelineCustomers(): Promise<PipelineCustomer[]> {
   return items
 }
 
-/** 更新客戶的開發階段/來源/負責業務（認領）。stage 傳 null 表示移出漏斗。 */
+/**
+ * 更新客戶的開發階段/來源/負責業務（認領）。stage 傳 null 表示移出漏斗。
+ * 認領鐵律(零覆蓋,與 assignSalesperson 同規則):salesperson 只在「負責業務目前為空白」時才寫;
+ * 已被別人認領則略過該欄位(devStage/devSource 仍照常更新),回傳 salespersonSkipped 供呼叫端提示。
+ */
 export async function updateCustomerDevStage(
   id: string,
   data: { devStage?: string | null; devSource?: string; salesperson?: string }
-): Promise<void> {
+): Promise<{ salespersonSkipped: boolean; currentSalesperson?: string }> {
   // 防止任意 page_id 寫入：限定目標頁面必須屬於客戶主檔 DB
   const page = await notionCallWithRetry('updateCustomerDevStage:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
@@ -556,13 +560,26 @@ export async function updateCustomerDevStage(
   if (data.devStage !== undefined) {
     properties['開發階段'] = data.devStage ? { select: { name: data.devStage } } : { select: null }
   }
-  if (data.devSource)    properties['開發來源'] = { select: { name: data.devSource } }
-  if (data.salesperson)  properties['負責業務'] = { select: { name: data.salesperson } }
-  if (Object.keys(properties).length === 0) return
+  if (data.devSource) properties['開發來源'] = { select: { name: data.devSource } }
+
+  let salespersonSkipped = false
+  let currentSalesperson: string | undefined
+  if (data.salesperson) {
+    currentSalesperson = getSelect(page, '負責業務')
+    if (currentSalesperson) {
+      salespersonSkipped = true // 已有負責業務→不動,避免互蓋
+    } else {
+      properties['負責業務'] = { select: { name: data.salesperson } }
+    }
+  }
+
+  if (Object.keys(properties).length === 0) return { salespersonSkipped, currentSalesperson }
   await notionCallWithRetry('updateCustomerDevStage', () =>
     notion.pages.update({ page_id: id, properties })
   )
   setCachedValue('pipeline-customers-v1', null as any, 1) // 失效看板快取
+  if (properties['負責業務']) await invalidateCustomerCaches() // 認領成功時比照 assignSalesperson 失效相關快取
+  return { salespersonSkipped, currentSalesperson }
 }
 
 // ── 醫事監控用：建立新客戶 ───────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { listOpenMembersForAutoClose, updateMember } from '@/lib/notion/campaigns'
 import { listOrders } from '@/lib/orders-notion'
+import { updateCustomerDevStage } from '@/lib/notion/customers'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
         )
         if (hit) {
           await updateMember(m.id, { status: '成交', dealOrderNo: hit.orderNumber })
+          // 名單成交是真實訂單命中,順便推進客戶主檔開發階段,業務不用兩邊各記一次
+          if (m.customerId) {
+            await updateCustomerDevStage(m.customerId, { devStage: '已成交' }).catch((e) =>
+              console.error(`campaign-autoclose: 客戶 ${m.name} 開發階段同步失敗`, e)
+            )
+          }
           closed++
           detail.push(`${campaign.name}:${m.name} → ${hit.orderNumber}`)
         }

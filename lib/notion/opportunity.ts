@@ -66,6 +66,33 @@ export async function listOpportunityCustomers(f: {
   return items
 }
 
+/**
+ * 有商機標籤、但還沒人認領、也還沒進開發漏斗(開發階段空白)的客戶——供漏斗頁「商機客戶」提示區使用。
+ * 已在漏斗裡(開發階段非空)的商機客戶不重複列出,避免同一人在兩個提示區各出現一次。
+ */
+export async function listUnclaimedOpportunityLeads(): Promise<OppCustomer[]> {
+  if (!DB.customers) return []
+  const items: OppCustomer[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listUnclaimedOpportunityLeads', () =>
+      notion.databases.query({
+        database_id: CUST(), page_size: 100,
+        filter: { and: [
+          { property: '商機標籤', multi_select: { is_not_empty: true } },
+          { property: '負責業務', select: { is_empty: true } },
+          { property: '開發階段', select: { is_empty: true } },
+        ] },
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) items.push(mapOpp(page))
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  items.sort((a, b) => b.goldTags.length - a.goldTags.length || a.name.localeCompare(b.name, 'zh-TW'))
+  return items
+}
+
 /** 各商機標籤的客戶計數 + 金訊號家數(供分頁頂部統計)。 */
 export async function getOpportunityStats(): Promise<{ tagCounts: Record<string, number>; goldCustomers: number; total: number }> {
   const all = await listOpportunityCustomers()

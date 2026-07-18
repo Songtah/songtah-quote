@@ -24,6 +24,16 @@ type PipelineItem = {
   nextFollowUpDate: string
 }
 
+/** 商機偵測掃出、尚未認領也還沒進漏斗的客戶(來自客戶資料監控→商機偵測)。 */
+type OpportunityLead = {
+  id: string
+  name: string
+  city: string
+  district: string
+  tags: string[]
+  goldTags: string[]
+}
+
 const STAGE_STYLE: Record<string, { dot: string; badge: string }> = {
   '線索':   { dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-600' },
   '已接觸': { dot: 'bg-brand-500',   badge: 'bg-brand-50 text-brand-600' },
@@ -47,6 +57,7 @@ function staleDays(lastEdited: string): number {
 export default function PipelineContent({ currentUser }: { currentUser?: string }) {
   const [items, setItems] = useState<PipelineItem[]>([])
   const [stages, setStages] = useState<string[]>([])
+  const [opportunityLeads, setOpportunityLeads] = useState<OpportunityLead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -61,6 +72,7 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
       const data = await res.json()
       setItems(data.items ?? [])
       setStages(data.stages ?? [])
+      setOpportunityLeads(data.opportunityLeads ?? [])
     } catch (e: any) {
       setError(e?.message ?? '讀取開發漏斗失敗')
     } finally {
@@ -78,10 +90,39 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...body }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? '更新失敗')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? '更新失敗')
+      if (body.salesperson && data.salespersonSkipped) {
+        // 認領被零覆蓋防呆擋下(已被別人認領):不套用樂觀更新,改用伺服器真實值刷新
+        alert(data.error ?? `此客戶已由 ${data.currentSalesperson} 認領`)
+        await load()
+        return
+      }
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...body } as PipelineItem : it)))
     } catch (e: any) {
       alert(e?.message ?? '更新失敗')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  /** 認領商機客戶:寫負責業務,並比照 BAS 新開業帶「線索」+來源,把客戶正式送進漏斗(此前開發階段是空的,不在 items 裡)。 */
+  async function claimOpportunity(id: string) {
+    setBusyId(id)
+    try {
+      const res = await fetch('/api/bd/pipeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, salesperson: currentUser, devStage: '線索', devSource: '商機偵測' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? '認領失敗')
+      if (data.salespersonSkipped) {
+        alert(data.error ?? `此客戶已由 ${data.currentSalesperson} 認領`)
+      }
+      await load() // 認領後這筆會從商機提示區消失、出現在「已接觸」分組,需要重新整份讀取
+    } catch (e: any) {
+      alert(e?.message ?? '認領失敗')
     } finally {
       setBusyId(null)
     }
@@ -146,6 +187,50 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
           )
         })}
       </div>
+
+      {/* 商機客戶提示區(來自客戶資料監控→商機偵測,尚未認領也還沒進漏斗) */}
+      {opportunityLeads.length > 0 && !stageFilter && (
+        <div className="card-soft p-5 border-l-4 border-l-brand-400">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-brand-500">🔍 商機客戶(尚未認領)</p>
+              <p className="text-sm text-stone-600 mt-1">
+                客戶資料監控掃到 <span className="font-bold text-brand-600">{opportunityLeads.length}</span> 家有設備/數位訊號但還沒人跟進,認領後會直接進入「線索」階段。
+              </p>
+            </div>
+          </div>
+          <div className="divide-y divide-stone-900/[0.04]">
+            {opportunityLeads.map((o) => (
+              <div key={o.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <div className="flex-1 min-w-[180px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-stone-800">{o.name}</span>
+                    <span className="text-[11px] text-stone-400">{o.city}{o.district}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {o.tags.map((t) => (
+                      <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded-full ${o.goldTags.includes(t) ? 'bg-brand-500 text-white font-semibold' : 'bg-stone-100 text-stone-500'}`}>
+                        {o.goldTags.includes(t) ? '🔥 ' : ''}{t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {currentUser ? (
+                  <button
+                    onClick={() => claimOpportunity(o.id)}
+                    disabled={busyId === o.id}
+                    className="shrink-0 text-xs px-3 py-1.5 rounded-full font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    認領
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-xs text-stone-300">未認領</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 無人認領警示區 */}
       {unclaimed.length > 0 && !stageFilter && (
