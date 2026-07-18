@@ -772,6 +772,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     labsStale: readBoolean(value.labsStale),
     customerWithCode: readNumber(value.customerWithCode),
     customerNoCode: readNumber(value.customerNoCode),
+    customerEngaged: readNumber(value.customerEngaged),
     normalOperating: readNumber(value.normalOperating),
     newOpeningClinics: readNumber(value.newOpeningClinics),
     newOpeningLabs: readNumber(value.newOpeningLabs),
@@ -1077,10 +1078,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         <>
           <div className="bg-brand-500 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3 text-white">
             <div>
-              <p className="text-xs font-medium text-white/70 uppercase tracking-wide">公司總客戶數</p>
-              <p className="text-3xl font-bold tabular-nums mt-1">
-                {(stats.customerWithCode + stats.customerNoCode).toLocaleString()}
-              </p>
+              <p className="text-xs font-medium text-white/70 uppercase tracking-wide">已往來客戶數</p>
+              <p className="text-3xl font-bold tabular-nums mt-1">{stats.customerEngaged.toLocaleString()}</p>
+              <p className="text-[11px] text-white/60 mt-1">主檔共 {(stats.customerWithCode + stats.customerNoCode).toLocaleString()} 筆，已排除歇業/停業/撤銷與純線索</p>
             </div>
             <div className="flex gap-6 text-sm">
               <div className="text-right">

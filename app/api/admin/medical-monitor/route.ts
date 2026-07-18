@@ -157,6 +157,7 @@ export interface MonitorStats {
   labsStale:      boolean          // true = 牙技所為上月沿用資料（本次未完整抓取）
   customerWithCode:    number
   customerNoCode:      number
+  customerEngaged:     number   // 已往來客戶數：排除歇業/停業/撤銷 + 排除純線索(線索/已接觸/流失)
   normalOperating:     number
   newOpeningClinics:   number
   newOpeningLabs:      number
@@ -195,6 +196,9 @@ export interface MonitorResult {
 
 const CLINIC_KINDS     = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所', '衛生所'])
 const LAB_KINDS        = new Set(['牙體技術所', '鑲牙所'])
+// 「已往來客戶數」判斷：排除歇業/停業/撤銷的機構，以及還沒真正互動過的純線索
+const DEAD_STATUS      = new Set(['停業', '已歇業', '撤銷'])
+const LEAD_ONLY_STAGE   = new Set(['線索', '已接觸', '流失'])
 
 function getCategory(kind: string): InstitutionCategory {
   if (LAB_KINDS.has(kind))    return 'lab'
@@ -589,6 +593,9 @@ async function computeMonitor(): Promise<MonitorResult> {
     labsStale:   snapshot.labsStale === true,
     customerWithCode:    customersWithCode.length,
     customerNoCode:      customersNoCode.length,
+    customerEngaged:     allCustomers.filter(c =>
+      !DEAD_STATUS.has(c.status) && !LEAD_ONLY_STAGE.has(c.devStage)
+    ).length,
     normalOperating:     normalOperating.length,
     newOpeningClinics:   newClinic.length,
     newOpeningLabs:      newLab.length,
