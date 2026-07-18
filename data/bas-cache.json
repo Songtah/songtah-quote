@@ -67774,5 +67774,45 @@
   "address": "臺北市大同區",
   "kind": "牙醫診所",
   "fetchedAt": "2026-07-06T17:14:35.113Z"
+ },
+ "DyEK5NIaBPFatqv%252F%252FEOnLg%253D%253D__W8Z4R4iC%252FpvZt3H1Q5wNUA%253D%253D": {
+  "code": "3731015538",
+  "status": "開業",
+  "name": "喜樂牙醫診所",
+  "address": "新北市板橋區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-18T15:36:24.356Z"
+ },
+ "48Q3LDVawv4jgyWFFUPBuQ%253D%253D__RWxKDCd8V3ezSFxbN%252Ff9IA%253D%253D": {
+  "code": "3733052084",
+  "status": "開業",
+  "name": "川悅牙醫診所",
+  "address": "新竹縣竹北市",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-18T15:36:24.356Z"
+ },
+ "2zvDndAZyct9O6g5i8pcrQ%253D%253D__sbaJwPm3AA19a78JW0WbTQ%253D%253D": {
+  "code": "3707380197",
+  "status": "開業",
+  "name": "臻澄牙醫診所",
+  "address": "高雄市小港區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-18T15:36:24.356Z"
+ },
+ "kGGMUgQhxQARH1X90DKxjQ%253D%253D__QgIFTqdDaPI9G0LjxjQEkw%253D%253D": {
+  "code": "3722022043",
+  "status": "開業",
+  "name": "真光牙醫診所",
+  "address": "嘉義市西區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-18T15:36:24.356Z"
+ },
+ "hqbsGlfitmEbsV56jGx7JQ%253D%253D__hqbsGlfitmEbsV56jGx7JQ%253D%253D": {
+  "code": "3717080640",
+  "status": "開業",
+  "name": "興安牙醫診所",
+  "address": "臺中市北屯區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-07-18T15:36:24.356Z"
  }
 }
