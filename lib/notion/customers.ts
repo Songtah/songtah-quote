@@ -74,6 +74,8 @@ export type SystemCustomerDetail = {
   dentistCount: number
   technicianCount: number
   technicianTraineeCount: number
+  salesperson: string
+  devStage: string
 }
 
 export async function getSystemCustomerById(id: string): Promise<SystemCustomerDetail | null> {
@@ -95,6 +97,8 @@ export async function getSystemCustomerById(id: string): Promise<SystemCustomerD
       dentistCount: getNumber(page, '牙醫師數'),
       technicianCount: getNumber(page, '牙體技術師數'),
       technicianTraineeCount: getNumber(page, '牙體技術生數量'),
+      salesperson: getSelect(page, '負責業務'),
+      devStage: getSelect(page, '開發階段'),
     }
   } catch {
     return null

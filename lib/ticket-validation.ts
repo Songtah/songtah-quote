@@ -2,6 +2,20 @@ import type { CreateTicketPayload, UpdateTicketPayload } from '@/types'
 
 export const TICKET_TYPES = ['技術支援', '維修', 'RMA', '換貨', '客訴', '安裝', '教育訓練'] as const
 export const TICKET_STATUSES = ['尚未處理', '👌 已受理', '🔍 診斷問題中', '🔧 維修中', '⚙️ 測試中', '🔍 後續追蹤', '✅ 結案'] as const
+
+/**
+ * 工單狀態轉換防呆：只允許往後推進（可跳步，如簡單案件可直接受理即結案）
+ * 或從「✅ 結案」重開回「🔍 後續追蹤」；禁止其他任何倒退（例如結案後誤點回維修中）。
+ */
+export function isValidTicketStatusTransition(from: string, to: string): boolean {
+  if (from === to) return true
+  const fromIdx = TICKET_STATUSES.indexOf(from as typeof TICKET_STATUSES[number])
+  const toIdx = TICKET_STATUSES.indexOf(to as typeof TICKET_STATUSES[number])
+  if (fromIdx === -1 || toIdx === -1) return false   // 未知狀態一律拒絕，不放行
+  if (toIdx > fromIdx) return true                    // 往後推進（含跳步）
+  if (from === '✅ 結案' && to === '🔍 後續追蹤') return true   // 結案後重開
+  return false
+}
 export const TICKET_PRIORITIES = ['P1', 'P2', 'P3', 'P4'] as const
 export const TICKET_SUPPORT_OWNERS = ['小黃', 'Paul', 'Aaron', 'Ted', 'Luca', 'Brain', '致廷'] as const
 export const TICKET_SALES_OWNERS = ['公司直營', 'Duncan', 'Gus', 'Hank', 'James', 'Eason', 'Amy', '小郭', 'Paul', 'Chloe'] as const

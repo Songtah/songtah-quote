@@ -9,11 +9,16 @@ import { VisitModal } from '@/components/VisitsContent'
 import type { Equipment, Ticket } from '@/types'
 import type { SystemCustomerDetail, Visit, EventRegistration } from '@/lib/system-notion'
 
+type QuoteSummary = { id: string; quoteNumber: string; status: string; total: number; createdAt: string }
+type OrderSummary = { id: string; orderNumber: string; status: string; totalAmount: number; createdTime: string }
+
 type CustomerData = {
   customer: SystemCustomerDetail
   equipment: Equipment[]
   tickets: Ticket[]
   visits: Visit[]
+  quotes: QuoteSummary[]
+  orders: OrderSummary[]
 }
 
 type EquipmentDetail = {
@@ -220,12 +225,20 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                         {data.customer.status}
                       </span>
                     )}
+                    {data.customer.devStage && (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+                        🎯 {data.customer.devStage}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <p className="text-sm text-gray-400 mt-1">
                   {[data.customer.city, data.customer.district].filter(Boolean).join('・')}
                   {data.customer.address && ` · ${data.customer.address}`}
                 </p>
+                {data.customer.salesperson && (
+                  <p className="text-sm text-gray-500 mt-1">負責業務：{data.customer.salesperson}</p>
+                )}
               </div>
             </div>
 
@@ -291,6 +304,58 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                 <InfoField label="技術生" value={`${data.customer.technicianTraineeCount} 人`} />
               )}
             </div>
+          </div>
+
+          {/* ── Quotes & Orders ──────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">報價與訂單</h2>
+              <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                {data.quotes.length} 張報價・{data.orders.length} 張訂單
+              </span>
+            </div>
+            {data.quotes.length === 0 && data.orders.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
+                尚無報價或訂單紀錄
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">報價單</p>
+                  <div className="space-y-1.5">
+                    {data.quotes.slice(0, 5).map((q) => (
+                      <Link
+                        key={q.id}
+                        href={`/quotes`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="font-mono text-slate-700 truncate">{q.quoteNumber}</span>
+                        <span className="text-slate-400 shrink-0">{q.total ? `NT$ ${q.total.toLocaleString()}` : ''}</span>
+                        <span className="text-xs text-slate-500 shrink-0">{q.status}</span>
+                      </Link>
+                    ))}
+                    {data.quotes.length === 0 && <p className="text-xs text-slate-300">尚無報價單</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-2">訂購單</p>
+                  <div className="space-y-1.5">
+                    {data.orders.slice(0, 5).map((o) => (
+                      <Link
+                        key={o.id}
+                        href={`/orders/${o.id}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="font-mono text-slate-700 truncate">{o.orderNumber}</span>
+                        <span className="text-slate-400 shrink-0">{o.totalAmount ? `NT$ ${o.totalAmount.toLocaleString()}` : ''}</span>
+                        <span className="text-xs text-slate-500 shrink-0">{o.status}</span>
+                      </Link>
+                    ))}
+                    {data.orders.length === 0 && <p className="text-xs text-slate-300">尚無訂購單</p>}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Tags ─────────────────────────────────────────────────────────── */}

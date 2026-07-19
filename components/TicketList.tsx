@@ -35,6 +35,22 @@ function formatDate(d?: string) {
   return d.slice(0, 10).replace(/-/g, '/')
 }
 
+// 服務期限提醒：目前系統無正式 SLA 欄位，先以優先級推估合理回應天數，
+// 超過視為逾期、到期前一天視為即將逾期，只是視覺提醒，不擋任何操作。
+const SLA_DAYS: Record<string, number> = { P1: 1, P2: 3, P3: 7, P4: 14 }
+
+function slaBadge(ticket: Ticket): { label: string; cls: string } | null {
+  if (!ticket.priority || !ticket.createdDate || ticket.status === '✅ 結案') return null
+  const slaDays = SLA_DAYS[ticket.priority]
+  if (!slaDays) return null
+  const created = new Date(ticket.createdDate)
+  if (Number.isNaN(created.getTime())) return null
+  const daysElapsed = Math.floor((Date.now() - created.getTime()) / (24 * 60 * 60 * 1000))
+  if (daysElapsed > slaDays) return { label: `⏰ 逾期 ${daysElapsed - slaDays} 天`, cls: 'bg-red-100 text-red-700 border-red-200' }
+  if (daysElapsed === slaDays) return { label: '⏰ 即將逾期', cls: 'bg-amber-100 text-amber-700 border-amber-200' }
+  return null
+}
+
 const ALL = '全部'
 
 export default function TicketList({ tickets }: { tickets: Ticket[] }) {
@@ -145,6 +161,14 @@ export default function TicketList({ tickets }: { tickets: Ticket[] }) {
 
               {/* Right */}
               <div className="flex items-center gap-3 shrink-0">
+                {(() => {
+                  const sla = slaBadge(ticket)
+                  return sla ? (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${sla.cls}`}>
+                      {sla.label}
+                    </span>
+                  ) : null
+                })()}
                 {ticket.status && <StatusBadge status={ticket.status} />}
                 <span className="text-slate-300 group-hover:text-emerald-400 transition-colors text-sm">›</span>
               </div>

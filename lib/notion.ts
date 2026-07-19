@@ -345,6 +345,38 @@ export async function listQuotes(options?: {
   }
 }
 
+/** 某客戶的報價單摘要(不含品項,供客戶 360 頁面顯示)。 */
+export async function listQuotesByCustomer(customerId: string): Promise<Quote[]> {
+  const resp: any = await notion.databases.query({
+    database_id: DB.quotes,
+    filter: { property: '客戶ID', rich_text: { equals: customerId } },
+    sorts: [{ property: '建立時間', direction: 'descending' }],
+    page_size: 50,
+  })
+
+  return resp.results
+    .filter((p: any) => !p.archived)
+    .map((p: any) => ({
+      id:           p.id,
+      quoteNumber:  getQuoteNumber(p),
+      customerName: getText(p, '客戶名稱'),
+      customerId:   getText(p, '客戶ID'),
+      companyTitle: getText(p, '公司抬頭'),
+      customerPhone: getText(p, '電話'),
+      customerAddress: getText(p, '地址'),
+      customerTaxId: getText(p, '統一編號'),
+      salesperson:  getText(p, '業務姓名'),
+      validUntil:   getDate(p, '有效期限'),
+      paymentTerms: getText(p, '付款條件'),
+      total:        getNumber(p, '總金額') ?? 0,
+      status:       (getSelect(p, '狀態') || '草稿') as Quote['status'],
+      shareUrl:     getText(p, '分享連結'),
+      note:         getText(p, '備註'),
+      approvalNote: getText(p, '審核意見'),
+      createdAt:    getCreatedTime(p, '建立時間'),
+    }))
+}
+
 export async function getQuote(pageId: string): Promise<Quote | null> {
   try {
     const formatted = pageId.replace(

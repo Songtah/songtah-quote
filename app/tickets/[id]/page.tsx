@@ -11,6 +11,7 @@ import {
   TICKET_SALES_OWNERS,
   TICKET_STATUSES,
   TICKET_SUPPORT_OWNERS,
+  isValidTicketStatusTransition,
 } from '@/lib/ticket-validation'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -217,7 +218,9 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 <label className="text-sm font-medium text-stone-600">
                   狀態
                   <select className="select-soft mt-1" value={form.status} onChange={(e) => updateForm('status', e.target.value)}>
-                    {TICKET_STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}
+                    {TICKET_STATUSES.filter(
+                      (value) => value === form.status || (ticket && isValidTicketStatusTransition(ticket.status, value))
+                    ).map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
                 <label className="text-sm font-medium text-stone-600">

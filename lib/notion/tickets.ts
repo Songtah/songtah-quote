@@ -26,6 +26,24 @@ export async function listCustomerTickets(customerId: string): Promise<Ticket[]>
   return items
 }
 
+/** 某設備的維修紀錄(依「設備資料」relation 反查)，供設備詳情頁顯示維修履歷。 */
+export async function listEquipmentTickets(equipmentId: string): Promise<Ticket[]> {
+  if (!DB.tickets) return []
+
+  const response: any = await notionCallWithRetry('listEquipmentTickets', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(DB.tickets),
+      page_size: 50,
+      filter: { property: '設備資料', relation: { contains: equipmentId } },
+      sorts: [{ property: '建立日期', direction: 'descending' }],
+    })
+  )
+
+  const rawItems = (response.results ?? []).map(mapTicketPageRaw)
+  const items = (await resolveTicketNames(rawItems)) as Ticket[]
+  return items
+}
+
 function getTicketNumber(page: any): string {
   const uid = page.properties?.['編號']?.unique_id
   if (!uid?.number) return ''

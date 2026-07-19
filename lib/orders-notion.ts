@@ -403,6 +403,17 @@ export async function listOrders(): Promise<Order[]> {
   })
 }
 
+/** 某客戶的訂單摘要(不含品項,供客戶 360 頁面顯示)。 */
+export async function listOrdersByCustomer(customerId: string): Promise<Order[]> {
+  const resp: any = await notion.databases.query({
+    database_id: ORDERS_DB,
+    filter: { property: '客戶ID', rich_text: { equals: customerId } },
+    sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+    page_size: 50,
+  })
+  return (resp.results ?? []).map((page: any) => parseOrderPage(page, []))
+}
+
 export async function getOrderById(id: string): Promise<Order | null> {
   const formatted = formatId(id)
   try {

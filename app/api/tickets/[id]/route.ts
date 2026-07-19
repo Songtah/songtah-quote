@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getSystemTicketById, updateTicket } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
-import { validateUpdateTicketPayload } from '@/lib/ticket-validation'
+import { validateUpdateTicketPayload, isValidTicketStatusTransition } from '@/lib/ticket-validation'
 import type { Ticket, UpdateTicketPayload } from '@/types'
 
 function notionErrorStatus(error: unknown): number {
@@ -66,6 +66,14 @@ export const PATCH = withApiAuth({ module: 'rma', action: 'edit' }, async (req: 
 
   try {
     const before = await getSystemTicketById(params.id) as Ticket
+
+    if (validation.data.status !== undefined && !isValidTicketStatusTransition(before.status, validation.data.status)) {
+      return NextResponse.json(
+        { error: `狀態不可從「${before.status}」改為「${validation.data.status}」` },
+        { status: 400 }
+      )
+    }
+
     await updateTicket(params.id, validation.data)
     let after = applyTicketUpdate(before, validation.data)
     let readBack: 'passed' | 'failed' = 'failed'
