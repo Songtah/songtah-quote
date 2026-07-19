@@ -909,6 +909,26 @@ export function CEODashboardContent({
         </div>
       </div>
 
+      {/* ── 近期高風險操作(帳號/權限異動) ── */}
+      {isAdmin && s && s.recentHighRiskAudit.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900">🔒 近期高風險操作</h3>
+            <Link href="/settings/audit" className="text-xs text-gray-400 hover:text-gray-600">查看全部 →</Link>
+          </div>
+          <div className="space-y-2">
+            {s.recentHighRiskAudit.map((log) => (
+              <div key={log.id} className="flex items-center justify-between gap-3 text-sm rounded-xl border border-gray-100 px-3 py-2">
+                <span className="text-gray-700 truncate">{log.summary || log.action}</span>
+                <span className="text-xs text-gray-400 shrink-0">
+                  {log.actorName}{log.occurredAt && `・${log.occurredAt.slice(0, 16).replace('T', ' ')}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Quick Actions ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <h3 className="font-semibold text-gray-900 mb-3">快速操作</h3>

@@ -403,6 +403,34 @@ export async function listOrders(): Promise<Order[]> {
   })
 }
 
+/**
+ * 各促銷活動帶動的訂單數與總金額(依訂單「促銷活動ID」分組)。
+ * 供促銷管理頁顯示成效回饋——只讀彙總,不含品項明細。
+ */
+export async function getPromotionUsageStats(): Promise<Record<string, { orderCount: number; totalAmount: number }>> {
+  const stats: Record<string, { orderCount: number; totalAmount: number }> = {}
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDERS_DB,
+      filter: { property: '促銷活動ID', rich_text: { is_not_empty: true } },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    for (const page of resp.results ?? []) {
+      const promotionId = getText(page, '促銷活動ID')
+      if (!promotionId) continue
+      const amount = page.properties?.['總金額']?.number ?? 0
+      const cur = stats[promotionId] ?? { orderCount: 0, totalAmount: 0 }
+      cur.orderCount++
+      cur.totalAmount += amount
+      stats[promotionId] = cur
+    }
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return stats
+}
+
 /** 某客戶的訂單摘要(不含品項,供客戶 360 頁面顯示)。 */
 export async function listOrdersByCustomer(customerId: string): Promise<Order[]> {
   const resp: any = await notion.databases.query({

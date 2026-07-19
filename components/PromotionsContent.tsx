@@ -1201,13 +1201,14 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
 
 // ── Promotion Card ────────────────────────────────────────────
 
-function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin }: {
+function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin, usage }: {
   promo:    Promotion
   onView:   () => void
   onEdit:   () => void
   onCopy:   () => void
   onDelete: () => void
   isAdmin:  boolean
+  usage?:   { orderCount: number; totalAmount: number }
 }) {
   const [deleting, setDeleting] = useState(false)
 
@@ -1232,6 +1233,11 @@ function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin }: {
           <p className="text-xs text-gray-400 mt-0.5">{fmtDate(promo.startDate)} – {fmtDate(promo.endDate)}</p>
           {promo.description && (
             <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{promo.description}</p>
+          )}
+          {usage && usage.orderCount > 0 && (
+            <p className="text-xs text-brand-600 mt-1.5">
+              📦 帶動 {usage.orderCount} 張訂單・NT$ {usage.totalAmount.toLocaleString()}
+            </p>
           )}
         </div>
         {isAdmin && (
@@ -1273,6 +1279,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
   const [editing, setEditing] = useState<Promotion | null | 'new'>(null)
   // 複製模式：copyOf 是來源活動，drawer 以複製模式開啟
   const [copyOf,  setCopyOf]  = useState<Promotion | null>(null)
+  const [usageStats, setUsageStats] = useState<Record<string, { orderCount: number; totalAmount: number }>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1284,6 +1291,12 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    fetch('/api/promotions/usage-stats')
+      .then((r) => r.json())
+      .then((d) => { if (d && typeof d === 'object') setUsageStats(d) })
+      .catch(() => {})
+  }, [])
 
   const handleSaved = async (p: Promotion, copySourceId?: string) => {
     setPromos((prev) => {
@@ -1392,6 +1405,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
                       key={promo.id}
                       promo={promo}
                       isAdmin={isAdmin}
+                      usage={usageStats[promo.id]}
                       onView={() => setViewing(promo)}
                       onEdit={() => { setViewing(null); setEditing(promo) }}
                       onCopy={() => { setViewing(null); setEditing(null); setCopyOf(promo) }}

@@ -323,6 +323,42 @@ function getPlainText(value: any) {
   return ''
 }
 
+/**
+ * 近期高風險操作(帳號/權限異動、行政管理模組寫入)，供首頁儀表板(admin 視角)提醒用。
+ * 不做分頁,只取最近 N 筆——這是提醒卡片,不是完整稽核查詢(完整查詢走 listAuditLogs)。
+ */
+export async function listRecentHighRiskAuditLogs(limit = 5): Promise<AuditLogRow[]> {
+  const dbId = await ensureAuditDb()
+  const HIGH_RISK_MODULES = ['accounts', 'admin']
+
+  const response: any = await notionCallWithRetry('audit.listHighRisk', () =>
+    notion.databases.query({
+      database_id: dbId,
+      page_size: limit,
+      sorts: [{ property: '發生時間', direction: 'descending' }],
+      filter: {
+        or: HIGH_RISK_MODULES.map((m) => ({ property: '模組', rich_text: { equals: m } })),
+      },
+    })
+  )
+
+  return (response.results ?? []).map((page: any) => ({
+    id: page.id,
+    occurredAt: getPlainText(page.properties?.['發生時間']),
+    module: getPlainText(page.properties?.['模組']),
+    action: getPlainText(page.properties?.['操作']),
+    entityType: getPlainText(page.properties?.['實體類型']),
+    entityId: getPlainText(page.properties?.['實體ID']),
+    entityTitle: getPlainText(page.properties?.['實體名稱']),
+    summary: getPlainText(page.properties?.['摘要']),
+    actorName: getPlainText(page.properties?.['執行者']),
+    actorRole: getPlainText(page.properties?.['角色']),
+    method: getPlainText(page.properties?.['請求方法']),
+    path: getPlainText(page.properties?.['路徑']),
+    url: page.url ?? '',
+  }))
+}
+
 export async function listAuditLogs(options?: {
   limit?: number
   cursor?: string
