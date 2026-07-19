@@ -3,6 +3,10 @@ import type { CreateTicketPayload, UpdateTicketPayload } from '@/types'
 export const TICKET_TYPES = ['技術支援', '維修', 'RMA', '換貨', '客訴', '安裝', '教育訓練'] as const
 export const TICKET_STATUSES = ['尚未處理', '👌 已受理', '🔍 診斷問題中', '🔧 維修中', '⚙️ 測試中', '🔍 後續追蹤', '✅ 結案'] as const
 
+// 服務期限提醒：目前系統無正式 SLA 欄位，先以優先級推估合理回應天數
+// (供列表逾期標示與首頁待辦聚合共用，避免兩處各自定義互相漂移)。
+export const TICKET_SLA_DAYS: Record<string, number> = { P1: 1, P2: 3, P3: 7, P4: 14 }
+
 /**
  * 工單狀態轉換防呆：只允許往後推進（可跳步，如簡單案件可直接受理即結案）
  * 或從「✅ 結案」重開回「🔍 後續追蹤」；禁止其他任何倒退（例如結案後誤點回維修中）。

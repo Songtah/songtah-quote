@@ -238,6 +238,32 @@ export async function updateTicket(id: string, data: UpdateTicketPayload): Promi
   )
 }
 
+/** 全部未結案工單的最小欄位(id/優先級/建立日期)，供首頁待辦聚合算逾期數用。 */
+export async function listOpenTicketsForSla(): Promise<{ id: string; priority: string; createdDate: string }[]> {
+  if (!DB.tickets) return []
+  const items: { id: string; priority: string; createdDate: string }[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listOpenTicketsForSla', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.tickets),
+        page_size: 100,
+        filter: { property: '狀態', select: { does_not_equal: '✅ 結案' } },
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) {
+      items.push({
+        id: page.id,
+        priority: getSelect(page, '優先級'),
+        createdDate: getDate(page, '建立日期'),
+      })
+    }
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  return items
+}
+
 export async function listSystemTickets(options?: {
   limit?: number
   cursor?: string

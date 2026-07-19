@@ -762,6 +762,32 @@ export function CEODashboardContent({
             href="/quotes"
           />
         </motion.div>
+        {isAdmin && (
+          <motion.div variants={listItem} className="h-full">
+            <KPICard
+              loading={loading}
+              label="待簽核報價"
+              value={s ? `${s.pendingQuoteApprovals}` : '—'}
+              sub="待行政/總經理審核"
+              icon="✍️"
+              accent="#be123c"
+              href="/quotes"
+            />
+          </motion.div>
+        )}
+        {isAdmin && (
+          <motion.div variants={listItem} className="h-full">
+            <KPICard
+              loading={loading}
+              label="逾期工單"
+              value={s ? `${s.overdueTickets}` : '—'}
+              sub="依優先級 SLA 推估"
+              icon="⏰"
+              accent="#c2410c"
+              href="/tickets"
+            />
+          </motion.div>
+        )}
         <motion.div variants={listItem} className="h-full">
           <KPICard
             loading={loading}

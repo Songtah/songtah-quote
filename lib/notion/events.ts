@@ -234,6 +234,17 @@ export async function listCustomerEvents(customerId: string): Promise<EventRegis
   return items
 }
 
+export async function getRegistrationById(id: string): Promise<EventRegistration | null> {
+  try {
+    const page: any = await notionCallWithRetry('getRegistrationById', () =>
+      notion.pages.retrieve({ page_id: id })
+    )
+    return mapRegistration(page)
+  } catch {
+    return null
+  }
+}
+
 export async function updateRegistrationStatus(id: string, status: string): Promise<void> {
   await notionCallWithRetry('updateRegistrationStatus', () =>
     notion.pages.update({

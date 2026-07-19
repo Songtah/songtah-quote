@@ -9,6 +9,8 @@
  */
 import { Client } from '@notionhq/client'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
+import { listOpenTicketsForSla } from '@/lib/notion/tickets'
+import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -315,11 +317,13 @@ export interface CEOStats {
   quoteConversionRate:  number
   pendingFollowUpItems: VisitStat[]   // 本月待追蹤明細，直接帶入無需額外 API
   recentHighRiskAudit:  AuditLogRow[] // 近期高風險操作(帳號/權限異動),供 admin 視角首頁提醒
+  pendingQuoteApprovals: number       // 待簽核報價數(近6個月內,狀態=待行政/總經理審核)
+  overdueTickets:        number       // 逾期未結案工單數(依優先級 SLA 推估)
   generatedAt:          string
 }
 
 export async function getCEOStats(): Promise<CEOStats> {
-  const cacheKey = 'ceo-stats:v3'   // v3=加 recentHighRiskAudit
+  const cacheKey = 'ceo-stats:v3'   // v3=加 recentHighRiskAudit+待辦聚合
   const cached = fromCache<CEOStats>(cacheKey)
   if (cached) return cached
 
@@ -344,12 +348,13 @@ export async function getCEOStats(): Promise<CEOStats> {
   // ④ 各月 visits 筆數（趨勢圖用，每月最多 5 頁，6 月平行）
   //    → ④ 用 Promise.all 同時發出 6 個查詢，壁鐘時間 ≈ 單月最慢者
 
-  const [allOrders, allQuotes, thisMonthVisits, openFollowUps, recentHighRiskAudit, ...visitCounts] = await Promise.all([
+  const [allOrders, allQuotes, thisMonthVisits, openFollowUps, recentHighRiskAudit, openTickets, ...visitCounts] = await Promise.all([
     safe(() => fetchOrderStats(months[0].from, curMonth.to), []),
     safe(() => fetchQuoteStats(months[0].from, curMonth.to), []),
     safe(() => fetchVisitsFull(curMonth.from, curMonth.to), []),
     safe(() => fetchOpenFollowUps(), []),
     safe(() => listRecentHighRiskAuditLogs(5), []),
+    safe(() => listOpenTicketsForSla(), []),
     // 6 個月的 visit count 平行查詢
     ...months.map((m) =>
       safe(() => fetchVisitCount(m.from, m.to), 0)
@@ -437,6 +442,21 @@ export async function getCEOStats(): Promise<CEOStats> {
     })
   const pendingFollowUps = pendingFollowUpItems.length
 
+  // ── 跨模組待辦聚合 ────────────────────────────────────────────
+  const pendingQuoteApprovals = (allQuotes as QuoteStat[])
+    .filter((q) => q.status === '待行政審核' || q.status === '待總經理審核').length
+
+  const today = new Date()
+  const overdueTickets = (openTickets as { priority: string; createdDate: string }[])
+    .filter((t) => {
+      const slaDays = TICKET_SLA_DAYS[t.priority]
+      if (!slaDays || !t.createdDate) return false
+      const created = new Date(t.createdDate)
+      if (Number.isNaN(created.getTime())) return false
+      const daysElapsed = Math.floor((today.getTime() - created.getTime()) / (24 * 60 * 60 * 1000))
+      return daysElapsed > slaDays
+    }).length
+
   const stats: CEOStats = {
     thisMonth: {
       ordersCount:      thisMonthOrders.length,
@@ -455,6 +475,8 @@ export async function getCEOStats(): Promise<CEOStats> {
     quoteConversionRate,
     pendingFollowUpItems,
     recentHighRiskAudit: recentHighRiskAudit as AuditLogRow[],
+    pendingQuoteApprovals,
+    overdueTickets,
     generatedAt: new Date().toISOString(),
   }
 

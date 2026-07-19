@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { Ticket } from '@/types'
+import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
 
 const STATUS_STYLES: Record<string, string> = {
   '尚未處理':      'bg-orange-100 text-orange-700 border-orange-200',
@@ -35,13 +36,10 @@ function formatDate(d?: string) {
   return d.slice(0, 10).replace(/-/g, '/')
 }
 
-// 服務期限提醒：目前系統無正式 SLA 欄位，先以優先級推估合理回應天數，
-// 超過視為逾期、到期前一天視為即將逾期，只是視覺提醒，不擋任何操作。
-const SLA_DAYS: Record<string, number> = { P1: 1, P2: 3, P3: 7, P4: 14 }
-
+// 逾期視覺提醒：超過 SLA 天數視為逾期、到期當天視為即將逾期，不擋任何操作。
 function slaBadge(ticket: Ticket): { label: string; cls: string } | null {
   if (!ticket.priority || !ticket.createdDate || ticket.status === '✅ 結案') return null
-  const slaDays = SLA_DAYS[ticket.priority]
+  const slaDays = TICKET_SLA_DAYS[ticket.priority]
   if (!slaDays) return null
   const created = new Date(ticket.createdDate)
   if (Number.isNaN(created.getTime())) return null

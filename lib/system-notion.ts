@@ -52,7 +52,7 @@ export { searchEquipment, listCustomerEquipment, getEquipmentById, updateEquipme
 export type { EventItem, EventRegistration } from './notion/events'
 export {
   listEvents, getEventById, createEvent, updateEvent, deleteEvent,
-  listEventRegistrations, listCustomerEvents, updateRegistrationStatus,
+  listEventRegistrations, listCustomerEvents, updateRegistrationStatus, getRegistrationById,
 } from './notion/events'
 
 // ─── 辦課成本試算 → 已抽至 ./notion/course-costs ────────────────────────────────
