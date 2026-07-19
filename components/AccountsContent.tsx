@@ -349,6 +349,23 @@ export default function AccountsContent() {
 
   const handleToggleStatus = async (u: SystemUser) => {
     const newStatus = u.status === '停用' ? '未開始' : '停用'
+
+    // 停用業務帳號前提醒:若名下仍有客戶未轉移,離職雙軌(轉客戶/停帳號)容易漏一邊
+    if (newStatus === '停用' && u.accountType === '業務') {
+      try {
+        const r = await fetch(`/api/customers/count-by-salesperson?name=${encodeURIComponent(u.name)}`)
+        const d = await r.json()
+        if (typeof d.count === 'number' && d.count > 0) {
+          const ok = confirm(
+            `${u.name} 名下目前還有約 ${d.count} 家客戶尚未轉移(依區域統計快取,可能有數小時延遲)。\n` +
+            `建議先到「客戶資料監控 → 業務轄區管理」把客戶轉給其他業務或釋出,再停用帳號，避免客戶交接遺漏。\n\n` +
+            `仍要繼續停用嗎?`
+          )
+          if (!ok) return
+        }
+      } catch { /* 查詢失敗不擋停用,只是少了提醒 */ }
+    }
+
     setTogglingId(u.id)
     try {
       const res = await fetch(`/api/accounts/${u.id}`, {

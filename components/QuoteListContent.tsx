@@ -461,14 +461,23 @@ export default function QuoteListContent() {
                           預覽
                         </Link>
                         {isApproved ? (
-                          <a
-                            href={`/api/quotes/${quote.id}/pdf`}
-                            target="_blank" rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
-                          >
-                            PDF
-                          </a>
+                          <>
+                            <a
+                              href={`/api/quotes/${quote.id}/pdf`}
+                              target="_blank" rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
+                            >
+                              PDF
+                            </a>
+                            <Link
+                              href={`/orders/new?fromQuote=${quote.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
+                            >
+                              轉訂單
+                            </Link>
+                          </>
                         ) : (
                           <span
                             title="需核准後才可產生 PDF"

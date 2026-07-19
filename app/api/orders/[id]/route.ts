@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getOrderById, updateOrder, updateOrderStatus, archiveOrder } from '@/lib/orders-notion'
+import { updateCustomerDevStage } from '@/lib/notion/customers'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const GET = withApiAuth('session', async (_req: NextRequest, { params }: { params: { id: string } }) => {
@@ -54,6 +55,13 @@ export const PATCH = withApiAuth({ module: 'orders', action: 'edit' }, async (re
       await updateOrderStatus(params.id, body.status)
     } else {
       await updateOrder(params.id, body)
+    }
+
+    // 訂單到貨＝成交訊號:同步客戶開發階段(業務開發漏斗鐵則——只在此推進,不覆蓋機構狀態)
+    if (body.status === '已到貨' && existing.status !== '已到貨' && existing.customerId) {
+      await updateCustomerDevStage(existing.customerId, { devStage: '已成交' }).catch((e) =>
+        console.error(`order ${existing.orderNumber}: 開發階段同步失敗`, e)
+      )
     }
 
     if (isNonDraftItemEdit) {

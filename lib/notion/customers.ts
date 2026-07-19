@@ -445,6 +445,17 @@ export async function peekRegionStatsRows(): Promise<RegionStatsResult | null> {
 }
 
 /**
+ * 某業務目前持有幾筆客戶(只讀區域統計快取,不觸發全庫掃描)。
+ * 用於帳號停用前的提醒——快取最長 24hr 未更新,數字僅供參考,不做為阻擋依據。
+ * 無快取(尚未跑過區域統計)時回傳 null,呼叫端應視為「無法判斷」而非「0 筆」。
+ */
+export async function peekCustomerCountBySalesperson(name: string): Promise<number | null> {
+  const cached = await peekRegionStatsRows()
+  if (!cached) return null
+  return cached.rows.filter((r) => r.salesperson === name).reduce((sum, r) => sum + r.count, 0)
+}
+
+/**
  * 區域統計:預設讀快取,無快取才全庫掃描並寫回。forceRefresh 強制重算(cron/手動用)。
  * 全庫掃描約 55–60s,故正常路徑一律走快取——由每晚 cron 保持新鮮。
  */

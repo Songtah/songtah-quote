@@ -882,9 +882,23 @@ interface OrderFormProps {
   canEdit?: boolean
   /** 鎖定原因說明（傳入時覆蓋預設的「僅限閱覽」文字） */
   lockedNote?: string
+  /**
+   * 新增模式下的預填資料（例如從已核准報價單「轉訂單」帶入客戶與備註）。
+   * 與 initialOrder 不同：不會觸發編輯模式（isEdit 仍為 false，送出仍是 POST 新建)。
+   */
+  prefill?: {
+    customerId?: string
+    customerName?: string
+    companyTitle?: string
+    customerAddress?: string
+    customerPhone?: string
+    contactPerson?: string
+    customerTaxId?: string
+    note?: string
+  }
 }
 
-export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: OrderFormProps) {
+export default function OrderForm({ initialOrder, canEdit = true, lockedNote, prefill }: OrderFormProps) {
   const router = useRouter()
   const isEdit = !!initialOrder
 
@@ -899,7 +913,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
   }, [])
   const [salesperson, setSalesperson] = useState(initialOrder?.salesperson ?? '')
   const [salespersonOptions, setSalespersonOptions] = useState<string[]>([])
-  const [note, setNote] = useState(initialOrder?.note ?? '')
+  const [note, setNote] = useState(initialOrder?.note ?? prefill?.note ?? '')
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
   const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? [])
   const [showPicker, setShowPicker] = useState(false)
@@ -972,13 +986,13 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote }: 
 
   // 客戶資訊
   const [customer, setCustomer] = useState<SelectedCustomer>({
-    id: initialOrder?.customerId ?? '',
-    name: initialOrder?.customerName ?? '',
-    companyTitle: initialOrder?.companyTitle ?? '',
-    address: initialOrder?.customerAddress ?? '',
-    phone: initialOrder?.customerPhone ?? '',
-    contactPerson: initialOrder?.contactPerson ?? '',
-    taxId: initialOrder?.customerTaxId ?? '',
+    id: initialOrder?.customerId ?? prefill?.customerId ?? '',
+    name: initialOrder?.customerName ?? prefill?.customerName ?? '',
+    companyTitle: initialOrder?.companyTitle ?? prefill?.companyTitle ?? '',
+    address: initialOrder?.customerAddress ?? prefill?.customerAddress ?? '',
+    phone: initialOrder?.customerPhone ?? prefill?.customerPhone ?? '',
+    contactPerson: initialOrder?.contactPerson ?? prefill?.contactPerson ?? '',
+    taxId: initialOrder?.customerTaxId ?? prefill?.customerTaxId ?? '',
   })
 
   // Load salesperson options

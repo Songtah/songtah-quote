@@ -8,9 +8,8 @@
  */
 
 import { put } from '@vercel/blob'
-import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -18,10 +17,7 @@ export const dynamic = 'force-dynamic'
 const MAX_SIZE   = 4 * 1024 * 1024   // 4 MB (Vercel serverless body limit is 4.5 MB)
 const ALLOWED    = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withApiAuth({ module: 'assets', action: 'edit' }, async (req: NextRequest) => {
   let formData: FormData
   try {
     formData = await req.formData()
@@ -56,4 +52,4 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Blob 儲存空間設定錯誤（private store）。' }, { status: 503 })
     return NextResponse.json({ error: `上傳失敗：${msg.slice(0, 120)}` }, { status: 500 })
   }
-}
+})
