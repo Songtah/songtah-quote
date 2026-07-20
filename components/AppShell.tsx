@@ -53,24 +53,25 @@ function getPageTitle(pathname: string): string {
 type NavItem = {
   href: string
   label: string
+  group: '工作' | '交易' | '服務' | '管理'
   module: ModuleKey | null
   adminOnly?: boolean
   adminOrStaff?: boolean   // visible to admin OR 行政 accountType
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',         label: '首頁',     module: null },
-  { href: '/customers',         label: '客戶',      module: 'crm' },
-  { href: '/tickets',           label: '技術支援', module: 'rma' },
-  { href: '/bd',                label: '業務開發', module: 'bd' },
-  { href: '/products/catalog',  label: '產品',     module: 'products' },
-  { href: '/quotes',            label: '報價',     module: 'quote' },
-  { href: '/orders',            label: '訂貨',     module: 'orders' },
-  { href: '/marketing',         label: '行銷管理', module: null },
-  { href: '/admin',                  label: '行政管理', module: 'admin', adminOrStaff: true },
-  { href: '/admin/clinic-monitor',   label: '客戶資料監控', module: 'clinic_monitor' },
-  { href: '/settings/accounts', label: '帳號權限', module: 'accounts' },
-  { href: '/settings/audit',    label: '操作紀錄', module: null, adminOnly: true },
+  { href: '/dashboard',               label: '今日總覽', group: '工作', module: null },
+  { href: '/bd',                      label: '業務開發', group: '工作', module: 'bd' },
+  { href: '/customers',               label: '客戶 360', group: '工作', module: 'crm' },
+  { href: '/quotes',                  label: '報價', group: '交易', module: 'quote' },
+  { href: '/orders',                  label: '訂貨', group: '交易', module: 'orders' },
+  { href: '/products/catalog',        label: '產品與價格', group: '交易', module: 'products' },
+  { href: '/tickets',                 label: '技術支援', group: '服務', module: 'rma' },
+  { href: '/marketing',               label: '行銷與活動', group: '服務', module: null },
+  { href: '/admin/clinic-monitor',    label: '市場監控', group: '服務', module: 'clinic_monitor' },
+  { href: '/admin',                   label: '行政管理', group: '管理', module: 'admin', adminOrStaff: true },
+  { href: '/settings/accounts',       label: '帳號權限', group: '管理', module: 'accounts' },
+  { href: '/settings/audit',          label: '操作紀錄', group: '管理', module: null, adminOnly: true },
 ]
 
 function canViewModule(
@@ -126,10 +127,20 @@ export function AppShell({
     if (item.adminOrStaff && role !== 'admin' && accountType !== '行政') return false
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
+  const visibleGroups = (['工作', '交易', '服務', '管理'] as const)
+    .map((group) => ({ group, items: visibleItems.filter((item) => item.group === group) }))
+    .filter(({ items }) => items.length > 0)
+
+  const isActive = (item: NavItem) => pathname === item.href ||
+    (item.href === '/quotes' && pathname.startsWith('/quote')) ||
+    (item.href === '/orders' && pathname.startsWith('/orders')) ||
+    (item.href === '/admin/clinic-monitor' && pathname.startsWith('/admin/clinic-monitor')) ||
+    (item.href === '/admin' && pathname.startsWith('/admin') && !pathname.startsWith('/admin/clinic-monitor') && !pathname.startsWith('/admin/trip-planner')) ||
+    (item.href === '/products/catalog' && pathname.startsWith('/products'))
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden">
-      <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-[#fcfbf8] text-stone-800 overflow-x-hidden">
+      <header className="glass-bar">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 py-2.5 sm:py-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Link href="/dashboard" className="shrink-0">
@@ -141,13 +152,13 @@ export function AppShell({
                 className="h-auto w-[80px] shrink-0 object-contain sm:w-28 md:w-36"
               />
             </Link>
-            <div className="hidden sm:block h-6 w-px bg-gray-200 shrink-0" />
+            <div className="hidden sm:block h-6 w-px bg-stone-900/[0.08] shrink-0" />
             <div className="hidden sm:block min-w-0">
               <p className="eyebrow text-[10px]">SONGTAH TRADING CO.,LTD.</p>
-              <h1 className="truncate text-base font-semibold text-gray-900">{title}</h1>
+              <h1 className="truncate text-base font-semibold text-stone-800">{title}</h1>
             </div>
             {/* Mobile: show current page title next to logo */}
-            <span className="sm:hidden text-sm font-semibold text-gray-800 truncate max-w-[140px]">{title}</span>
+            <span className="sm:hidden text-sm font-semibold text-stone-800 truncate max-w-[140px]">{title}</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <FontSizeToggle />
@@ -158,25 +169,26 @@ export function AppShell({
         </div>
         {/* Nav — horizontally scrollable on mobile, pill style */}
         <div className="mx-auto max-w-7xl px-3 sm:px-6 pb-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <nav className="inline-flex min-w-max bg-gray-100 rounded-full px-1 py-1 gap-0.5">
-            {visibleItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-3 sm:px-4 py-2 sm:py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
-                  (pathname === item.href ||
-                    (item.href === '/quotes'                && pathname.startsWith('/quote')) ||
-                    (item.href === '/orders'                && pathname.startsWith('/orders')) ||
-                    (item.href === '/admin/clinic-monitor'  && pathname.startsWith('/admin/clinic-monitor')) ||
-                    (item.href === '/admin/trip-planner'    && pathname.startsWith('/admin/trip-planner')) ||
-                    (item.href === '/admin'                 && pathname.startsWith('/admin') && !pathname.startsWith('/admin/clinic-monitor') && !pathname.startsWith('/admin/trip-planner')) ||
-                    (item.href === '/products/catalog'      && pathname.startsWith('/products')))
-                    ? 'bg-white shadow-sm text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {item.label}
-              </Link>
+          <nav className="inline-flex min-w-max items-center rounded-full bg-stone-100/90 px-1.5 py-1 gap-1 ring-1 ring-stone-900/[0.04]" aria-label="主要導覽">
+            {visibleGroups.map(({ group, items }, groupIndex) => (
+              <div key={group} role="group" aria-label={`${group}導覽`} className="contents">
+                {groupIndex > 0 && <span aria-hidden="true" className="mx-1 h-5 w-px bg-stone-300/70" />}
+                <span className="hidden lg:inline px-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">{group}</span>
+                {items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive(item) ? 'page' : undefined}
+                    className={`rounded-full px-3 sm:px-4 py-2 sm:py-1.5 text-sm font-medium transition-all active:scale-95 whitespace-nowrap ${
+                      isActive(item)
+                        ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+                        : 'text-stone-500 hover:bg-white hover:text-brand-700'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
         </div>
@@ -185,7 +197,7 @@ export function AppShell({
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-4 sm:py-8">
         <motion.div key={pathname} variants={fadeUp} initial="hidden" animate="show">
           <div className="mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-stone-800">{title}</h2>
             <p className="muted mt-1 max-w-3xl text-sm sm:text-base">{description}</p>
           </div>
           {children}

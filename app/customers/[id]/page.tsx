@@ -179,7 +179,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
       <div className="mb-5">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-stone-400 hover:text-brand-700 active:scale-95 transition-all"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -205,7 +205,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         <div className="space-y-5">
 
           {/* ── Hero card ─────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="card-soft overflow-hidden">
             {/* Gradient header */}
             <div className="px-6 pt-6 pb-5 flex items-start gap-4">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarGradient(data.customer.name)} flex items-center justify-center text-2xl font-bold text-white shrink-0 shadow-sm`}>
@@ -213,10 +213,10 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <h1 className="text-xl font-bold text-gray-900 leading-snug">{data.customer.name}</h1>
+                  <h1 className="text-xl font-bold text-stone-800 leading-snug">{data.customer.name}</h1>
                   <div className="flex items-center gap-2 flex-wrap">
                     {data.customer.type && (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-stone-100 text-stone-600">
                         {data.customer.type}
                       </span>
                     )}
@@ -232,40 +232,40 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm text-stone-400 mt-1">
                   {[data.customer.city, data.customer.district].filter(Boolean).join('・')}
                   {data.customer.address && ` · ${data.customer.address}`}
                 </p>
                 {data.customer.salesperson && (
-                  <p className="text-sm text-gray-500 mt-1">負責業務：{data.customer.salesperson}</p>
+                  <p className="text-sm text-stone-600 mt-1">負責業務：<span className="font-semibold text-stone-800">{data.customer.salesperson}</span></p>
                 )}
               </div>
             </div>
 
             {/* Quick stats row */}
-            <div className="grid grid-cols-3 divide-x divide-gray-100 border-t border-gray-100">
+            <div className="grid grid-cols-3 divide-x divide-stone-900/[0.06] border-t border-stone-900/[0.06] bg-stone-50/40">
               <StatCell
                 label="設備"
                 value={`${data.equipment.length} 台`}
-                color={data.equipment.length > 0 ? 'text-blue-600' : 'text-gray-400'}
+                color={data.equipment.length > 0 ? 'text-brand-700' : 'text-stone-400'}
               />
               <StatCell
                 label="未結工單"
                 value={`${openTickets.length} 筆`}
-                color={openTickets.length > 0 ? 'text-amber-600' : 'text-gray-400'}
+                color={openTickets.length > 0 ? 'text-amber-600' : 'text-stone-400'}
               />
               <StatCell
                 label="最後拜訪"
                 value={lastVisit?.date ? lastVisit.date.slice(0, 10).replace(/-/g, '/') : '—'}
-                color="text-gray-600"
+                color="text-stone-600"
               />
             </div>
 
             {/* Quick actions */}
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-2 flex-wrap">
+            <div className="px-6 py-4 border-t border-stone-900/[0.06] flex gap-2 flex-wrap">
               <button
                 onClick={() => setShowVisitModal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                className="button-primary gap-1.5"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -274,13 +274,13 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
               </button>
               <Link
                 href="/tickets/new"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                className="button-secondary gap-1.5"
               >
                 建立工單
               </Link>
               <Link
                 href="/quote/new"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                className="button-secondary gap-1.5"
               >
                 建立報價單
               </Link>
@@ -288,8 +288,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
 
           {/* ── Info grid ──────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">基本資訊</h2>
+          <div className="card-soft p-6">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mb-4">基本資訊</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
               {data.customer.phone      && <InfoField label="電話" value={data.customer.phone} />}
               {data.customer.taxId      && <InfoField label="統一編號" value={data.customer.taxId} />}

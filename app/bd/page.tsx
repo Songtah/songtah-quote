@@ -31,11 +31,11 @@ export default async function BdPage({
           : 'visits'
 
   const TAB_ITEMS = [
-    { id: 'visits',    href: '/bd',                 label: '📋 客情紀錄' },
-    { id: 'pipeline',  href: '/bd?tab=pipeline',    label: '🎯 開發漏斗' },
-    { id: 'campaigns', href: '/bd?tab=campaigns',   label: '📇 追蹤名單' },
-    { id: 'suggest',   href: '/bd?tab=suggest',     label: '🧭 拜訪建議' },
-    { id: 'report',    href: '/bd?tab=report',      label: '📥 匯入' },
+    { id: 'pipeline',  href: '/bd?tab=pipeline',    label: '開發漏斗', hint: '客戶在哪個階段' },
+    { id: 'suggest',   href: '/bd?tab=suggest',     label: '拜訪建議', hint: '下一步該找誰' },
+    { id: 'visits',    href: '/bd',                 label: '客情紀錄', hint: '已完成哪些互動' },
+    { id: 'campaigns', href: '/bd?tab=campaigns',   label: '追蹤名單', hint: '批次推進一群客戶' },
+    { id: 'report',    href: '/bd?tab=report',      label: '紀錄匯入', hint: 'LINE 與日報轉紀錄' },
   ] as const
 
   return (
@@ -54,21 +54,23 @@ export default async function BdPage({
       }
     >
       {/* Sub-tab bar */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <nav className="card-soft mb-6 flex gap-1 overflow-x-auto p-1.5 [&::-webkit-scrollbar]:hidden" aria-label="業務開發功能">
         {TAB_ITEMS.map((t) => (
           <Link
             key={t.id}
             href={t.href}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            aria-current={tab === t.id ? 'page' : undefined}
+            className={`min-w-max rounded-full px-4 py-2.5 text-left transition-all active:scale-95 ${
               tab === t.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+                : 'text-stone-500 hover:bg-brand-50/60 hover:text-brand-700'
             }`}
           >
-            {t.label}
+            <span className="block text-sm font-semibold">{t.label}</span>
+            <span className={`hidden text-[11px] sm:block ${tab === t.id ? 'text-white/75' : 'text-stone-400'}`}>{t.hint}</span>
           </Link>
         ))}
-      </div>
+      </nav>
 
       {tab === 'visits' ? (
         <VisitsContent />

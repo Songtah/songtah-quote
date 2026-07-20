@@ -16,8 +16,8 @@ export default async function DashboardPage() {
 
   return (
     <AppShell
-      title="首頁總覽"
-      description="業績概況、客情動態與核心指標一覽。"
+      title="今日營運總覽"
+      description={isAdmin ? '掌握團隊漏斗、待辦風險與經營結果。' : '聚焦今日拜訪、待追蹤與下一個業務動作。'}
       sessionUser={{ role, accountType, permissions }}
     >
       <CEODashboardContent isAdmin={isAdmin} />
