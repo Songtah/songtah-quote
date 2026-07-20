@@ -23,12 +23,15 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { name, date, endDate, location, type, deadline, status, description } = body
+  const { name, date, endDate, location, type, deadline, status, description, campaignIds } = body
 
   if (!name || !date || !type || !status) {
     return NextResponse.json({ error: '缺少必要欄位' }, { status: 400 })
   }
 
-  const event = await createEvent({ name, date, endDate, location: location ?? '', type, deadline, status: status ?? '籌備中', description: description ?? '' })
+  const event = await createEvent({
+    name, date, endDate, location: location ?? '', type, deadline, status: status ?? '籌備中', description: description ?? '',
+    campaignIds: Array.isArray(campaignIds) ? campaignIds : undefined,
+  })
   return NextResponse.json(event)
 }

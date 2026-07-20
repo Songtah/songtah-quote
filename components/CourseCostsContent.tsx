@@ -18,12 +18,12 @@ type FormState = {
   venueFee: string; speakerFee: string; materialFee: string
   marketingFee: string; cateringFee: string; transportFee: string; otherFee: string
   feePerPerson: string; headcount: string
-  status: string; note: string
+  status: string; note: string; eventId: string
 }
 const EMPTY: FormState = {
   name: '', venueFee: '', speakerFee: '', materialFee: '',
   marketingFee: '', cateringFee: '', transportFee: '', otherFee: '',
-  feePerPerson: '', headcount: '', status: '規劃中', note: '',
+  feePerPerson: '', headcount: '', status: '規劃中', note: '', eventId: '',
 }
 
 function toNum(s: string) { return parseFloat(s) || 0 }
@@ -36,17 +36,21 @@ export function CourseCostsContent() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [filterStatus, setFilterStatus] = useState('全部')
+  const [eventOptions, setEventOptions] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     fetch('/api/course-costs').then(r => r.json())
       .then(d => { setItems(Array.isArray(d) ? d : []); setLoading(false) })
       .catch(() => setLoading(false))
+    fetch('/api/events?limit=100').then(r => r.json())
+      .then(d => { if (Array.isArray(d?.items)) setEventOptions(d.items.map((e: any) => ({ id: e.id, name: e.name }))) })
+      .catch(() => {})
   }, [])
 
   function openCreate() { setForm(EMPTY); setEditId(null); setShowForm(true) }
   function openEdit(item: CourseCost) {
     setForm({
-      name: item.name, note: item.note, status: item.status,
+      name: item.name, note: item.note, status: item.status, eventId: item.eventId ?? '',
       venueFee: item.venueFee ? String(item.venueFee) : '',
       speakerFee: item.speakerFee ? String(item.speakerFee) : '',
       materialFee: item.materialFee ? String(item.materialFee) : '',
@@ -65,7 +69,7 @@ export function CourseCostsContent() {
     if (!form.name) return
     setSaving(true)
     const payload = {
-      name: form.name, status: form.status, note: form.note,
+      name: form.name, status: form.status, note: form.note, eventId: form.eventId || undefined,
       venueFee: toNum(form.venueFee), speakerFee: toNum(form.speakerFee),
       materialFee: toNum(form.materialFee), marketingFee: toNum(form.marketingFee),
       cateringFee: toNum(form.cateringFee), transportFee: toNum(form.transportFee),
@@ -246,6 +250,14 @@ export function CourseCostsContent() {
                 </div>
               )
             })()}
+
+            <div><label className="label">關聯活動（選填）</label>
+              <select className="input w-full" value={form.eventId} onChange={e => setForm(f => ({ ...f, eventId: e.target.value }))}>
+                <option value="">— 不關聯 —</option>
+                {eventOptions.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">關聯後，活動詳情頁會顯示這筆成本試算</p>
+            </div>
 
             <div><label className="label">備註</label>
               <textarea className="input w-full" rows={2} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />

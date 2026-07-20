@@ -28,6 +28,7 @@ export const PUT = withApiAuth({ roles: ['行政', '中央管理'] }, async (req
       endDate:     body.endDate,
       description: body.description,
       dmUrl:       body.dmUrl,
+      campaignIds: Array.isArray(body.campaignIds) ? body.campaignIds : undefined,
     })
     return NextResponse.json({ ok: true })
   } catch (err: any) {

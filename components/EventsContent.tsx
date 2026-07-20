@@ -30,11 +30,12 @@ type FormState = {
   deadline: string
   status: string
   description: string
+  campaignIds: string[]
 }
 
 const EMPTY_FORM: FormState = {
   name: '', date: '', endDate: '', location: '',
-  type: '研討會', deadline: '', status: '籌備中', description: '',
+  type: '研討會', deadline: '', status: '籌備中', description: '', campaignIds: [],
 }
 
 function eventToForm(ev: EventItem): FormState {
@@ -47,6 +48,7 @@ function eventToForm(ev: EventItem): FormState {
     deadline: ev.deadline || '',
     status: ev.status || '籌備中',
     description: ev.description || '',
+    campaignIds: ev.campaignIds ?? [],
   }
 }
 
@@ -61,6 +63,14 @@ export function EventsContent() {
   const [editId, setEditId]     = useState<string | null>(null)
   const [saving, setSaving]     = useState(false)
   const [filter, setFilter]     = useState<string>('全部')
+  const [campaignOptions, setCampaignOptions] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/bd/campaigns')
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setCampaignOptions(d.map((c: any) => ({ id: c.id, name: c.name }))) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/events?limit=10')
@@ -352,6 +362,31 @@ export function EventsContent() {
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="簡短說明活動內容"
               />
+            </div>
+
+            <div>
+              <label className="label">關聯追蹤名單（選填）</label>
+              {campaignOptions.length === 0 ? (
+                <p className="text-xs text-gray-400">目前沒有可選的追蹤名單</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                  {campaignOptions.map((c) => {
+                    const active = form.campaignIds.includes(c.id)
+                    return (
+                      <button key={c.id} type="button"
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          campaignIds: active ? f.campaignIds.filter((id) => id !== c.id) : [...f.campaignIds, c.id],
+                        }))}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium border transition ${
+                          active ? 'bg-gray-900 border-gray-900 text-white' : 'border-gray-300 text-gray-600 hover:border-gray-500'
+                        }`}>
+                        {c.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

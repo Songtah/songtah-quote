@@ -1094,6 +1094,8 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
   const [endDate,     setEndDate]     = useState(isCopy ? '' : (src?.endDate     ?? ''))
   const [description, setDescription] = useState(src?.description ?? '')
   const [dmUrl,       setDmUrl]       = useState(isCopy ? '' : (src?.dmUrl ?? ''))
+  const [campaignIds, setCampaignIds] = useState<string[]>(isCopy ? [] : (src?.campaignIds ?? []))
+  const [campaignOptions, setCampaignOptions] = useState<{ id: string; name: string }[]>([])
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState('')
 
@@ -1103,11 +1105,18 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
     return () => window.removeEventListener('keydown', fn)
   }, [onClose])
 
+  useEffect(() => {
+    fetch('/api/bd/campaigns')
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setCampaignOptions(d.map((c: any) => ({ id: c.id, name: c.name }))) })
+      .catch(() => {})
+  }, [])
+
   const handleSave = async () => {
     if (!name.trim()) { setError('請填寫活動名稱'); return }
     setError(''); setSaving(true)
     try {
-      const body = { name: name.trim(), type: type || undefined, startDate: startDate || undefined, endDate: endDate || undefined, description, dmUrl: dmUrl || undefined }
+      const body = { name: name.trim(), type: type || undefined, startDate: startDate || undefined, endDate: endDate || undefined, description, dmUrl: dmUrl || undefined, campaignIds }
       const res = isEdit
         ? await fetch(`/api/promotions/${initial!.id}`, { method: 'PUT',  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         : await fetch('/api/promotions',                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -1182,6 +1191,28 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
               placeholder="https://…（Notion 附件、Google Drive 等）"
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             <p className="text-[11px] text-gray-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">關聯追蹤名單（選填）</label>
+            {campaignOptions.length === 0 ? (
+              <p className="text-xs text-gray-400">目前沒有可選的追蹤名單</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                {campaignOptions.map((c) => {
+                  const active = campaignIds.includes(c.id)
+                  return (
+                    <button key={c.id} type="button"
+                      onClick={() => setCampaignIds((prev) => active ? prev.filter((id) => id !== c.id) : [...prev, c.id])}
+                      className={['px-2.5 py-1 rounded-full text-xs font-medium border transition',
+                        active ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+                      ].join(' ')}>
+                      {c.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <p className="text-[11px] text-gray-400 mt-1">讓行銷準備與業務執行(追蹤名單)可互相對照,同一檔活動可連多份名單</p>
           </div>
         </div>
         <div className="px-6 py-4 border-t shrink-0 rounded-b-2xl bg-gray-50/60">

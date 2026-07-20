@@ -18,6 +18,7 @@ export type EventItem = {
   status:      string
   description: string
   createdAt:   string
+  campaignIds: string[]   // 關聯追蹤名單(可選,供業務準備↔執行互查)
 }
 
 export type EventRegistration = {
@@ -46,6 +47,7 @@ function mapEvent(page: any): EventItem {
     status:      getSelect(page, '狀態'),
     description: getText(page, '簡介'),
     createdAt:   getProp(page, '建立時間')?.created_time ?? '',
+    campaignIds: (getProp(page, '關聯追蹤名單')?.relation ?? []).map((r: any) => r.id),
   }
 }
 
@@ -132,6 +134,7 @@ export async function createEvent(data: {
   deadline?:   string
   status:      string
   description: string
+  campaignIds?: string[]
 }): Promise<EventItem> {
   if (!DB.events) throw new Error('NOTION_EVENTS_DB not set')
   const page: any = await notionCallWithRetry('createEvent', () =>
@@ -145,6 +148,7 @@ export async function createEvent(data: {
         '狀態':     { select: { name: data.status } },
         '簡介':     { rich_text: [{ text: { content: data.description } }] },
         ...(data.deadline ? { '報名截止日': { date: { start: data.deadline } } } : {}),
+        ...(data.campaignIds?.length ? { '關聯追蹤名單': { relation: data.campaignIds.map((id) => ({ id })) } } : {}),
       },
     })
   )
@@ -161,6 +165,7 @@ export async function updateEvent(id: string, data: Partial<{
   deadline:    string
   status:      string
   description: string
+  campaignIds: string[]
 }>): Promise<void> {
   const props: Record<string, any> = {}
   if (data.name)        props['活動名稱'] = { title: [{ text: { content: data.name } }] }
@@ -170,6 +175,7 @@ export async function updateEvent(id: string, data: Partial<{
   if (data.status)      props['狀態']     = { select: { name: data.status } }
   if (data.description != null) props['簡介'] = { rich_text: [{ text: { content: data.description } }] }
   if (data.deadline)    props['報名截止日'] = { date: { start: data.deadline } }
+  if (data.campaignIds !== undefined) props['關聯追蹤名單'] = { relation: data.campaignIds.map((id) => ({ id })) }
 
   await notionCallWithRetry('updateEvent', () =>
     notion.pages.update({ page_id: id, properties: props })

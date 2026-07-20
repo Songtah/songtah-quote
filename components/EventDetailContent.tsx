@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { EventItem, EventRegistration } from '@/lib/system-notion'
+import type { EventItem, EventRegistration, CourseCost } from '@/lib/system-notion'
 
 const STATUS_STYLE: Record<string, string> = {
   '已報名': 'bg-blue-100 text-blue-700',
@@ -29,6 +29,7 @@ export function EventDetailContent({ id }: { id: string }) {
   const [regs, setRegs]             = useState<EventRegistration[]>([])
   const [loading, setLoading]       = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [courseCost, setCourseCost] = useState<CourseCost | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -39,6 +40,10 @@ export function EventDetailContent({ id }: { id: string }) {
       setRegs(Array.isArray(regList) ? regList : [])
       setLoading(false)
     }).catch(() => setLoading(false))
+
+    fetch('/api/course-costs').then(r => r.json())
+      .then((all) => { if (Array.isArray(all)) setCourseCost(all.find((c: CourseCost) => c.eventId === id) ?? null) })
+      .catch(() => {})
   }, [id])
 
   async function changeStatus(regId: string, status: string) {
@@ -130,6 +135,26 @@ export function EventDetailContent({ id }: { id: string }) {
           </div>
         ))}
       </div>
+
+      {/* 關聯課程成本試算 */}
+      {courseCost && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900">💰 課程成本試算</h3>
+            <Link href="/course-costs" className="text-xs text-brand-600 hover:underline">查看明細 →</Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div><p className="text-xs text-gray-400">總成本</p><p className="font-semibold text-red-600">${courseCost.totalCost.toLocaleString()}</p></div>
+            <div><p className="text-xs text-gray-400">總收入</p><p className="font-semibold text-blue-600">${courseCost.totalRevenue.toLocaleString()}</p></div>
+            <div>
+              <p className="text-xs text-gray-400">淨利</p>
+              <p className={`font-semibold ${courseCost.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${courseCost.netProfit.toLocaleString()}{courseCost.marginPct ? ` (${courseCost.marginPct.toFixed(1)}%)` : ''}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Registrations table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

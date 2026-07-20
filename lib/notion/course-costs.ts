@@ -24,6 +24,7 @@ export type CourseCost = {
   marginPct:   number   // 利潤率% (formula)
   status:      string   // 規劃中 / 已確認 / 已結算
   note:        string
+  eventId?:    string   // 關聯活動(可選,供活動 ROI 對照)
 }
 
 function getFormula(page: any, field: string): number {
@@ -51,6 +52,7 @@ function mapCourseCost(page: any): CourseCost {
     marginPct:    getFormula(page, '利潤率%'),
     status:       getSelect(page, '狀態'),
     note:         getText(page, '備註'),
+    eventId:      (getProp(page, '關聯活動')?.relation ?? [])[0]?.id ?? '',
   }
 }
 
@@ -91,6 +93,7 @@ export async function createCourseCost(data: Omit<CourseCost, 'id'|'totalCost'|'
         '預計人數':  { number: data.headcount || null },
         '狀態':      { select: { name: data.status || '規劃中' } },
         '備註':      { rich_text: [{ text: { content: data.note || '' } }] },
+        ...(data.eventId ? { '關聯活動': { relation: [{ id: data.eventId }] } } : {}),
       },
     })
   )
@@ -111,6 +114,7 @@ export async function updateCourseCost(id: string, data: Partial<Omit<CourseCost
   if (data.headcount    !== undefined) props['預計人數']  = { number: data.headcount || null }
   if (data.status       !== undefined) props['狀態']      = { select: { name: data.status } }
   if (data.note         !== undefined) props['備註']      = { rich_text: [{ text: { content: data.note } }] }
+  if (data.eventId      !== undefined) props['關聯活動']  = { relation: data.eventId ? [{ id: data.eventId }] : [] }
   await notionCallWithRetry('updateCourseCost', () =>
     notion.pages.update({ page_id: id, properties: props })
   )
