@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { listCourseCosts, createCourseCost } from '@/lib/system-notion'
-import { canEdit } from '@/lib/permissions'
+import { withApiAuth } from '@/lib/api-auth'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+export const GET = withApiAuth({ module: 'course_costs', action: 'view' }, async () => {
   const items = await listCourseCosts()
   return NextResponse.json(items)
-}
+})
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
-  if (!canEdit(session as any, 'course_costs')) {
-    return NextResponse.json({ error: '無建立辦課成本權限' }, { status: 403 })
-  }
+export const POST = withApiAuth({ module: 'course_costs', action: 'edit' }, async (req: NextRequest) => {
   const body = await req.json()
   const item = await createCourseCost(body)
   return NextResponse.json(item, { status: 201 })
-}
+})

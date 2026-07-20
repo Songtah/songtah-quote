@@ -90,7 +90,7 @@ async function verifyPassword(stored: string, supplied: string): Promise<boolean
 export async function getSystemUserByCredentials(
   username: string,
   password: string
-): Promise<(SystemUser & { password: string }) | null> {
+): Promise<SystemUser | null> {
   await ensureUserDbFields()
   const response: any = await notionCallWithRetry('getSystemUserByCredentials', () =>
     notion.databases.query({
@@ -108,9 +108,10 @@ export async function getSystemUserByCredentials(
       // 舊版明文密碼登入成功時，當場改寫成雜湊（migrate-on-login），下次起不再是明文。
       if (!BCRYPT_HASH_RE.test(storedPw)) {
         const newHash = await hashPassword(password)
+        // 雜湊遷移失敗時拒絕本次登入，避免明文密碼持續留存卻被視為登入成功。
         await notionCallWithRetry('migratePasswordHash', () =>
           notion.pages.update({ page_id: page.id, properties: { 密碼: { rich_text: richText(newHash) } } as any })
-        ).catch((e) => console.error('migratePasswordHash error:', e))
+        )
       }
 
       return {
@@ -119,7 +120,6 @@ export async function getSystemUserByCredentials(
         username: getText(page, '帳號代碼'),
         accountType: getSelect(page, '帳號類型'),
         status,
-        password: storedPw,
         permissions: mapUserPermissions(page),
       }
     }

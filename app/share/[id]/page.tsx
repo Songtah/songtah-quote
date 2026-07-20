@@ -1,6 +1,12 @@
 import Image from 'next/image'
+import type { Metadata } from 'next'
+import { unstable_noStore as noStore } from 'next/cache'
 import { getQuote } from '@/lib/notion'
 import type { Quote } from '@/types'
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+}
 
 function formatMoney(n: number) {
   return 'NT$ ' + n.toLocaleString('zh-TW')
@@ -11,6 +17,7 @@ function formatDate(d: string) {
 }
 
 export default async function SharePage({ params }: { params: { id: string } }) {
+  noStore()
   const quote: Quote | null = await getQuote(params.id)
 
   if (!quote) {
@@ -20,6 +27,20 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           <div className="text-4xl mb-4">🔍</div>
           <h1 className="text-xl font-bold text-stone-700">找不到此報價單</h1>
           <p className="text-stone-400 text-sm mt-2">連結可能已失效或不正確</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 公開連結只允許交付已核准內容。保留既有 URL，但未核准／退回時不回傳
+  // 客戶個資、品項、價格或內部簽核意見，避免以「前端隱藏」代替資料授權。
+  if (quote.status !== '已核准') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream-100 px-4">
+        <div className="card-soft max-w-md p-8 text-center">
+          <div className="text-4xl mb-4">🔒</div>
+          <h1 className="text-xl font-bold text-stone-700">此報價單尚未開放</h1>
+          <p className="text-stone-500 text-sm mt-2">報價內容完成核准後，原連結即可查看，不需要更換網址。</p>
         </div>
       </div>
     )
@@ -148,39 +169,14 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           </div>
         )}
 
-        {/* Approval status banner */}
-        {quote.status !== '已核准' && (
-          <div className={`rounded-2xl px-6 py-4 mb-4 border ${
-            quote.status === '已退回'
-              ? 'bg-red-50 border-red-200 text-red-700'
-              : 'bg-amber-50 border-amber-200 text-amber-700'
-          }`}>
-            <div className="flex items-center gap-2 font-semibold text-sm mb-1">
-              {quote.status === '已退回' ? '✗ 此報價單已被退回' :
-               quote.status === '待總經理審核' ? '📋 此報價單正等待總經理審核' :
-               '⏳ 此報價單正等待行政審核'}
-            </div>
-            {quote.approvalNote && (
-              <div className="text-sm opacity-80">意見：{quote.approvalNote}</div>
-            )}
-            <div className="text-xs opacity-60 mt-1">核准後即可下載 PDF</div>
-          </div>
-        )}
-
         {/* PDF Button */}
         <div className="text-center">
-          {quote.status === '已核准' ? (
-            <a
-              href={`/api/quotes/${params.id}/pdf`}
-              className="button-primary inline-flex items-center gap-2"
-            >
-              ↓ 下載 PDF
-            </a>
-          ) : (
-            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-stone-100 text-stone-400 text-sm font-medium cursor-not-allowed select-none">
-              ↓ 下載 PDF（待核准）
-            </span>
-          )}
+          <a
+            href={`/api/quotes/${params.id}/pdf`}
+            className="button-primary inline-flex items-center gap-2"
+          >
+            ↓ 下載 PDF
+          </a>
         </div>
 
         <div className="text-center mt-6 text-xs text-stone-400">

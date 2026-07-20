@@ -108,6 +108,36 @@ async function notionCallWithRetry<T>(
   throw lastError
 }
 
+function isSensitiveAuditKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const exactOrSuffix = [
+    'password', 'passwordhash', 'passcode', 'token', 'accesstoken', 'refreshtoken',
+    'idtoken', 'authtoken', 'secret', 'clientsecret', 'webhooksecret', 'authorization',
+    'cookie', 'setcookie', 'apikey', 'privatekey', 'credential', 'credentials',
+    'sessionid', 'sessiontoken',
+  ]
+  return exactOrSuffix.some((part) => normalized === part || normalized.endsWith(part))
+}
+
+function sanitizeAuditString(value: string): string {
+  const trimmed = value.trim()
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+    try {
+      const sanitizedJson = JSON.stringify(sanitizeForAudit(JSON.parse(value)))
+      return sanitizedJson.length > 4000 ? `${sanitizedJson.slice(0, 4000)}…` : sanitizedJson
+    } catch {
+      // 非完整 JSON 字串時繼續走文字遮罩。
+    }
+  }
+
+  const redacted = value
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, `Bearer ${REDACTED}`)
+    .replace(/((?:authorization|cookie|set-cookie)"?\s*[:=]\s*)[^,}\r\n]+/gi, `$1${REDACTED}`)
+    .replace(/((?:password|passcode|access[-_]?token|refresh[-_]?token|id[-_]?token|api[-_]?key|private[-_]?key|secret|credential)"?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s,;}]+)/gi, `$1${REDACTED}`)
+
+  return redacted.length > 4000 ? `${redacted.slice(0, 4000)}…` : redacted
+}
+
 function sanitizeForAudit(value: unknown): unknown {
   if (value == null) return value
 
@@ -119,13 +149,15 @@ function sanitizeForAudit(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
         key,
-        /password|token|secret/i.test(key) ? REDACTED : sanitizeForAudit(nested),
+        isSensitiveAuditKey(key)
+          ? REDACTED
+          : sanitizeForAudit(nested),
       ])
     )
   }
 
   if (typeof value === 'string') {
-    return value.length > 4000 ? `${value.slice(0, 4000)}…` : value
+    return sanitizeAuditString(value)
   }
 
   return value
