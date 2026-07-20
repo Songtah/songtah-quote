@@ -167,17 +167,17 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
   return (
     <div className="space-y-6">
       {/* 條件列 */}
-      <div className="card-soft p-5 flex flex-wrap items-end gap-4">
-        <div>
+      <div className="card-soft p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[auto_auto_1fr] items-end gap-4">
+        <div className="min-w-0">
           <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務</label>
-          <select className="select-soft mt-1 block" value={sp} onChange={(e) => { setSp(e.target.value); setCity(''); setDistrict('') }}>
+          <select className="select-soft mt-1 block w-full" value={sp} onChange={(e) => { setSp(e.target.value); setCity(''); setDistrict('') }}>
             {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">鄉鎮市區(轄區優先)</label>
           <select
-            className="select-soft mt-1 block min-w-[220px]"
+            className="select-soft mt-1 block w-full sm:min-w-[220px]"
             value={city && district ? city + '|' + district : ''}
             onChange={(e) => { const [c, d] = e.target.value.split('|'); setCity(c); setDistrict(d) }}
           >
@@ -188,7 +188,7 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
             ))}
           </select>
         </div>
-        <p className="text-xs text-stone-400 ml-auto self-center">
+        <p className="text-xs text-stone-400 sm:col-span-2 xl:col-span-1 xl:ml-auto xl:self-center">
           建議一日 8 家上下,依現場彈性調整;資料每晚更新{data ? `(${data.mapsBuiltAt.slice(0, 10)})` : ''}
         </p>
       </div>
@@ -223,7 +223,7 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
                 </header>
                 <ul className="divide-y divide-stone-900/[0.04]">
                   {items.map((x) => (
-                    <li key={x.id} className="px-5 py-3.5 flex items-start gap-3 hover:bg-brand-50/50 transition-colors">
+                    <li key={x.id} className="px-4 sm:px-5 py-4 flex items-start gap-3 hover:bg-brand-50/50 transition-colors">
                       <input
                         type="checkbox"
                         className="mt-1.5 accent-[#b8956a] cursor-pointer"
@@ -239,7 +239,7 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
                         </div>
                         <p className="mt-1 text-sm text-stone-600 leading-relaxed">{x.reason}</p>
                       </div>
-                      <div className="flex shrink-0 gap-2 self-center">
+                      <div className="flex flex-col sm:flex-row shrink-0 gap-2 self-center">
                         {x.phone && (
                           <a href={telHref(x.phone)}
                              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
@@ -263,12 +263,12 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
               {city}{district} 目前沒有可建議的拜訪對象(已排除歇業、公司戶、盤商與其他業務的客戶)
             </div>
           ) : (
-            <div className="glass-bar sticky bottom-4 rounded-full px-5 py-3 flex items-center gap-4 shadow-lg">
+            <div className="glass-bar sticky bottom-20 md:bottom-4 rounded-3xl md:rounded-full px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-lg">
               <span className="text-sm text-stone-600">
                 共 {total} 家建議{pickedCount > 0 ? `,已勾選 ${pickedCount} 家` : '(未勾選=全部帶走)'}
               </span>
               <button onClick={copyPlan}
-                      className="ml-auto px-5 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+                      className="w-full sm:w-auto sm:ml-auto min-h-11 px-5 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
                 {copied ? '✓ 已複製' : '複製拜訪單'}
               </button>
             </div>

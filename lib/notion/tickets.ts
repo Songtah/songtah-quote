@@ -267,6 +267,7 @@ export async function listOpenTicketsForSla(): Promise<{ id: string; priority: s
 export async function listSystemTickets(options?: {
   limit?: number
   cursor?: string
+  salesOwner?: string
 }): Promise<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }> {
   const limit = options?.limit ?? 10
   const cursor = options?.cursor
@@ -277,6 +278,9 @@ export async function listSystemTickets(options?: {
         database_id: normalizeDatabaseId(DB.tickets),
         page_size: limit,
         sorts: [{ property: '建立日期', direction: 'descending' }],
+        ...(options?.salesOwner
+          ? { filter: { property: '業務窗口', select: { equals: options.salesOwner } } }
+          : {}),
       })
     )
     const rawItems = (response.results ?? []).map(mapTicketPageRaw)
@@ -294,6 +298,9 @@ export async function listSystemTickets(options?: {
       database_id: normalizeDatabaseId(DB.tickets),
       page_size: limit,
       sorts: [{ property: '建立日期', direction: 'descending' }],
+      ...(options?.salesOwner
+        ? { filter: { property: '業務窗口', select: { equals: options.salesOwner } } }
+        : {}),
       start_cursor: cursor,
     })
   )

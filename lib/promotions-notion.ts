@@ -61,7 +61,7 @@ export interface Promotion {
 export const PROMOTION_TYPES: PromotionType[] = ['季度展場', '月度促銷', '課程', '其他']
 
 export const PROMOTION_STATUS_COLOR: Record<PromotionStatus, string> = {
-  '進行中': 'bg-green-100 text-green-700',
+  '進行中': 'bg-brand-50 text-green-700',
   '規劃中': 'bg-blue-100  text-blue-700',
   '已結束': 'bg-gray-100  text-gray-500',
 }

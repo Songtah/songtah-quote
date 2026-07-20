@@ -10,12 +10,20 @@ import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audi
 
 export const dynamic = 'force-dynamic'
 
-export const GET = withApiAuth('session', async () => {
+function canViewAll(session: any) {
+  const user = session.user as any
+  return user?.role === 'admin' || user?.accountType === '中央管理'
+}
+
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _ctx, session) => {
   try {
     const campaigns = await listCampaigns()
     // 每張名單的成員狀態統計(名單數少,逐張查可接受;>20 張時再優化)
     const items = await Promise.all(campaigns.map(async (c) => {
-      const members = await listMembers(c.id)
+      const allMembers = await listMembers(c.id)
+      const members = canViewAll(session)
+        ? allMembers
+        : allMembers.filter((member) => member.salesperson === session.user?.name)
       const byStatus: Record<string, number> = {}
       for (const s of MEMBER_STATUSES) byStatus[s] = 0
       for (const m of members) byStatus[m.status] = (byStatus[m.status] ?? 0) + 1
@@ -28,7 +36,7 @@ export const GET = withApiAuth('session', async () => {
   }
 })
 
-export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const name = (body.name ?? '').trim()

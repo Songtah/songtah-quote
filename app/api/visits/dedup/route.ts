@@ -40,7 +40,7 @@ function readRow(page: any): Row {
 
 const norm = (s: string) => (s ?? '').toLowerCase().trim()
 
-export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   try {
     const body = await req.json().catch(() => ({}))
     const dryRun = Boolean(body.dryRun)

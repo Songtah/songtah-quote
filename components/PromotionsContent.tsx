@@ -33,7 +33,7 @@ function StatusBadge({ status }: { status: PromotionStatus }) {
 const TYPE_COLOR: Record<string, string> = {
   '季度展場': 'bg-orange-100 text-orange-700',
   '月度促銷': 'bg-blue-100   text-blue-700',
-  '課程':     'bg-green-100  text-green-700',
+  '課程':     'bg-brand-50  text-green-700',
   '其他':     'bg-gray-100   text-gray-600',
 }
 
@@ -93,10 +93,10 @@ const CONDITION_TYPE_COLOR: Record<string, string> = {
   single_price:    'bg-blue-50 text-blue-700 border-blue-200',
   series_discount: 'bg-purple-50 text-purple-700 border-purple-200',
   qty_discount:    'bg-indigo-50 text-indigo-700 border-indigo-200',
-  buy_n_get_m:          'bg-green-50 text-green-700 border-green-200',
-  series_buy_n_get_m:   'bg-teal-50  text-teal-700  border-teal-200',
-  fixed_set_price: 'bg-teal-50 text-teal-700 border-teal-200',
-  buy_a_get_b:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+  buy_n_get_m:          'bg-brand-50 text-green-700 border-brand-200',
+  series_buy_n_get_m:   'bg-brand-50  text-teal-700  border-brand-200',
+  fixed_set_price: 'bg-brand-50 text-teal-700 border-brand-200',
+  buy_a_get_b:     'bg-brand-50 text-emerald-700 border-brand-200',
   add_on:          'bg-orange-50 text-orange-700 border-orange-200',
   bundle:          'bg-amber-50 text-amber-700 border-amber-200',
 }
@@ -357,7 +357,7 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
                 className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
           </div>
-          <p className="text-[11px] text-teal-600 bg-teal-50 rounded-lg px-3 py-2">
+          <p className="text-[11px] text-teal-600 bg-brand-50 rounded-lg px-3 py-2">
             同系列不同規格的數量會合計計算。贈品由業務在訂單中手動加入，系統顯示進度提示。
           </p>
         </div>
@@ -902,34 +902,34 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
 
       {/* Card */}
       <motion.div
-        className="relative w-full max-w-2xl mx-0 sm:mx-2 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+        className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:mx-2 sm:max-h-[90vh] sm:rounded-3xl"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
         {/* Header */}
-        <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b shrink-0">
+        <div className="shrink-0 border-b border-stone-900/[0.06] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
                 <StatusBadge status={promo.status} />
                 {promo.type && <TypeBadge type={promo.type} />}
               </div>
-              <h2 className="text-lg font-bold text-gray-900 leading-snug">{promo.name}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h2 className="text-lg font-bold text-stone-800 leading-snug">{promo.name}</h2>
+              <p className="text-xs text-stone-400 mt-0.5">
                 {fmtDate(promo.startDate)} – {fmtDate(promo.endDate)}
               </p>
             </div>
             <div className="flex gap-1.5 shrink-0">
               {isAdmin && (
                 <button onClick={onEdit}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
+                  className="min-h-11 rounded-full bg-stone-100 px-4 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
                   編輯活動
                 </button>
               )}
               <button onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
+                className="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">✕</button>
             </div>
           </div>
 
@@ -957,7 +957,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
                 <button
                   onClick={handleConfirmAll}
                   disabled={confirmingAll}
-                  className="ml-auto px-2.5 py-1 rounded-lg bg-green-500 text-white font-semibold text-[11px] hover:bg-green-600 disabled:opacity-50 transition"
+                  className="ml-auto px-2.5 py-1 rounded-lg bg-brand-500 text-white font-semibold text-[11px] hover:bg-brand-600 disabled:opacity-50 transition"
                 >
                   {confirmingAll ? '確認中…' : `⚡ 全部確認 (${pending})`}
                 </button>
@@ -1135,24 +1135,24 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-lg mx-0 sm:mx-2 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:mx-2 sm:max-h-[90vh] sm:rounded-3xl"
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1,    y: 0 }}
         exit={{    opacity: 0, scale: 0.96, y: 8 }}
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
-        <div className="px-4 sm:px-6 py-5 border-b flex items-center justify-between shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-900/[0.06] px-4 py-5 sm:px-6">
+          <h2 className="text-base font-bold text-stone-800">
             {isCopy ? '複製促銷活動' : isEdit ? '編輯促銷活動' : '新增促銷活動'}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-lg">✕</button>
+          <button onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-5 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">活動名稱 *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="例：2026 年 Q2 季度展場"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              className="input-soft w-full" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">活動類型</label>
@@ -1171,25 +1171,25 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">開始日期</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                className="input-soft w-full" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">結束日期</label>
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                className="input-soft w-full" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">活動說明</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="活動內容、優惠條件說明…" rows={4}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none" />
+              className="input-soft w-full resize-none" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">DM 附件連結</label>
             <input type="url" value={dmUrl} onChange={(e) => setDmUrl(e.target.value)}
               placeholder="https://…（Notion 附件、Google Drive 等）"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              className="input-soft w-full" />
             <p className="text-[11px] text-gray-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
           </div>
           <div>
@@ -1215,12 +1215,12 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
             <p className="text-[11px] text-gray-400 mt-1">讓行銷準備與業務執行(追蹤名單)可互相對照,同一檔活動可連多份名單</p>
           </div>
         </div>
-        <div className="px-6 py-4 border-t shrink-0 rounded-b-2xl bg-gray-50/60">
+        <div className="shrink-0 border-t border-stone-900/[0.06] bg-white/70 px-4 py-4 sm:px-6">
           {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
           <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition">取消</button>
+            <button onClick={onClose} className="min-h-11 flex-1 rounded-full bg-stone-100 px-4 py-2 text-sm font-medium text-stone-600 transition-all hover:bg-stone-200 active:scale-95">取消</button>
             <button onClick={handleSave} disabled={saving}
-              className="flex-1 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 transition">
+              className="min-h-11 flex-1 rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
               {saving ? '儲存中…' : isCopy ? '建立複製版' : isEdit ? '儲存變更' : '建立活動'}
             </button>
           </div>
@@ -1253,17 +1253,17 @@ function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin, usage
 
   return (
     <div onClick={onView}
-      className="panel p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-brand-200 group">
+      className="card-soft card-soft-hover group cursor-pointer p-4 transition-all active:scale-[0.99] sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <StatusBadge status={promo.status} />
             {promo.type && <TypeBadge type={promo.type} />}
           </div>
-          <h3 className="font-semibold text-gray-900 text-sm group-hover:text-brand-700 transition-colors">{promo.name}</h3>
-          <p className="text-xs text-gray-400 mt-0.5">{fmtDate(promo.startDate)} – {fmtDate(promo.endDate)}</p>
+          <h3 className="font-semibold text-stone-800 text-sm group-hover:text-brand-700 transition-colors">{promo.name}</h3>
+          <p className="text-xs text-stone-400 mt-0.5">{fmtDate(promo.startDate)} – {fmtDate(promo.endDate)}</p>
           {promo.description && (
-            <p className="text-xs text-gray-500 mt-1.5 line-clamp-1">{promo.description}</p>
+            <p className="text-xs text-stone-500 mt-1.5 line-clamp-2">{promo.description}</p>
           )}
           {usage && usage.orderCount > 0 && (
             <p className="text-xs text-brand-600 mt-1.5">
@@ -1272,7 +1272,7 @@ function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin, usage
           )}
         </div>
         {isAdmin && (
-          <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex shrink-0 gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
             <button onClick={(e) => { e.stopPropagation(); onEdit() }}
               className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
               編輯
@@ -1388,34 +1388,38 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-gray-500">
+      <section className="card-soft mb-6 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="促銷活動摘要">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">活動概況</p>
+          <p className="mt-1 text-sm font-medium text-stone-600">
           共 {promos.length} 個活動
           {promos.filter((p) => p.status === '進行中').length > 0 && (
             <span className="ml-2 text-green-600 font-medium">
               · {promos.filter((p) => p.status === '進行中').length} 個進行中
             </span>
           )}
-        </p>
+          </p>
+          <p className="mt-1 text-xs text-stone-400">先確認進行中的活動，再處理待定價與即將開始的內容。</p>
+        </div>
         {isAdmin && (
-          <button onClick={() => setEditing('new')} className="button-primary px-4 py-2 text-sm">
+          <button onClick={() => setEditing('new')} className="min-h-11 shrink-0 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">
             + 新增活動
           </button>
         )}
-      </div>
+      </section>
 
       {loading && (
         <div className="space-y-3">
-          {[1,2,3].map((i) => <div key={i} className="h-24 rounded-xl bg-gray-100 animate-pulse" />)}
+          {[1,2,3].map((i) => <div key={i} className="h-28 rounded-3xl bg-stone-100 animate-pulse" />)}
         </div>
       )}
 
       {!loading && promos.length === 0 && (
-        <div className="text-center py-24 text-gray-400">
+        <div className="card-soft px-5 py-20 text-center text-stone-400">
           <div className="text-5xl mb-3">🎪</div>
           <p className="text-sm">尚未建立任何促銷活動</p>
           {isAdmin && (
-            <button onClick={() => setEditing('new')} className="mt-3 text-xs text-brand-600 hover:underline font-medium">立即新增</button>
+            <button onClick={() => setEditing('new')} className="mt-4 min-h-11 rounded-full bg-brand-50 px-5 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95">立即新增</button>
           )}
         </div>
       )}
@@ -1427,7 +1431,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
             if (list.length === 0) return null
             return (
               <div key={status}>
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                <h3 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-widest text-stone-400">
                   {STATUS_LABEL[status]} <span className="font-normal">({list.length})</span>
                 </h3>
                 <div className="space-y-3">

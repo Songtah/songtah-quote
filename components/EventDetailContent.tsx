@@ -6,20 +6,20 @@ import type { EventItem, EventRegistration, CourseCost } from '@/lib/system-noti
 
 const STATUS_STYLE: Record<string, string> = {
   '已報名': 'bg-blue-100 text-blue-700',
-  '已確認': 'bg-green-100 text-green-700',
+  '已確認': 'bg-brand-50 text-green-700',
   '取消':   'bg-red-100 text-red-600',
 }
 
 const EVENT_STATUS_STYLE: Record<string, string> = {
   '籌備中': 'bg-gray-100 text-gray-600',
-  '開放報名': 'bg-green-100 text-green-700',
+  '開放報名': 'bg-brand-50 text-green-700',
   '已結束': 'bg-red-100 text-red-600',
 }
 
 const TYPE_STYLE: Record<string, string> = {
   '研討會': 'bg-blue-50 text-blue-700',
   '產品發表': 'bg-purple-50 text-purple-700',
-  '培訓': 'bg-emerald-50 text-emerald-700',
+  '培訓': 'bg-brand-50 text-emerald-700',
   '展覽': 'bg-orange-50 text-orange-700',
   '其他': 'bg-gray-50 text-gray-600',
 }
@@ -58,11 +58,11 @@ export function EventDetailContent({ id }: { id: string }) {
   }
 
   if (loading) {
-    return <div className="py-16 text-center text-gray-400">載入中…</div>
+    return <div className="card-soft py-16 text-center text-stone-400">載入中…</div>
   }
 
   if (!event) {
-    return <div className="py-16 text-center text-gray-400">找不到活動</div>
+    return <div className="card-soft py-16 text-center text-stone-400">找不到活動</div>
   }
 
   const totalAttendees = regs.reduce((sum, r) => sum + (r.attendees || 0), 0)
@@ -73,12 +73,12 @@ export function EventDetailContent({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       {/* Back */}
-      <Link href="/events" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/events" className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm text-stone-500 transition-all hover:bg-white hover:text-brand-600 active:scale-95">
         ← 返回活動列表
       </Link>
 
       {/* Event info card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="card-soft p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div className="flex gap-2 flex-wrap">
             <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${TYPE_STYLE[event.type] ?? 'bg-gray-50 text-gray-600'}`}>
@@ -90,9 +90,9 @@ export function EventDetailContent({ id }: { id: string }) {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-gray-900 mb-4">{event.name}</h2>
+        <h2 className="mb-4 text-xl font-bold text-stone-800">{event.name}</h2>
 
-        <div className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+        <div className="grid gap-3 text-sm text-stone-600 sm:grid-cols-2">
           <div className="flex items-center gap-2">
             <span>📅</span>
             <span>
@@ -129,7 +129,7 @@ export function EventDetailContent({ id }: { id: string }) {
           { label: '待確認', value: pending.length, color: 'text-blue-600' },
           { label: '預計出席人數', value: totalAttendees, color: 'text-purple-600' },
         ].map(s => (
-          <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+          <div key={s.label} className="card-soft p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
@@ -138,7 +138,7 @@ export function EventDetailContent({ id }: { id: string }) {
 
       {/* 關聯課程成本試算 */}
       {courseCost && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+        <div className="card-soft p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">💰 課程成本試算</h3>
             <Link href="/course-costs" className="text-xs text-brand-600 hover:underline">查看明細 →</Link>
@@ -157,7 +157,7 @@ export function EventDetailContent({ id }: { id: string }) {
       )}
 
       {/* Registrations table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="card-soft overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">報名名單</h3>
           <span className="text-sm text-gray-400">{regs.length} 筆</span>
@@ -168,7 +168,7 @@ export function EventDetailContent({ id }: { id: string }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs">
+              <thead className="bg-cream-50 text-xs text-stone-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">機構名稱</th>
                   <th className="px-4 py-3 text-left font-medium">聯絡人</th>
@@ -180,21 +180,21 @@ export function EventDetailContent({ id }: { id: string }) {
                   <th className="px-4 py-3 text-left font-medium">報名時間</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-stone-900/[0.06]">
                 {regs.map(reg => (
-                  <tr key={reg.id} className="hover:bg-gray-50">
+                  <tr key={reg.id} className="transition-colors hover:bg-brand-50/50">
                     <td className="px-4 py-3 font-medium text-gray-900">{reg.institution}</td>
                     <td className="px-4 py-3 text-gray-600">{reg.contact || '—'}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {reg.email
-                        ? <a href={`mailto:${reg.email}`} className="text-blue-600 hover:underline">{reg.email}</a>
+                        ? <a href={`mailto:${reg.email}`} className="text-brand-600 hover:underline">{reg.email}</a>
                         : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{reg.phone || '—'}</td>
                     <td className="px-4 py-3 text-center text-gray-900">{reg.attendees || 1}</td>
                     <td className="px-4 py-3">
                       {reg.customerId
-                        ? <Link href={`/customers/${reg.customerId}`} className="text-blue-600 hover:underline text-xs">查看客戶 →</Link>
+                        ? <Link href={`/customers/${reg.customerId}`} className="text-xs text-brand-600 hover:underline">查看客戶 →</Link>
                         : <span className="text-gray-300 text-xs">未配對</span>}
                     </td>
                     <td className="px-4 py-3">

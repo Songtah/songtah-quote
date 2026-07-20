@@ -9,7 +9,8 @@
  * 安全:官網 fetch 走 SSRF 防護(https + 擋私網位址);Places 端點為固定主機。
  */
 import { notion, DB, normalizeDatabaseId, notionCallWithRetry, getTitle, getText, getSelect, getProp } from './shared'
-import { detectOpportunities, GOLD_TAGS, ALL_TAGS } from '@/lib/opportunity-signals'
+import { detectOpportunities } from '@/lib/opportunity-signals'
+import { getOpportunityKeywordLibrary } from '@/lib/opportunity-keywords'
 
 const CUST = () => normalizeDatabaseId(DB.customers!)
 
@@ -19,7 +20,7 @@ export type OppCustomer = {
   tags: string[]; goldTags: string[]
 }
 
-function mapOpp(page: any): OppCustomer {
+function mapOpp(page: any, goldTags: Set<string>): OppCustomer {
   const tags = (getProp(page, '商機標籤')?.multi_select ?? []).map((o: any) => o.name).filter(Boolean)
   return {
     id: page.id,
@@ -30,7 +31,7 @@ function mapOpp(page: any): OppCustomer {
     phone: page.properties?.['電話']?.phone_number ?? getText(page, '電話'),
     address: getText(page, '地址'),
     tags,
-    goldTags: tags.filter((t: string) => GOLD_TAGS.includes(t)),
+    goldTags: tags.filter((t: string) => goldTags.has(t)),
   }
 }
 
@@ -39,6 +40,8 @@ export async function listOpportunityCustomers(f: {
   tag?: string; city?: string; district?: string; salesperson?: string; goldOnly?: boolean
 } = {}): Promise<OppCustomer[]> {
   if (!DB.customers) return []
+  const library = await getOpportunityKeywordLibrary()
+  const goldTags = new Set(library.signals.filter((signal) => signal.gold).map((signal) => signal.tag))
   const clauses: any[] = [{ property: '商機標籤', multi_select: { is_not_empty: true } }]
   if (f.tag) clauses.push({ property: '商機標籤', multi_select: { contains: f.tag } })
   if (f.city) clauses.push({ property: '縣市', select: { equals: f.city } })
@@ -55,7 +58,7 @@ export async function listOpportunityCustomers(f: {
         ...(cursor ? { start_cursor: cursor } : {}),
       })
     )
-    for (const page of res.results ?? []) out.push(mapOpp(page))
+    for (const page of res.results ?? []) out.push(mapOpp(page, goldTags))
     cursor = res.has_more ? res.next_cursor : undefined
   } while (cursor)
 
@@ -72,6 +75,8 @@ export async function listOpportunityCustomers(f: {
  */
 export async function listUnclaimedOpportunityLeads(): Promise<OppCustomer[]> {
   if (!DB.customers) return []
+  const library = await getOpportunityKeywordLibrary()
+  const goldTags = new Set(library.signals.filter((signal) => signal.gold).map((signal) => signal.tag))
   const items: OppCustomer[] = []
   let cursor: string | undefined
   do {
@@ -86,7 +91,7 @@ export async function listUnclaimedOpportunityLeads(): Promise<OppCustomer[]> {
         ...(cursor ? { start_cursor: cursor } : {}),
       })
     )
-    for (const page of res.results ?? []) items.push(mapOpp(page))
+    for (const page of res.results ?? []) items.push(mapOpp(page, goldTags))
     cursor = res.has_more ? res.next_cursor : undefined
   } while (cursor)
   items.sort((a, b) => b.goldTags.length - a.goldTags.length || a.name.localeCompare(b.name, 'zh-TW'))
@@ -94,16 +99,19 @@ export async function listUnclaimedOpportunityLeads(): Promise<OppCustomer[]> {
 }
 
 /** 各商機標籤的客戶計數 + 金訊號家數(供分頁頂部統計)。 */
-export async function getOpportunityStats(): Promise<{ tagCounts: Record<string, number>; goldCustomers: number; total: number }> {
+export async function getOpportunityStats(): Promise<{ tagCounts: Record<string, number>; goldCustomers: number; total: number; allTags: string[]; goldTags: string[] }> {
+  const library = await getOpportunityKeywordLibrary()
+  const allTags = library.signals.map((signal) => signal.tag)
+  const goldTags = library.signals.filter((signal) => signal.gold).map((signal) => signal.tag)
   const all = await listOpportunityCustomers()
   const tagCounts: Record<string, number> = {}
-  for (const t of ALL_TAGS) tagCounts[t] = 0
+  for (const t of allTags) tagCounts[t] = 0
   let goldCustomers = 0
   for (const c of all) {
     for (const t of c.tags) tagCounts[t] = (tagCounts[t] ?? 0) + 1
     if (c.goldTags.length) goldCustomers++
   }
-  return { tagCounts, goldCustomers, total: all.length }
+  return { tagCounts, goldCustomers, total: all.length, allTags, goldTags }
 }
 
 // ── 掃描(Google Places + 官網)────────────────────────────────────────
@@ -164,6 +172,9 @@ export async function scanDistrict(city: string, district: string, opts: { dryRu
   const key = process.env.GOOGLE_PLACES_API_KEY
   if (!key) throw new Error('未設定 GOOGLE_PLACES_API_KEY')
   if (!DB.customers) throw new Error('客戶主檔未設定')
+  const library = await getOpportunityKeywordLibrary()
+  const dictionary = library.signals
+  const goldTagSet = new Set(dictionary.filter((signal) => signal.gold).map((signal) => signal.tag))
 
   // 撈該區牙醫診所
   const custs: any[] = []
@@ -197,11 +208,11 @@ export async function scanDistrict(city: string, district: string, opts: { dryRu
     placeHit++
     let corpus = (place.displayName?.text || '') + ' ' + (place.editorialSummary?.text || '')
     if (place.websiteUri) { const t = await fetchSite(place.websiteUri); if (t) corpus += ' ' + t }
-    const hits = detectOpportunities(corpus)
+    const hits = detectOpportunities(corpus, dictionary)
     if (hits.length === 0) continue
     tagged++
     const tags = hits.map((h) => h.tag)
-    const goldTags = tags.filter((t) => GOLD_TAGS.includes(t))
+    const goldTags = tags.filter((t) => goldTagSet.has(t))
     if (goldTags.length) goldCustomers++
     for (const t of tags) tagCounts[t] = (tagCounts[t] ?? 0) + 1
     rows.push({ id: p.id, name, tags, goldTags, evidence: hits.map((h) => h.evidence).filter(Boolean).slice(0, 3) })

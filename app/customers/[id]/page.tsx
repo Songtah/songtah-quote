@@ -43,9 +43,9 @@ const EQ_PREVIEW = 4
 
 const EQUIPMENT_STATUS_STYLES: Record<string, string> = {
   '正常':    'bg-blue-100 text-blue-700',
-  '新機':    'bg-green-100 text-green-700',
+  '新機':    'bg-brand-50 text-green-700',
   '高齡設備': 'bg-red-100 text-red-700',
-  '報廢':    'bg-gray-100 text-gray-500',
+  '報廢':    'bg-stone-100 text-stone-500',
   '借用中':  'bg-yellow-100 text-yellow-700',
   '狀態不明': 'bg-orange-100 text-orange-700',
 }
@@ -53,10 +53,10 @@ const EQUIPMENT_STATUS_STYLES: Record<string, string> = {
 // ── avatar color ──────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
   'from-blue-400 to-blue-600',
-  'from-green-400 to-green-600',
+  'from-brand-400 to-brand-600',
   'from-purple-400 to-purple-600',
   'from-orange-400 to-orange-500',
-  'from-teal-400 to-teal-600',
+  'from-brand-400 to-brand-600',
   'from-rose-400 to-rose-600',
 ]
 function avatarGradient(name: string) {
@@ -307,9 +307,9 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
 
           {/* ── Quotes & Orders ──────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="card-soft p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">報價與訂單</h2>
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">報價與訂單</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.quotes.length} 張報價・{data.orders.length} 張訂單
               </span>
@@ -360,11 +360,11 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
 
           {/* ── Tags ─────────────────────────────────────────────────────────── */}
           {allTags.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">客戶標籤</h2>
+            <div className="card-soft p-6">
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">客戶標籤</h2>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag) => (
-                  <span key={tag} className="text-sm bg-green-50 text-green-700 border border-green-200 px-3 py-1 rounded-full">
+                  <span key={tag} className="text-sm bg-brand-50 text-green-700 border border-brand-200 px-3 py-1 rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -373,9 +373,9 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           )}
 
           {/* ── Equipment ────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="card-soft p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">設備清單</h2>
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">設備清單</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.equipment.length} 台
               </span>
@@ -413,7 +413,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       onClick={() => openEquipment(eq.id)}
                       className={`rounded-xl border p-3 text-sm flex flex-col gap-2 transition-all text-left cursor-grab active:cursor-grabbing select-none
                         ${dragId === eq.id ? 'opacity-40 scale-95' : 'hover:border-slate-300 hover:shadow-sm'}
-                        ${overId === eq.id && dragId !== eq.id ? 'border-green-400 ring-1 ring-green-300' : 'border-slate-200'}
+                        ${overId === eq.id && dragId !== eq.id ? 'border-brand-400 ring-1 ring-brand-300' : 'border-slate-200'}
                       `}
                     >
                       <div className="w-full aspect-[4/3] rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
@@ -451,9 +451,9 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
 
           {/* ── Visits ────────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="card-soft p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">拜訪紀錄</h2>
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">拜訪紀錄</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {(data.visits ?? []).length} 筆
               </span>
@@ -476,7 +476,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                           <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">待追蹤</span>
                         )}
                         {v.status && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{v.status}</span>
+                          <span className="text-xs bg-brand-50 text-green-700 px-2 py-0.5 rounded-full">{v.status}</span>
                         )}
                       </div>
                     </div>
@@ -503,9 +503,9 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
 
           {/* ── Tickets ───────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="card-soft p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">技術支援工單</h2>
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">技術支援工單</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {data.tickets.length} 筆
               </span>
@@ -531,7 +531,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                         {t.status && (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             ['已結案', '關閉'].includes(t.status)
-                              ? 'bg-gray-100 text-gray-400'
+                              ? 'bg-stone-100 text-stone-400'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
                             {t.status}
@@ -562,27 +562,27 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           </div>
 
           {/* ── 參加活動 ───────────────────────────────────────────────────── */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="card-soft p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">參加活動</h2>
-              <span className="text-xs text-gray-400">{customerEvents.length} 筆</span>
+              <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">參加活動</h2>
+              <span className="text-xs text-stone-400">{customerEvents.length} 筆</span>
             </div>
             {customerEvents.length === 0 ? (
-              <p className="text-sm text-gray-400">尚無活動報名紀錄</p>
+              <p className="text-sm text-stone-400">尚無活動報名紀錄</p>
             ) : (
               <div className="space-y-2">
                 {(eventsExpanded ? customerEvents : customerEvents.slice(0, 3)).map(ev => (
                   <Link
                     key={ev.id}
                     href={`/events/${ev.eventId}`}
-                    className="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between rounded-2xl border border-stone-900/[0.06] p-3 hover:bg-brand-50/40 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{ev.institution}</p>
-                      <p className="text-xs text-gray-400">{ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : ''}</p>
+                      <p className="text-sm font-medium text-stone-800 truncate">{ev.institution}</p>
+                      <p className="text-xs text-stone-400">{ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : ''}</p>
                     </div>
                     <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      ev.status === '已確認' ? 'bg-green-100 text-green-700' :
+                      ev.status === '已確認' ? 'bg-brand-50 text-green-700' :
                       ev.status === '取消'   ? 'bg-red-100 text-red-600' :
                       'bg-blue-100 text-blue-700'
                     }`}>{ev.status}</span>
@@ -733,7 +733,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                       ) : (
                         <>
                           {selectedEq.status && (
-                            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-4 ${EQUIPMENT_STATUS_STYLES[selectedEq.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-4 ${EQUIPMENT_STATUS_STYLES[selectedEq.status] ?? 'bg-stone-100 text-stone-500'}`}>
                               {selectedEq.status}
                             </span>
                           )}
@@ -771,7 +771,7 @@ function StatCell({ label, value, color }: { label: string; value: string; color
   return (
     <div className="flex flex-col items-center py-3 px-2">
       <span className={`text-lg font-bold ${color}`}>{value}</span>
-      <span className="text-xs text-gray-400 mt-0.5">{label}</span>
+      <span className="text-xs text-stone-400 mt-0.5">{label}</span>
     </div>
   )
 }
@@ -779,8 +779,8 @@ function StatCell({ label, value, color }: { label: string; value: string; color
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400 mb-0.5">{label}</dt>
-      <dd className="text-gray-900 font-medium">{value || '—'}</dd>
+      <dt className="text-xs text-stone-400 mb-0.5">{label}</dt>
+      <dd className="text-stone-900 font-medium">{value || '—'}</dd>
     </div>
   )
 }
@@ -795,7 +795,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function EquipmentStatusBadge({ status }: { status: string }) {
-  const cls = EQUIPMENT_STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'
+  const cls = EQUIPMENT_STATUS_STYLES[status] ?? 'bg-stone-100 text-stone-500'
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${cls}`}>
       {status}

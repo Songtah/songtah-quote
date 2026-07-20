@@ -218,7 +218,7 @@ function FollowUpModal({
                         <button
                           onClick={() => handleCloseFollowUp(v.id)}
                           disabled={closingId === v.id}
-                          className="text-xs px-2.5 py-1 rounded-full border border-stone-200 bg-white text-stone-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 active:scale-95 transition-all disabled:opacity-50"
+                          className="text-xs px-2.5 py-1 rounded-full border border-stone-200 bg-white text-stone-500 hover:bg-brand-50 hover:text-emerald-600 hover:border-brand-200 active:scale-95 transition-all disabled:opacity-50"
                         >
                           {closingId === v.id ? '結案中…' : '✓ 結案'}
                         </button>
@@ -473,7 +473,7 @@ const STATUS_COLOR: Record<string, string> = {
   草稿:   'bg-gray-100 text-gray-500',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
-  已到貨: 'bg-emerald-100 text-emerald-700',
+  已到貨: 'bg-brand-50 text-emerald-700',
   已取消: 'bg-red-100 text-red-500',
 }
 

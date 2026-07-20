@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listOpportunityCustomers, getOpportunityStats } from '@/lib/notion/opportunity'
-import { ALL_TAGS, GOLD_TAGS } from '@/lib/opportunity-signals'
+import { getOpportunityKeywordLibrary } from '@/lib/opportunity-keywords'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -16,8 +16,10 @@ export const GET = withApiAuth({ module: 'clinic_monitor', action: 'view' }, asy
     const sp = req.nextUrl.searchParams
     if (sp.get('mode') === 'stats') {
       const stats = await getOpportunityStats()
-      return NextResponse.json({ ...stats, allTags: ALL_TAGS, goldTags: GOLD_TAGS })
+      return NextResponse.json(stats)
     }
+    const library = await getOpportunityKeywordLibrary()
+    const goldTags = library.signals.filter((signal) => signal.gold).map((signal) => signal.tag)
     const items = await listOpportunityCustomers({
       tag: sp.get('tag') || undefined,
       city: sp.get('city') || undefined,
@@ -25,7 +27,7 @@ export const GET = withApiAuth({ module: 'clinic_monitor', action: 'view' }, asy
       salesperson: sp.get('salesperson') || undefined,
       goldOnly: sp.get('goldOnly') === '1',
     })
-    return NextResponse.json({ items, goldTags: GOLD_TAGS })
+    return NextResponse.json({ items, goldTags })
   } catch (error) {
     console.error('opportunity GET error:', error)
     return NextResponse.json({ error: '讀取商機資料失敗' }, { status: 500 })

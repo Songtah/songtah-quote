@@ -10,7 +10,12 @@ import { logSuggestionCopy, getSuggestionAdoptionStats } from '@/lib/notion/visi
 
 export const dynamic = 'force-dynamic'
 
-export const POST = withApiAuth('session', async (req: NextRequest, _ctx, session) => {
+function canViewAll(session: any) {
+  const user = session.user as any
+  return user?.role === 'admin' || user?.accountType === '中央管理'
+}
+
+export const POST = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const { city, district, items } = body ?? {}
@@ -33,10 +38,10 @@ export const POST = withApiAuth('session', async (req: NextRequest, _ctx, sessio
   }
 })
 
-export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session) => {
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
     const sp = req.nextUrl.searchParams
-    const mine = sp.get('mine') === '1'
+    const mine = !canViewAll(session) || sp.get('mine') === '1'
     const salesperson = mine ? (session?.user?.name as string) ?? undefined : undefined
     const sinceDays = Math.min(180, Math.max(1, Number(sp.get('days')) || 30))
     const stats = await getSuggestionAdoptionStats({ salesperson, sinceDays })

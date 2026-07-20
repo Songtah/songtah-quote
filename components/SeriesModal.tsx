@@ -396,7 +396,7 @@ export function SeriesModal({ family, allItems, allowedSkuCodes, onEdit, onClose
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 24, scale: reduceMotion ? 1 : 0.98 }}
         transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-        className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-[92vh] sm:rounded-3xl"
+        className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-[92vh] sm:rounded-3xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="series-modal-title"

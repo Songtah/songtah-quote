@@ -3,12 +3,19 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listVisits, createVisit } from '@/lib/system-notion'
 import { bumpContactedByCustomer } from '@/lib/notion/campaigns'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { advanceCustomerDevStage } from '@/lib/notion/customers'
 
-export const GET = withApiAuth('session', async (req: NextRequest) => {
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
     const p = req.nextUrl.searchParams
     const customerName = p.get('customerName') ?? undefined
-    const salesperson  = p.get('salesperson')  ?? undefined
+    const user = session.user as any
+    const canViewAll = user?.role === 'admin' || user?.accountType === '中央管理'
+    // 一般帳號只能讀取自己的客情。不可相信 client 傳入的 salesperson，
+    // 否則只要改 query string 就能跨業務列舉機密紀錄。
+    const salesperson = canViewAll
+      ? p.get('salesperson') ?? undefined
+      : session.user?.name || '__NO_MATCH__'
     const cursor       = p.get('cursor')        ?? undefined
     const limit        = Math.min(parseInt(p.get('limit') ?? '10') || 10, 100)
 
@@ -20,7 +27,7 @@ export const GET = withApiAuth('session', async (req: NextRequest) => {
   }
 })
 
-export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
+export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
     const {
@@ -31,10 +38,14 @@ export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: N
 
     if (!customerName) return NextResponse.json({ error: '客戶名稱必填' }, { status: 400 })
 
+    const user = session.user as any
+    const canCreateForOthers = user?.role === 'admin' || user?.accountType === '中央管理'
+    const scopedSalesperson = canCreateForOthers ? salesperson : session.user?.name
+
     const visit = await createVisit({
       customerName,
       date,
-      salesperson,
+      salesperson: scopedSalesperson,
       status,
       content,
       address,
@@ -55,6 +66,13 @@ export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: N
     // 追蹤名單連動:此客戶在進行中名單裡的「未聯絡」→「已聯絡」(fire-and-forget,不影響建檔)
     if (customerId) {
       bumpContactedByCustomer(customerId).catch((e) => console.warn('campaign bump error:', e))
+      const targetStage = customerReaction === '同意試用' ? '試用中' : '已接觸'
+      await advanceCustomerDevStage(customerId, targetStage, {
+        actorName: session.user?.name ?? '',
+        canManageAll: canCreateForOthers,
+      }).catch((e) =>
+        console.warn('visit stage advance error:', e)
+      )
     }
 
     await logAuditEvent({

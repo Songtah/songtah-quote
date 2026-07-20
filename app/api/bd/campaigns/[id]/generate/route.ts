@@ -24,7 +24,7 @@ export const maxDuration = 300
 const CAP = 300
 const nid = (s: string) => (s ?? '').replace(/-/g, '')
 
-export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest, { params }: { params: { id: string } }) => {
   try {
     const b = await req.json()
     const source: string = b.source

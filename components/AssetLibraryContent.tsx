@@ -333,7 +333,7 @@ function UploadModal({
 
               {/* Compression stats */}
               {us.stage !== 'compressing' && us.compressedBlob && (
-                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs">
+                <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5 text-xs">
                   <span className="text-emerald-600 font-semibold">✓ 已壓縮</span>
                   <span className="text-gray-400">原圖</span>
                   <span className="font-medium text-gray-700">{formatBytes(us.file.size)}</span>
@@ -466,11 +466,11 @@ function AssetCard({
   const [confirmDel, setConfirmDel] = useState(false)
 
   return (
-    <div className="group relative bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all cursor-pointer"
+    <div className="card-soft card-soft-hover group relative overflow-hidden cursor-pointer transition-all active:scale-[0.99]"
       onClick={onClick}>
 
       {/* Thumbnail */}
-      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+      <div className="aspect-square bg-stone-50 flex items-center justify-center overflow-hidden">
         {asset.compressedUrl && !imgErr ? (
           <img
             src={asset.compressedUrl}
@@ -479,7 +479,7 @@ function AssetCard({
             onError={() => setImgErr(true)}
           />
         ) : (
-          <span className="text-4xl text-gray-200">🖼</span>
+          <span className="text-4xl text-stone-200">🖼</span>
         )}
       </div>
 
@@ -494,12 +494,12 @@ function AssetCard({
             <button onClick={() => { onDelete(); setConfirmDel(false) }}
               className="text-xs font-bold text-red-600 hover:text-red-800 px-1">是</button>
             <button onClick={() => setConfirmDel(false)}
-              className="text-xs text-gray-500 hover:text-gray-700 px-1">否</button>
+              className="min-h-8 text-xs text-stone-500 hover:text-stone-700 px-1">否</button>
           </div>
         ) : (
           <button
             onClick={() => setConfirmDel(true)}
-            className="w-7 h-7 bg-white/90 rounded-full shadow text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center text-sm transition"
+            className="w-11 h-11 sm:w-8 sm:h-8 bg-white/90 rounded-full shadow text-stone-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center text-sm transition-all active:scale-95"
           >
             ✕
           </button>
@@ -515,22 +515,22 @@ function AssetCard({
 
       {/* Info */}
       <div className="px-3 py-2.5">
-        <p className="text-sm font-medium text-gray-900 truncate leading-snug">{asset.name}</p>
+        <p className="text-sm font-semibold text-stone-800 truncate leading-snug">{asset.name}</p>
         <div className="flex items-center gap-2 mt-0.5">
           {asset.compressedSize > 0 && (
-            <span className="text-[10px] text-gray-400">{formatBytes(asset.compressedSize)}</span>
+            <span className="text-[10px] text-stone-400">{formatBytes(asset.compressedSize)}</span>
           )}
           {asset.uploadedBy && (
-            <span className="text-[10px] text-gray-300">· {asset.uploadedBy}</span>
+            <span className="text-[10px] text-stone-300">· {asset.uploadedBy}</span>
           )}
         </div>
         {asset.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {asset.tags.slice(0, 3).map((t) => (
-              <span key={t} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{t}</span>
+              <span key={t} className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-full">{t}</span>
             ))}
             {asset.tags.length > 3 && (
-              <span className="text-[10px] text-gray-400">+{asset.tags.length - 3}</span>
+              <span className="text-[10px] text-stone-400">+{asset.tags.length - 3}</span>
             )}
           </div>
         )}
@@ -742,17 +742,18 @@ export function AssetLibraryContent({ setupNeeded }: { setupNeeded?: boolean }) 
   return (
     <>
       {/* Toolbar */}
-      <div className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3">
+      <section className="card-soft mb-5 p-4 sm:p-5" aria-label="素材搜尋與上傳">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜尋素材名稱或標籤…"
-          className="flex-1 max-w-sm px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+          className="input-soft min-h-11 flex-1 rounded-full px-5 sm:max-w-lg"
         />
         <button
           onClick={() => setShowUpload(true)}
-          className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 transition shadow-sm"
+          className="min-h-11 shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 shadow-md shadow-brand-500/25 transition-all active:scale-95"
         >
           <span className="text-base leading-none">＋</span>
           上傳素材
@@ -760,22 +761,23 @@ export function AssetLibraryContent({ setupNeeded }: { setupNeeded?: boolean }) 
       </div>
 
       {/* Category tabs */}
-      <div className="flex flex-wrap gap-1.5 mb-6">
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap" role="group" aria-label="素材分類">
         {ALL_CATS.map((c) => (
           <button
             key={c}
             onClick={() => setActiveCategory(c)}
             className={[
-              'px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all',
+              'min-h-11 shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95',
               activeCategory === c
-                ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
-                : 'bg-white border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
+                : 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700',
             ].join(' ')}
           >
             {c}
           </button>
         ))}
       </div>
+      </section>
 
       {/* Error */}
       {loadError && (
@@ -789,13 +791,13 @@ export function AssetLibraryContent({ setupNeeded }: { setupNeeded?: boolean }) 
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-2xl bg-gray-100 animate-pulse" />
+            <div key={i} className="aspect-square rounded-3xl bg-stone-100 animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-gray-300">
+        <div className="card-soft flex flex-col items-center justify-center px-5 py-20 text-stone-300">
           <span className="text-6xl mb-4">🖼</span>
-          <p className="text-sm text-gray-400">
+          <p className="text-center text-sm text-stone-400">
             {search ? '找不到符合的素材' : '尚無素材，點擊「上傳素材」開始建立圖庫'}
           </p>
         </div>
@@ -827,7 +829,7 @@ export function AssetLibraryContent({ setupNeeded }: { setupNeeded?: boolean }) 
 
       {/* Count */}
       {!loading && filtered.length > 0 && (
-        <p className="mt-5 text-xs text-gray-400 text-center">
+        <p className="mt-5 text-xs text-stone-400 text-center">
           共 {filtered.length} 個素材
           {activeCategory !== '全部' && ` · ${activeCategory}`}
         </p>

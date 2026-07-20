@@ -1,26 +1,44 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import { AppShell } from '@/components/AppShell'
-import { CEODashboardContent } from '@/components/CEODashboardContent'
+import { SalesTodayDashboard } from '@/components/SalesTodayDashboard'
 import { authOptions } from '@/lib/auth'
+import { getTodayDashboard } from '@/lib/dashboard-today'
+import { canView } from '@/lib/permissions'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
 
-  const role        = (session.user as any)?.role        as string | undefined ?? 'viewer'
-  const accountType = (session.user as any)?.accountType as string | undefined ?? ''
-  const permissions = (session.user as any)?.permissions
-
-  const isAdmin = role === 'admin' || accountType === '行政' || accountType === '中央管理'
+  const userName = session.user?.name?.trim() ?? ''
+  const accountType = (session.user as any)?.accountType as string | undefined
+  const role = (session.user as any)?.role as string | undefined
+  const visibleModules = {
+    bd: canView(session, 'bd'),
+    crm: canView(session, 'crm'),
+    quote: canView(session, 'quote'),
+    orders: canView(session, 'orders'),
+    products: canView(session, 'products'),
+    rma: canView(session, 'rma'),
+    marketing: true,
+    clinicMonitor: canView(session, 'clinic_monitor'),
+    admin: (role === 'admin' || accountType === '行政') && canView(session, 'admin'),
+    accounts: canView(session, 'accounts'),
+    audit: role === 'admin',
+  }
+  const hasPersonalSalesQueue = accountType === '業務'
+  const data = await getTodayDashboard(userName, {
+    bd: hasPersonalSalesQueue && visibleModules.bd,
+    quote: hasPersonalSalesQueue && visibleModules.quote,
+    rma: hasPersonalSalesQueue && visibleModules.rma,
+  })
+  const hour = Number(new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Taipei',
+  }).format(new Date()))
+  const greeting = hour < 11 ? '早安' : hour < 17 ? '午安' : '晚安'
 
   return (
-    <AppShell
-      title="今日營運總覽"
-      description={isAdmin ? '掌握團隊漏斗、待辦風險與經營結果。' : '聚焦今日拜訪、待追蹤與下一個業務動作。'}
-      sessionUser={{ role, accountType, permissions }}
-    >
-      <CEODashboardContent isAdmin={isAdmin} />
-    </AppShell>
+    <SalesTodayDashboard userName={userName} greeting={greeting} data={data} visibleModules={visibleModules} />
   )
 }

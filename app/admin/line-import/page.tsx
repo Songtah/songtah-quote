@@ -12,7 +12,7 @@ export default async function LineImportPage() {
       title="LINE 客情紀錄匯入"
       description="上傳 LINE 群組聊天記錄 .txt，AI 自動識別並匯入客情紀錄。"
     >
-      <LineImportContent />
+      <LineImportContent canImportForOthers />
     </AppShell>
   )
 }

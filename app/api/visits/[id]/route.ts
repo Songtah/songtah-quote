@@ -3,11 +3,22 @@ import { withApiAuth } from '@/lib/api-auth'
 import { deleteVisit, getVisitById, updateVisit } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
-export const PATCH = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
+function canManageVisit(session: any, salesperson?: string) {
+  const user = session.user as any
+  return user?.role === 'admin' || user?.accountType === '中央管理' || Boolean(user?.name && salesperson === user.name)
+}
+
+export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
     const before = await getVisitById(params.id).catch(() => null)
+    if (!before) return NextResponse.json({ error: '找不到客情紀錄' }, { status: 404 })
+    if (!canManageVisit(session, before.salesperson)) {
+      return NextResponse.json({ error: '不可修改其他業務的客情紀錄' }, { status: 403 })
+    }
     const updateData = { ...body }
+    const user = session.user as any
+    if (user?.role !== 'admin' && user?.accountType !== '中央管理') delete updateData.salesperson
     if (body.tags !== undefined && !Array.isArray(body.tags)) delete updateData.tags
     if (body.competitorEquipment !== undefined && !Array.isArray(body.competitorEquipment)) delete updateData.competitorEquipment
     if (body.interestedProductIds !== undefined && !Array.isArray(body.interestedProductIds)) delete updateData.interestedProductIds
@@ -16,7 +27,7 @@ export const PATCH = withApiAuth({ module: 'crm', action: 'edit' }, async (req: 
 
     const after = await getVisitById(params.id).catch(() => ({ id: params.id, ...body }))
     await logAuditEvent({
-      module: 'crm',
+      module: 'bd',
       action: 'update',
       entityType: 'visit',
       entityId: params.id,
@@ -41,13 +52,17 @@ export const PATCH = withApiAuth({ module: 'crm', action: 'edit' }, async (req: 
   }
 })
 
-export const DELETE = withApiAuth({ module: 'crm', action: 'edit' }, async (_req: NextRequest, { params }: { params: { id: string } }, session) => {
+export const DELETE = withApiAuth({ module: 'bd', action: 'edit' }, async (_req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const before = await getVisitById(params.id).catch(() => null)
+    if (!before) return NextResponse.json({ error: '找不到客情紀錄' }, { status: 404 })
+    if (!canManageVisit(session, before.salesperson)) {
+      return NextResponse.json({ error: '不可刪除其他業務的客情紀錄' }, { status: 403 })
+    }
     await deleteVisit(params.id)
 
     await logAuditEvent({
-      module: 'crm',
+      module: 'bd',
       action: 'delete',
       entityType: 'visit',
       entityId: params.id,

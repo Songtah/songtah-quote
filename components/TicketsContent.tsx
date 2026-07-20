@@ -59,28 +59,35 @@ export default function TicketsContent() {
   return (
     <>
       {/* Stats */}
-      <section className="mb-6 grid gap-4 md:grid-cols-3">
-        <div className="panel p-5">
+      <div className="card-soft mb-5 flex flex-col gap-3 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">技術支援</p>
+          <p className="mt-1 font-bold text-stone-800">有新問題先建立案件，處理進度集中在下方</p>
+        </div>
+        <NewTicketModal onCreated={loadTickets} />
+      </div>
+      <section className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="card-soft bg-white p-5">
           <p className="eyebrow mb-2">總案件數</p>
-          <p className="text-3xl font-black text-slate-900">
+          <p className="text-3xl font-black text-stone-800">
             {loading ? (
               <span className="inline-block h-8 w-12 animate-pulse rounded-lg bg-stone-200" />
             ) : (
-              <>{tickets.length}{hasMore && <span className="text-lg font-semibold text-slate-400">+</span>}</>
+              <>{tickets.length}{hasMore && <span className="text-lg font-semibold text-stone-400">+</span>}</>
             )}
           </p>
         </div>
-        <div className="panel p-5">
+        <div className="card-soft bg-white p-5">
           <p className="eyebrow mb-2">處理中</p>
-          <p className="text-3xl font-black text-blue-600">
+          <p className="text-3xl font-black text-brand-600">
             {loading ? (
               <span className="inline-block h-8 w-12 animate-pulse rounded-lg bg-stone-200" />
             ) : (
-              <>{open}{hasMore && <span className="text-lg font-semibold text-blue-300">+</span>}</>
+              <>{open}{hasMore && <span className="text-lg font-semibold text-brand-300">+</span>}</>
             )}
           </p>
         </div>
-        <div className="panel p-5">
+        <div className="card-soft bg-white p-5">
           <p className="eyebrow mb-2">已結案</p>
           <p className="text-3xl font-black text-green-600">
             {loading ? (
@@ -92,14 +99,9 @@ export default function TicketsContent() {
         </div>
       </section>
 
-      {/* Actions */}
-      <div className="mb-5 flex justify-end">
-        <NewTicketModal onCreated={loadTickets} />
-      </div>
-
       {/* List */}
       {loading ? (
-        <div className="panel p-6 space-y-3">
+        <div className="card-soft p-6 space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-16 animate-pulse rounded-2xl bg-stone-100" />
           ))}

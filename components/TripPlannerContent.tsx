@@ -94,9 +94,9 @@ function minToPixel(min: number): number {
 const TYPE_STYLE: Record<ActivityType, { bg: string; border: string; text: string; dot: string }> = {
   '交通': { bg: 'bg-blue-50',    border: 'border-blue-400',   text: 'text-blue-900',   dot: 'bg-blue-400' },
   '餐飲': { bg: 'bg-amber-50',   border: 'border-amber-400',  text: 'text-amber-900',  dot: 'bg-amber-400' },
-  '參觀': { bg: 'bg-emerald-50', border: 'border-emerald-400',text: 'text-emerald-900',dot: 'bg-emerald-400' },
+  '參觀': { bg: 'bg-brand-50', border: 'border-brand-400',text: 'text-emerald-900',dot: 'bg-brand-400' },
   '會議': { bg: 'bg-violet-50',  border: 'border-violet-400', text: 'text-violet-900', dot: 'bg-violet-400' },
-  '住宿': { bg: 'bg-teal-50',    border: 'border-teal-400',   text: 'text-teal-900',   dot: 'bg-teal-400' },
+  '住宿': { bg: 'bg-brand-50',    border: 'border-brand-400',   text: 'text-teal-900',   dot: 'bg-brand-400' },
   '其他': { bg: 'bg-gray-50',    border: 'border-gray-400',   text: 'text-gray-900',   dot: 'bg-gray-400' },
 }
 const TYPES: ActivityType[] = ['交通', '餐飲', '參觀', '會議', '住宿', '其他']
@@ -139,9 +139,9 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-bold text-gray-900">{initial.id ? '編輯活動' : '新增活動'}</h2>
+      <div className="w-full max-w-md rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-stone-900/[0.06] p-5">
+          <h2 className="font-bold text-stone-800">{initial.id ? '編輯活動' : '新增活動'}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -151,7 +151,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <label className="text-xs font-semibold text-gray-500 mb-1 block">活動名稱 *</label>
             <input value={form.name} onChange={e => setF('name', e.target.value)}
               placeholder="例：機場接送、晚宴、工廠參觀"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
 
           {/* 類型 */}
@@ -176,7 +176,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <div>
               <label className="text-xs font-semibold text-gray-500 mb-1 block">開始時間</label>
               <select value={form.startMin} onChange={e => setF('startMin', +e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                className="select-soft w-full">
                 {timeOptions.map(m => (
                   <option key={m} value={m}>{fmtMin(m)}</option>
                 ))}
@@ -185,7 +185,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <div>
               <label className="text-xs font-semibold text-gray-500 mb-1 block">結束時間</label>
               <select value={form.endMin} onChange={e => setF('endMin', +e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                className="select-soft w-full">
                 {timeOptions.filter(m => m > form.startMin).map(m => (
                   <option key={m} value={m}>{fmtMin(m)}</option>
                 ))}
@@ -198,7 +198,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <label className="text-xs font-semibold text-gray-500 mb-1 block">地點</label>
             <input value={form.location} onChange={e => setF('location', e.target.value)}
               placeholder="飯店名稱、地址、場所"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
 
           {/* 參與客戶 */}
@@ -206,7 +206,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <label className="text-xs font-semibold text-gray-500 mb-1 block">參與客戶</label>
             <input value={form.clients} onChange={e => setF('clients', e.target.value)}
               placeholder="客戶名稱，多人以逗號分隔"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
 
           {/* 負責業務 */}
@@ -214,7 +214,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <label className="text-xs font-semibold text-gray-500 mb-1 block">負責業務</label>
             <input value={form.salesperson} onChange={e => setF('salesperson', e.target.value)}
               placeholder="業務姓名"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
 
           {/* 備註 */}
@@ -222,19 +222,19 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
             <label className="text-xs font-semibold text-gray-500 mb-1 block">備註</label>
             <textarea value={form.notes} onChange={e => setF('notes', e.target.value)}
               rows={2} placeholder="補充說明"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
+              className="input-soft w-full resize-none" />
           </div>
         </div>
-        <div className="p-5 border-t border-gray-100 flex justify-between items-center">
+        <div className="flex items-center justify-between border-t border-stone-900/[0.06] p-5">
           {onDelete
             ? <button onClick={onDelete} className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-xl hover:bg-red-50">刪除</button>
             : <div />
           }
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+            <button onClick={onClose} className="button-secondary">取消</button>
             <button onClick={handleSave}
               disabled={!form.name.trim() || form.endMin <= form.startMin}
-              className="px-5 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40">
+              className="button-primary disabled:opacity-40">
               儲存
             </button>
           </div>
@@ -259,7 +259,7 @@ function TripForm({ onSave, onClose }: { onSave: (t: Trip) => void; onClose: () 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-sm rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06]" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-bold text-gray-900">建立新行程</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
@@ -269,24 +269,24 @@ function TripForm({ onSave, onClose }: { onSave: (t: Trip) => void; onClose: () 
             <label className="text-xs font-semibold text-gray-500 mb-1 block">行程名稱 *</label>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="例：2025 日本醫材參訪"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 mb-1 block">目的地</label>
             <input value={dest} onChange={e => setDest(e.target.value)}
               placeholder="例：日本大阪"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="input-soft w-full" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-gray-500 mb-1 block">出發日期</label>
               <input type="date" value={start} onChange={e => setStart(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                className="input-soft w-full" />
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-500 mb-1 block">返回日期</label>
               <input type="date" value={end} min={start} onChange={e => setEnd(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                className="input-soft w-full" />
             </div>
           </div>
         </div>
@@ -294,7 +294,7 @@ function TripForm({ onSave, onClose }: { onSave: (t: Trip) => void; onClose: () 
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
           <button onClick={handleSave}
             disabled={!name.trim() || !start || !end || start > end}
-            className="px-5 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40">
+            className="button-primary disabled:opacity-40">
             建立行程
           </button>
         </div>
@@ -488,7 +488,7 @@ export function TripPlannerContent() {
           <select
             value={tripId ?? ''}
             onChange={e => setTripId(e.target.value || null)}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[200px]"
+            className="select-soft min-w-[200px] flex-1"
           >
             <option value="">-- 選擇行程 --</option>
             {trips.map(t => (
@@ -508,7 +508,7 @@ export function TripPlannerContent() {
         </div>
         <button
           onClick={() => setShowTripModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors shrink-0"
+          className="button-primary flex min-h-11 shrink-0 items-center gap-1.5 px-5"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -532,13 +532,13 @@ export function TripPlannerContent() {
 
       {/* ── No trip selected ── */}
       {!selectedTrip && (
-        <div className="flex-1 flex flex-col items-center justify-center py-24 text-gray-400">
+        <div className="card-soft flex flex-1 flex-col items-center justify-center py-24 text-stone-400">
           <div className="text-5xl mb-4">✈️</div>
           <p className="text-base font-medium text-gray-500">尚無選取行程</p>
           <p className="text-sm mt-1">請從上方選擇行程，或點「新增行程」建立新的出國計畫</p>
           <button
             onClick={() => setShowTripModal(true)}
-            className="mt-6 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700"
+            className="button-primary mt-6 px-5 py-2.5"
           >
             建立第一個行程
           </button>
@@ -581,7 +581,7 @@ export function TripPlannerContent() {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+          <div className="w-full max-w-sm rounded-3xl bg-[#fdfdfb] p-6 shadow-2xl ring-1 ring-stone-900/[0.06]">
             <p className="font-bold text-gray-900 mb-2">刪除行程？</p>
             <p className="text-sm text-gray-500 mb-5">此行程的所有活動也會一併刪除，無法復原。</p>
             <div className="flex justify-end gap-2">
@@ -645,7 +645,7 @@ function TimelineGrid({ dates, activities, dragLive, onActivityMouseDown, onColu
   }, [activities, dragLive, dates])
 
   return (
-    <div className="flex-1 overflow-hidden border border-gray-200 rounded-2xl bg-white flex flex-col">
+    <div className="card-soft flex flex-1 flex-col overflow-hidden">
       {/* Header row with day labels */}
       <div className="flex border-b border-gray-200 shrink-0">
         {/* Time label gutter */}

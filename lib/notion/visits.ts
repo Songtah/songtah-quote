@@ -427,7 +427,7 @@ export async function createVisit(data: {
  * 跨月列出所有「未結案」的待追蹤拜訪（是否需追蹤=true 且 追蹤已結案=false）。
  * 修復舊版只算本月、月初整批消失的缺陷。有追蹤日者在前（升冪），無日期者在後。
  */
-export async function listOpenFollowUps(): Promise<Visit[]> {
+export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> {
   const allResults: any[] = []
   let cur: string | undefined
   do {
@@ -439,6 +439,9 @@ export async function listOpenFollowUps(): Promise<Visit[]> {
           and: [
             { property: '是否需追蹤', checkbox: { equals: true } },
             { property: '追蹤已結案', checkbox: { equals: false } },
+            ...(salesperson
+              ? [{ property: '業務人員', select: { equals: salesperson } }]
+              : []),
           ],
         },
         sorts: [{ property: '日期', direction: 'descending' }],

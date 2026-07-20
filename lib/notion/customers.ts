@@ -185,6 +185,8 @@ export type CustomerListItem = {
   status: string
 }
 
+let allSystemCustomersInFlight: Promise<CustomerListItem[]> | null = null
+
 /**
  * 一次拉取所有系統客戶（輕量欄位），快取 5 分鐘。
  * 前端用於 client-side 即時搜尋，避免每次打字都打 Notion API。
@@ -194,25 +196,35 @@ export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   const cacheKey = 'all-system-customers-v2' // v2=分區掃描修正 10k 截斷
   const cached = getCachedValue<CustomerListItem[]>(cacheKey)
   if (cached) return cached
+  if (allSystemCustomersInFlight) return allSystemCustomersInFlight
 
-  const items: CustomerListItem[] = []
-  await scanAllCustomerPages((page) => {
-    const name = getTitle(page, '客戶名稱')
-    if (!name) return
-    items.push({
-      id: page.id,
-      name,
-      city:        getSelect(page, '縣市'),
-      district:    getSelect(page, '行政區') || getText(page, '行政區'),
-      type:        getSelect(page, '客戶類型'),
-      salesperson: getSelect(page, '負責業務'),
-      status:      getSelect(page, '機構狀態'),
+  const request = (async () => {
+    const items: CustomerListItem[] = []
+    await scanAllCustomerPages((page) => {
+      const name = getTitle(page, '客戶名稱')
+      if (!name) return
+      items.push({
+        id: page.id,
+        name,
+        city:        getSelect(page, '縣市'),
+        district:    getSelect(page, '行政區') || getText(page, '行政區'),
+        type:        getSelect(page, '客戶類型'),
+        salesperson: getSelect(page, '負責業務'),
+        status:      getSelect(page, '機構狀態'),
+      })
     })
-  })
-  items.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
+    items.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
 
-  setCachedValue(cacheKey, items, 300_000) // 5 min
-  return items
+    setCachedValue(cacheKey, items, 300_000) // 5 min
+    return items
+  })()
+
+  allSystemCustomersInFlight = request
+  try {
+    return await request
+  } finally {
+    if (allSystemCustomersInFlight === request) allSystemCustomersInFlight = null
+  }
 }
 
 export async function listSystemCustomersPaginated(options?: {
@@ -498,6 +510,14 @@ export async function getRegionStatsRows(forceRefresh = false): Promise<RegionSt
 export const DEV_STAGES = ['線索', '已接觸', '試用中', '報價中', '已成交', '流失'] as const
 export type DevStage = (typeof DEV_STAGES)[number]
 
+const DEV_STAGE_RANK: Record<Exclude<DevStage, '流失'>, number> = {
+  '線索': 0,
+  '已接觸': 1,
+  '試用中': 2,
+  '報價中': 3,
+  '已成交': 4,
+}
+
 export interface PipelineCustomer {
   id:          string
   name:        string
@@ -599,6 +619,40 @@ export async function updateCustomerDevStage(
   return { salespersonSkipped, currentSalesperson }
 }
 
+/**
+ * 由明確業務事件向前推進階段。只前進、不倒退，也不覆蓋「流失」；
+ * 人工修正仍走 updateCustomerDevStage，避免自動化改掉業務判斷。
+ */
+export async function advanceCustomerDevStage(
+  id: string,
+  target: Exclude<DevStage, '線索' | '流失'>,
+  access?: { actorName: string; canManageAll: boolean },
+): Promise<boolean> {
+  const page = await notionCallWithRetry('advanceCustomerDevStage:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  ) as any
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const customersDb = (DB.customers ?? '').replace(/-/g, '')
+  if (!targetDb || targetDb !== customersDb) {
+    throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+  }
+
+  const owner = getSelect(page, '負責業務')
+  if (access && !access.canManageAll && owner && owner !== access.actorName) {
+    throw new Error('不可更新其他業務負責的客戶')
+  }
+
+  const current = getSelect(page, '開發階段') as DevStage | ''
+  if (current === '流失' || current === '已成交') return false
+  if (current && DEV_STAGE_RANK[current as Exclude<DevStage, '流失'>] >= DEV_STAGE_RANK[target]) return false
+
+  await notionCallWithRetry('advanceCustomerDevStage', () =>
+    notion.pages.update({ page_id: id, properties: { '開發階段': { select: { name: target } } } })
+  )
+  setCachedValue('pipeline-customers-v1', null as any, 1)
+  return true
+}
+
 // ── 醫事監控用：建立新客戶 ───────────────────────────────────────────────
 export async function createSystemCustomer(data: {
   name:            string
@@ -685,12 +739,13 @@ export async function getCustomerFilterOptions(): Promise<{
     types       = opts('客戶類型')
   } catch { /* return what we have */ }
 
-  // ── Step 2: 分區掃描建 city → districts[] 對照(修正 10k 截斷)──
+  // ── Step 2: 從共用客戶索引建立 city → districts[]，避免同頁重複全庫掃描 ──
   const districtsByCity: Record<string, string[]> = {}
   try {
-    await scanAllCustomerPages((page) => {
-      const city     = getSelect(page, '縣市')
-      const district = getText(page, '行政區')
+    const customers = await getAllSystemCustomers()
+    customers.forEach((customer) => {
+      const city = customer.city
+      const district = customer.district
       if (city && district) {
         if (!districtsByCity[city]) districtsByCity[city] = []
         if (!districtsByCity[city].includes(district)) districtsByCity[city].push(district)

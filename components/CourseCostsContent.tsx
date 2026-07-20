@@ -7,7 +7,7 @@ const STATUS_OPTIONS = ['規劃中', '已確認', '已結算']
 const STATUS_STYLE: Record<string, string> = {
   '規劃中': 'bg-gray-100 text-gray-600',
   '已確認': 'bg-blue-100 text-blue-700',
-  '已結算': 'bg-green-100 text-green-700',
+  '已結算': 'bg-brand-50 text-green-700',
 }
 
 const fmt = (n: number) => n ? n.toLocaleString('zh-TW') : '—'
@@ -116,12 +116,12 @@ export function CourseCostsContent() {
         <div className="flex gap-2 flex-wrap">
           {['全部', ...STATUS_OPTIONS].map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
-              className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${filterStatus === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`min-h-10 rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95 ${filterStatus === s ? 'bg-brand-500 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
               {s}
             </button>
           ))}
         </div>
-        <button onClick={openCreate} className="button-primary">+ 新增成本試算</button>
+        <button onClick={openCreate} className="button-primary min-h-11 px-5">+ 新增成本試算</button>
       </div>
 
       {/* Summary cards */}
@@ -132,25 +132,25 @@ export function CourseCostsContent() {
           { label: '總收入合計', value: filtered.reduce((s,i) => s + (i.totalRevenue||0), 0), fmt: (v: number) => `$${v.toLocaleString()}`, color: 'text-blue-600' },
           { label: '淨利合計', value: totalNetProfit, fmt: (v: number) => `$${v.toLocaleString()}`, color: totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600' },
         ].map(c => (
-          <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+          <div key={c.label} className="card-soft p-4 text-center">
             <p className={`text-2xl font-bold ${c.color}`}>{c.fmt(c.value)}</p>
-            <p className="text-xs text-gray-500 mt-1">{c.label}</p>
+            <p className="mt-1 text-xs text-stone-500">{c.label}</p>
           </div>
         ))}
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="py-16 text-center text-gray-400">載入中…</div>
+        <div className="card-soft py-16 text-center text-stone-400">載入中…</div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 py-16 text-center text-gray-400">
+        <div className="card-soft py-16 text-center text-stone-400">
           尚無資料，點擊「新增成本試算」開始建立
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="card-soft overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs">
+              <thead className="bg-cream-50 text-xs text-stone-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">課程名稱</th>
                   <th className="px-4 py-3 text-right font-medium">總成本</th>
@@ -162,9 +162,9 @@ export function CourseCostsContent() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-stone-900/[0.06]">
                 {filtered.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr key={item.id} className="transition-colors hover:bg-brand-50/50">
                     <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{item.totalCost ? `$${item.totalCost.toLocaleString()}` : '—'}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{item.totalRevenue ? `$${item.totalRevenue.toLocaleString()}` : '—'}</td>
@@ -182,7 +182,7 @@ export function CourseCostsContent() {
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate">{item.note || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => openEdit(item)} className="text-xs text-blue-600 hover:underline">編輯</button>
+                        <button onClick={() => openEdit(item)} className="text-xs text-brand-600 hover:underline">編輯</button>
                         <button onClick={() => handleDelete(item.id)} className="text-xs text-red-500 hover:underline">刪除</button>
                       </div>
                     </td>
@@ -197,7 +197,7 @@ export function CourseCostsContent() {
       {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <form onSubmit={handleSave} className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleSave} className="max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-[#fdfdfb] p-6 shadow-2xl ring-1 ring-stone-900/[0.06]">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{editId ? '編輯成本試算' : '新增成本試算'}</h2>
               <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>

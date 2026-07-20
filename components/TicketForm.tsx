@@ -171,13 +171,17 @@ export default function TicketForm() {
     router.refresh()
   }
 
-  const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700'
+  const inputCls = 'input-soft w-full px-4 py-3 text-sm text-stone-800 placeholder:text-stone-400'
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5 pb-24 sm:pb-0">
       {/* 案件基本資訊 */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-semibold text-gray-800 mb-4">案件基本資訊</h2>
+      <div className="card-soft rounded-3xl p-5 sm:p-7">
+        <div className="mb-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第一步</p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">案件基本資訊</h2>
+          <p className="mt-1 text-sm text-stone-500">先找到客戶，再填寫需要協助的問題。</p>
+        </div>
 
         {/* 設備搜尋 */}
         <div className="mb-4">
@@ -193,7 +197,7 @@ export default function TicketForm() {
               <button
                 type="button"
                 onClick={clearEquipment}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 whitespace-nowrap"
+                className="shrink-0 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 active:scale-95 transition-all whitespace-nowrap"
               >
                 清除
               </button>
@@ -206,7 +210,7 @@ export default function TicketForm() {
                   key={item.id}
                   type="button"
                   onClick={() => selectEquipment(item)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-green-50 text-sm border-b border-gray-50 last:border-0"
+                  className="w-full text-left px-4 py-3 hover:bg-brand-50/50 text-sm border-b border-stone-900/[0.06] last:border-0 transition-colors"
                 >
                   <div className="font-medium text-gray-800">{item.customerName}</div>
                   <div className="text-xs text-gray-400 mt-0.5">
@@ -227,7 +231,7 @@ export default function TicketForm() {
           {equipmentError && <p className="mt-2 text-xs text-amber-600">{equipmentError}</p>}
           {selectedEquipment && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              <span className="text-xs text-green-600 bg-brand-50 px-2 py-1 rounded-full">
                 ✓ 已選：{[selectedEquipment.customerName, selectedEquipment.manufacturer, selectedEquipment.serialNumber && `序號 ${selectedEquipment.serialNumber}`, selectedEquipment.supportId && `Support ${selectedEquipment.supportId}`].filter(Boolean).join('・')}
               </span>
             </div>
@@ -263,7 +267,7 @@ export default function TicketForm() {
                     key={item.id}
                     type="button"
                     onMouseDown={() => selectCustomer(item)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-green-50 text-sm border-b border-gray-50 last:border-0"
+                    className="w-full text-left px-4 py-3 hover:bg-brand-50/50 text-sm border-b border-stone-900/[0.06] last:border-0 transition-colors"
                   >
                     <div className="font-medium">{item.name}</div>
                     {(item.city || item.type) && (
@@ -279,7 +283,7 @@ export default function TicketForm() {
             )}
             {form.customerId && (
               <div className="mt-1">
-                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">✓ 已從清單選取</span>
+                <span className="text-xs text-green-600 bg-brand-50 px-2 py-1 rounded-full">✓ 已從清單選取</span>
               </div>
             )}
           </div>
@@ -375,8 +379,11 @@ export default function TicketForm() {
       </div>
 
       {/* 問題詳情 */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-semibold text-gray-800 mb-4">問題詳情</h2>
+      <div className="card-soft rounded-3xl p-5 sm:p-7">
+        <div className="mb-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第二步</p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">問題詳情</h2>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -432,20 +439,20 @@ export default function TicketForm() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-200">{error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 rounded-t-3xl border-t border-stone-900/[0.06] bg-[#fdfdfb]/95 px-4 py-3 shadow-[0_-4px_24px_rgba(28,25,23,0.06)] backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <button
           type="submit"
           disabled={submitting}
-          className="bg-green-800 hover:bg-green-900 disabled:bg-green-300 text-white px-5 py-2 rounded-lg text-sm font-medium transition"
+          className="flex-1 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-50 sm:flex-none"
         >
           {submitting ? '建立中...' : '建立工單'}
         </button>
         <button
           type="button"
           onClick={() => router.push('/tickets')}
-          className="border border-gray-300 px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+          className="rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
         >
           返回列表
         </button>

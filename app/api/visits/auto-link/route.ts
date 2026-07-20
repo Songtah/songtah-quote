@@ -28,7 +28,7 @@ function normId(id: string) {
   return id.replace(/-/g, '')
 }
 
-export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   try {
     const body = await req.json().catch(() => ({}))
     const cursor   = body.cursor   as string | undefined

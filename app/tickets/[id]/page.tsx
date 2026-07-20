@@ -21,7 +21,7 @@ const STATUS_STYLES: Record<string, string> = {
   '🔍 診斷問題中': 'bg-sky-100 text-sky-700 border border-sky-200',
   '⚙️ 測試中': 'bg-indigo-100 text-indigo-700 border border-indigo-200',
   '🔍 後續追蹤': 'bg-purple-100 text-purple-700 border border-purple-200',
-  '✅ 結案': 'bg-green-100 text-green-700 border border-green-200',
+  '✅ 結案': 'bg-brand-50 text-green-700 border border-brand-200',
 }
 
 const PRIORITY_STYLES: Record<string, string> = {

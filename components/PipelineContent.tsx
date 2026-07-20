@@ -8,6 +8,7 @@
  *   2. 各階段分組清單：認領、推進階段、逾期追蹤標紅
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 
 type PipelineItem = {
   id: string
@@ -39,8 +40,26 @@ const STAGE_STYLE: Record<string, { dot: string; badge: string }> = {
   '已接觸': { dot: 'bg-brand-500',   badge: 'bg-brand-50 text-brand-600' },
   '試用中': { dot: 'bg-violet-400',  badge: 'bg-violet-50 text-violet-600' },
   '報價中': { dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-600' },
-  '已成交': { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-600' },
+  '已成交': { dot: 'bg-brand-500', badge: 'bg-brand-50 text-emerald-600' },
   '流失':   { dot: 'bg-stone-300',   badge: 'bg-stone-100 text-stone-500' },
+}
+
+const STAGE_LABEL: Record<string, string> = {
+  '線索': '尚未聯絡',
+  '已接觸': '已聯絡',
+  '試用中': '評估中',
+  '報價中': '等待成交',
+  '已成交': '已成交',
+  '流失': '暫不追蹤',
+}
+
+const STAGE_DESCRIPTION: Record<string, string> = {
+  '線索': '還沒開始聯絡',
+  '已接觸': '已經有過第一次互動',
+  '試用中': '正在試用或評估產品',
+  '報價中': '已提供報價，等待決定',
+  '已成交': '已經成立訂單',
+  '流失': '目前不繼續追蹤',
 }
 
 function isOverdue(dateStr: string) {
@@ -54,6 +73,17 @@ function staleDays(lastEdited: string): number {
   return Math.floor((Date.now() - new Date(lastEdited).getTime()) / 86_400_000)
 }
 
+function nextStep(item: PipelineItem): string {
+  if (item.nextFollowUpDate) return '完成已安排的聯絡'
+  if (item.openFollowUps > 0) return '安排追蹤日期'
+  if (item.devStage === '線索') return '第一次聯絡客戶'
+  if (item.devStage === '已接觸') return '記錄需求與下一步'
+  if (item.devStage === '試用中') return '確認試用結果'
+  if (item.devStage === '報價中') return '確認報價決定'
+  if (item.devStage === '已成交') return '持續維護客情'
+  return '確認是否重新開發'
+}
+
 export default function PipelineContent({ currentUser }: { currentUser?: string }) {
   const [items, setItems] = useState<PipelineItem[]>([])
   const [stages, setStages] = useState<string[]>([])
@@ -62,6 +92,8 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [stageFilter, setStageFilter] = useState<string>('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [statusMenuId, setStatusMenuId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -155,8 +187,13 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
     return groups
   }, [items, stages, stageFilter])
 
+  const urgentCount = useMemo(
+    () => items.filter((it) => isOverdue(it.nextFollowUpDate) || (it.devStage === '線索' && !it.salesperson)).length,
+    [items],
+  )
+
   if (loading) {
-    return <div className="py-16 text-center text-sm text-stone-400">載入開發漏斗中…</div>
+    return <div className="py-16 text-center text-sm text-stone-400">載入客戶進度中…</div>
   }
   if (error) {
     return (
@@ -169,33 +206,75 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
 
   return (
     <div className="space-y-6">
-      {/* 階段統計 + 篩選 */}
-      <div className="flex flex-wrap gap-2">
+      <section className="card-soft p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">今天先做這些</p>
+            <h2 className="mt-1 text-xl font-bold text-stone-800">
+              {urgentCount > 0 ? `${urgentCount} 位客戶需要優先處理` : '目前沒有逾期跟進'}
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">狀態會隨客情紀錄、試用與報價自動前進，不需要重複維護。</p>
+          </div>
+          <Link href="/bd?tab=visits&action=new" className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">
+            新增客情紀錄
+          </Link>
+        </div>
+      </section>
+
+      {/* 單一篩選選單：避免多顆 chip 在手機擠壓，焦點狀態維持圓角 */}
+      <div className="relative z-30 max-w-sm">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-stone-400">顯示哪些客戶</p>
         <button
-          onClick={() => setStageFilter('')}
-          className={stageFilter === '' ? 'chip-active' : 'chip'}
+          type="button"
+          aria-expanded={filterOpen}
+          onClick={() => setFilterOpen((open) => !open)}
+          className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white px-4 text-left shadow-sm ring-1 ring-stone-900/[0.06] transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 active:scale-[0.99]"
         >
-          全部 {items.length}
+          <span className={`size-2.5 shrink-0 rounded-full ${stageFilter ? STAGE_STYLE[stageFilter]?.dot ?? 'bg-stone-300' : 'bg-brand-500'}`} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-stone-700">{stageFilter ? STAGE_LABEL[stageFilter] ?? stageFilter : '全部客戶'}</span>
+            <span className="block text-xs text-stone-400">{stageFilter ? STAGE_DESCRIPTION[stageFilter] : `共 ${items.length} 位客戶`}</span>
+          </span>
+          <span className={`text-stone-400 transition-transform ${filterOpen ? 'rotate-180' : ''}`}>⌄</span>
         </button>
-        {stages.map((s) => {
-          const n = items.filter((it) => it.devStage === s).length
-          return (
-            <button key={s} onClick={() => setStageFilter(stageFilter === s ? '' : s)} className={stageFilter === s ? 'chip-active' : 'chip'}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${STAGE_STYLE[s]?.dot ?? 'bg-stone-300'}`} />
-              {s} {n}
-            </button>
-          )
-        })}
+        {filterOpen && (
+          <>
+            <button type="button" aria-label="關閉篩選選單" className="fixed inset-0 z-30 cursor-default" onClick={() => setFilterOpen(false)} />
+            <div className="absolute left-0 right-0 z-40 mt-2 overflow-hidden rounded-3xl bg-white p-2 shadow-2xl ring-1 ring-stone-900/[0.08]">
+              {[{ value: '', label: '全部客戶', description: `共 ${items.length} 位客戶`, count: items.length }, ...stages.map((stage) => ({
+                value: stage,
+                label: STAGE_LABEL[stage] ?? stage,
+                description: STAGE_DESCRIPTION[stage] ?? '',
+                count: items.filter((item) => item.devStage === stage).length,
+              }))].map((option) => (
+                <button
+                  key={option.value || 'all'}
+                  type="button"
+                  onClick={() => { setStageFilter(option.value); setFilterOpen(false) }}
+                  className={`flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400/40 ${stageFilter === option.value ? 'bg-brand-50' : 'hover:bg-stone-50'}`}
+                >
+                  <span className={`size-2.5 shrink-0 rounded-full ${option.value ? STAGE_STYLE[option.value]?.dot ?? 'bg-stone-300' : 'bg-brand-500'}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-stone-700">{option.label}</span>
+                    <span className="block text-xs text-stone-400">{option.description}</span>
+                  </span>
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-500">{option.count}</span>
+                  {stageFilter === option.value && <span className="text-sm font-bold text-brand-600">✓</span>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 商機客戶提示區(來自客戶資料監控→商機偵測,尚未認領也還沒進漏斗) */}
       {opportunityLeads.length > 0 && !stageFilter && (
-        <div className="card-soft p-5 border-l-4 border-l-brand-400">
+        <div className="card-soft p-4 sm:p-5 border-l-4 border-l-brand-400">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-brand-500">🔍 商機客戶(尚未認領)</p>
               <p className="text-sm text-stone-600 mt-1">
-                客戶資料監控掃到 <span className="font-bold text-brand-600">{opportunityLeads.length}</span> 家有設備/數位訊號但還沒人跟進,認領後會直接進入「線索」階段。
+                找到 <span className="font-bold text-brand-600">{opportunityLeads.length}</span> 家可能值得開發的客戶；認領後會加入「尚未聯絡」。
               </p>
             </div>
           </div>
@@ -234,7 +313,7 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
 
       {/* 無人認領警示區 */}
       {unclaimed.length > 0 && !stageFilter && (
-        <div className="card-soft p-5 border-l-4 border-l-rose-400">
+        <div className="card-soft p-4 sm:p-5 border-l-4 border-l-rose-400">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-rose-400">未認領線索</p>
@@ -248,10 +327,10 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
 
       {/* 各階段分組 */}
       {stages.filter((s) => (stageGroups[s]?.length ?? 0) > 0).map((s) => (
-        <section key={s} className="card-soft overflow-hidden">
-          <header className="px-5 py-3.5 flex items-center gap-2 border-b border-stone-900/[0.06]">
+        <section key={s} className="card-soft overflow-visible">
+          <header className="px-4 sm:px-5 py-3.5 flex items-center gap-2 border-b border-stone-900/[0.06] bg-white/60">
             <span className={`w-2 h-2 rounded-full ${STAGE_STYLE[s]?.dot ?? 'bg-stone-300'}`} />
-            <h3 className="text-sm font-bold text-stone-800">{s}</h3>
+            <h3 className="text-sm font-bold text-stone-800">{STAGE_LABEL[s] ?? s}</h3>
             <span className="text-xs text-stone-400">{stageGroups[s].length} 家</span>
           </header>
           <div className="divide-y divide-stone-900/[0.04]">
@@ -259,15 +338,16 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
               const overdue = isOverdue(it.nextFollowUpDate)
               const stale = staleDays(it.lastEdited)
               return (
-                <div key={it.id} className="px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 hover:bg-brand-50/50 transition-colors">
-                  {/* 名稱與地區 */}
-                  <div className="flex-1 min-w-[200px]">
+                <div key={it.id} className="px-4 sm:px-5 py-4 flex flex-wrap items-center gap-x-4 gap-y-3 hover:bg-brand-50/50 transition-colors">
+                  {/* 客戶與現在狀態 */}
+                  <div className="min-w-[210px] flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-stone-800">{it.name}</span>
+                      <Link href={`/customers/${it.id}`} className="text-sm font-semibold text-stone-800 hover:text-brand-700">{it.name}</Link>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${STAGE_STYLE[it.devStage]?.badge ?? 'bg-stone-100 text-stone-500'}`}>
+                        {STAGE_LABEL[it.devStage] ?? it.devStage}
+                      </span>
                       {it.devSource && (
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full ${STAGE_STYLE[it.devStage]?.badge ?? 'bg-stone-100 text-stone-500'}`}>
-                          {it.devSource}
-                        </span>
+                        <span className="text-[11px] text-stone-400">來自 {it.devSource}</span>
                       )}
                     </div>
                     <p className="text-xs text-stone-400 mt-0.5">
@@ -276,6 +356,12 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
                         <span className="ml-2 text-amber-500">⏳ 停滯 {stale} 天</span>
                       )}
                     </p>
+                  </div>
+
+                  {/* 系統整理的下一步 */}
+                  <div className="min-w-[180px] flex-1 sm:flex-none">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">下一步</p>
+                    <p className={`mt-0.5 text-sm font-semibold ${overdue ? 'text-rose-600' : 'text-stone-700'}`}>{nextStep(it)}</p>
                   </div>
 
                   {/* 追蹤狀態 */}
@@ -306,16 +392,44 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
                     )}
                   </div>
 
-                  {/* 階段推進 */}
-                  <div className="shrink-0">
-                    <select
-                      className="select-soft text-xs !py-1.5"
-                      value={it.devStage}
-                      disabled={busyId === it.id}
-                      onChange={(e) => patch(it.id, { devStage: e.target.value })}
+                  <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
+                    <Link
+                      href={`/bd?tab=visits&action=new&customer=${encodeURIComponent(it.name)}`}
+                      className="inline-flex min-h-10 flex-1 items-center justify-center rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95 sm:flex-none"
                     >
-                      {stages.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
+                      記錄結果
+                    </Link>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-expanded={statusMenuId === it.id}
+                        onClick={() => setStatusMenuId((id) => id === it.id ? null : it.id)}
+                        className="rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-500 transition-all hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 active:scale-95"
+                      >
+                        修正狀態
+                      </button>
+                      {statusMenuId === it.id && <>
+                        <button type="button" aria-label="關閉狀態選單" className="fixed inset-0 z-30 cursor-default" onClick={() => setStatusMenuId(null)} />
+                        <div className="absolute bottom-full right-0 z-40 mb-2 w-64 rounded-3xl bg-white p-2 shadow-2xl ring-1 ring-stone-900/[0.08] sm:bottom-auto sm:mb-0 sm:mt-2">
+                        {stages.map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            disabled={busyId === it.id || opt === it.devStage}
+                            onClick={() => { setStatusMenuId(null); patch(it.id, { devStage: opt }) }}
+                            className={`flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400/40 disabled:opacity-40 ${opt === it.devStage ? 'bg-brand-50' : 'hover:bg-stone-50'}`}
+                          >
+                            <span className={`size-2.5 shrink-0 rounded-full ${STAGE_STYLE[opt]?.dot ?? 'bg-stone-300'}`} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-semibold text-stone-700">{STAGE_LABEL[opt] ?? opt}</span>
+                              <span className="block text-[11px] text-stone-400">{STAGE_DESCRIPTION[opt]}</span>
+                            </span>
+                            {opt === it.devStage && <span className="font-bold text-brand-600">✓</span>}
+                          </button>
+                        ))}
+                        </div>
+                      </>}
+                    </div>
                   </div>
                 </div>
               )
@@ -326,7 +440,7 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
 
       {items.length === 0 && (
         <div className="card-soft p-10 text-center text-sm text-stone-400">
-          漏斗目前是空的——醫事監控匯入新開業機構後會自動入池為「線索」。
+          目前沒有開發中的客戶。新客戶認領後會出現在「尚未聯絡」。
         </div>
       )}
     </div>

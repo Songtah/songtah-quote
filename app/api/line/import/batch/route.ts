@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const BATCH_SIZE = 30
 
-export const POST = withApiAuth('admin', async (req: NextRequest) => {
+export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   let visits: ParsedVisitItem[]
   let offset: number
 
@@ -27,6 +27,15 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     offset = body.offset ?? 0
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+  }
+
+  const user = session.user as any
+  const canImportForOthers = user?.role === 'admin' || user?.accountType === '中央管理'
+  const actorName = session.user?.name ?? ''
+  if (!canImportForOthers) {
+    visits = visits
+      .filter((visit) => visit.salesperson === actorName)
+      .map((visit) => ({ ...visit, salesperson: actorName }))
   }
 
   // 本批次範圍

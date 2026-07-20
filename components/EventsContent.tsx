@@ -9,14 +9,14 @@ const EVENT_STATUSES = ['籌備中', '開放報名', '已結束']
 
 const STATUS_STYLE: Record<string, string> = {
   '籌備中': 'bg-gray-100 text-gray-600',
-  '開放報名': 'bg-green-100 text-green-700',
+  '開放報名': 'bg-brand-50 text-green-700',
   '已結束': 'bg-red-100 text-red-600',
 }
 
 const TYPE_STYLE: Record<string, string> = {
   '研討會': 'bg-blue-50 text-blue-700',
   '產品發表': 'bg-purple-50 text-purple-700',
-  '培訓': 'bg-emerald-50 text-emerald-700',
+  '培訓': 'bg-brand-50 text-emerald-700',
   '展覽': 'bg-orange-50 text-orange-700',
   '其他': 'bg-gray-50 text-gray-600',
 }
@@ -173,7 +173,7 @@ export function EventsContent() {
               onClick={() => setFilter(s)}
               className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 filter === s
-                  ? 'bg-gray-900 text-white'
+                  ? 'bg-brand-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -186,31 +186,31 @@ export function EventsContent() {
             </button>
           ))}
         </div>
-        <button onClick={openCreate} className="button-primary">+ 新增活動</button>
+        <button onClick={openCreate} className="button-primary min-h-11 px-5">+ 新增活動</button>
       </div>
 
       {/* Events list */}
       {loading ? (
-        <div className="py-16 text-center text-gray-400">載入中…</div>
+        <div className="card-soft py-16 text-center text-stone-400">載入中…</div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 py-16 text-center text-gray-400">
+        <div className="card-soft py-16 text-center text-stone-400">
           {filter === '全部' ? '尚無任何活動，點擊「新增活動」開始建立' : `沒有「${filter}」的活動`}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map(ev => (
-            <div key={ev.id} className="relative group rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md hover:border-gray-300 transition-all">
+            <div key={ev.id} className="card-soft card-soft-hover group relative overflow-hidden">
               {/* Edit / Delete buttons */}
               <div className="absolute top-3 right-3 hidden group-hover:flex gap-1 z-10">
                 <button
                   onClick={e => openEdit(ev, e)}
-                  className="rounded-lg bg-white border border-gray-200 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 shadow-sm"
+                  className="rounded-full bg-white px-3 py-1.5 text-xs text-brand-600 shadow-sm ring-1 ring-stone-900/[0.06] transition-all hover:bg-brand-50 active:scale-95"
                 >
                   編輯
                 </button>
                 <button
                   onClick={e => handleDelete(ev, e)}
-                  className="rounded-lg bg-white border border-gray-200 px-2 py-1 text-xs text-red-500 hover:bg-red-50 shadow-sm"
+                  className="rounded-full bg-white px-3 py-1.5 text-xs text-red-500 shadow-sm ring-1 ring-stone-900/[0.06] transition-all hover:bg-red-50 active:scale-95"
                 >
                   刪除
                 </button>
@@ -225,16 +225,16 @@ export function EventsContent() {
                     {ev.status}
                   </span>
                 </div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                <h3 className="line-clamp-2 font-semibold text-stone-800 transition-colors group-hover:text-brand-600">
                   {ev.name}
                 </h3>
-                <div className="mt-2 space-y-1 text-sm text-gray-500">
+                <div className="mt-2 space-y-1 text-sm text-stone-500">
                   <p>📅 {ev.date}{ev.endDate && ev.endDate !== ev.date ? ` — ${ev.endDate}` : ''}</p>
                   {ev.location && <p>📍 {ev.location}</p>}
                   {ev.deadline && <p>⏰ 報名截止：{ev.deadline}</p>}
                 </div>
                 {ev.description && (
-                  <p className="mt-3 text-sm text-gray-400 line-clamp-2">{ev.description}</p>
+                  <p className="mt-3 line-clamp-2 text-sm text-stone-400">{ev.description}</p>
                 )}
               </Link>
             </div>
@@ -265,7 +265,7 @@ export function EventsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl bg-[#fdfdfb] p-6 shadow-2xl ring-1 ring-stone-900/[0.06]"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{editId ? '編輯活動' : '新增活動'}</h2>
@@ -379,7 +379,7 @@ export function EventsContent() {
                           campaignIds: active ? f.campaignIds.filter((id) => id !== c.id) : [...f.campaignIds, c.id],
                         }))}
                         className={`rounded-full px-2.5 py-1 text-xs font-medium border transition ${
-                          active ? 'bg-gray-900 border-gray-900 text-white' : 'border-gray-300 text-gray-600 hover:border-gray-500'
+                          active ? 'border-brand-500 bg-brand-500 text-white' : 'border-stone-300 text-stone-600 hover:border-brand-400'
                         }`}>
                         {c.name}
                       </button>

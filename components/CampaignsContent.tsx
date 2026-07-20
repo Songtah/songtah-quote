@@ -13,7 +13,7 @@ const STATUS_COLOR: Record<string, { chip: string; bar: string }> = {
   已聯絡: { chip: 'bg-sky-50 text-sky-600', bar: 'bg-sky-400' },
   有興趣: { chip: 'bg-amber-50 text-amber-600', bar: 'bg-amber-400' },
   已報價: { chip: 'bg-orange-50 text-orange-600', bar: 'bg-orange-400' },
-  成交:   { chip: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-500' },
+  成交:   { chip: 'bg-brand-50 text-emerald-600', bar: 'bg-brand-500' },
   放棄:   { chip: 'bg-rose-50 text-rose-400', bar: 'bg-rose-300' },
 }
 
@@ -37,7 +37,7 @@ function telHref(phone: string): string | null {
   return cleaned.replace(/[^0-9]/g, '').length >= 6 ? cleaned : null
 }
 
-export default function CampaignsContent() {
+export default function CampaignsContent({ canManageAll = false }: { canManageAll?: boolean }) {
   const [campaigns, setCampaigns] = useState<CampaignRow[] | null>(null)
   const [error, setError] = useState('')
   const [detailId, setDetailId] = useState<string>('')   // 開啟中的名單
@@ -72,22 +72,24 @@ export default function CampaignsContent() {
   }
 
   if (detailId) {
-    return <CampaignDetail campaignId={detailId} onBack={() => { setDetailId(''); load() }} />
+    return <CampaignDetail campaignId={detailId} canManageAll={canManageAll} onBack={() => { setDetailId(''); load() }} />
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-stone-500">把某商品的潛在購買清單派給業務追蹤;成交由訂單自動判定。</p>
-        <button onClick={() => setShowCreate(true)}
-          className="px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
-          ＋ 建立名單
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-sm text-stone-500">建立商品追蹤名單、交給業務聯絡；成交狀態由訂單自動判定。</p>
+        {canManageAll && (
+          <button onClick={() => setShowCreate(true)}
+            className="w-full sm:w-auto min-h-11 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+            ＋ 建立名單
+          </button>
+        )}
       </div>
 
       {campaigns.length === 0 && (
         <div className="card-soft p-10 text-center text-sm text-stone-400">
-          還沒有任何追蹤名單——點右上「建立名單」,貼上客戶清單即可開始。
+          {canManageAll ? '還沒有任何追蹤名單——建立名單並加入客戶即可開始。' : '目前沒有指派給你的追蹤名單。'}
         </div>
       )}
 
@@ -102,7 +104,7 @@ export default function CampaignsContent() {
                   <h3 className="font-bold text-stone-800">{c.name}</h3>
                   <p className="mt-0.5 text-xs text-stone-400">🎯 {c.product}{c.deadline && ` ・截止 ${c.deadline}`}</p>
                 </div>
-                <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full ${c.status === '進行中' ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400'}`}>{c.status || '進行中'}</span>
+                <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full ${c.status === '進行中' ? 'bg-brand-50 text-emerald-600' : 'bg-stone-100 text-stone-400'}`}>{c.status || '進行中'}</span>
               </div>
               {/* 疊層進度條 */}
               <div className="mt-4 h-2.5 rounded-full bg-stone-100 overflow-hidden flex">
@@ -184,12 +186,12 @@ function CreateModal({ onClose }: { onClose: (created: boolean) => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(false)} />
-      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
-        <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
+      <div className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
           <h3 className="text-lg font-bold">建立追蹤名單</h3>
           <button onClick={() => onClose(false)} className="w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-all text-lg">✕</button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="grid md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-stone-500 mb-1.5">名單名稱 *</label>
@@ -228,7 +230,7 @@ function CreateModal({ onClose }: { onClose: (created: boolean) => void }) {
           )}
           {err && <p className="text-sm text-rose-500">{err}</p>}
         </div>
-        <div className="px-6 py-4 border-t border-stone-900/[0.06] flex justify-between">
+        <div className="sticky bottom-0 bg-[#fdfdfb]/95 backdrop-blur px-4 sm:px-6 py-4 border-t border-stone-900/[0.06] flex flex-col-reverse sm:flex-row gap-2 sm:justify-between">
           <button onClick={runPreview} disabled={busy || !lines.length}
             className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all disabled:opacity-40">
             {busy && !preview ? '比對中…' : '比對預覽'}
@@ -244,7 +246,7 @@ function CreateModal({ onClose }: { onClose: (created: boolean) => void }) {
 }
 
 // ── 名單詳情(成員清單+一鍵改狀態)────────────────────────────────────────
-function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: () => void }) {
+function CampaignDetail({ campaignId, canManageAll, onBack }: { campaignId: string; canManageAll: boolean; onBack: () => void }) {
   const [campaign, setCampaign] = useState<CampaignRow | null>(null)
   const [members, setMembers] = useState<Member[] | null>(null)
   const [error, setError] = useState('')
@@ -321,10 +323,12 @@ function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: ()
               {campaign.deadline && ` ・截止 ${campaign.deadline}`}
             </p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowImport(true)} className="px-4 py-2 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">＋ 加成員</button>
-            <button onClick={exportCsv} className="px-4 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">⤓ 匯出 CSV</button>
-          </div>
+          {canManageAll && (
+            <div className="flex gap-2">
+              <button onClick={() => setShowImport(true)} className="px-4 py-2 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">＋ 加成員</button>
+              <button onClick={exportCsv} className="px-4 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">⤓ 匯出 CSV</button>
+            </div>
+          )}
         </div>
         {/* 狀態統計 chips(可點=篩選) */}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -335,7 +339,7 @@ function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: ()
               {s} {counts[s] ?? 0}
             </button>
           ))}
-          {salespersons.length > 0 && (
+          {canManageAll && salespersons.length > 0 && (
             <select className="ml-auto text-xs px-3 py-1.5 rounded-full bg-white ring-1 ring-stone-900/[0.08] text-stone-600" value={spFilter} onChange={(e) => setSpFilter(e.target.value)}>
               <option value="">全部業務</option>
               {salespersons.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
@@ -346,7 +350,7 @@ function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: ()
 
       {/* 成員清單 */}
       <div className="card-soft overflow-hidden divide-y divide-stone-900/[0.05]">
-        {shown.length === 0 && <p className="px-6 py-10 text-center text-sm text-stone-400">{members.length === 0 ? '尚無成員——點「＋ 加成員」貼上清單' : '此篩選下沒有成員'}</p>}
+        {shown.length === 0 && <p className="px-6 py-10 text-center text-sm text-stone-400">{members.length === 0 ? (canManageAll ? '尚無成員——請加入客戶名單' : '目前沒有指派給你的客戶') : '此篩選下沒有成員'}</p>}
         {shown.map((m) => {
           const tel = telHref(m.phone)
           return (
@@ -357,12 +361,12 @@ function CampaignDetail({ campaignId, onBack }: { campaignId: string; onBack: ()
                     <a href={`/customers/${m.customerId}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-stone-800 hover:text-brand-700">{m.name}</a>
                     {m.type && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">{m.type}</span>}
                     {m.salesperson && <span className="text-xs text-stone-400">{m.salesperson}</span>}
-                    {m.dealOrderNo && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">單號 {m.dealOrderNo}</span>}
+                    {m.dealOrderNo && <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-emerald-600">單號 {m.dealOrderNo}</span>}
                   </div>
                   <p className="mt-0.5 text-xs text-stone-400 truncate">{[m.city, m.district, m.address].filter(Boolean).join('・')}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {tel && <a href={`tel:${tel}`} className="px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:scale-95 transition-all whitespace-nowrap">📞 {m.phone}</a>}
+                  {tel && <a href={`tel:${tel}`} className="px-3 py-1.5 rounded-full text-xs font-medium bg-brand-50 text-emerald-600 hover:bg-brand-50 active:scale-95 transition-all whitespace-nowrap">📞 {m.phone}</a>}
                   <div className={`flex gap-1 ${busyId === m.id ? 'opacity-40 pointer-events-none' : ''}`}>
                     {STATUSES.map((s) => (
                       <button key={s} onClick={() => setStatus(m.id, s)} title={s}
@@ -460,7 +464,7 @@ function ImportModal({ campaignId, onClose }: { campaignId: string; onClose: (im
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(false)} />
-      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-bold">加入成員</h3>

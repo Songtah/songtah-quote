@@ -313,7 +313,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       {openPop === id && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpenPop('')} />
-          <div className={`absolute z-40 mt-2 ${width} max-h-80 overflow-auto bg-[#fcfbf8] rounded-2xl shadow-2xl ring-1 ring-stone-900/[0.08] p-3`}>{children}</div>
+          <div className={`absolute z-40 mt-2 ${width} max-h-80 overflow-auto bg-[#fdfdfb] rounded-2xl shadow-2xl ring-1 ring-stone-900/[0.08] p-3`}>{children}</div>
         </>
       )}
     </div>
@@ -323,17 +323,17 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
     <div className="flex flex-col gap-5">
       {/* 模式切換(限主管) */}
       {canAssign && (
-        <div className="order-1 flex items-center gap-2">
-          <div className="inline-flex rounded-full bg-stone-100 p-1">
-            <button onClick={() => setAssignMode(false)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!assignMode ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>檢視模式</button>
-            <button onClick={enterAssignMode} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${assignMode ? 'bg-brand-500 text-white shadow-sm' : 'text-stone-500'}`}>分派模式</button>
+        <div className="order-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="inline-flex w-full rounded-full bg-stone-100 p-1 sm:w-auto">
+            <button onClick={() => setAssignMode(false)} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium active:scale-95 transition-all sm:flex-none ${!assignMode ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}>檢視模式</button>
+            <button onClick={enterAssignMode} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium active:scale-95 transition-all sm:flex-none ${assignMode ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25' : 'text-stone-500'}`}>分派模式</button>
           </div>
-          {assignMode && <span className="text-xs text-stone-400">選業務可看其轄區;分派/釋出只動負責業務空白或該離職業務的客戶</span>}
+          {assignMode && <span className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700 ring-1 ring-amber-200">分派／釋出會寫入客戶負責業務；只有在彈窗逐筆確認後才會執行。</span>}
         </div>
       )}
 
       {/* 篩選(分派模式移到摘要下方) */}
-      <div className={`card-soft p-5 space-y-4 ${assignMode ? 'order-3' : 'order-2'}`}>
+      <div className={`card-soft p-4 sm:p-5 space-y-4 ${assignMode ? 'order-3' : 'order-2'}`}>
         {/* 地區快選 */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-widest text-stone-400 mr-1">快速選區</span>
@@ -732,7 +732,7 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(!!done)} />
-      <div className="relative w-full max-w-lg bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+      <div className="relative w-full max-w-lg bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">轄區分派</p>
@@ -839,7 +839,7 @@ function ReassignModal({ from, districts, successors, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => onClose(!!done)} />
-      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務離職・轄區接手</p>
@@ -906,12 +906,12 @@ type AreaCustomer = {
   address: string; phone: string; salesperson: string; devStage: string; institutionCode: string
 }
 const STATUS_BADGE: Record<string, string> = {
-  開業: 'bg-emerald-50 text-emerald-600', 狀況不明: 'bg-amber-50 text-amber-600',
+  開業: 'bg-brand-50 text-emerald-600', 狀況不明: 'bg-amber-50 text-amber-600',
   停業: 'bg-rose-50 text-rose-500', 已歇業: 'bg-stone-100 text-stone-500', 撤銷: 'bg-stone-100 text-stone-500',
 }
 const STAGE_BADGE: Record<string, string> = {
   線索: 'bg-sky-50 text-sky-600', 已接觸: 'bg-brand-50 text-brand-600', 試用中: 'bg-violet-50 text-violet-600',
-  報價中: 'bg-amber-50 text-amber-600', 已成交: 'bg-emerald-50 text-emerald-600', 流失: 'bg-stone-100 text-stone-500',
+  報價中: 'bg-amber-50 text-amber-600', 已成交: 'bg-brand-50 text-emerald-600', 流失: 'bg-stone-100 text-stone-500',
 }
 
 /** 純數字/+ 的可撥號字串;非法回 null(不顯示撥號連結) */
@@ -954,7 +954,7 @@ function CustomerModal({ city, district, salesperson, onClose }: { city: string;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
       <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-900/[0.06]">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{city}{district}</p>
@@ -998,7 +998,7 @@ function CustomerModal({ city, district, salesperson, onClose }: { city: string;
                   </a>
                   <div className="shrink-0 flex flex-col items-end gap-1">
                     {tel ? (
-                      <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:scale-95 transition-all whitespace-nowrap">
+                      <a href={`tel:${tel}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-brand-50 text-emerald-600 hover:bg-brand-50 active:scale-95 transition-all whitespace-nowrap">
                         📞 {c.phone}
                       </a>
                     ) : c.phone ? (

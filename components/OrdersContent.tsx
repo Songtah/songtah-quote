@@ -9,7 +9,7 @@ const STATUS_COLOR: Record<string, string> = {
   草稿:   'bg-gray-100 text-gray-600',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
-  已到貨: 'bg-green-100 text-green-700',
+  已到貨: 'bg-brand-50 text-green-700',
   已取消: 'bg-red-100 text-red-600',
 }
 
@@ -79,14 +79,23 @@ export default function OrdersContent() {
   const hasDisplayMore = filtered.length > displayLimit
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="card-soft flex flex-col gap-3 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">訂貨工作</p>
+          <p className="mt-1 font-bold text-stone-800">先建立訂貨單，再從清單追蹤狀態</p>
+        </div>
+        <Link href="/orders/new" className="button-primary w-full rounded-full px-5 py-3 text-center text-sm sm:w-auto">
+          ＋ 新增訂貨單
+        </Link>
+      </div>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="border rounded px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="select-soft min-h-11 rounded-full px-4 pr-9 text-sm"
           >
             <option value="">全部狀態</option>
             {STATUS_OPTIONS.map((s) => (
@@ -98,12 +107,6 @@ export default function OrdersContent() {
             {hasDisplayMore && <span className="ml-1 text-amber-500">（顯示前 {displayLimit} 筆）</span>}
           </span>
         </div>
-        <Link
-          href="/orders/new"
-          className="button-primary px-4 py-2 text-sm rounded"
-        >
-          + 新增訂貨單
-        </Link>
       </div>
 
       {/* Content */}
@@ -119,12 +122,12 @@ export default function OrdersContent() {
           {/* ── Mobile cards (< md) ── */}
           <div className="md:hidden space-y-3">
             {displayed.map((order) => (
-              <div key={order.id} className="bg-white border rounded-lg p-4 space-y-3">
+              <div key={order.id} className="card-soft card-soft-hover bg-white p-4 space-y-3">
                 {/* Top row: order number + status */}
                 <div className="flex items-center justify-between gap-2">
                   <Link
                     href={`/orders/${order.id}`}
-                    className="font-mono text-blue-600 font-semibold text-sm"
+                    className="font-mono text-brand-700 font-semibold text-sm"
                   >
                     {order.orderNumber || '—'}
                   </Link>
@@ -151,10 +154,10 @@ export default function OrdersContent() {
                   <p className="text-xs text-gray-400 truncate">備註：{order.note}</p>
                 )}
                 {/* Actions */}
-                <div className="flex items-center gap-3 pt-1 border-t">
+                <div className="flex items-center gap-3 pt-3 border-t border-stone-900/[0.06]">
                   <Link
                     href={`/orders/${order.id}`}
-                    className="text-sm text-blue-500 font-medium"
+                    className="rounded-full bg-brand-50 px-3 py-2 text-sm text-brand-700 font-semibold active:scale-95 transition-all"
                   >
                     查看 ›
                   </Link>
@@ -190,11 +193,11 @@ export default function OrdersContent() {
           </div>
 
           {/* ── Desktop table (md+) ── */}
-          <div className="hidden md:block bg-white border rounded-lg overflow-hidden">
+          <div className="card-soft hidden md:block bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b">
+                  <tr className="bg-stone-50/80 text-xs text-stone-500 uppercase tracking-wide border-b border-stone-900/[0.06]">
                     <th className="px-4 py-3 text-left">訂單編號</th>
                     <th className="px-4 py-3 text-left">日期</th>
                     <th className="px-4 py-3 text-left">業務</th>
@@ -206,11 +209,11 @@ export default function OrdersContent() {
                 </thead>
                 <tbody className="divide-y">
                   {displayed.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
+                    <tr key={order.id} className="hover:bg-brand-50/50 transition-colors">
                       <td className="px-4 py-3">
                         <Link
                           href={`/orders/${order.id}`}
-                          className="font-mono text-blue-600 hover:underline font-medium"
+                          className="font-mono text-brand-700 hover:text-brand-800 font-semibold"
                         >
                           {order.orderNumber || '—'}
                         </Link>
@@ -242,7 +245,7 @@ export default function OrdersContent() {
                         <div className="flex items-center justify-center gap-3">
                           <Link
                             href={`/orders/${order.id}`}
-                            className="text-blue-500 hover:text-blue-700 text-xs"
+                            className="rounded-full bg-brand-50 px-3 py-1.5 text-brand-700 hover:bg-brand-100 text-xs font-semibold active:scale-95 transition-all"
                           >
                             查看 ›
                           </Link>

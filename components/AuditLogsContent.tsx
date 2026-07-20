@@ -111,7 +111,8 @@ export default function AuditLogsContent() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="panel p-4">
+      <div className="panel p-4 sm:p-5">
+        <p className="eyebrow mb-3 text-xs">快速篩選</p>
         <div className="grid gap-3 md:grid-cols-[1.5fr_0.7fr_0.7fr]">
           <input
             type="text"
@@ -154,7 +155,7 @@ export default function AuditLogsContent() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
+      <div className="card-soft overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-sm text-stone-400">載入操作紀錄中…</div>
         ) : error ? (

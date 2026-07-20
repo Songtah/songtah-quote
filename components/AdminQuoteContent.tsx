@@ -20,7 +20,7 @@ function formatDate(d: string) {
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   待行政審核:    { label: '待行政審核',   cls: 'bg-amber-100  text-amber-700  border-amber-200',  dot: 'bg-amber-400'  },
   待總經理審核:  { label: '待總經理審核', cls: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-400' },
-  已核准:        { label: '✓ 已核准',     cls: 'bg-green-100  text-green-700  border-green-200',  dot: 'bg-green-500'  },
+  已核准:        { label: '✓ 已核准',     cls: 'bg-brand-50  text-green-700  border-brand-200',  dot: 'bg-brand-500'  },
   已退回:        { label: '✗ 已退回',     cls: 'bg-red-100    text-red-600    border-red-200',    dot: 'bg-red-400'    },
   草稿:          { label: '草稿',         cls: 'bg-stone-100  text-stone-500  border-stone-200',  dot: 'bg-stone-300'  },
 }
@@ -43,10 +43,10 @@ type ApprovalAction = 'approve' | 'escalate' | 'reject' | 'resubmit'
 const ACTION_META: Record<ApprovalAction, {
   icon: string; title: string; btn: string; btnCls: string; needNote: boolean
 }> = {
-  approve:  { icon: '✅', title: '核准此報價單',     btn: '確認核准', btnCls: 'bg-green-600 hover:bg-green-700',   needNote: false },
+  approve:  { icon: '✅', title: '核准此報價單',     btn: '確認核准', btnCls: 'bg-brand-600 hover:bg-brand-700',   needNote: false },
   escalate: { icon: '📋', title: '呈送總經理審核',   btn: '呈總經理', btnCls: 'bg-orange-500 hover:bg-orange-600', needNote: false },
   reject:   { icon: '↩︎', title: '退回此報價單',    btn: '確認退回', btnCls: 'bg-red-500 hover:bg-red-600',       needNote: true  },
-  resubmit: { icon: '🔄', title: '重新送交行政審核', btn: '重新送審', btnCls: 'bg-blue-600 hover:bg-blue-700',     needNote: false },
+  resubmit: { icon: '🔄', title: '重新送交行政審核', btn: '重新送審', btnCls: 'bg-brand-500 hover:bg-brand-600',   needNote: false },
 }
 
 function ApprovalModal({
@@ -143,18 +143,18 @@ function QuoteRow({
   const meta = STATUS_META[quote.status] ?? { label: quote.status, cls: 'bg-stone-100 text-stone-500 border-stone-200', dot: 'bg-stone-300' }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 hover:border-brand-200 hover:shadow-sm transition space-y-3">
+    <div className="card-soft card-soft-hover space-y-3 px-5 py-4">
       {/* Top row */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-sm font-bold text-slate-700">{quote.quoteNumber}</span>
+            <span className="font-mono text-sm font-bold text-stone-700">{quote.quoteNumber}</span>
             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${meta.cls}`}>
               {meta.label}
             </span>
           </div>
-          <div className="mt-1 font-semibold text-slate-800 truncate">{quote.customerName}</div>
-          <div className="mt-0.5 flex flex-wrap gap-x-4 text-xs text-slate-400">
+          <div className="mt-1 truncate font-semibold text-stone-800">{quote.customerName}</div>
+          <div className="mt-0.5 flex flex-wrap gap-x-4 text-xs text-stone-400">
             {quote.salesperson && <span>業務：{quote.salesperson}</span>}
             {quote.createdAt   && <span>建立：{formatDate(quote.createdAt)}</span>}
             {quote.validUntil  && <span>有效至：{formatDate(quote.validUntil)}</span>}
@@ -185,12 +185,12 @@ function QuoteRow({
 
       {/* Action buttons */}
       {actions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
-          <span className="text-xs text-slate-400">簽核動作：</span>
+        <div className="flex flex-wrap items-center gap-2 border-t border-stone-900/[0.06] pt-3">
+          <span className="text-xs text-stone-400">下一步：</span>
           {actions.includes('approve') && (
             <button
               onClick={() => onAction(quote, 'approve')}
-              className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 transition"
+              className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-brand-700 active:scale-95"
             >
               ✓ 核准
             </button>
@@ -198,7 +198,7 @@ function QuoteRow({
           {actions.includes('escalate') && (
             <button
               onClick={() => onAction(quote, 'escalate')}
-              className="rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 transition"
+              className="rounded-full bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-orange-600 active:scale-95"
             >
               ↑ 呈總經理
             </button>
@@ -206,7 +206,7 @@ function QuoteRow({
           {actions.includes('reject') && (
             <button
               onClick={() => onAction(quote, 'reject')}
-              className="rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-1.5 transition"
+              className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition-all hover:bg-red-100 active:scale-95"
             >
               ✗ 退回
             </button>
@@ -214,7 +214,7 @@ function QuoteRow({
           {actions.includes('resubmit') && (
             <button
               onClick={() => onAction(quote, 'resubmit')}
-              className="rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 transition"
+              className="rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95"
             >
               🔄 重新送審
             </button>
@@ -356,17 +356,17 @@ export default function AdminQuoteContent() {
       {/* ── Queue panel ── */}
       <section className="panel p-6">
         <div className="mb-5 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">簽核佇列</h3>
+          <div><p className="eyebrow mb-1 text-xs">待辦工作</p><h3 className="text-lg font-bold text-stone-800">報價簽核</h3></div>
           <button
             onClick={loadQuotes}
-            className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition"
+            className="button-secondary px-4 py-2 text-xs"
           >
             ↻ 重新整理
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="mb-5 flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+        <div className="mb-5 flex gap-2 overflow-x-auto border-b border-stone-900/[0.06] pb-4">
           {TABS.map((tab) => (
             <button
               key={tab}
@@ -374,7 +374,7 @@ export default function AdminQuoteContent() {
               className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                 activeTab === tab
                   ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
               }`}
             >
               {TAB_LABELS[tab]}
@@ -395,7 +395,7 @@ export default function AdminQuoteContent() {
             <button onClick={loadQuotes} className="ml-3 underline hover:no-underline">重試</button>
           </div>
         ) : displayed.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center text-sm text-slate-400">
+          <div className="rounded-2xl bg-stone-50 px-5 py-12 text-center text-sm text-stone-400 ring-1 ring-stone-900/[0.06]">
             {activeTab === '全部' ? '目前沒有報價單' : '此分類目前沒有報價單'}
           </div>
         ) : (

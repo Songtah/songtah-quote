@@ -3,6 +3,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { createQuote, listQuotes } from '@/lib/notion'
 import type { QuoteItem } from '@/types'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { advanceCustomerDevStage } from '@/lib/notion/customers'
 
 export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
@@ -61,6 +62,17 @@ export const POST = withApiAuth({ module: 'quote', action: 'edit' }, async (req:
       items: quoteItems,
       appUrl,
     })
+
+    if (customerId) {
+      const user = session.user as any
+      const canManageAll = user?.role === 'admin' || user?.accountType === '中央管理'
+      await advanceCustomerDevStage(customerId, '報價中', {
+        actorName: session.user?.name ?? '',
+        canManageAll,
+      }).catch((error) =>
+        console.warn('quote stage advance error:', error)
+      )
+    }
 
     await logAuditEvent({
       module: 'quote',

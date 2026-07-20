@@ -277,11 +277,11 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
   if (result) {
     const shareUrl = `${window.location.origin}${result.shareUrl}`
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 text-center">
+      <div className="card-soft rounded-3xl p-7 sm:p-10 text-center">
         <div className="text-5xl mb-4">✅</div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">報價單已建立</h2>
+        <h2 className="text-xl font-bold text-stone-800 mb-2">報價單已建立</h2>
         <p className="text-gray-500 text-sm mb-6">報價單號：{result.quoteNumber}</p>
-        <div className="bg-gray-50 rounded-xl p-4 mb-6 flex items-center gap-3">
+        <div className="rounded-2xl bg-stone-50 p-4 mb-6 flex items-center gap-3 ring-1 ring-stone-900/[0.06]">
           <input
             readOnly
             value={shareUrl}
@@ -298,19 +298,19 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
           <a
             href={result.shareUrl}
             target="_blank"
-            className="bg-green-800 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-900"
+            className="rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-600 active:scale-95 transition-all"
           >
             檢視報價單
           </a>
           <a
             href={`/api/quotes/${result.id}/pdf`}
-            className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+            className="rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-600 active:scale-95 transition-all"
           >
             下載 PDF
           </a>
           <button
             onClick={() => onClose ? onClose() : router.push('/quotes')}
-            className="border border-gray-300 px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 active:scale-95 transition-all"
           >
             返回列表
           </button>
@@ -320,9 +320,13 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-semibold text-gray-800 mb-4">客戶資訊</h2>
+    <form onSubmit={handleSubmit} className="space-y-5 pb-24 sm:pb-0">
+      <div className="card-soft rounded-3xl p-5 sm:p-7">
+        <div className="mb-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第一步</p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">客戶資訊</h2>
+          <p className="mt-1 text-sm text-stone-500">搜尋既有客戶可自動帶入資料，減少重複輸入。</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -338,12 +342,12 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               }}
               onFocus={() => customerQuery && setShowCustomerList(true)}
               onBlur={() => setTimeout(() => setShowCustomerList(false), 150)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="搜尋客戶或直接輸入名稱"
             />
             {selectedCustomer && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">✓ 已從清單選取</span>
+                <span className="text-xs text-green-600 bg-brand-50 px-2 py-1 rounded-full">✓ 已從清單選取</span>
                 <button type="button" onClick={clearCustomer} className="text-xs text-gray-400 hover:text-gray-600">
                   清除
                 </button>
@@ -361,7 +365,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                     key={customer.id}
                     type="button"
                     onMouseDown={() => selectCustomer(customer)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-green-50 text-sm border-b border-gray-50 last:border-0"
+                    className="w-full text-left px-4 py-2.5 hover:bg-brand-50 text-sm border-b border-gray-50 last:border-0"
                   >
                     <div className="font-medium">{customer.name}</div>
                     <div className="text-xs text-gray-400 mt-0.5 flex gap-2">
@@ -382,7 +386,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="輸入電話"
             />
           </div>
@@ -392,7 +396,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={customerTaxId}
               onChange={(e) => setCustomerTaxId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="輸入統一編號"
             />
           </div>
@@ -404,7 +408,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={companyTitle}
               onChange={(e) => setCompanyTitle(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="如：XX 牙醫診所"
             />
           </div>
@@ -414,7 +418,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="輸入地址"
             />
           </div>
@@ -424,7 +428,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={salesperson}
               onChange={(e) => setSalesperson(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="輸入業務姓名"
             />
           </div>
@@ -434,7 +438,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="date"
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
             />
           </div>
           <div>
@@ -443,7 +447,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               type="text"
               value={paymentTerms}
               onChange={(e) => setPaymentTerms(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+              className="input-soft w-full px-4 py-3 text-sm"
               placeholder="如：貨到付款、月結30天"
             />
           </div>
@@ -453,20 +457,20 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 resize-none"
+              className="input-soft w-full px-4 py-3 text-sm resize-none"
               placeholder="選填"
             />
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div className="card-soft rounded-3xl p-5 sm:p-7">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <h2 className="font-semibold text-gray-800">選擇產品</h2>
+          <div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第二步</p><h2 className="mt-1 text-lg font-bold text-stone-800">選擇產品</h2></div>
           <button
             type="button"
             onClick={addCustomItem}
-            className="self-start md:self-auto border border-green-700 text-green-800 hover:bg-green-50 text-sm font-semibold px-4 py-2 rounded-lg transition"
+            className="self-start md:self-auto rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 active:scale-95 transition-all"
           >
             + 新增客製化品項
           </button>
@@ -477,13 +481,13 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             type="text"
             value={productQuery}
             onChange={(e) => setProductQuery(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700 w-52"
+            className="input-soft w-full px-4 py-2.5 text-sm sm:w-52"
             placeholder="搜尋品名、規格..."
           />
           <select
             value={brandFilter}
             onChange={(e) => setBrandFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            className="select-soft px-4 py-2.5 text-sm"
           >
             <option value="">全部品牌</option>
             {brands.map((brand) => (
@@ -495,7 +499,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+            className="select-soft px-4 py-2.5 text-sm"
           >
             <option value="">全部品類</option>
             {categories.map((category) => (
@@ -530,7 +534,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 </tr>
               )}
               {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-green-50/50">
+                <tr key={product.id} className="hover:bg-brand-50/50">
                   <td className="px-3 py-2">
                     <div className="font-medium">{product.name}</div>
                     {product.series && <div className="text-xs text-gray-400">{product.series}</div>}
@@ -553,7 +557,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                     <button
                       type="button"
                       onClick={() => addProduct(product)}
-                      className="bg-green-800 hover:bg-green-900 text-white text-xs px-3 py-1 rounded-lg transition"
+                      className="rounded-full bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-500/20 hover:bg-brand-600 active:scale-95 transition-all"
                     >
                       + 加入
                     </button>
@@ -566,8 +570,9 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
         </div>
       </div>
 
-      <div ref={detailSectionRef} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-semibold text-gray-800 mb-4">報價明細 ({items.length} 項)</h2>
+      <div ref={detailSectionRef} className="card-soft rounded-3xl p-5 sm:p-7">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第三步</p>
+        <h2 className="mt-1 text-lg font-bold text-stone-800 mb-4">確認報價明細 ({items.length} 項)</h2>
         {items.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">尚未新增任何品項</div>
         ) : (
@@ -578,7 +583,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 ref={item.tempId === highlightedItemId ? latestAddedItemRef : null}
                 className={`border rounded-2xl p-4 transition ${
                   item.tempId === highlightedItemId
-                    ? 'border-green-500 bg-green-50/60 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]'
+                    ? 'border-brand-500 bg-brand-50/60 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]'
                     : 'border-gray-200'
                 }`}
               >
@@ -647,7 +652,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                     type="text"
                     value={item.note}
                     onChange={(e) => updateItem(item.tempId, 'note', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-700 placeholder:text-gray-400 bg-gray-50"
+                    className="input-soft w-full px-3 py-2 text-xs text-stone-600 placeholder:text-stone-400 bg-stone-50"
                     placeholder="備註（選填，會顯示於品名下方）"
                   />
                 </div>
@@ -676,7 +681,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="text"
                           value={item.name}
                           onChange={(e) => updateItem(item.tempId, 'name', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="輸入品名"
                         />
                       </div>
@@ -686,7 +691,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="text"
                           value={item.spec}
                           onChange={(e) => updateItem(item.tempId, 'spec', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="可自由調整"
                         />
                       </div>
@@ -696,7 +701,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="text"
                           value={item.brand}
                           onChange={(e) => updateItem(item.tempId, 'brand', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="可自由輸入"
                         />
                       </div>
@@ -706,7 +711,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="text"
                           value={item.category}
                           onChange={(e) => updateItem(item.tempId, 'category', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="可自由輸入"
                         />
                       </div>
@@ -716,7 +721,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="text"
                           value={item.unit}
                           onChange={(e) => updateItem(item.tempId, 'unit', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="例：個、組、式"
                         />
                       </div>
@@ -726,7 +731,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           type="url"
                           value={item.imageUrl}
                           onChange={(e) => updateItem(item.tempId, 'imageUrl', e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-sm"
                           placeholder="可手動調整圖片來源"
                         />
                       </div>
@@ -737,7 +742,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           value={item.unitPrice}
                           min={0}
                           onChange={(e) => updateItem(item.tempId, 'unitPrice', Number(e.target.value))}
-                          className="w-full text-right border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-right text-sm"
                         />
                       </div>
                       <div>
@@ -747,7 +752,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                           value={item.quantity}
                           min={1}
                           onChange={(e) => updateItem(item.tempId, 'quantity', Number(e.target.value))}
-                          className="w-full text-right border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                          className="input-soft w-full px-4 py-3 text-right text-sm"
                         />
                       </div>
                     </div>
@@ -770,18 +775,18 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
         </div>
       )}
 
-      <div className="flex justify-end gap-3">
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 rounded-t-3xl border-t border-stone-900/[0.06] bg-[#fdfdfb]/95 px-4 py-3 shadow-[0_-4px_24px_rgba(28,25,23,0.06)] backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
         <button
           type="button"
           onClick={() => onClose ? onClose() : router.push('/quotes')}
-          className="border border-white/60 px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10"
+          className="rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 active:scale-95 transition-all"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="bg-green-800 hover:bg-green-900 disabled:bg-green-300 text-white px-8 py-2.5 rounded-xl text-sm font-semibold transition"
+          className="flex-1 rounded-full bg-brand-500 px-7 py-3 text-sm font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-50 sm:flex-none"
         >
           {submitting ? '送出中...' : '送出報價單'}
         </button>

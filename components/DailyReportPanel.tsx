@@ -125,14 +125,21 @@ function parseDailyReportText(raw: string): ParsedReport {
 
 // ── Main Component ─────────────────────────────────────────────
 
-export default function DailyReportPanel() {
+export default function DailyReportPanel({
+  currentUser = '',
+  canImportForOthers = false,
+}: {
+  currentUser?: string
+  canImportForOthers?: boolean
+}) {
   // Tab
   const [tab, setTab] = useState<'paste' | 'line'>('paste')
 
   // Salesperson list (從帳號管理拉，全部業務帳號；停用的排後面並標示)
-  const [spNames,      setSpNames]      = useState<string[]>([])
+  const [spNames,      setSpNames]      = useState<string[]>(currentUser ? [currentUser] : [])
   const [inactiveNames, setInactiveNames] = useState<Set<string>>(new Set())
   useEffect(() => {
+    if (!canImportForOthers) return
     fetch('/api/accounts')
       .then((r) => r.json())
       .then((data) => {
@@ -145,7 +152,7 @@ export default function DailyReportPanel() {
         }
       })
       .catch(() => {})
-  }, [])
+  }, [canImportForOthers])
 
   // 客戶反應選項（供 AI 建議使用）
   const [reactionOptions, setReactionOptions] = useState<string[]>([])
@@ -159,7 +166,7 @@ export default function DailyReportPanel() {
   // ── 貼上文字匯入 tab ────────────────────────────────────────────────
   const [rawText,      setRawText]      = useState('')
   const [matchedVisits, setMatchedVisits] = useState<MatchedVisit[]>([])
-  const [impSp,        setImpSp]        = useState('')
+  const [impSp,        setImpSp]        = useState(canImportForOthers ? '' : currentUser)
   const [impDate,      setImpDate]      = useState('')
   const [importing,    setImporting]    = useState(false)
   const [impResult,    setImpResult]    = useState('')
@@ -296,13 +303,13 @@ export default function DailyReportPanel() {
     finally  { setImporting(false) }
   }
 
-  const ic = 'rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition'
+  const ic = 'input-soft w-full min-h-11 text-sm'
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-3xl space-y-5">
 
       {/* Tab switcher */}
-      <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-fit">
+      <div className="inline-flex max-w-full overflow-x-auto rounded-full bg-stone-100 p-1 gap-1">
         {([
           { id: 'paste', label: '📝 貼上日報文字' },
           { id: 'line',  label: '📥 LINE 聊天記錄' },
@@ -310,8 +317,8 @@ export default function DailyReportPanel() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-              tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            className={`min-h-10 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-full active:scale-95 transition-all ${
+              tab === t.id ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500 hover:text-stone-700'
             }`}
           >
             {t.label}
@@ -320,21 +327,24 @@ export default function DailyReportPanel() {
       </div>
 
       {/* ── LINE 聊天記錄匯入 Tab ── */}
-      {tab === 'line' && <LineImportContent />}
+      {tab === 'line' && (
+        <LineImportContent currentUser={currentUser} canImportForOthers={canImportForOthers} />
+      )}
 
       {/* ── 貼上文字匯入 Tab ── */}
       {tab === 'paste' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <div className="card-soft p-4 sm:p-6 space-y-5">
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-1">匯入業務日報</h3>
-            <p className="text-sm text-gray-400">將業務手寫的日報文字貼入，系統自動拆解為獨立的客情紀錄（每個編號一筆）。</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">建立客情紀錄</p>
+            <h3 className="mt-1 font-bold text-stone-800">貼上業務日報，先確認再匯入</h3>
+            <p className="mt-1 text-sm text-stone-500">系統會拆成獨立紀錄；按下最後的匯入按鈕前，不會寫入資料。</p>
           </div>
 
           {/* 範例說明 */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600 space-y-1">
-            <p className="font-semibold mb-1">支援格式</p>
-            <pre className="font-mono leading-relaxed whitespace-pre-wrap">{`每日報表
+          <details className="rounded-2xl bg-brand-50/60 px-4 py-3 text-xs text-stone-600 ring-1 ring-brand-500/10">
+            <summary className="cursor-pointer font-semibold text-brand-700">查看支援格式範例</summary>
+            <pre className="mt-3 overflow-x-auto font-mono leading-relaxed whitespace-pre-wrap">{`每日報表
 職稱：北區業務
 日期：2026/05/29（五）
 ——————————————
@@ -342,18 +352,19 @@ export default function DailyReportPanel() {
 回覆王技師價格說明…
 2.冠橋牙技所
 例行關心，討論新產品…`}</pre>
-          </div>
+          </details>
 
           {/* 業務 + 日期（解析前就要填） */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">
+              <label className="text-xs font-medium text-stone-500">
                 業務姓名
                 <span className="text-red-500 ml-0.5">*</span>
               </label>
               <select
                 value={impSp}
                 onChange={(e) => setImpSp(e.target.value)}
+                disabled={!canImportForOthers}
                 className={`${ic} ${!impSp ? 'border-amber-300 ring-1 ring-amber-200' : ''}`}
               >
                 <option value="">請選擇業務…</option>
@@ -363,9 +374,12 @@ export default function DailyReportPanel() {
                   </option>
                 ))}
               </select>
+              {!canImportForOthers && currentUser && (
+                <p className="text-xs text-stone-400">一般業務只能匯入自己的客情紀錄。</p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">
+              <label className="text-xs font-medium text-stone-500">
                 記錄日期
                 <span className="text-red-500 ml-0.5">*</span>
               </label>
@@ -387,13 +401,13 @@ export default function DailyReportPanel() {
 
           {/* Paste area */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-gray-500">貼入日報文字</label>
+            <label className="text-xs font-medium text-stone-500">貼入日報文字</label>
             <textarea
               value={rawText}
               onChange={(e) => { setRawText(e.target.value); setMatchedVisits([]); setImpResult('') }}
               rows={12}
               placeholder="在此貼入業務日報…"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-300 transition"
+              className="input-soft w-full min-h-40 px-4 py-3 text-sm text-stone-700 font-mono leading-relaxed resize-y placeholder:text-stone-300"
             />
           </div>
 
@@ -401,32 +415,32 @@ export default function DailyReportPanel() {
             onClick={handleParse}
             disabled={!rawText.trim() || !impSp || !impDate}
             title={!impSp ? '請先選擇業務' : !impDate ? '請先填寫日期' : ''}
-            className="button-secondary w-full py-2.5 text-sm rounded-xl disabled:opacity-40">
+            className="w-full min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 active:scale-[0.99] transition-all disabled:opacity-40">
             🔍 解析日報
           </button>
 
           {/* 解析結果 + 客戶比對 */}
           {matchedVisits.length > 0 && (
-            <div className="space-y-4 border-t border-gray-100 pt-4">
-              <h4 className="font-semibold text-gray-800">
+            <div className="space-y-4 border-t border-stone-900/[0.06] pt-5">
+              <h4 className="font-bold text-stone-800">
                 解析結果：{matchedVisits.length} 筆 — 請確認客戶對應
               </h4>
 
               {/* 已選：業務 + 日期（唯讀摘要，可點擊欄位修改） */}
-              <div className="flex items-center gap-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 bg-stone-50 rounded-2xl px-3 py-2.5">
                 <span>👤 {impSp}</span>
-                <span className="text-gray-300">｜</span>
+                <span className="text-stone-300">｜</span>
                 <span>📅 {impDate}</span>
-                <span className="ml-auto text-gray-400 italic">如需修改請往上更改</span>
+                <span className="sm:ml-auto text-stone-400">如需修改請往上更改</span>
               </div>
 
               {/* 比對確認清單 */}
               <div className="space-y-3">
                 {matchedVisits.map((mv, i) => (
-                  <div key={i} className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 space-y-2">
+                  <div key={i} className="rounded-2xl bg-stone-50/80 ring-1 ring-stone-900/[0.06] px-4 py-3 space-y-2">
                     {/* 客戶名稱（可編輯）+ 刪除按鈕 */}
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 shrink-0">{i + 1}.</span>
+                      <span className="text-xs text-stone-400 shrink-0">{i + 1}.</span>
                       <input
                         type="text"
                         value={mv.customerName}
@@ -464,36 +478,36 @@ export default function DailyReportPanel() {
                             })
                         }}
                         placeholder="客戶名稱"
-                        className="flex-1 text-sm font-semibold text-gray-800 bg-transparent border-b border-dashed border-gray-300 focus:border-blue-400 focus:outline-none py-0.5"
+                        className="min-w-0 flex-1 text-sm font-semibold text-stone-800 bg-transparent border-b border-dashed border-stone-300 focus:border-brand-400 focus:outline-none py-0.5"
                       />
                       <button
                         type="button"
                         onClick={() => removeVisit(i)}
                         title="移除此筆"
-                        className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:bg-red-100 hover:text-red-500 transition-colors text-base leading-none"
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-stone-400 hover:bg-rose-50 hover:text-rose-500 active:scale-95 transition-all text-base leading-none"
                       >
                         ✕
                       </button>
                     </div>
                     {mv.content && (
-                      <p className="text-gray-400 text-xs whitespace-pre-wrap line-clamp-3 leading-relaxed pl-4">{mv.content}</p>
+                      <p className="text-stone-500 text-xs whitespace-pre-wrap line-clamp-3 leading-relaxed sm:pl-4">{mv.content}</p>
                     )}
 
                     {/* 比對選項 */}
                     <div className="pt-1">
                       {mv.searching ? (
-                        <span className="text-xs text-gray-400 animate-pulse">比對客戶資料庫中…</span>
+                        <span className="text-xs text-stone-400 animate-pulse">比對客戶資料庫中…</span>
                       ) : (
                         <div className="flex flex-wrap gap-1.5 items-center">
-                          <span className="text-[10px] text-gray-400 shrink-0 mr-0.5">連結：</span>
+                          <span className="text-[10px] text-stone-400 shrink-0 mr-0.5">連結：</span>
 
                           {/* 不連結 */}
                           <button
                             onClick={() => updateSelectedId(i, '')}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                               mv.selectedId === ''
-                                ? 'bg-gray-700 text-white border-gray-700'
-                                : 'border-gray-300 text-gray-500 hover:border-gray-500'
+                                ? 'bg-stone-700 text-white border-stone-700'
+                                : 'border-stone-300 text-stone-500 hover:border-stone-500'
                             }`}
                           >
                             不連結
@@ -506,8 +520,8 @@ export default function DailyReportPanel() {
                               onClick={() => updateSelectedId(i, c.id)}
                               className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                                 mv.selectedId === c.id
-                                  ? 'bg-blue-500 text-white border-blue-500'
-                                  : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                                  ? 'bg-brand-500 text-white border-brand-500'
+                                  : 'border-stone-200 text-stone-600 hover:border-brand-300 hover:text-brand-600'
                               }`}
                             >
                               {c.name}{c.city ? ` · ${c.city}` : ''}
@@ -515,7 +529,7 @@ export default function DailyReportPanel() {
                           ))}
 
                           {mv.candidates.length === 0 && (
-                            <span className="text-xs text-gray-400 italic">找不到相符客戶</span>
+                            <span className="text-xs text-stone-400">找不到相符客戶</span>
                           )}
                         </div>
                       )}
@@ -526,7 +540,7 @@ export default function DailyReportPanel() {
 
               {/* 連結統計 */}
               {matchedVisits.some((mv) => !mv.searching) && (
-                <p className="text-xs text-gray-400 text-right">
+                <p className="text-xs text-stone-400 text-right">
                   已連結 {matchedVisits.filter((mv) => mv.selectedId).length} /
                   {matchedVisits.length} 筆至客戶資料庫
                 </p>
@@ -535,7 +549,7 @@ export default function DailyReportPanel() {
               <button
                 onClick={handleImport}
                 disabled={importing || !impDate || matchedVisits.some((mv) => mv.searching || mv.reactionLoading) || matchedVisits.length === 0}
-                className="button-primary w-full py-3 text-sm rounded-xl disabled:opacity-50 font-medium"
+                className="w-full min-h-12 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-brand-500/25 hover:bg-brand-600 active:scale-[0.99] transition-all disabled:opacity-50"
               >
                 {importing
                   ? '建立中…'
@@ -547,7 +561,7 @@ export default function DailyReportPanel() {
               </button>
 
               {impResult && (
-                <p className={`text-sm px-4 py-2.5 rounded-xl ${impResult.startsWith('❌') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                <p className={`text-sm px-4 py-3 rounded-2xl ${impResult.startsWith('❌') ? 'bg-rose-50 text-rose-700' : 'bg-brand-50 text-emerald-700'}`}>
                   {impResult}
                 </p>
               )}

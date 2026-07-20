@@ -745,7 +745,7 @@ function MultiImageUploadZone({
               <div className={[
                 'absolute inset-0 flex flex-col items-center justify-center gap-1',
                 task.status === 'error' ? 'bg-red-900/65' :
-                task.status === 'done'  ? 'bg-emerald-900/50' :
+                task.status === 'done'  ? 'bg-brand-900/50' :
                                           'bg-black/55',
               ].join(' ')}>
                 {(task.status === 'compressing' || task.status === 'uploading') && (
@@ -1448,7 +1448,7 @@ function ProductEditDrawer({
 
       <motion.div
         ref={dialogRef}
-        className="relative ml-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-l-3xl"
+        className="relative ml-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-l-3xl"
         initial={{ x: reduceMotion ? 0 : '100%' }} animate={{ x: 0 }} exit={{ x: reduceMotion ? 0 : '100%' }}
         transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
         role="dialog"
@@ -1495,7 +1495,7 @@ function ProductEditDrawer({
             </div>
           )}
 
-          <div className={`rounded-2xl p-4 ${centralDisabled ? 'bg-red-50' : 'bg-emerald-50/70'}`}>
+          <div className={`rounded-2xl p-4 ${centralDisabled ? 'bg-red-50' : 'bg-brand-50/70'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">商品使用狀態</p>
@@ -2167,7 +2167,7 @@ function CategoryBrowserModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 24, scale: reduceMotion ? 1 : 0.98 }}
         transition={{ duration: reduceMotion ? 0 : 0.2 }}
-        className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-[90vh] sm:rounded-3xl"
+        className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-[90vh] sm:rounded-3xl"
       >
         <header className="glass-bar flex shrink-0 items-center gap-3 border-b border-stone-900/[0.06] px-3 py-3 sm:px-5">
           <button
@@ -2626,18 +2626,19 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         </button>
       </div>
 
-      {/* List guidance */}
+      {/* List guidance: keep the next action obvious for sales users. */}
       {(isSearching || browseMode === 'products') && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400">
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />已設售價</span>
-          <span>{canManageProducts ? '點品名展開介紹；「編輯」可維護照片、規格與文件' : '點品名展開介紹、照片、規格與文件'}</span>
+        <div className="card-soft mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs text-stone-500">
+          <span className="font-semibold text-stone-700">下一步：點選產品查看完整資料</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-brand-400" />綠點表示已設售價</span>
+          {canManageProducts && <span className="text-stone-400">需要維護照片、規格或文件時再點「編輯」</span>}
         </div>
       )}
 
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse motion-reduce:animate-none rounded-2xl bg-stone-100 motion-reduce:animate-none" />
+            <div key={i} className="h-16 animate-pulse rounded-2xl bg-stone-100 motion-reduce:animate-none" />
           ))}
         </div>
       ) : loadError ? (

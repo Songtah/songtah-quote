@@ -21,7 +21,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
   草稿:          { label: '草稿',         cls: 'bg-stone-100  text-stone-500  border-stone-200'  },
   待行政審核:    { label: '待行政審核',   cls: 'bg-amber-100  text-amber-700  border-amber-200'  },
   待總經理審核:  { label: '待總經理審核', cls: 'bg-orange-100 text-orange-700 border-orange-200' },
-  已核准:        { label: '✓ 已核准',     cls: 'bg-green-100  text-green-700  border-green-200'  },
+  已核准:        { label: '✓ 已核准',     cls: 'bg-brand-50  text-green-700  border-brand-200'  },
   已退回:        { label: '✗ 已退回',     cls: 'bg-red-100    text-red-600    border-red-200'    },
   已送出:        { label: '已送出',        cls: 'bg-blue-100   text-blue-700   border-blue-200'   },
   已確認:        { label: '已確認',        cls: 'bg-brand-100  text-brand-700  border-brand-200'  },
@@ -50,10 +50,10 @@ function ApprovalModal({
   const [note, setNote] = useState('')
 
   const meta: Record<ApprovalAction, { icon: string; title: string; btn: string; btnCls: string; noteRequired: boolean }> = {
-    approve:   { icon: '✅', title: '確認核准報價單？',           btn: '核准',     btnCls: 'bg-green-600 hover:bg-green-700',  noteRequired: false },
+    approve:   { icon: '✅', title: '確認核准報價單？',           btn: '核准',     btnCls: 'bg-brand-600 hover:bg-brand-700',  noteRequired: false },
     escalate:  { icon: '📋', title: '呈送總經理審核？',           btn: '呈總經理', btnCls: 'bg-orange-500 hover:bg-orange-600', noteRequired: false },
     reject:    { icon: '↩︎', title: '退回報價單？',              btn: '確認退回', btnCls: 'bg-red-500 hover:bg-red-600',      noteRequired: true  },
-    resubmit:  { icon: '🔄', title: '重新送交行政審核？',         btn: '重新送審', btnCls: 'bg-blue-600 hover:bg-blue-700',    noteRequired: false },
+    resubmit:  { icon: '🔄', title: '重新送交行政審核？',         btn: '重新送審', btnCls: 'bg-brand-500 hover:bg-brand-600',  noteRequired: false },
   }
   const m = meta[action]
 
@@ -346,27 +346,30 @@ export default function QuoteListContent() {
   // ── Render ─────────────────────────────────────────────────────
   return (
     <>
-      <section className="panel p-6">
+      <section className="card-soft p-4 sm:p-6">
         {/* Header + controls */}
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-slate-900">報價單列表</h3>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">報價工作</p>
+              <h3 className="mt-1 text-lg font-bold text-stone-800">下一步：新增報價或選一筆繼續處理</h3>
+            </div>
             {!loading && !error && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+              <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-500">
                 {displayed.length} / {quotes.length} 張
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <button
               onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition"
+              className="flex min-h-10 items-center gap-1.5 rounded-full border border-stone-200 px-3 py-2 text-xs text-stone-500 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 active:scale-95 transition-all"
             >
               <span>{sortDir === 'desc' ? '↓' : '↑'}</span>
               <span>{sortDir === 'desc' ? '由新到舊' : '由舊到新'}</span>
             </button>
-            <Link href="/quote/new" className="button-primary rounded-full">
+            <Link href="/quote/new" className="button-primary flex-1 rounded-full py-2.5 text-center sm:flex-none">
               ＋ 新增報價單
             </Link>
           </div>
@@ -383,12 +386,12 @@ export default function QuoteListContent() {
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
                   active
                     ? 'border-brand-600 bg-brand-600 text-white'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                    : 'border-stone-200 text-stone-500 hover:border-brand-300 hover:bg-brand-50'
                 }`}
               >
                 {s}
                 {s !== ALL && (
-                  <span className={active ? 'ml-1 text-white/70' : 'ml-1 text-slate-400'}>
+                  <span className={active ? 'ml-1 text-white/70' : 'ml-1 text-stone-400'}>
                     {quotes.filter((q) => q.status === s).length}
                   </span>
                 )}
@@ -399,7 +402,7 @@ export default function QuoteListContent() {
 
         {/* List */}
         {loading ? (
-          <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-10 text-center text-sm text-slate-400">
+          <div className="rounded-3xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-10 text-center text-sm text-stone-400">
             載入報價單中…
           </div>
         ) : error ? (
@@ -407,7 +410,7 @@ export default function QuoteListContent() {
             {error}
           </div>
         ) : displayed.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-400">
+          <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50/70 px-4 py-8 text-center text-sm text-stone-400">
             {filterStatus === ALL ? '尚無報價單，點擊「新增報價單」開始建立。' : '沒有符合條件的報價單'}
           </div>
         ) : (
@@ -420,21 +423,21 @@ export default function QuoteListContent() {
               return (
                 <div
                   key={quote.id}
-                  className="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-gradient-to-b from-[#fdfcfb] to-[#f8f6f3] px-5 py-4 transition hover:border-brand-200 hover:bg-white hover:shadow-sm"
+                  className="card-soft card-soft-hover group flex flex-col gap-2 bg-white px-4 py-4 sm:px-5 active:scale-[0.995] transition-all"
                 >
                   {/* Main row */}
                   <div className="flex items-center justify-between gap-4">
                     {/* Left info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-bold text-slate-700 shrink-0">
+                        <span className="font-mono text-sm font-bold text-stone-700 shrink-0">
                           {quote.quoteNumber}
                         </span>
                       </div>
-                      <div className="font-medium text-slate-800 truncate group-hover:text-brand-700 transition-colors">
+                      <div className="font-medium text-stone-800 truncate group-hover:text-brand-700 transition-colors">
                         {quote.customerName}
                       </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-400">
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-stone-400">
                         {quote.createdAt  && <span>{formatDate(quote.createdAt)}</span>}
                         {quote.salesperson && <span>{quote.salesperson}</span>}
                         {quote.validUntil  && <span>有效至 {formatDate(quote.validUntil)}</span>}
@@ -443,7 +446,7 @@ export default function QuoteListContent() {
 
                     {/* Right: amount + status + actions */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                      <span className="text-sm font-semibold text-stone-700 tabular-nums">
                         {formatMoney(quote.total)}
                       </span>
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.cls}`}>
@@ -456,7 +459,7 @@ export default function QuoteListContent() {
                           href={`/share/${quote.id}`}
                           target="_blank" rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
+                          className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-2 active:scale-95 transition-all whitespace-nowrap"
                         >
                           預覽
                         </Link>
@@ -466,14 +469,14 @@ export default function QuoteListContent() {
                               href={`/api/quotes/${quote.id}/pdf`}
                               target="_blank" rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
+                              className="rounded-lg bg-brand-50 hover:bg-brand-50 text-green-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
                             >
                               PDF
                             </a>
                             <Link
                               href={`/orders/new?fromQuote=${quote.id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
+                              className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-2 active:scale-95 transition-all whitespace-nowrap"
                             >
                               轉訂單
                             </Link>
@@ -494,7 +497,7 @@ export default function QuoteListContent() {
                         </button>
                       </div>
 
-                      <span className="text-slate-300 group-hover:text-brand-400 transition-colors text-sm">›</span>
+                      <span className="text-stone-300 group-hover:text-brand-400 transition-colors text-sm">›</span>
                     </div>
                   </div>
 
@@ -507,12 +510,12 @@ export default function QuoteListContent() {
 
                   {/* Approval action buttons */}
                   {actions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-                      <span className="text-xs text-slate-400 self-center mr-1">簽核：</span>
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-900/[0.06]">
+                      <span className="text-xs text-stone-400 self-center mr-1">簽核：</span>
                       {actions.includes('approve') && (
                         <button
                           onClick={(e) => openApproval(e, quote, 'approve')}
-                          className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 transition"
+                          className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 transition"
                         >
                           ✓ 核准
                         </button>
@@ -536,7 +539,7 @@ export default function QuoteListContent() {
                       {actions.includes('resubmit') && (
                         <button
                           onClick={(e) => openApproval(e, quote, 'resubmit')}
-                          className="rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 transition border border-blue-200"
+                          className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-1.5 active:scale-95 transition-all border border-brand-200"
                         >
                           🔄 重新送審
                         </button>

@@ -9,7 +9,7 @@ import type { OverviewAnalysis } from '@/app/api/ai/analyze/route'
 // Legacy 拜訪性質 badge colors (for old records)
 const LEGACY_STATUS_COLORS: Record<string, string> = {
   初次拜訪: 'bg-blue-100 text-blue-700',
-  例行拜訪: 'bg-green-100 text-green-700',
+  例行拜訪: 'bg-brand-50 text-green-700',
   重點追蹤: 'bg-orange-100 text-orange-700',
   展覽: 'bg-purple-100 text-purple-700',
   電話拜訪: 'bg-slate-100 text-slate-600',
@@ -21,7 +21,7 @@ const LEGACY_STATUS_COLORS: Record<string, string> = {
 const INTERACTION_TYPE_COLORS: Record<string, string> = {
   拜訪: 'bg-blue-100 text-blue-700',
   電話: 'bg-slate-100 text-slate-600',
-  LINE: 'bg-green-100 text-green-700',
+  LINE: 'bg-brand-50 text-green-700',
   展會: 'bg-purple-100 text-purple-700',
   課程: 'bg-cyan-100 text-cyan-700',
   維修: 'bg-orange-100 text-orange-700',
@@ -31,11 +31,11 @@ const INTERACTION_TYPE_COLORS: Record<string, string> = {
 
 // 客戶反應 badge colors
 const REACTION_COLORS: Record<string, string> = {
-  有興趣: 'bg-emerald-100 text-emerald-700',
+  有興趣: 'bg-brand-50 text-emerald-700',
   觀望: 'bg-yellow-100 text-yellow-700',
   拒絕: 'bg-red-100 text-red-600',
   需內部討論: 'bg-indigo-100 text-indigo-700',
-  已購買: 'bg-teal-100 text-teal-700',
+  已購買: 'bg-brand-50 text-teal-700',
 }
 
 type CustomerSuggestion = {
@@ -266,7 +266,15 @@ function AIReactionButton({
   )
 }
 
-export default function VisitsContent() {
+export default function VisitsContent({
+  initialOpenCreate = false,
+  initialCustomerName = '',
+  canManageAll = false,
+}: {
+  initialOpenCreate?: boolean
+  initialCustomerName?: string
+  canManageAll?: boolean
+} = {}) {
   const router = useRouter()
   const [visits, setVisits] = useState<Visit[]>([])
   const [hasMore, setHasMore] = useState(false)
@@ -277,7 +285,7 @@ export default function VisitsContent() {
   const [filterSalesperson, setFilterSalesperson] = useState('')  // server-side filter
   const [filterCity, setFilterCity] = useState('')               // client-side filter
   const [salespersonFilterOptions, setSalespersonFilterOptions] = useState<string[]>([])
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState(initialOpenCreate)
   const [editingVisit, setEditingVisit] = useState<Visit | null>(null)
   const [viewingVisit, setViewingVisit] = useState<Visit | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -853,20 +861,42 @@ export default function VisitsContent() {
   }
 
   return (
-    <div>
+    <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <section className="card-soft relative overflow-hidden px-5 py-5 sm:px-7 sm:py-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-100/50 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-stone-800">客情拜訪紀錄</h2>
-          <p className="text-xs text-stone-400 mt-0.5">記錄每日客戶拜訪情況</p>
+          <p className="eyebrow mb-1.5">今天的第一步</p>
+          <h2 className="text-2xl font-bold tracking-tight text-stone-800">和客戶互動後，就在這裡留下紀錄</h2>
+          <p className="mt-2 text-sm text-stone-500">記下客戶反應與下一步，之後追蹤不遺漏。</p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+        <button
+          onClick={() => setShowModal(true)}
+          className="w-full shrink-0 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 sm:w-auto"
+        >
+          ＋ 新增客情紀錄
+        </button>
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-stone-800">客情紀錄</h3>
+          <p className="mt-0.5 text-xs text-stone-400">搜尋、查看或更新過去紀錄</p>
+        </div>
+        <details className="group self-stretch sm:self-auto">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-500 shadow-sm ring-1 ring-stone-900/[0.06] transition-all hover:text-brand-600 active:scale-95">
+            整理與分析
+            <span className="text-stone-300 transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+          <div className="mt-2 flex flex-wrap justify-end gap-2 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-stone-900/[0.06] sm:max-w-xl">
           {/* 一鍵批次 AI 分析 */}
           <button
             onClick={handleBatchAnalyze}
             disabled={batchAnalyzing || batchPendingCount === 0}
             title={batchPendingCount === 0 ? '所有已載入紀錄均已填寫互動類型與客戶反應' : `分析 ${batchPendingCount} 筆缺少互動類型或客戶反應的紀錄`}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex min-h-11 items-center gap-1.5 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {batchAnalyzing && batchProgress ? (
               <><span className="animate-pulse text-base leading-none">✨</span> 分析中 {batchProgress.done}/{batchProgress.total}</>
@@ -877,81 +907,82 @@ export default function VisitsContent() {
           <button
             onClick={openAiModal}
             disabled={visits.length === 0}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex min-h-11 items-center gap-1.5 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="text-base leading-none">✦</span>
             AI 商機分析
           </button>
-          <button
-            onClick={() => { setAutoLinkOpen(true); setAutoLinkDone(false); setAutoLinkStats(null) }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition"
-            title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
-          >
-            <span className="text-base leading-none">🔗</span> 補齊關聯
-          </button>
-          <button
-            onClick={() => { setDetectOpen(true); setDetectDone(false); setDetectStats(null) }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition"
-            title="掃描拜訪內文，自動偵測並填入競品欄位"
-          >
-            <span className="text-base leading-none">🔍</span> 偵測競品
-          </button>
-          <button
-            onClick={() => { setDedupOpen(true); setDedupDone(false); setDedupStats(null); runDedup(true) }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition"
-            title="找出同客戶+同日期+同業務的重複紀錄，保留最完整一筆、刪除其餘"
-          >
-            <span className="text-base leading-none">🧹</span> 刪除重複
-          </button>
-          <button
-            onClick={() => setShowModal(true)}
-            className="button-primary px-4 py-2 rounded-full text-sm font-medium"
-          >
-            + 新增拜訪
-          </button>
+          {canManageAll && (
+            <>
+              <button
+                onClick={() => { setAutoLinkOpen(true); setAutoLinkDone(false); setAutoLinkStats(null) }}
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+                title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
+              >
+                <span className="text-base leading-none">🔗</span> 補齊關聯
+              </button>
+              <button
+                onClick={() => { setDetectOpen(true); setDetectDone(false); setDetectStats(null) }}
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+                title="掃描拜訪內文，自動偵測並填入競品欄位"
+              >
+                <span className="text-base leading-none">🔍</span> 偵測競品
+              </button>
+              <button
+                onClick={() => { setDedupOpen(true); setDedupDone(false); setDedupStats(null); runDedup(true) }}
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-stone-100 active:scale-95"
+                title="找出同客戶+同日期+同業務的重複紀錄，保留最完整一筆、刪除其餘"
+              >
+                <span className="text-base leading-none">🧹</span> 刪除重複
+              </button>
+            </>
+          )}
+          </div>
+        </details>
         </div>
-      </div>
 
       {/* Search + Filter bar */}
-      <div className="space-y-2 mb-4">
+      <div className="card-soft space-y-3 p-3 sm:p-4">
         {/* Search row */}
         <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜尋客戶名稱、拜訪性質、內容…"
-            className="input pl-10 pr-10"
+            placeholder="搜尋客戶名稱、互動方式或內容…"
+            className="input-soft min-h-12 w-full pl-12 pr-11 text-base sm:text-sm"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setSearch('')} aria-label="清除搜尋" className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-600 active:scale-95">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           )}
         </div>
         {/* Filter selects row */}
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={filterSalesperson}
-            onChange={(e) => handleSalespersonFilter(e.target.value)}
-            className="input text-sm py-2 flex-1 min-w-[130px]"
-          >
-            <option value="">全部業務</option>
-            {salespersonFilterOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className={`grid grid-cols-1 gap-2 ${canManageAll ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto]'}`}>
+          {canManageAll && (
+            <select
+              value={filterSalesperson}
+              onChange={(e) => handleSalespersonFilter(e.target.value)}
+              className="select-soft min-h-11 w-full text-sm"
+            >
+              <option value="">全部業務</option>
+              {salespersonFilterOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
           <select
             value={filterCity}
             onChange={(e) => setFilterCity(e.target.value)}
-            className="input text-sm py-2 flex-1 min-w-[130px]"
+            className="select-soft min-h-11 w-full text-sm"
           >
             <option value="">全部縣市</option>
             {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           {isFiltered && (
-            <button onClick={clearAll} className="button-secondary px-4 py-2 text-sm whitespace-nowrap">
+            <button onClick={clearAll} className="min-h-11 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 active:scale-95">
               清除篩選
             </button>
           )}
@@ -960,7 +991,7 @@ export default function VisitsContent() {
 
       {/* 多選操作列 */}
       {selectedIds.size > 0 && (
-        <div className="sticky top-0 z-20 mb-2 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-brand-50 border border-brand-200">
+        <div className="sticky top-2 z-20 flex flex-col gap-3 rounded-2xl bg-brand-50 px-4 py-3 shadow-md ring-1 ring-brand-200/70 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-brand-700">已選 {selectedIds.size} 筆</span>
             <button onClick={toggleSelectAll} className="text-xs text-stone-500 hover:text-stone-700 transition-colors">
@@ -987,48 +1018,52 @@ export default function VisitsContent() {
       )}
 
       {/* List */}
-      <div className="panel overflow-hidden">
+      <div className="card-soft overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">載入中…</div>
+          <div className="p-12 text-center text-sm text-stone-400">正在整理客情紀錄…</div>
         ) : visits.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">
-            尚無拜訪紀錄，點擊「新增拜訪」開始記錄。
+          <div className="px-6 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-xl text-brand-600">＋</div>
+            <p className="text-sm font-medium text-stone-700">還沒有客情紀錄</p>
+            <p className="mt-1 text-sm text-stone-400">與客戶互動後，新增第一筆紀錄。</p>
+            <button onClick={() => setShowModal(true)} className="mt-5 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">新增客情紀錄</button>
           </div>
         ) : filteredVisits.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">
-            找不到符合條件的拜訪紀錄
+          <div className="px-6 py-14 text-center">
+            <p className="text-sm font-medium text-stone-700">找不到符合條件的紀錄</p>
+            <button onClick={clearAll} className="mt-3 min-h-11 rounded-full px-5 text-sm font-medium text-brand-600 transition-all hover:bg-brand-50 active:scale-95">清除搜尋與篩選</button>
           </div>
         ) : (
           <>
             {/* Filter result summary */}
             {isFiltered && (
-              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-xs text-gray-500">
-                  篩選結果：<span className="font-medium text-gray-900">{filteredVisits.length}</span> 筆
-                  <span className="text-gray-400">（共 {visits.length} 筆）</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-stone-900/[0.06] bg-stone-50/70 px-4 py-3">
+                <span className="text-xs text-stone-500">
+                  找到 <span className="font-semibold text-stone-800">{filteredVisits.length}</span> 筆
+                  <span className="text-stone-400">（共 {visits.length} 筆）</span>
                 </span>
                 {filterSalesperson && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
+                  <span className="chip inline-flex items-center gap-1 text-xs">
                     業務：{filterSalesperson}
-                    <button onClick={() => setFilterSalesperson('')} className="hover:text-gray-900">✕</button>
+                    <button onClick={() => setFilterSalesperson('')} className="hover:text-stone-900">✕</button>
                   </span>
                 )}
                 {filterCity && (
-                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full">
+                  <span className="chip inline-flex items-center gap-1 text-xs">
                     縣市：{filterCity}
-                    <button onClick={() => setFilterCity('')} className="hover:text-gray-900">✕</button>
+                    <button onClick={() => setFilterCity('')} className="hover:text-stone-900">✕</button>
                   </span>
                 )}
               </div>
             )}
 
             {/* ── Mobile / iPad card list (< lg) ── */}
-            <div className="divide-y divide-gray-50 lg:hidden">
+            <div className="space-y-2 bg-stone-50/40 p-2 lg:hidden">
               {filteredVisits.map((v) => (
                 <div
                   key={v.id}
                   onClick={() => setViewingVisit(v)}
-                  className={`px-4 py-4 transition-colors cursor-pointer ${selectedIds.has(v.id) ? 'bg-brand-50/60' : 'hover:bg-gray-50'}`}
+                  className={`cursor-pointer rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all active:scale-[0.99] ${selectedIds.has(v.id) ? 'bg-brand-50/70 ring-brand-200' : 'hover:shadow-md'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     {/* Checkbox */}
@@ -1043,7 +1078,7 @@ export default function VisitsContent() {
                     <div className="flex-1 min-w-0">
                       {/* Name + follow-up dot */}
                       <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="font-medium text-gray-900 truncate">{v.customerName}</span>
+                        <span className="truncate font-semibold text-stone-800">{v.customerName}</span>
                         {v.needsFollowUp && (
                           <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-orange-400" title="需要追蹤" />
                         )}
@@ -1052,16 +1087,16 @@ export default function VisitsContent() {
                       <div className="flex flex-wrap items-center gap-1.5 mb-2">
                         <InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} />
                         <ReactionBadge reaction={v.customerReaction} />
-                        {v.city && <span className="text-xs text-gray-400">{v.city}</span>}
+                        {v.city && <span className="text-xs text-stone-400">{v.city}</span>}
                       </div>
                       {/* Content preview */}
                       {v.content && (
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-2">{v.content}</p>
+                        <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-stone-600">{v.content}</p>
                       )}
                       {/* Meta: date + salesperson */}
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-400">{formatDate(v.date)}</span>
-                        {v.salesperson && <span className="text-xs text-gray-400">{v.salesperson}</span>}
+                        <span className="text-xs text-stone-400">{formatDate(v.date)}</span>
+                        {v.salesperson && <span className="text-xs text-stone-400">{v.salesperson}</span>}
                       </div>
                     </div>
                     {/* Right: actions */}
@@ -1077,9 +1112,9 @@ export default function VisitsContent() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); setEditingVisit(v); setDeleteConfirmId(null) }} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">編輯</button>
-                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(v.id) }} className="text-xs text-gray-300 hover:text-red-500 transition-colors">刪除</button>
+                        <div className="flex gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingVisit(v); setDeleteConfirmId(null) }} className="min-h-11 rounded-full px-3 text-xs font-medium text-brand-600 transition-all hover:bg-brand-50 active:scale-95">編輯</button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(v.id) }} className="min-h-11 rounded-full px-3 text-xs text-stone-300 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95">刪除</button>
                         </div>
                       )}
                     </div>
@@ -1091,7 +1126,7 @@ export default function VisitsContent() {
             {/* ── Desktop table (lg+) ── */}
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-400 text-xs border-b border-gray-100">
+                <thead className="border-b border-stone-900/[0.06] bg-stone-50/80 text-xs text-stone-400">
                   <tr>
                     <th className="px-4 py-3 w-10">
                       <input
@@ -1112,9 +1147,9 @@ export default function VisitsContent() {
                     <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-stone-900/[0.05]">
                   {filteredVisits.map((v) => (
-                    <tr key={v.id} onClick={() => setViewingVisit(v)} className={`transition-colors cursor-pointer group ${selectedIds.has(v.id) ? 'bg-brand-50/60' : 'hover:bg-gray-50'}`}>
+                    <tr key={v.id} onClick={() => setViewingVisit(v)} className={`group cursor-pointer transition-colors ${selectedIds.has(v.id) ? 'bg-brand-50/60' : 'hover:bg-brand-50/40'}`}>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -1123,16 +1158,16 @@ export default function VisitsContent() {
                           className="w-4 h-4 accent-brand-500 cursor-pointer align-middle"
                         />
                       </td>
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(v.date)}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="whitespace-nowrap px-4 py-4 text-stone-500">{formatDate(v.date)}</td>
+                      <td className="px-4 py-4 font-semibold text-stone-800">
                         {v.customerName}
                         {v.needsFollowUp && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-orange-400 align-middle" title="需要追蹤" />}
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{v.city || '—'}</td>
+                      <td className="px-4 py-4 text-stone-500">{v.city || '—'}</td>
                       <td className="px-4 py-3"><InteractionBadge interactionType={v.interactionType} fallbackStatus={v.status} /></td>
                       <td className="px-4 py-3"><ReactionBadge reaction={v.customerReaction} /></td>
-                      <td className="px-4 py-3 text-gray-500">{v.salesperson || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{v.content || '—'}</td>
+                      <td className="px-4 py-4 text-stone-500">{v.salesperson || '—'}</td>
+                      <td className="max-w-xs truncate px-4 py-4 text-stone-500">{v.content || '—'}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {deleteConfirmId === v.id ? (
                           <div className="flex items-center gap-2 justify-end">
@@ -1141,9 +1176,9 @@ export default function VisitsContent() {
                             <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }} className="text-xs text-gray-400 hover:text-gray-700 transition-colors">編輯</button>
-                            <button onClick={() => setDeleteConfirmId(v.id)} className="text-xs text-gray-300 hover:text-red-500 transition-colors">刪除</button>
+                          <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
+                            <button onClick={() => { setEditingVisit(v); setDeleteConfirmId(null) }} className="rounded-full px-3 py-2 text-xs font-medium text-brand-600 transition-all hover:bg-brand-50 active:scale-95">編輯</button>
+                            <button onClick={() => setDeleteConfirmId(v.id)} className="rounded-full px-3 py-2 text-xs text-stone-300 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95">刪除</button>
                           </div>
                         )}
                       </td>
@@ -1209,6 +1244,7 @@ export default function VisitsContent() {
       {/* New Visit Modal */}
       {showModal && (
         <VisitModal
+          prefillCustomer={initialCustomerName ? { name: initialCustomerName } : undefined}
           onClose={() => setShowModal(false)}
           onSaved={() => {
             setShowModal(false)
@@ -1263,12 +1299,13 @@ export default function VisitsContent() {
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
             >
-              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+              <div className="max-h-[94vh] w-full max-w-md space-y-5 overflow-y-auto rounded-t-3xl bg-[#fdfdfb] p-5 shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-3xl sm:p-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">🔗 批次補齊客戶關聯</h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="eyebrow mb-1">資料整理</p>
+                  <h3 className="text-lg font-semibold text-stone-800">🔗 批次補齊客戶關聯</h3>
+                  <p className="mt-1 text-sm text-stone-500">
                     自動比對客情紀錄的客戶簡稱與客戶資料庫，若唯一符合則建立關聯並更新為完整名稱。
                   </p>
                 </div>
@@ -1289,7 +1326,7 @@ export default function VisitsContent() {
                 {(autoLinkRunning || autoLinkDone) && autoLinkStats && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-center">
-                      <div className="bg-green-50 border border-green-200 rounded-xl py-3">
+                      <div className="bg-brand-50 border border-brand-200 rounded-xl py-3">
                         <div className="text-2xl font-bold text-green-700">{autoLinkStats.linked}</div>
                         <div className="text-xs text-green-600 mt-0.5">成功關聯</div>
                       </div>
@@ -1327,7 +1364,7 @@ export default function VisitsContent() {
                   {!autoLinkRunning && !autoLinkDone && (
                     <button
                       onClick={handleAutoLink}
-                      className="button-primary flex-1 py-2.5 text-sm rounded-xl font-medium"
+                      className="min-h-12 flex-1 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
                     >
                       開始補齊關聯
                     </button>
@@ -1343,7 +1380,7 @@ export default function VisitsContent() {
                   <button
                     onClick={() => { if (!autoLinkRunning) setAutoLinkOpen(false) }}
                     disabled={autoLinkRunning}
-                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                    className="min-h-12 flex-1 rounded-full px-5 py-2.5 text-sm font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-stone-100 active:scale-95 disabled:opacity-40"
                   >
                     {autoLinkDone ? '關閉' : '取消'}
                   </button>
@@ -1363,12 +1400,13 @@ export default function VisitsContent() {
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
             >
-              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+              <div className="max-h-[94vh] w-full max-w-md space-y-5 overflow-y-auto rounded-t-3xl bg-[#fdfdfb] p-5 shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-3xl sm:p-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">🧹 刪除重複項目</h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="eyebrow mb-1">資料清理</p>
+                  <h3 className="text-lg font-semibold text-stone-800">🧹 刪除重複項目</h3>
+                  <p className="mt-1 text-sm text-stone-500">
                     以「客戶＋日期＋業務」為同一次拜訪，同組保留內容最完整的一筆，刪除其餘重複。
                   </p>
                 </div>
@@ -1449,12 +1487,12 @@ export default function VisitsContent() {
               onClick={() => { if (!detectRunning) setDetectOpen(false) }}
             />
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+              className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4 sm:py-8"
               initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
             >
-              <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+              <div className="max-h-[94vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-3xl">
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-emerald-100/60 bg-emerald-50/40">
+                <div className="px-5 py-4 border-b border-brand-100/60 bg-brand-50/40">
                   <h3 className="font-bold text-gray-900">🔍 自動偵測競品</h3>
                   <p className="text-xs text-gray-500 mt-0.5">掃描拜訪內文，比對 Notion 競品選項並自動填入</p>
                 </div>
@@ -1491,7 +1529,7 @@ export default function VisitsContent() {
                           <p className="text-xs text-gray-400 mb-1.5">比對的競品選項（共 {detectStats.competitorOptions.length} 項）</p>
                           <div className="flex flex-wrap gap-1">
                             {detectStats.competitorOptions.map((opt) => (
-                              <span key={opt} className="text-[11px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full">{opt}</span>
+                              <span key={opt} className="text-[11px] px-2 py-0.5 bg-brand-50 text-emerald-700 border border-brand-100 rounded-full">{opt}</span>
                             ))}
                           </div>
                         </div>
@@ -1527,7 +1565,7 @@ export default function VisitsContent() {
                   {!detectRunning && !detectDone && (
                     <button
                       onClick={handleDetectCompetitors}
-                      className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-brand-600 text-white hover:bg-brand-700 transition"
                     >
                       開始偵測
                     </button>
@@ -1598,7 +1636,7 @@ function ViewVisitModal({
 
           {/* Scroll container */}
           <motion.div
-            className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto sm:items-start sm:px-4 sm:py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1611,9 +1649,9 @@ function ViewVisitModal({
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              <div className="panel overflow-hidden">
+              <div className="max-h-[94vh] overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-none sm:rounded-3xl">
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-brand-100/60 flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-4 border-b border-stone-900/[0.06] px-5 py-4 sm:px-6 sm:py-5">
                   <div className="min-w-0">
                     <p className="eyebrow mb-1">客情管理</p>
                     <h3 className="text-lg font-bold text-stone-800 truncate">{visit.customerName}</h3>
@@ -1633,14 +1671,14 @@ function ViewVisitModal({
                   </div>
                   <button
                     onClick={handleClose}
-                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg leading-none text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-600 active:scale-95"
                   >
                     ✕
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="px-6 py-5 space-y-4">
+                <div className="max-h-[68vh] space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
                   {/* Info grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {([
@@ -1688,7 +1726,7 @@ function ViewVisitModal({
                       <div className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">有興趣的產品</div>
                       <div className="flex flex-wrap gap-1.5">
                         {visit.interestedProducts.map((p) => (
-                          <span key={p.id} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/50 rounded-full px-2.5 py-0.5 font-medium">
+                          <span key={p.id} className="text-xs bg-brand-50 text-emerald-700 border border-brand-200/50 rounded-full px-2.5 py-0.5 font-medium">
                             {p.name}
                           </span>
                         ))}
@@ -1726,22 +1764,22 @@ function ViewVisitModal({
                 </div>
 
                 {/* Footer actions */}
-                <div className="px-6 py-4 border-t border-brand-100/60 flex gap-2">
+                <div className="flex gap-2 border-t border-stone-900/[0.06] bg-white/80 px-5 py-4 sm:px-6">
                   <button
                     onClick={() => onEdit(visit)}
-                    className="button-primary flex-1 py-2.5 rounded-xl text-sm font-medium"
+                    className="min-h-11 flex-1 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"
                   >
                     編輯紀錄
                   </button>
                   <button
                     onClick={handleClose}
-                    className="button-secondary px-5 py-2.5 rounded-xl text-sm"
+                    className="min-h-11 rounded-full px-5 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 active:scale-95"
                   >
                     關閉
                   </button>
                   <button
                     onClick={() => onDelete(visit.id)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                    className="min-h-11 rounded-full px-4 py-2.5 text-sm font-medium text-stone-400 transition-all hover:bg-red-50 hover:text-red-500 active:scale-95"
                   >
                     刪除
                   </button>
@@ -1764,7 +1802,7 @@ export function VisitModal({
   onSaved,
 }: {
   initialData?: Visit
-  prefillCustomer?: { id: string; name: string; city: string; district: string; address: string }
+  prefillCustomer?: { id?: string; name: string; city?: string; district?: string; address?: string }
   onClose: () => void
   onSaved: () => void
 }) {
@@ -1992,7 +2030,7 @@ export function VisitModal({
     }
   }
 
-  const inputCls = 'w-full border border-brand-200/60 bg-cream-50/50 rounded-xl px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition'
+  const inputCls = 'input-soft min-h-11 w-full text-base sm:text-sm'
 
   return (
     <AnimatePresence>
@@ -2010,7 +2048,7 @@ export function VisitModal({
 
           {/* Scroll container */}
           <motion.div
-            className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto sm:items-start sm:px-4 sm:py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -2024,25 +2062,25 @@ export function VisitModal({
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              <div className="panel overflow-hidden">
+              <div className="max-h-[96vh] overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:max-h-none sm:rounded-3xl">
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-brand-100/60 flex items-center justify-between">
+                <div className="flex items-center justify-between border-b border-stone-900/[0.06] px-5 py-4 sm:px-6 sm:py-5">
                   <div>
                     <p className="eyebrow mb-1">客情管理</p>
                     <h3 className="text-lg font-bold text-stone-800">
-                      {isEdit ? '編輯拜訪紀錄' : '新增拜訪紀錄'}
+                      {isEdit ? '編輯客情紀錄' : '新增客情紀錄'}
                     </h3>
                   </div>
                   <button
                     onClick={handleClose}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-lg leading-none text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-600 active:scale-95"
                   >
                     ✕
                   </button>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="px-6 py-5 max-h-[72vh] overflow-y-auto space-y-4">
+                <form onSubmit={handleSubmit} className="max-h-[78vh] space-y-5 overflow-y-auto px-5 py-5 sm:max-h-[72vh] sm:px-6">
                   {/* Customer search */}
                   <div className="relative">
                     <label className="block text-xs font-medium text-stone-500 mb-1.5">客戶名稱 *</label>
@@ -2202,7 +2240,7 @@ export function VisitModal({
                     {form.interestedProductIds.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {form.interestedProductIds.map((id) => (
-                          <span key={id} className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full px-2.5 py-0.5">
+                          <span key={id} className="inline-flex items-center gap-1 text-xs bg-brand-50 text-emerald-700 border border-brand-200/60 rounded-full px-2.5 py-0.5">
                             {selectedProductNames[id] ?? id}
                             <button type="button" onClick={() => removeProduct(id)} className="hover:text-emerald-900 leading-none">×</button>
                           </span>
@@ -2382,18 +2420,18 @@ export function VisitModal({
                     <p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>
                   )}
 
-                  <div className="flex gap-3 pt-2 border-t border-brand-100/40">
+                  <div className="sticky bottom-0 -mx-5 flex gap-3 border-t border-stone-900/[0.06] bg-[#fdfdfb]/95 px-5 pb-1 pt-4 backdrop-blur sm:-mx-6 sm:px-6">
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="button-primary flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50"
+                      className="min-h-12 flex-1 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
                     >
                       {submitting ? (isEdit ? '儲存中…' : '建立中…') : (isEdit ? '儲存變更' : '建立紀錄')}
                     </button>
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="button-secondary px-5 py-2.5 rounded-xl text-sm"
+                      className="min-h-12 rounded-full px-5 py-2.5 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 active:scale-95"
                     >
                       取消
                     </button>
@@ -2613,7 +2651,7 @@ function AiAnalysisModal({
 
         {/* Modal */}
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto sm:items-start sm:px-4 sm:py-8"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
@@ -2624,7 +2662,7 @@ function AiAnalysisModal({
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <div className="panel overflow-hidden border-violet-200/60">
+            <div className="max-h-[96vh] overflow-hidden rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-3xl">
               {/* Header */}
               <div className="px-6 py-5 border-b border-violet-100/60 bg-violet-50/40 flex items-start justify-between gap-4">
                 <div>
@@ -2741,7 +2779,7 @@ function AiAnalysisModal({
                         onClick={onSavePrompt}
                         className={`text-xs font-medium px-3 py-1 rounded-full border transition ${
                           promptSaved
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                            ? 'bg-brand-50 border-brand-200 text-emerald-600'
                             : 'bg-amber-100 border-amber-300 text-amber-700 hover:bg-amber-200'
                         }`}
                       >
@@ -2804,12 +2842,12 @@ function AiAnalysisModal({
                           <h4 className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-3">📦 產品需求趨勢</h4>
                           <div className="space-y-2">
                             {analysis.productDemand.map((p, i) => (
-                              <div key={i} className="bg-emerald-50/50 rounded-xl px-4 py-2.5 border border-emerald-100/60 flex justify-between items-start gap-3">
+                              <div key={i} className="bg-brand-50/50 rounded-xl px-4 py-2.5 border border-brand-100/60 flex justify-between items-start gap-3">
                                 <div>
                                   <p className="text-sm font-medium text-stone-800">{p.product}</p>
                                   <p className="text-xs text-stone-400 mt-0.5">{p.note}</p>
                                 </div>
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 rounded-full px-2 py-0.5 shrink-0">{p.count} 次</span>
+                                <span className="text-xs font-bold text-emerald-600 bg-brand-50 rounded-full px-2 py-0.5 shrink-0">{p.count} 次</span>
                               </div>
                             ))}
                           </div>

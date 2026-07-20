@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Fuse from 'fuse.js'
 import { listItem, staggerFast } from '@/lib/motion'
@@ -40,10 +40,10 @@ type FilterOptions = {
 
 const AVATAR_COLORS = [
   'bg-blue-100 text-blue-700',
-  'bg-green-100 text-green-700',
+  'bg-brand-50 text-green-700',
   'bg-purple-100 text-purple-700',
   'bg-orange-100 text-orange-700',
-  'bg-teal-100 text-teal-700',
+  'bg-brand-50 text-teal-700',
   'bg-rose-100 text-rose-700',
   'bg-indigo-100 text-indigo-700',
   'bg-amber-100 text-amber-700',
@@ -74,6 +74,8 @@ export function CustomersContent({
   initialOptions?: FilterOptions
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlQuery = searchParams.get('q')?.trim() ?? ''
   const inputRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fuseRef = useRef<Fuse<NameIndexEntry> | null>(null)
@@ -85,7 +87,7 @@ export function CustomersContent({
   )
 
   // Search state
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(urlQuery)
   const [typeFilter, setTypeFilter] = useState('')
   const [cityFilter, setCityFilter] = useState('')
   const [districtFilter, setDistrictFilter] = useState('')
@@ -101,13 +103,17 @@ export function CustomersContent({
     id: string; name: string; city: string; district: string; address: string
   } | null>(null)
 
+  useEffect(() => {
+    setQuery(urlQuery)
+  }, [urlQuery])
+
   // Load filter options + name index on mount
   useEffect(() => {
     if (!initialOptions) {
       fetch('/api/system-customers/options')
         .then((r) => r.json())
         .then((data) => { if (data && typeof data === 'object') setOptions(data) })
-        .catch(console.error)
+        .catch(() => {})
     }
     // Load name index for fuzzy search
     fetch('/api/system-customers/names')
@@ -122,7 +128,7 @@ export function CustomersContent({
           minMatchCharLength: 1,
         })
       })
-      .catch(console.error)
+      .catch(() => {})
   }, [initialOptions])
 
   // Trigger search when query or filters change (debounced)
@@ -162,7 +168,10 @@ export function CustomersContent({
             setFuzzyResults([])
           }
         })
-        .catch(console.error)
+        .catch(() => {
+          setResults([])
+          setFuzzyResults([])
+        })
         .finally(() => setSearching(false))
     }, 300)
 
@@ -182,12 +191,18 @@ export function CustomersContent({
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+
+      <div className="card-soft bg-white p-4 sm:p-5">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第一步</p>
+        <p className="mt-1 text-base font-bold text-stone-800">搜尋客戶，再查看資料或新增客情</p>
+        <p className="mt-1 text-sm text-stone-500">輸入名稱最快；需要縮小範圍時再使用下方篩選。</p>
+      </div>
 
       {/* ── Search bar ──────────────────────────────────────────────────────── */}
       <div className="relative">
         <svg
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-500 pointer-events-none"
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -197,7 +212,7 @@ export function CustomersContent({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="輸入客戶名稱、縣市、行政區或業務姓名…"
-          className="input pl-10 pr-10 py-3 text-[15px]"
+          className="input-soft w-full pl-12 pr-12 py-3.5 text-base shadow-sm"
           autoComplete="off"
           autoFocus
         />
@@ -209,9 +224,9 @@ export function CustomersContent({
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.1 }}
               onClick={() => { setQuery(''); inputRef.current?.focus() }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 text-stone-500 hover:bg-brand-50 hover:text-brand-600 active:scale-95 transition-all"
             >
-              <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg className="w-3 h-3 text-stone-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </motion.button>
@@ -262,7 +277,7 @@ export function CustomersContent({
         {hasActiveFilter && (
           <button
             onClick={clearAll}
-            className="text-sm text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-stone-400 hover:bg-brand-50 hover:text-brand-700 active:scale-95 transition-all"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -274,9 +289,10 @@ export function CustomersContent({
 
       {/* ── Results / Prompt ─────────────────────────────────────────────────── */}
       {!hasActiveFilter ? (
-        <div className="panel px-6 py-16 text-center">
+        <div className="card-soft px-6 py-14 text-center">
           <div className="text-3xl mb-3">🔍</div>
-          <p className="text-sm text-gray-400">輸入客戶名稱、縣市，或選擇篩選條件開始搜尋</p>
+          <p className="font-semibold text-stone-700">先輸入客戶名稱</p>
+          <p className="mt-1 text-sm text-stone-400">也可以用縣市、行政區或負責業務篩選</p>
         </div>
       ) : searching ? (
         <LoadingSkeleton />
@@ -284,7 +300,7 @@ export function CustomersContent({
         <EmptyState hasFilter={hasActiveFilter} />
       ) : (
         <>
-          <div className="text-xs text-gray-400 px-1">
+          <div className="text-xs text-stone-400 px-1">
             找到 {results.length} 筆
             {fuzzyResults.length > 0 && `，另有 ${fuzzyResults.length} 筆相似結果`}
           </div>
@@ -293,7 +309,7 @@ export function CustomersContent({
             variants={staggerFast}
             initial="hidden"
             animate="show"
-            className="panel divide-y divide-gray-50 overflow-hidden"
+            className="card-soft divide-y divide-stone-900/[0.06] overflow-hidden"
           >
             {results.map((c) => (
               <motion.div key={c.id} variants={listItem}>
@@ -310,9 +326,9 @@ export function CustomersContent({
             {/* Fuzzy-only results with separator */}
             {fuzzyResults.length > 0 && (
               <>
-                <div className="flex items-center gap-2 px-5 py-2 bg-gray-50">
-                  <span className="text-xs text-gray-400 font-medium">🔍 相似結果</span>
-                  <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex items-center gap-2 px-5 py-2 bg-stone-50">
+                  <span className="text-xs text-stone-400 font-medium">🔍 相似結果</span>
+                  <div className="flex-1 h-px bg-stone-200" />
                 </div>
                 {fuzzyResults.map((c) => (
                   <motion.div key={c.id} variants={listItem}>
@@ -358,7 +374,7 @@ function CustomerRow({
 
   return (
     <div
-      className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group"
+      className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5 hover:bg-brand-50/50 transition-colors group"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -374,10 +390,10 @@ function CustomerRow({
       {/* Main info — clickable */}
       <button
         onClick={onNavigate}
-        className="flex-1 min-w-0 text-left"
+        className="flex-1 min-w-0 text-left py-1 active:scale-[0.99] transition-all"
       >
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-gray-900 truncate">{customer.name}</span>
+          <span className="font-semibold text-stone-800 truncate">{customer.name}</span>
           {customer.type && (
             <span className="shrink-0 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
               {customer.type}
@@ -409,7 +425,7 @@ function CustomerRow({
               exit={{ opacity: 0, x: 6 }}
               transition={{ duration: 0.12 }}
               onClick={(e) => { e.stopPropagation(); onQuickVisit() }}
-              className="text-xs text-green-700 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg hover:bg-green-100 transition-colors font-medium"
+              className="text-xs text-white bg-brand-500 px-3 py-2 rounded-full hover:bg-brand-600 shadow-sm shadow-brand-500/20 active:scale-95 transition-all font-semibold"
             >
               + 客情
             </motion.button>
@@ -437,8 +453,8 @@ function TypePill({ label, active, onClick }: { label: string; active: boolean; 
       onClick={onClick}
       className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? 'bg-gray-900 text-white border-gray-900'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+          ? 'chip-active border-brand-500'
+          : 'chip border-stone-200 hover:border-brand-300 hover:text-brand-700'
       }`}
     >
       {label}
@@ -462,10 +478,10 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`appearance-none pl-3 pr-7 py-1.5 rounded-lg border text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+        className={`appearance-none pl-4 pr-9 py-2.5 rounded-full border text-sm transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
           value
-            ? 'border-gray-700 bg-gray-900 text-white font-medium'
-            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+            ? 'border-brand-500 bg-brand-500 text-white font-medium'
+            : 'border-stone-200 bg-white text-stone-600 hover:border-brand-300'
         }`}
       >
         <option value="">{placeholder}</option>
@@ -485,7 +501,7 @@ function FilterSelect({
 
 function LoadingSkeleton() {
   return (
-    <div className="panel divide-y divide-gray-50 overflow-hidden">
+    <div className="card-soft divide-y divide-stone-900/[0.06] overflow-hidden">
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-3.5">
           <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse shrink-0" />
@@ -501,7 +517,7 @@ function LoadingSkeleton() {
 
 function EmptyState({ hasFilter }: { hasFilter: boolean }) {
   return (
-    <div className="panel px-6 py-16 text-center">
+    <div className="card-soft px-6 py-16 text-center">
       <div className="text-3xl mb-3">{hasFilter ? '🔍' : '📋'}</div>
       <p className="text-sm text-gray-400">
         {hasFilter ? '找不到符合條件的客戶' : '尚無客戶資料'}

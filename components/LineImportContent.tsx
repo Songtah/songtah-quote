@@ -14,14 +14,20 @@ type Progress = {
   processed: number
 }
 
-export function LineImportContent() {
+export function LineImportContent({
+  currentUser = '',
+  canImportForOthers = false,
+}: {
+  currentUser?: string
+  canImportForOthers?: boolean
+}) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [stage, setStage] = useState<Stage>('idle')
   const [fileName, setFileName] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [progress, setProgress] = useState<Progress | null>(null)
   const [dateFrom, setDateFrom] = useState('')
-  const [salesperson, setSalesperson] = useState('')
+  const [salesperson, setSalesperson] = useState(canImportForOthers ? '' : currentUser)
   const abortRef = useRef(false)
 
   async function handleUpload(file: File) {
@@ -105,17 +111,17 @@ export function LineImportContent() {
   const pct = progress ? Math.round((progress.processed / progress.total) * 100) : 0
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-3xl space-y-6">
 
       {/* 說明 */}
       <div className="panel p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800">使用方式</h2>
-        <ol className="text-sm text-gray-600 space-y-1.5 list-decimal list-inside">
+        <div><p className="eyebrow mb-1 text-xs">匯入前確認</p><h2 className="font-semibold text-stone-800">三步完成 LINE 回報匯入</h2></div>
+        <ol className="list-inside list-decimal space-y-2 text-sm leading-6 text-stone-600">
           <li>在 LINE App 開啟業務群組 → 右上角 ☰ → 聊天設定 → 匯出聊天記錄</li>
           <li>選擇「以文字格式儲存」，取得 .txt 檔案</li>
           <li>上傳到下方，系統自動篩選每日回報並逐批匯入</li>
         </ol>
-        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-700 ring-1 ring-amber-200">
           ⚠️ 只匯入「行程回報」區段，早上行程規劃自動跳過。已存在的紀錄（同客戶＋同日期）不重複建立。
         </div>
 
@@ -142,14 +148,21 @@ export function LineImportContent() {
           <select
             value={salesperson}
             onChange={(e) => setSalesperson(e.target.value)}
+            disabled={!canImportForOthers}
             className="select-soft text-sm"
           >
             <option value="">全部業務</option>
+            {!canImportForOthers && currentUser && !KNOWN_SALESPERSON_LIST.includes(currentUser) && (
+              <option value={currentUser}>{currentUser}</option>
+            )}
             {KNOWN_SALESPERSON_LIST.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
+        {!canImportForOthers && (
+          <p className="text-xs text-stone-400">只會解析並匯入你的 LINE 日報，其他成員訊息會自動略過。</p>
+        )}
       </div>
 
       {/* 上傳區 */}
@@ -157,8 +170,8 @@ export function LineImportContent() {
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => { if (stage === 'idle' || stage === 'done' || stage === 'error') fileRef.current?.click() }}
-        className={`panel border-2 border-dashed transition-colors px-6 py-12 text-center ${
-          stage === 'importing' ? 'cursor-default border-gray-100' : 'cursor-pointer border-gray-200 hover:border-gray-400'
+        className={`card-soft min-h-56 border-2 border-dashed px-6 py-12 text-center transition-all ${
+          stage === 'importing' ? 'cursor-default border-stone-100' : 'cursor-pointer border-brand-200 hover:border-brand-400 hover:bg-brand-50/30 active:scale-[0.99]'
         }`}
       >
         <input ref={fileRef} type="file" accept=".txt" className="hidden" onChange={handleFileChange} />
@@ -166,8 +179,8 @@ export function LineImportContent() {
         {stage === 'idle' && (
           <>
             <div className="text-3xl mb-3">📄</div>
-            <p className="font-medium text-gray-700">點選或拖曳 .txt 檔案到此處</p>
-            <p className="text-sm text-gray-400 mt-1">LINE 匯出的聊天記錄 .txt 格式</p>
+            <p className="font-semibold text-stone-700">選擇 LINE 聊天記錄</p>
+            <p className="mt-1 text-sm text-stone-400">點一下選檔，電腦也可直接拖曳 .txt 到這裡</p>
           </>
         )}
 
@@ -186,7 +199,7 @@ export function LineImportContent() {
             {/* 進度條 */}
             <div className="w-full bg-gray-100 rounded-full h-2.5">
               <div
-                className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+                className="h-2.5 rounded-full bg-brand-500 transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -221,7 +234,7 @@ export function LineImportContent() {
       {/* 完成後結果摘要 */}
       {stage === 'done' && progress && (
         <div className="panel p-5 space-y-3">
-          <h2 className="font-semibold text-gray-800">匯入結果</h2>
+          <h2 className="font-semibold text-stone-800">匯入結果</h2>
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="成功匯入" value={progress.imported} highlight />
             <StatCard label="跳過（重複）" value={progress.skipped} />
@@ -235,9 +248,9 @@ export function LineImportContent() {
 
 function StatCard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl px-4 py-3 text-center ${highlight ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-      <div className={`text-2xl font-bold ${highlight ? 'text-green-700' : 'text-gray-800'}`}>{value}</div>
-      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+    <div className={`rounded-2xl px-4 py-3 text-center ring-1 ${highlight ? 'bg-brand-50 ring-green-200' : 'bg-stone-50 ring-stone-900/[0.06]'}`}>
+      <div className={`text-2xl font-bold ${highlight ? 'text-green-700' : 'text-stone-800'}`}>{value}</div>
+      <div className="mt-0.5 text-xs text-stone-500">{label}</div>
     </div>
   )
 }

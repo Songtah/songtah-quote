@@ -20,7 +20,7 @@ const calcTotal = (items: OrderItem[]): number =>
 const ITEM_TYPE_LABEL: Record<ItemType, string>  = { normal: '一般', gift: '贈品', sample: '樣品' }
 const ITEM_TYPE_COLOR: Record<ItemType, string>  = {
   normal: 'bg-gray-100 text-gray-600',
-  gift:   'bg-green-100 text-green-700',
+  gift:   'bg-brand-50 text-green-700',
   sample: 'bg-blue-100 text-blue-700',
 }
 
@@ -119,7 +119,7 @@ const STATUS_COLOR: Record<StatusType, string> = {
   草稿:   'bg-gray-100 text-gray-600',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
-  已到貨: 'bg-green-100 text-green-700',
+  已到貨: 'bg-brand-50 text-green-700',
   已取消: 'bg-red-100 text-red-600',
 }
 
@@ -311,7 +311,7 @@ function ProductPicker({
 
       {/* Modal */}
       <motion.div
-        className="relative w-full max-w-2xl bg-[#fcfbf8] rounded-t-3xl sm:rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] flex flex-col overflow-hidden"
+        className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-t-3xl sm:rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] flex flex-col overflow-hidden"
         style={{ maxHeight: '92vh' }}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -692,7 +692,7 @@ function CustomerNameInput({
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="輸入客戶 / 診所名稱（可直接填寫，或由 CRM 選取）"
           disabled={disabled}
-          className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500 pr-16"
+          className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50 disabled:text-stone-500 pr-16"
         />
         {searching && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">搜尋中…</span>
@@ -1348,9 +1348,14 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
   const totalAmount = calcTotal(items)
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-5 pb-24 sm:pb-0">
       {/* Header info */}
-      <div className="card-soft p-5 sm:p-6 space-y-4">
+      <div className="card-soft rounded-3xl p-5 sm:p-7 space-y-5">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第一步</p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">訂單基本資訊</h2>
+          <p className="mt-1 text-sm text-stone-500">確認日期、業務與適用促銷，再選擇客戶。</p>
+        </div>
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-start gap-3">
           {isEdit && (
             <div className="col-span-1">
@@ -1364,7 +1369,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-[8.5rem] focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-[8.5rem]"
             />
           </div>
           <div className="col-span-1">
@@ -1373,7 +1378,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               <select
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
-                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
+                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-32"
               >
                 <option value="">請選擇</option>
                 {salespersonOptions.map((s) => (
@@ -1386,7 +1391,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                 value={salesperson}
                 onChange={(e) => setSalesperson(e.target.value)}
                 placeholder="輸入姓名"
-                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-32"
+                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-32"
               />
             )}
           </div>
@@ -1396,7 +1401,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 w-full sm:w-auto"
+                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-auto"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -1411,7 +1416,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="訂單備註（選填）"
-              className="w-full border rounded px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="input-soft w-full px-4 py-2.5 text-sm"
             />
           </div>
 
@@ -1433,7 +1438,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                 })
               }}
               disabled={!canEdit}
-              className="select-soft px-3 py-2 sm:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 w-full sm:max-w-[280px]"
+              className="select-soft px-3 py-2 sm:py-2 text-sm disabled:bg-stone-50 w-full sm:max-w-[280px]"
             >
               <option value="">— 無關聯活動 —</option>
               {activePromos.map((p) => (
@@ -1449,8 +1454,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
       </div>
 
       {/* 客戶資訊 */}
-      <div className="bg-white border rounded-lg p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800 text-sm">客戶資訊</h2>
+      <div className="card-soft rounded-3xl p-5 sm:p-7 space-y-4">
+        <div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第二步</p><h2 className="mt-1 text-lg font-bold text-stone-800">客戶資訊</h2></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* 客戶名稱：單一欄位，打字即搜尋 CRM */}
           <div className="sm:col-span-2">
@@ -1465,7 +1470,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
               placeholder="聯絡人姓名（選填）"
               disabled={!canEdit}
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
             />
           </div>
           <div>
@@ -1476,7 +1481,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
               placeholder="電話號碼（選填）"
               disabled={!canEdit}
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
             />
           </div>
           <div>
@@ -1487,7 +1492,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               onChange={(e) => setCustomer((c) => ({ ...c, taxId: e.target.value }))}
               placeholder="統一編號（選填）"
               disabled={!canEdit}
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
             />
           </div>
           <div>
@@ -1500,7 +1505,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               onChange={(e) => setCustomer((c) => ({ ...c, companyTitle: e.target.value }))}
               placeholder="如：XX 牙醫診所"
               disabled={!canEdit}
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
             />
           </div>
           <div>
@@ -1511,17 +1516,17 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
               placeholder="送貨地址（選填）"
               disabled={!canEdit}
-              className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50"
+              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
             />
           </div>
         </div>
       </div>
 
       {/* Items table */}
-      <div className="card-soft overflow-hidden">
+      <div className="card-soft rounded-3xl overflow-hidden">
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-900/[0.06] gap-2">
           <h2 className="font-bold text-stone-800 min-w-0 truncate tracking-wide">
-            訂貨品項
+            <span className="mr-2 text-[11px] font-bold uppercase tracking-widest text-stone-400">第三步</span>訂貨品項
             {items.length > 0 && (
               <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-gray-400 whitespace-nowrap">
                 {items.length} 種 · 共 {totalQty} 件
@@ -1550,7 +1555,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               key={seriesId}
               className={`mx-4 sm:mx-5 my-3 rounded-xl border px-4 py-3 text-sm ${
                 reached
-                  ? 'bg-teal-50 border-teal-200 text-teal-800'
+                  ? 'bg-brand-50 border-brand-200 text-teal-800'
                   : 'bg-gray-50 border-gray-200 text-gray-600'
               }`}
             >
@@ -1567,7 +1572,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               {/* progress bar */}
               <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${reached ? 'bg-teal-400' : 'bg-gray-400'}`}
+                  className={`h-full rounded-full transition-all ${reached ? 'bg-brand-400' : 'bg-gray-400'}`}
                   style={{ width: `${totalQty === 0 ? 0 : Math.min(100, (totalQty / n) * 100)}%` }}
                 />
               </div>
@@ -1579,7 +1584,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                   <button
                     type="button"
                     onClick={() => setGiftPicker({ seriesId, seriesName })}
-                    className="text-xs px-3 py-1.5 rounded-full bg-teal-600 text-white font-medium hover:bg-teal-700 active:scale-95 transition-all"
+                    className="text-xs px-3 py-1.5 rounded-full bg-brand-600 text-white font-medium hover:bg-brand-700 active:scale-95 transition-all"
                   >
                     🎁 選擇贈品
                   </button>
@@ -1607,7 +1612,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                 const lineAmt = qty * price
                 const hint    = promoHints[item.id]
                 return (
-                  <div key={item.id} className={`p-4 space-y-3 ${isGift ? 'bg-green-50/40' : ''}`}>
+                  <div key={item.id} className={`p-4 space-y-3 ${isGift ? 'bg-brand-50/40' : ''}`}>
 
                     {/* 品名 row */}
                     <div className="flex items-start justify-between gap-2">
@@ -1650,7 +1655,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                             })
                           }}
                           disabled={!canEdit}
-                          className={`text-xs font-medium rounded-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-300 disabled:opacity-80 ${ITEM_TYPE_COLOR[type]}`}
+                          className={`text-xs font-medium rounded-full px-2 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-80 ${ITEM_TYPE_COLOR[type]}`}
                         >
                           <option value="normal">一般</option>
                           <option value="gift">贈品</option>
@@ -1677,7 +1682,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, v)
                                 else updateItem(item.id, { quantity: v })
                               }}
-                              className="w-12 text-center border rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              className="input-soft w-12 rounded-xl px-1 py-1 text-center text-sm"
                             />
                             <button
                               onClick={() => {
@@ -1709,7 +1714,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                               updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
                             }}
                             placeholder="—"
-                            className="w-full border-b border-dashed border-gray-300 text-sm py-0.5 focus:outline-none focus:border-blue-400 bg-transparent"
+                            className="w-full border-b border-dashed border-stone-300 bg-transparent py-0.5 text-sm focus:outline-none focus:border-brand-500"
                           />
                         ) : (
                           <span className="text-sm text-gray-700">{price > 0 ? price.toLocaleString() : '—'}</span>
@@ -1736,7 +1741,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                         value={item.note ?? ''}
                         onChange={(e) => updateItem(item.id, { note: e.target.value })}
                         placeholder="品項備註（選填）"
-                        className="w-full border-b border-dashed border-gray-200 text-sm py-1 focus:outline-none focus:border-blue-400 bg-transparent text-gray-600 placeholder:text-gray-300"
+                        className="w-full border-b border-dashed border-stone-200 bg-transparent py-1 text-sm text-stone-600 placeholder:text-stone-300 focus:outline-none focus:border-brand-500"
                       />
                     ) : item.note ? (
                       <p className="text-xs text-gray-400">{item.note}</p>
@@ -1779,7 +1784,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                     const price   = isGift ? 0 : (item.unitPrice || 0)
                     const lineAmt = qty * price
                     return (
-                      <tr key={item.id} className={isGift ? 'bg-green-50/40 hover:bg-green-50' : 'hover:bg-gray-50'}>
+                      <tr key={item.id} className={isGift ? 'bg-brand-50/40 hover:bg-brand-50' : 'hover:bg-gray-50'}>
                         <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
                         <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
                         <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
@@ -1803,7 +1808,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                               })
                             }}
                             disabled={!canEdit}
-                            className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300 ${ITEM_TYPE_COLOR[type]}`}
+                            className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${ITEM_TYPE_COLOR[type]}`}
                           >
                             <option value="normal">一般</option>
                             <option value="gift">贈品</option>
@@ -1828,7 +1833,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, v)
                                 else updateItem(item.id, { quantity: v })
                               }}
-                              className="w-12 text-center border rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              className="input-soft w-12 rounded-xl px-1 py-0.5 text-center text-sm"
                             />
                             <button
                               onClick={() => {
@@ -1852,7 +1857,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
                               }}
                               placeholder="—"
-                              className="w-full text-right border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                              className="w-full border-0 border-b border-dashed border-stone-300 bg-transparent text-right text-sm focus:outline-none focus:border-brand-500"
                             />
                           )}
                           {!isGift && price <= 0 && item.skuCode && (
@@ -1872,7 +1877,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                             value={item.note ?? ''}
                             onChange={(e) => updateItem(item.id, { note: e.target.value })}
                             placeholder="備註"
-                            className="w-full border-0 border-b border-dashed border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-transparent"
+                            className="w-full border-0 border-b border-dashed border-stone-300 bg-transparent text-sm focus:outline-none focus:border-brand-500"
                           />
                         </td>
                         <td className="px-3 py-2.5 text-center">
@@ -1902,8 +1907,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
 
       {/* 訂購統計 */}
       {items.length > 0 && (
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="font-semibold text-gray-800 text-sm mb-3">訂購統計</h2>
+        <div className="card-soft rounded-3xl p-5 sm:p-7">
+          <h2 className="font-bold text-stone-800 text-sm mb-3">訂購統計</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

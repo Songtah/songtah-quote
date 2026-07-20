@@ -37,7 +37,7 @@ input[type="date"] {
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-white text-stone-800 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -157,8 +157,8 @@ input[type="date"] {
   }
 
   .panel {
-    @apply rounded-2xl bg-white ring-1 ring-stone-900/[0.06];
-    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -16px rgba(28, 25, 23, 0.12);
+    @apply rounded-3xl bg-white ring-1 ring-stone-900/[0.05];
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.03), 0 18px 50px -28px rgba(87, 74, 48, 0.2);
   }
 
   .muted {
@@ -173,8 +173,8 @@ input[type="date"] {
 
   /* 層疊柔影卡片：取代細灰框平卡 */
   .card-soft {
-    @apply rounded-2xl bg-white ring-1 ring-stone-900/[0.06];
-    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -16px rgba(28, 25, 23, 0.12);
+    @apply rounded-3xl bg-white ring-1 ring-stone-900/[0.05];
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.03), 0 18px 50px -28px rgba(87, 74, 48, 0.2);
   }
 
   .card-soft-hover {
@@ -188,7 +188,7 @@ input[type="date"] {
   /* 玻璃吸頂工具列 */
   .glass-bar {
     @apply sticky top-0 z-20 backdrop-blur-xl border-b border-stone-900/[0.06];
-    background: rgba(252, 251, 248, 0.85);
+    background: rgba(253, 253, 251, 0.9);
   }
 
   /* 規格選擇 chip */
@@ -208,7 +208,7 @@ input[type="date"] {
 
   /* 價格徽章 */
   .price-pill {
-    @apply inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2.5 py-0.5
+    @apply inline-flex items-center gap-0.5 rounded-full bg-brand-50 px-2.5 py-0.5
            text-xs font-semibold tabular-nums text-emerald-700 ring-1 ring-emerald-600/10;
   }
 

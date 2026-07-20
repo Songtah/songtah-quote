@@ -11,7 +11,7 @@ import { buildVisitSuggestions } from '@/lib/notion/visit-suggestions'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session) => {
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
     const sp = req.nextUrl.searchParams
     const city = sp.get('city') ?? ''
@@ -19,7 +19,11 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
     if (!city || !district) {
       return NextResponse.json({ error: '請指定縣市與鄉鎮市區' }, { status: 400 })
     }
-    const salesperson = sp.get('salesperson') || (session?.user?.name ?? '')
+    const user = session.user as any
+    const canViewAll = user?.role === 'admin' || user?.accountType === '中央管理'
+    const salesperson = canViewAll
+      ? (sp.get('salesperson') || (session?.user?.name ?? ''))
+      : (session?.user?.name ?? '')
     if (!salesperson) {
       return NextResponse.json({ error: '請指定業務' }, { status: 400 })
     }

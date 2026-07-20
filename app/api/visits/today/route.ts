@@ -11,11 +11,14 @@ import { fetchTodayVisits, todayTW } from '@/lib/ceo-stats'
 
 export const dynamic = 'force-dynamic'
 
-export const GET = withApiAuth('session', async (req: NextRequest) => {
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   const date = req.nextUrl.searchParams.get('date') ?? todayTW()
 
   try {
-    const visits = await fetchTodayVisits(date)
+    const allVisits = await fetchTodayVisits(date)
+    const user = session.user as any
+    const canViewAll = user?.role === 'admin' || user?.accountType === '中央管理'
+    const visits = canViewAll ? allVisits : allVisits.filter((visit) => visit.salesperson === session.user?.name)
 
     // 依業務分組
     const map = new Map<string, typeof visits>()

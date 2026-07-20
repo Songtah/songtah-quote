@@ -28,6 +28,9 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     }
 
     const results: { ok: boolean; id?: string; customerName: string; error?: string }[] = []
+    const user = session.user as any
+    const canImportForOthers = user?.role === 'admin' || user?.accountType === '中央管理'
+    const actorName = session.user?.name ?? ''
 
     // 逐筆建立（Notion rate limit 保護：sequential）
     for (const v of visits) {
@@ -39,7 +42,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
         const visit = await createVisit({
           customerName:     v.customerName.trim(),
           date:             v.date,
-          salesperson:      v.salesperson ?? '',
+          salesperson:      canImportForOthers ? (v.salesperson ?? '') : actorName,
           content:          v.content ?? '',
           customerId:       v.customerId || undefined,
           customerReaction: v.customerReaction || undefined,

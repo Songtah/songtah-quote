@@ -4,12 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-
-const modules = [
-  { badge: '客戶', title: '客戶管理', description: '客戶主檔、聯繫紀錄、區域管理' },
-  { badge: '技術支援', title: '維修案件與設備追蹤', description: '工單管理、設備序號、維護排程' },
-  { badge: '業務開發', title: '商機與報價流程', description: '商機追蹤、報價建立、PDF 匯出' },
-]
+import { ArrowRight, LockKeyhole, ShieldCheck } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -34,67 +29,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-5 sm:px-8 lg:grid-cols-[1.15fr_0.85fr]">
-        {/* Left info panel */}
-        <section className="hidden lg:block py-16">
-          <div className="max-w-lg">
-            <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-[260px] object-contain" />
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900">企業管理系統</h1>
-            <p className="muted mt-4 max-w-md text-base">
-              將客戶主檔、產品資訊、技術支援工單與報價流程集中到同一個平台，
-              讓業務、行政與工程團隊使用同一套資料與操作入口。
-            </p>
-            <div className="mt-10 space-y-4">
-              {modules.map((m) => (
-                <div key={m.badge} className="flex items-start gap-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4">
-                  <span className="mt-0.5 shrink-0 rounded-md bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
-                    {m.badge}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{m.title}</p>
-                    <p className="text-sm text-gray-500">{m.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="relative min-h-screen overflow-hidden bg-white">
+      <div className="pointer-events-none absolute -left-32 top-1/3 size-96 rounded-full bg-brand-50 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-0 size-80 rounded-full bg-brand-50/70 blur-3xl" />
+      <div className="mx-auto grid min-h-screen max-w-5xl items-center gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_420px]">
+        <section className="hidden lg:block">
+          <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-56" priority />
+          <p className="mt-10 text-sm font-bold uppercase tracking-[0.2em] text-brand-500">每天從下一步開始</p>
+          <h1 className="mt-3 max-w-xl text-5xl font-bold leading-tight tracking-tight text-stone-800">登入後，立即看見今天該完成的工作。</h1>
+          <p className="mt-5 max-w-lg text-lg leading-8 text-stone-500">客戶、拜訪、報價、訂貨與技術支援集中在同一個入口；畫面只呈現你的角色有權查看的內容。</p>
+          <div className="mt-10 flex items-center gap-3 text-sm font-semibold text-stone-500"><ShieldCheck className="size-5 text-brand-600" />敏感資料依帳號權限分級顯示</div>
         </section>
 
-        {/* Right login card */}
         <motion.section
-          className="mx-auto w-full max-w-sm py-8 sm:py-16"
+          className="relative mx-auto w-full max-w-md"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div className="rounded-3xl bg-white p-7 shadow-[0_28px_80px_rgba(87,74,48,0.13)] ring-1 ring-stone-900/[0.05] sm:p-9">
             <div className="mb-8 flex flex-col items-center text-center">
-              <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="mb-5 h-auto w-40 object-contain" />
-              <p className="eyebrow">企業管理平台</p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900">帳號登入</h2>
+              <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="mb-7 h-auto w-40 lg:hidden" priority />
+              <span className="mb-4 rounded-full bg-brand-50 p-3 text-brand-600"><LockKeyhole className="size-5" /></span>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-stone-400">企業管理平台</p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-800">登入開始今天的工作</h2>
+              <p className="mt-2 text-sm text-stone-400">請使用公司帳號登入</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">帳號</label>
+                <label className="mb-2 block text-sm font-semibold text-stone-600">帳號</label>
                 <input
                   type="text"
                   value={form.username}
                   onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                  className="input"
+                  className="input-soft h-12 rounded-2xl"
                   placeholder="輸入帳號"
                   autoComplete="username"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">密碼</label>
+                <label className="mb-2 block text-sm font-semibold text-stone-600">密碼</label>
                 <input
                   type="password"
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  className="input"
+                  className="input-soft h-12 rounded-2xl"
                   placeholder="輸入密碼"
                   autoComplete="current-password"
                   required
@@ -108,9 +89,9 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="button-primary w-full py-2.5"
+                className="button-primary h-12 w-full gap-2"
               >
-                {loading ? '登入中...' : '登入系統'}
+                {loading ? '登入中...' : <>登入系統 <ArrowRight className="size-4" /></>}
               </button>
             </form>
           </div>

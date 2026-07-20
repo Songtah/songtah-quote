@@ -22,7 +22,7 @@ export type ParsedVisitItem = {
   needsFollowUp: boolean
 }
 
-export const POST = withApiAuth('admin', async (req: NextRequest) => {
+export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   let fileContent: string
   let dateFrom = ''           // 只匯入此日期(含)以後的日報，留空 = 全部
   let salespersonFilter = ''  // 只匯入此業務的日報，留空 = 全部名單業務
@@ -40,6 +40,11 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     return NextResponse.json({ error: '無法讀取檔案' }, { status: 400 })
   }
 
+  const user = session.user as any
+  const canImportForOthers = user?.role === 'admin' || user?.accountType === '中央管理'
+  const actorName = session.user?.name ?? ''
+  if (!canImportForOthers) salespersonFilter = actorName
+
   const messages = parseLineTxt(fileContent)
   if (messages.length === 0) {
     return NextResponse.json(
@@ -56,6 +61,7 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     // 只匯入業務名單上的業務（非名單成員的訊息一律跳過）
     if (!isKnownSalesperson(msg.sender)) continue
     const salesperson = resolveSalesperson(msg.sender)
+    if (!canImportForOthers && salesperson !== actorName) continue
     // 業務篩選：只匯入指定業務的日報
     if (salespersonFilter && salesperson !== salespersonFilter) continue
     const report = parseDailyReport(msg.text)

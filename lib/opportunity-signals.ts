@@ -58,11 +58,11 @@ function extractEvidence(rawText: string, keyword: string): string {
 }
 
 /** 對一段文字跑字典,回傳所有命中(每標籤一筆,取第一個命中的關鍵字為代表)。 */
-export function detectOpportunities(rawText: string): SignalHit[] {
+export function detectOpportunities(rawText: string, dictionary: OpportunitySignal[] = SIGNAL_DICTIONARY): SignalHit[] {
   const text = rawText || ''
   const nText = normalize(text)
   const hits: SignalHit[] = []
-  for (const sig of SIGNAL_DICTIONARY) {
+  for (const sig of dictionary) {
     const matched = sig.keywords.find((kw) => nText.includes(normalize(kw)))
     if (!matched) continue
     hits.push({

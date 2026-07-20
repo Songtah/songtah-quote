@@ -49,21 +49,21 @@ export default async function SharePage({ params }: { params: { id: string } }) 
   const items = quote.items ?? []
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream-100 to-brand-50 py-8 px-4">
+    <div className="min-h-screen bg-white px-4 py-6 sm:py-10">
       <div className="max-w-3xl mx-auto">
         {/* Header Card */}
-        <div className="bg-white rounded-2xl shadow-[0_16px_48px_-16px_rgba(90,66,51,0.12)] border border-brand-200/40 overflow-hidden mb-4">
+        <div className="mb-5 overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(90,66,51,0.22)] ring-1 ring-stone-900/[0.05]">
           <div
             className="px-8 py-7 relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, #6b4c2a 0%, #8b6340 25%, #7a5535 52%, #9a7248 76%, #5c3d1e 100%)',
+              background: 'linear-gradient(135deg, #f7f4ec 0%, #ffffff 50%, #f5eee1 100%)',
             }}
           >
             {/* Metallic sheen sweep */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.12) 50%, transparent 75%)',
+                background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.75) 50%, transparent 75%)',
               }}
             />
 
@@ -72,13 +72,13 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                 <div className="bg-white/90 rounded-xl px-4 py-2 inline-flex items-center mb-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
                   <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-48 object-contain" />
                 </div>
-                <div className="text-white/60 text-[10px] font-semibold tracking-[0.22em] uppercase">
+                <div className="text-stone-400 text-[10px] font-semibold tracking-[0.22em] uppercase">
                   SONGTAH TRADING CO.,LTD.
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-white tracking-wider">報　價　單</div>
-                <div className="text-white/70 text-sm font-mono mt-1.5 bg-white/10 rounded-lg px-3 py-1 inline-block">
+                <div className="text-2xl font-black tracking-wider text-stone-800">報　價　單</div>
+                <div className="mt-1.5 inline-block rounded-full bg-brand-50 px-3 py-1 font-mono text-sm text-brand-700">
                   {quote.quoteNumber}
                 </div>
               </div>
@@ -108,7 +108,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
         </div>
 
         {/* Items Table */}
-        <div className="bg-white rounded-2xl shadow-[0_16px_48px_-16px_rgba(90,66,51,0.12)] border border-brand-200/40 overflow-hidden mb-4">
+        <div className="mb-5 overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(90,66,51,0.18)] ring-1 ring-stone-900/[0.05]">
           <div className="px-6 py-4 border-b border-brand-100">
             <h2 className="font-semibold text-stone-700">報價明細</h2>
           </div>

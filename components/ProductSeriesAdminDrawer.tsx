@@ -269,7 +269,7 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
         initial={{ x: reduceMotion ? 0 : '100%' }}
         animate={{ x: 0 }}
         exit={{ x: reduceMotion ? 0 : '100%' }}
-        className="relative ml-auto flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-l-3xl"
+        className="relative ml-auto flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-l-3xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="series-admin-title"
@@ -286,7 +286,7 @@ export function ProductSeriesAdminDrawer({ families, allItems, onClose, onChange
 
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {error && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</div>}
-          {notice && <div className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">{notice}</div>}
+          {notice && <div className="mb-4 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-emerald-700" role="status">{notice}</div>}
 
           <section className="card-soft p-4 sm:p-5">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">建立新系列</p>

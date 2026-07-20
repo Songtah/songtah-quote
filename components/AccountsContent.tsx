@@ -25,7 +25,7 @@ function Badge({ label, color }: { label: string; color: string }) {
 function accountTypeBadge(type: string) {
   const map: Record<string, string> = {
     中央管理: 'bg-slate-900 text-white',
-    業務: 'bg-emerald-100 text-emerald-800',
+    業務: 'bg-brand-50 text-emerald-800',
     行政: 'bg-blue-100 text-blue-800',
     技術: 'bg-purple-100 text-purple-800',
   }
@@ -420,14 +420,14 @@ export default function AccountsContent() {
         ].map(({ label, count, warn }) => (
           <div key={label} className="panel p-5">
             <div className="eyebrow mb-2">{label}</div>
-            <div className={`text-3xl font-black ${warn ? 'text-red-500' : 'text-slate-900'}`}>{count}</div>
+            <div className={`text-3xl font-black ${warn ? 'text-red-500' : 'text-stone-800'}`}>{count}</div>
           </div>
         ))}
       </div>
 
       {/* Table header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-stone-800">帳號清單</h2>
+        <div><p className="eyebrow mb-1 text-xs">權限與安全</p><h2 className="text-lg font-semibold text-stone-800">帳號清單</h2></div>
         <button
           onClick={() => setShowCreate(true)}
           className="button-primary px-4 py-2 rounded-full text-sm font-medium"
@@ -443,7 +443,7 @@ export default function AccountsContent() {
             const viewableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.view)
             const editableModules = MODULE_KEYS.filter((m) => u.permissions[m]?.edit)
             return (
-              <div key={u.id} className={`bg-white rounded-2xl border shadow-sm p-4 space-y-2.5 ${u.status === '停用' ? 'border-red-200 opacity-60' : 'border-brand-200/40'}`}>
+              <div key={u.id} className={`card-soft space-y-2.5 p-4 ${u.status === '停用' ? 'opacity-60 ring-1 ring-red-200' : ''}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`font-semibold truncate ${u.status === '停用' ? 'text-stone-400 line-through' : 'text-stone-800'}`}>{u.name}</span>
@@ -493,7 +493,7 @@ export default function AccountsContent() {
       )}
 
       {/* ── Desktop table (md+) ── */}
-      <div className="hidden md:block bg-white rounded-2xl border border-brand-200/40 shadow-sm overflow-hidden">
+      <div className="card-soft hidden overflow-hidden md:block">
         {loading ? (
           <div className="p-8 text-center text-sm text-stone-400">載入中…</div>
         ) : users.length === 0 ? (
@@ -578,7 +578,7 @@ export default function AccountsContent() {
         )}
       </div>
       {/* Mobile loading/empty state */}
-      {loading && <div className="md:hidden p-8 text-center text-sm text-stone-400 bg-white rounded-2xl border border-brand-200/40">載入中…</div>}
+      {loading && <div className="card-soft p-8 text-center text-sm text-stone-400 md:hidden">載入中…</div>}
       {!loading && users.length === 0 && <div className="md:hidden p-10 text-center text-sm text-stone-400 border-2 border-dashed border-brand-200/40 rounded-2xl">尚無帳號資料。</div>}
 
       {showCreate && (

@@ -6,11 +6,16 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { listOpenFollowUps, closeFollowUp } from '@/lib/notion/visits'
+import { listOpenFollowUps, closeFollowUp, getVisitById } from '@/lib/notion/visits'
 
-export const GET = withApiAuth('session', async () => {
+function canViewAll(session: any) {
+  const user = session.user as any
+  return user?.role === 'admin' || user?.accountType === '中央管理'
+}
+
+export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _ctx, session) => {
   try {
-    const items = await listOpenFollowUps()
+    const items = await listOpenFollowUps(canViewAll(session) ? undefined : (session.user?.name ?? undefined))
     return NextResponse.json({ items })
   } catch (error) {
     console.error('listOpenFollowUps error:', error)
@@ -18,11 +23,16 @@ export const GET = withApiAuth('session', async () => {
   }
 })
 
-export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest) => {
+export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const { id } = await req.json()
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: '缺少追蹤紀錄 id' }, { status: 400 })
+    }
+    const visit = await getVisitById(id).catch(() => null)
+    if (!visit) return NextResponse.json({ error: '找不到追蹤紀錄' }, { status: 404 })
+    if (!canViewAll(session) && visit.salesperson !== session.user?.name) {
+      return NextResponse.json({ error: '不可結案其他業務的追蹤紀錄' }, { status: 403 })
     }
     await closeFollowUp(id)
     return NextResponse.json({ ok: true })

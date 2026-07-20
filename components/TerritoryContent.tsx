@@ -126,27 +126,27 @@ export default function TerritoryContent({ initialData, canAssign = false, canMa
   return (
     <div className="space-y-6">
       {/* 業務選擇 + 說明 */}
-      <div className="card-soft p-5 flex flex-wrap items-end gap-4">
-        <div>
+      <div className="card-soft p-4 sm:p-5 flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
+        <div className="w-full sm:w-auto">
           <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務</label>
-          <select className="select-soft mt-1 block min-w-[140px]" value={sp} onChange={(e) => setSp(e.target.value)}>
+          <select className="select-soft mt-1 block w-full sm:w-auto sm:min-w-[160px]" value={sp} onChange={(e) => setSp(e.target.value)}>
             {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <p className="text-sm text-stone-500 self-center">
           {sp ? <>{sp} 目前涵蓋 <b className="text-stone-700">{myDistricts.length}</b> 區、<b className="text-stone-700">{totalCust}</b> 家客戶</> : '—'}
         </p>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-3">
           {updatedAt && <span className="text-xs text-stone-400">資料 {updatedAt.slice(0, 10)}</span>}
           {canManageCompany && (
             <button onClick={() => setCompanyOpen(true)}
-                    className="px-5 py-2 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
               🏢 公司客戶調度
             </button>
           )}
           {canAssign && (
             <button onClick={() => setAddOpen(true)}
-                    className="px-5 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
               ＋ 新增轄區
             </button>
           )}
@@ -309,7 +309,7 @@ function AddModal({ sp, summary, onClose, onDone }: {
     <Modal onClose={onClose} title={`新增轄區 → ${sp}`}>
       {ok ? (
         <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-emerald-50 rounded-2xl p-4">{ok}</p>
+          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
           <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
         </div>
       ) : (
@@ -423,7 +423,7 @@ function RemoveModal({ sp, target, salespersons, onClose, onDone }: {
     <Modal onClose={onClose} title={`移除轄區:${target.city}${target.district}`}>
       {ok ? (
         <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-emerald-50 rounded-2xl p-4">{ok}</p>
+          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
           <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
         </div>
       ) : (
@@ -535,7 +535,7 @@ function CompanyModal({ sp, allAreas, onClose, onDone }: {
     <Modal onClose={onClose} title="公司客戶調度">
       {ok ? (
         <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-emerald-50 rounded-2xl p-4">{ok}</p>
+          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
           <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
         </div>
       ) : (
@@ -619,7 +619,7 @@ function CompanyModal({ sp, allAreas, onClose, onDone }: {
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <header className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
           <h3 className="font-bold text-stone-800">{title}</h3>
           <button onClick={onClose} className="text-stone-400 hover:text-stone-600 active:scale-95 transition-all text-xl leading-none">×</button>

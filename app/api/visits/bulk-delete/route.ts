@@ -10,14 +10,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { deleteVisit } from '@/lib/system-notion'
+import { deleteVisit, getVisitById } from '@/lib/system-notion'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: NextRequest) => {
+export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   let ids: string[] = []
   try {
     const body = await req.json()
@@ -30,8 +30,15 @@ export const POST = withApiAuth({ module: 'crm', action: 'edit' }, async (req: N
 
   let deleted = 0
   let failed = 0
+  const user = session.user as any
+  const canDeleteAll = user?.role === 'admin' || user?.accountType === '中央管理'
   for (const id of ids) {
     try {
+      const visit = await getVisitById(id)
+      if (!canDeleteAll && visit.salesperson !== session.user?.name) {
+        failed++
+        continue
+      }
       await deleteVisit(id)
       deleted++
       await sleep(300) // 節流避免 rate limit

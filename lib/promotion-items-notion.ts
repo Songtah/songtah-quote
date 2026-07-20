@@ -109,7 +109,7 @@ export interface PromotionItem {
 
 export const ITEM_STATUS_COLOR: Record<ItemStatus, string> = {
   '待定價': 'bg-yellow-100 text-yellow-700',
-  '已確認': 'bg-green-100  text-green-700',
+  '已確認': 'bg-brand-50  text-green-700',
   '不採用': 'bg-red-100    text-red-600',
 }
 

@@ -25,15 +25,15 @@ export function MarketingContent({
   return (
     <div className="space-y-5">
       {/* Tab bar */}
-      <div className="inline-flex bg-gray-100 rounded-full px-1 py-1 gap-0.5 flex-wrap">
+      <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-stone-100/80 p-1 sm:inline-flex sm:w-auto sm:rounded-full">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`min-h-11 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all active:scale-95 ${
               activeTab === tab
-                ? 'bg-white shadow-sm text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-stone-800 shadow-sm ring-1 ring-stone-900/[0.04]'
+                : 'text-stone-500 hover:bg-white/60 hover:text-stone-700'
             }`}
           >
             {tab}
@@ -42,7 +42,7 @@ export function MarketingContent({
       </div>
 
       {/* Description */}
-      <p className="text-sm text-gray-500 -mt-2">{TAB_DESC[activeTab]}</p>
+      <p className="-mt-2 max-w-2xl text-sm leading-6 text-stone-500">{TAB_DESC[activeTab]}</p>
 
       {/* Content */}
       <div key={activeTab}>

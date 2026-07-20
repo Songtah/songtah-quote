@@ -15,11 +15,11 @@ function StatCard({ label, value, sub, accent, delta, onClick }: {
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-gray-200 p-4 flex flex-col gap-1 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-brand-300 active:scale-[0.98] transition-all' : ''}`}
+      className={`card-soft p-4 flex flex-col gap-1 ${onClick ? 'card-soft-hover cursor-pointer active:scale-[0.98] transition-all' : ''}`}
     >
-      <span className="text-xs text-gray-400 font-medium flex items-center gap-1">{label}{onClick && <span className="text-stone-300">›</span>}</span>
+      <span className="text-xs text-stone-400 font-medium flex items-center gap-1">{label}{onClick && <span className="text-stone-300">›</span>}</span>
       <span className="flex items-baseline gap-2">
-        <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-gray-900'}`}>
+        <span className={`text-2xl font-bold tabular-nums ${accent ?? 'text-stone-800'}`}>
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
         {typeof delta === 'number' && delta !== 0 && (
@@ -27,9 +27,9 @@ function StatCard({ label, value, sub, accent, delta, onClick }: {
             {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
           </span>
         )}
-        {delta === 0 && <span className="text-xs text-gray-300">持平</span>}
+        {delta === 0 && <span className="text-xs text-stone-300">持平</span>}
       </span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+      {sub && <span className="text-xs text-stone-400">{sub}</span>}
     </div>
   )
 }
@@ -43,7 +43,7 @@ function TypeChip({ kind }: { kind: string }) {
     '醫院':         'bg-orange-50 text-orange-700',
   }
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${MAP[kind] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${MAP[kind] ?? 'bg-stone-100 text-stone-600'}`}>
       {kind}
     </span>
   )
@@ -54,16 +54,16 @@ function CollapsibleSection({ title, count, color, children, defaultOpen = true 
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+    <div className="card-soft overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white/80 hover:bg-brand-50/50 active:scale-[0.995] transition-all text-left"
       >
         <span className="flex-1 flex items-center gap-3">
-          <span className="font-semibold text-gray-800 text-sm">{title}</span>
+          <span className="font-semibold text-stone-800 text-sm">{title}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>{count} 筆</span>
         </span>
-        <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-4 h-4 text-stone-400 transition-transform ${open ? '' : '-rotate-90'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -75,15 +75,15 @@ function CollapsibleSection({ title, count, color, children, defaultOpen = true 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="text-xs text-gray-400 shrink-0 w-24">{label}</span>
-      <span className="text-sm text-gray-700 flex-1">{value}</span>
+      <span className="text-xs text-stone-400 shrink-0 w-24">{label}</span>
+      <span className="text-sm text-stone-700 flex-1">{value}</span>
     </div>
   )
 }
 
 function ChevronRight() {
   return (
-    <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg className="w-4 h-4 text-stone-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   )
@@ -94,9 +94,9 @@ function ChevronRight() {
 const FORM_BADGE: Record<string, { label: string; cls: string }> = {
   closure:         { label: '真歇業/停業', cls: 'bg-red-50 text-red-700 border border-red-200' },
   recode:          { label: '換照換碼',     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  unknown:         { label: '查無',         cls: 'bg-gray-100 text-gray-600 border border-gray-200' },
+  unknown:         { label: '查無',         cls: 'bg-stone-100 text-stone-600 border border-stone-200' },
   status_mismatch: { label: '狀態不符',     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  ok:              { label: '一致',         cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+  ok:              { label: '一致',         cls: 'bg-brand-50 text-emerald-700 border border-brand-200' },
 }
 
 function MohwLookupButton({ name, code, kind, customerStatus }: { name: string; code?: string; kind?: string; customerStatus?: string }) {
@@ -128,7 +128,7 @@ function MohwLookupButton({ name, code, kind, customerStatus }: { name: string; 
         className="text-xs px-4 py-2 rounded-full bg-brand-500 text-white font-medium hover:bg-brand-600 shadow-sm shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50">
         {loading ? '查詢衛福部中…' : '🔍 查衛福部機構代碼／開業狀態'}
       </button>
-      {err && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+      {err && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-2xl px-3 py-2">{err}</p>}
       {result && (
         <div className="mt-2 rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs space-y-2">
           {result.form && FORM_BADGE[result.form] && (
@@ -147,7 +147,7 @@ function MohwLookupButton({ name, code, kind, customerStatus }: { name: string; 
           ) : (
             <div className="text-stone-500">衛福部查無此名稱</div>
           )}
-          <div className="text-brand-700 bg-brand-50 rounded-lg px-2.5 py-2 leading-relaxed">💡 {result.suggestion}</div>
+          <div className="text-brand-700 bg-brand-50 rounded-2xl px-2.5 py-2 leading-relaxed">💡 {result.suggestion}</div>
           {result.candidates?.length > 1 && (
             <div className="text-stone-400">其他候選：{result.candidates.slice(1, 5).map((c: any) => c.name).join('、')}</div>
           )}
@@ -212,8 +212,8 @@ function CategoryModal({ category, closureItems, hospitalItems, result, onClose,
   onResolved: (id: string, status: string) => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={onClose}>
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
           <h2 className="font-bold text-stone-800 text-lg">{CATEGORY_TITLE[category]}</h2>
@@ -237,26 +237,26 @@ function ImportPreviewModal({ selected, onConfirm, onClose }: {
   selected: NewOpening[]; onConfirm: () => void; onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+        <div className="p-5 border-b border-stone-100 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="font-bold text-gray-900">匯入預覽</h2>
-            <p className="text-sm text-gray-400 mt-0.5">以下 {selected.length} 筆資料將新增至客戶資料庫</p>
+            <h2 className="font-bold text-stone-900">匯入預覽</h2>
+            <p className="text-sm text-stone-400 mt-0.5">以下 {selected.length} 筆資料將新增至客戶資料庫</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
         </div>
         <div className="overflow-y-auto flex-1 p-5 space-y-2">
           {selected.map((inst, i) => (
-            <div key={inst.code} className="flex gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <span className="text-xs text-gray-400 shrink-0 w-5 text-right">{i + 1}</span>
+            <div key={inst.code} className="flex gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+              <span className="text-xs text-stone-400 shrink-0 w-5 text-right">{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-gray-900">{inst.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-mono">{inst.code}</span>
+                  <span className="font-semibold text-sm text-stone-900">{inst.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-200 text-stone-600 font-mono">{inst.code}</span>
                   <TypeChip kind={inst.kind} />
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-x-2">
+                <div className="text-xs text-stone-400 mt-0.5 flex flex-wrap gap-x-2">
                   {inst.city && <span>{inst.city}{inst.district}</span>}
                   {inst.address && <span className="truncate max-w-[300px]">{inst.address}</span>}
                 </div>
@@ -265,9 +265,9 @@ function ImportPreviewModal({ selected, onConfirm, onClose }: {
             </div>
           ))}
         </div>
-        <div className="p-5 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
-          <button onClick={onConfirm} className="px-5 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700">
+        <div className="p-5 border-t border-stone-100 flex justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-full text-sm border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
+          <button onClick={onConfirm} className="px-5 py-2.5 rounded-full text-sm bg-brand-500 text-white font-semibold hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
             ✅ 確認新增 {selected.length} 筆
           </button>
         </div>
@@ -303,7 +303,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
   const fAll       = [...fClinics, ...fLabs, ...fHospitals]
 
   if (allItems.length === 0) return (
-    <div className="py-16 text-center text-gray-400 text-sm">
+    <div className="py-16 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">🎉</div>
       <p>沒有找到尚未加入客戶資料庫的牙科單位</p>
     </div>
@@ -311,19 +311,19 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
 
   return (
     <div className="space-y-4">
-      <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-fit">
+      <div className="flex bg-stone-100 rounded-xl p-1 gap-1 w-fit">
         {([
           { id: 'all',      label: '全部',      count: allItems.length },
           { id: 'new',      label: '本月新增',   count: newThisMonthCount },
           { id: 'existing', label: '既有未開發', count: existingCount },
         ] as const).map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 ${filter === f.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+            className={`px-3 py-1.5 text-xs font-medium rounded-2xl transition-all flex items-center gap-1.5 ${filter === f.id ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}>
             {f.label}
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
               filter === f.id
-                ? f.id === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'
-                : 'bg-white text-gray-500'
+                ? f.id === 'new' ? 'bg-brand-50 text-emerald-700' : 'bg-stone-100 text-stone-700'
+                : 'bg-white text-stone-500'
             }`}>{f.count}</span>
           </button>
         ))}
@@ -331,13 +331,13 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
 
       {fAll.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm text-gray-500">已選 <strong>{selectedIds.size}</strong> 筆</span>
+          <span className="text-sm text-stone-500">已選 <strong>{selectedIds.size}</strong> 筆</span>
           <button onClick={() => onToggleAll(fAll)} className="text-xs text-blue-600 hover:underline">
             {fAll.every(i => selectedIds.has(i.code)) ? '取消全選' : '全選此頁'}
           </button>
           <div className="flex-1" />
           <button onClick={onImport} disabled={selectedIds.size === 0 || importing}
-            className="px-4 py-2 rounded-xl text-sm bg-gray-900 text-white font-medium hover:bg-gray-700 disabled:opacity-40">
+            className="px-4 py-2 rounded-xl text-sm bg-stone-900 text-white font-medium hover:bg-stone-700 disabled:opacity-40">
             {importing ? '匯入中…' : `📥 預覽並匯入（${selectedIds.size}）`}
           </button>
         </div>
@@ -345,7 +345,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
 
       {fClinics.length > 0 && (
         <CollapsibleSection title="牙醫診所" count={fClinics.length} color="bg-blue-50 text-blue-700">
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-stone-50">
             {fClinics.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
@@ -354,7 +354,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
       )}
       {fLabs.length > 0 && (
         <CollapsibleSection title="牙體技術所" count={fLabs.length} color="bg-violet-50 text-violet-700">
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-stone-50">
             {fLabs.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
@@ -363,7 +363,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
       )}
       {fHospitals.length > 0 && (
         <CollapsibleSection title="有牙科的醫院" count={fHospitals.length} color="bg-orange-50 text-orange-700" defaultOpen={false}>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-stone-50">
             {fHospitals.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
             ))}
@@ -379,20 +379,20 @@ function NewOpeningRow({ inst, selected, onToggle }: {
 }) {
   return (
     <div onClick={onToggle}
-      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${selected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-      <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-stone-50 last:border-0 ${selected ? 'bg-blue-50' : 'hover:bg-stone-50'}`}>
+      <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-blue-500 border-blue-500' : 'border-stone-300'}`}>
         {selected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round"/></svg>}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-gray-900">{inst.name}</span>
-          <span className="text-[10px] font-mono text-gray-400">{inst.code}</span>
+          <span className="text-sm font-semibold text-stone-900">{inst.name}</span>
+          <span className="text-[10px] font-mono text-stone-400">{inst.code}</span>
           <TypeChip kind={inst.kind} />
           {inst.isNewThisMonth && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">本月新增</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-50 text-emerald-700 font-semibold">本月新增</span>
           )}
         </div>
-        <div className="text-xs text-gray-400 flex flex-wrap gap-x-2 mt-0.5">
+        <div className="text-xs text-stone-400 flex flex-wrap gap-x-2 mt-0.5">
           {inst.city && <span>{inst.city}{inst.district}</span>}
           {inst.address && <span className="truncate max-w-[40vw]">{inst.address}</span>}
         </div>
@@ -409,7 +409,7 @@ function SuspectedClosuresTab({ items, onResolved }: {
   onResolved?: (id: string, status: string) => void
 }) {
   if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
+    <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
       <p>目前沒有歇業候選的客戶機構</p>
     </div>
@@ -420,22 +420,22 @@ function SuspectedClosuresTab({ items, onResolved }: {
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
         ⛔ 以下客戶有機構代碼，但不在衛福部開業清單中。可「查衛福部」確認，並直接編輯開業狀態（會寫回 Notion 機構狀態；標停業／已歇業／撤銷後此筆即結案移除）。
       </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {items.map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
-                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
+                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
+                <div className="text-xs text-stone-400 mt-0.5">
                   {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
                   {item.customerStatus && ` · 目前：${item.customerStatus}`}
                 </div>
               </div>
-              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
@@ -457,34 +457,34 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
     : items
 
   if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
+    <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
       <p>所有客戶都已填入機構代碼</p>
     </div>
   )
   return (
     <div className="space-y-3">
-      <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-        👤 公司自建：無機構代碼、人名／機構名稱混雜的客戶。<span className="text-gray-400">非每月更新重點，由業務手動回報現況；如需納入自動監控，請至客戶頁面填入正確機構代碼。</span>
+      <div className="text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
+        👤 公司自建：無機構代碼、人名／機構名稱混雜的客戶。<span className="text-stone-400">非每月更新重點，由業務手動回報現況；如需納入自動監控，請至客戶頁面填入正確機構代碼。</span>
       </div>
       <div className="flex items-center gap-2">
         <input
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="搜尋客戶名稱 / 縣市 / 類型…"
-          className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
-        <span className="text-xs text-gray-400 shrink-0">{filtered.length} / {items.length} 筆</span>
+        <span className="text-xs text-stone-400 shrink-0">{filtered.length} / {items.length} 筆</span>
       </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {filtered.slice(0, 300).map(item => (
           <a key={item.customerId} href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">
+              <div className="text-xs text-stone-400 mt-0.5">
                 {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
                 {item.customerStatus && ` · ${item.customerStatus}`}
               </div>
@@ -493,7 +493,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
           </a>
         ))}
         {filtered.length > 300 && (
-          <div className="px-4 py-3 text-xs text-gray-400 text-center">顯示前 300 筆，請搜尋縮小範圍</div>
+          <div className="px-4 py-3 text-xs text-stone-400 text-center">顯示前 300 筆，請搜尋縮小範圍</div>
         )}
       </div>
     </div>
@@ -504,7 +504,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
 
 function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
   if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
+    <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
       <p>所有代碼對應的客戶資料與醫事快照一致</p>
     </div>
@@ -514,33 +514,33 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
       <div className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
         🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請確認是否需要更新。
       </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {items.map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
                   <TypeChip kind={item.snapshotKind} />
                   {item.diffs.map(d => (
                     <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">{d.field}不符</span>
                   ))}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
+                <div className="text-xs text-stone-400 mt-0.5">
                   {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                  {' · 快照：'}<span className="text-gray-600">{item.snapshotName}</span>
+                  {' · 快照：'}<span className="text-stone-600">{item.snapshotName}</span>
                 </div>
                 <div className="mt-1.5 space-y-1">
                   {item.diffs.map(d => (
-                    <div key={d.field} className="text-[11px] text-gray-500">
-                      <span className="text-gray-400">{d.field}：</span>
-                      公司「<span className="text-gray-800">{d.customerValue}</span>」／快照「<span className="text-gray-600">{d.snapshotValue}</span>」
+                    <div key={d.field} className="text-[11px] text-stone-500">
+                      <span className="text-stone-400">{d.field}：</span>
+                      公司「<span className="text-stone-800">{d.customerValue}</span>」／快照「<span className="text-stone-600">{d.snapshotValue}</span>」
                     </div>
                   ))}
                 </div>
               </div>
-              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
             <div className="mt-2"><MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} /></div>
           </div>
@@ -553,7 +553,7 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
 // ── 更換代碼 Tab ────────────────────────────────────────────────────────────────
 function CodeChangedTab({ items }: { items: CodeChanged[] }) {
   if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
+    <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
       <p>沒有偵測到更換代碼的客戶</p>
     </div>
@@ -563,19 +563,19 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
         🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。建議至客戶頁將機構代碼更新為新碼。
       </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {items.map((item) => (
           <a key={item.customerId} href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{item.customerType}</span>}
+                <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">
+              <div className="text-xs text-stone-400 mt-0.5">
                 {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
                 <span className="mx-2">·</span>
-                <span className="font-mono text-gray-400 line-through">{item.oldCode}</span>
+                <span className="font-mono text-stone-400 line-through">{item.oldCode}</span>
                 <span className="mx-1 text-amber-500">→</span>
                 <span className="font-mono text-amber-700 font-semibold">{item.newCode}</span>
               </div>
@@ -591,7 +591,7 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 // ── 醫院待確認 Tab ──────────────────────────────────────────────────────────────
 function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverified[]; onResolved?: (id: string, status: string) => void }) {
   if (items.length === 0) return (
-    <div className="py-12 text-center text-gray-400 text-sm">
+    <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
       <p>沒有待確認的醫院</p>
     </div>
@@ -601,22 +601,22 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
       <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
         🏥 以下醫院客戶的機構代碼不在衛福部「牙醫一般科」開業清單中。醫院多半仍在營業，只是牙科未登記為牙醫一般科，故不列入歇業候選。請逐筆「查衛福部」確認牙科現況。
       </div>
-      <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {items.map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{item.customerName}</span>
-                  <span className="text-[10px] font-mono text-gray-400">{item.institutionCode}</span>
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 font-medium">醫院</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
+                <div className="text-xs text-stone-400 mt-0.5">
                   {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
                   {item.customerStatus && ` · ${item.customerStatus}`}
                 </div>
               </div>
-              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
@@ -657,21 +657,21 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
   const N = (h: HistoryEntry, k: keyof HistoryEntry) => Number(h[k]) || 0
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
+      <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CATS.map(cat => {
           const vals = series.map(h => N(h, cat.total))
           const max = Math.max(1, ...vals)
           return (
-            <div key={cat.label} className="bg-white rounded-2xl border border-gray-200 p-3">
-              <div className="text-xs text-gray-400 font-medium">{cat.label}</div>
+            <div key={cat.label} className="bg-white rounded-2xl border border-stone-200 p-3">
+              <div className="text-xs text-stone-400 font-medium">{cat.label}</div>
               <div className="mt-1 flex items-baseline gap-1">
                 <span className="text-xl font-bold tabular-nums text-stone-800">{N(cur, cat.total).toLocaleString()}</span>
-                <span className="text-[10px] text-gray-400">全台</span>{DELTA(N(cur, cat.total), prev && N(prev, cat.total))}
+                <span className="text-[10px] text-stone-400">全台</span>{DELTA(N(cur, cat.total), prev && N(prev, cat.total))}
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-sm font-semibold tabular-nums text-brand-600">{N(cur, cat.cust).toLocaleString()}</span>
-                <span className="text-[10px] text-gray-400">客戶</span>{DELTA(N(cur, cat.cust), prev && N(prev, cat.cust))}
+                <span className="text-[10px] text-stone-400">客戶</span>{DELTA(N(cur, cat.cust), prev && N(prev, cat.cust))}
               </div>
               <div className="mt-2 flex items-end gap-0.5 h-8">
                 {series.map((h, i) => (
@@ -689,38 +689,38 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
 // 📋 本月異動彈窗（讀「診所監控紀錄」DB）
 interface ChangeRow { type: string; name: string; code: string; address: string; customer: string; customerUrl: string }
 const CHANGE_BADGE: Record<string, string> = {
-  '新開業': 'bg-emerald-50 text-emerald-700', '新增停業': 'bg-red-50 text-red-700',
-  '停業': 'bg-gray-100 text-gray-600', '恢復開業': 'bg-blue-50 text-blue-700',
+  '新開業': 'bg-brand-50 text-emerald-700', '新增停業': 'bg-red-50 text-red-700',
+  '停業': 'bg-stone-100 text-stone-600', '恢復開業': 'bg-blue-50 text-blue-700',
 }
 function ChangesModal({ month, changes, loading, onClose }: { month: string; changes: ChangeRow[]; loading: boolean; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-[#fcfbf8] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={onClose}>
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
           <h2 className="font-bold text-stone-800 text-lg">📋 本月異動（{month}）</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
         </div>
         <div className="p-5 overflow-y-auto">
-          {loading ? <div className="py-12 text-center text-gray-400 text-sm">載入中…</div>
+          {loading ? <div className="py-12 text-center text-stone-400 text-sm">載入中…</div>
             : changes.length === 0 ? (
-              <div className="py-12 text-center text-gray-400 text-sm">
+              <div className="py-12 text-center text-stone-400 text-sm">
                 <div className="text-3xl mb-3">🗓️</div>
                 <p>本月尚無異動紀錄</p>
                 <p className="text-xs mt-1">需累積兩個月 BAS 快照才會產生月對月異動（下個月起自動出現）</p>
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-50">
+              <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
                 {changes.map((c, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-3">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${CHANGE_BADGE[c.type] ?? 'bg-gray-100 text-gray-600'}`}>{c.type}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${CHANGE_BADGE[c.type] ?? 'bg-stone-100 text-stone-600'}`}>{c.type}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900">{c.name || c.customer}</span>
-                        {c.code && <span className="text-[10px] font-mono text-gray-400">{c.code}</span>}
+                        <span className="text-sm font-semibold text-stone-900">{c.name || c.customer}</span>
+                        {c.code && <span className="text-[10px] font-mono text-stone-400">{c.code}</span>}
                       </div>
-                      {c.address && <div className="text-xs text-gray-400 mt-0.5">{c.address}</div>}
+                      {c.address && <div className="text-xs text-stone-400 mt-0.5">{c.address}</div>}
                     </div>
-                    {c.customerUrl && <a href={c.customerUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-gray-400 hover:text-gray-600 underline">客戶頁</a>}
+                    {c.customerUrl && <a href={c.customerUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>}
                   </div>
                 ))}
               </div>
@@ -1010,9 +1010,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     <div className="space-y-5">
 
       {/* Control bar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="card-soft p-4 sm:p-5 flex items-stretch sm:items-center gap-2.5 flex-col sm:flex-row sm:flex-wrap">
         <button onClick={loadComparison} disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
+          className="justify-center flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 shadow-md shadow-brand-500/25 disabled:opacity-50 active:scale-95 transition-all">
           {loading
             ? <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -1020,7 +1020,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           {loading ? '比對中…' : '🔍 執行比對'}
         </button>
         <button onClick={triggerDataUpdate} disabled={triggering}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+          className="justify-center flex items-center gap-2 px-5 py-2.5 rounded-full border border-stone-200 bg-white text-stone-600 text-sm hover:border-stone-300 hover:bg-stone-50 disabled:opacity-50 active:scale-95 transition-all">
           {triggering
             ? <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -1028,39 +1028,39 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           更新醫事資料
         </button>
         <button onClick={saveRecord} disabled={saving || !result?.hasSnapshot}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 text-brand-700 text-sm hover:bg-brand-50 disabled:opacity-50 transition-colors">
+          className="justify-center flex items-center gap-2 px-5 py-2.5 rounded-full border border-brand-300 bg-white text-brand-700 text-sm hover:bg-brand-50 disabled:opacity-50 active:scale-95 transition-all">
           {saving ? '儲存中…' : '💾 儲存比對紀錄'}
         </button>
         <button onClick={openChanges}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-gray-600 text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          className="justify-center flex items-center gap-2 px-5 py-2.5 rounded-full border border-stone-200 bg-white text-stone-600 text-sm hover:border-stone-300 hover:bg-stone-50 active:scale-95 transition-all">
           📋 本月異動
         </button>
         {cachedAt && (
-          <span className="text-xs text-gray-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
+          <span className="text-xs text-stone-400 flex items-center justify-center gap-1.5 sm:ml-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-400 inline-block shrink-0" />
             上次比對：{new Date(cachedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             <button
               onClick={() => {
                 try { localStorage.removeItem(CACHE_KEY) } catch {}
                 setResult(null); setCachedAt(null)
               }}
-              className="ml-1 text-gray-300 hover:text-gray-500"
+              className="ml-1 text-stone-300 hover:text-stone-500"
             >✕</button>
           </span>
         )}
         {result && (
-          <span className="text-xs text-gray-300">
+          <span className="text-xs text-stone-300">
             快照：{result.snapshotMonth}（{new Date(result.snapshotFetched).toLocaleDateString('zh-TW')} 擷取）
           </span>
         )}
       </div>
 
       {triggerMsg && (
-        <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
+        <div className="text-sm text-stone-700 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
           {triggerMsg}
           <a href="https://github.com/Songtah/songtah-quote/actions/workflows/clinic-monitor.yml"
             target="_blank" rel="noreferrer"
-            className="text-xs text-gray-400 underline hover:text-gray-600 ml-1">查看進度</a>
+            className="text-xs text-stone-400 underline hover:text-stone-600 ml-1">查看進度</a>
         </div>
       )}
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>}
@@ -1068,8 +1068,8 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {result && !result.hasSnapshot && (
         <div className="panel px-6 py-16 text-center">
           <div className="text-3xl mb-3">📡</div>
-          <p className="text-sm text-gray-600 font-medium">尚無醫事資料快照</p>
-          <p className="text-sm text-gray-400 mt-1">請點擊「更新醫事資料」後等待約 25 分鐘，完成後再執行比對</p>
+          <p className="text-sm text-stone-600 font-medium">尚無醫事資料快照</p>
+          <p className="text-sm text-stone-400 mt-1">請點擊「更新醫事資料」後等待約 25 分鐘，完成後再執行比對</p>
         </div>
       )}
 
@@ -1095,14 +1095,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
+            <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
               {stats.totalLabs > 0
                 ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : (stats.labDelta === null ? '全台 · 首次建立基準' : '全台')} />
                 : (
                   <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
-                    <span className="text-xs text-gray-400 font-medium">牙體技術所</span>
+                    <span className="text-xs text-stone-400 font-medium">牙體技術所</span>
                     <span className="text-lg font-bold text-amber-500">資料未取得</span>
                     <span className="text-xs text-amber-500">BAS 上次抓取失敗，請點「更新醫事資料」重新執行</span>
                   </div>
@@ -1111,12 +1111,12 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="客戶（有代碼）" value={stats.customerWithCode} />
               <StatCard label="客戶（無代碼）" value={stats.customerNoCode} sub="未納入監控" />
             </div>
-            <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
               ℹ️ 此處「淨增減」是全台院所總數較上月的變化（新增−歇業），與下方「新開業候選」不同——後者只列尚未成為崧達客戶的新機構，已是客戶者會被排除，故數字通常較小。
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS) <span className="normal-case font-normal text-stone-300">— 點卡片看清單</span></p>
+            <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS) <span className="normal-case font-normal text-stone-300">— 點卡片看清單</span></p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
               <StatCard label="⛔ 疑似歇業"    value={closureItems.length} sub="點擊編輯開業狀態" accent="text-red-600" onClick={() => setActiveCategory('closure')} />
@@ -1125,7 +1125,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" onClick={() => setActiveCategory('inconsistent')} />
               <StatCard label="👤 公司自建"    value={stats.customerNoCode} sub="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
             </div>
-            <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
               ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，另列「醫院待確認」。
             </p>
           </div>
@@ -1140,9 +1140,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {result?.hasSnapshot && (
         <div>
           <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">🆕 待開發機構（BAS 有、非客戶）</p>
+            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">🆕 待開發機構（BAS 有、非客戶）</p>
             {stats && (
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[11px] text-stone-400">
                 本月新增 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong>
                 ｜既有未開發 <strong className="text-amber-600">{(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}</strong>
                 ｜可勾選下方項目匯入客戶資料庫
@@ -1151,12 +1151,12 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           </div>
 
           {importResult && (
-            <div className={`mb-3 text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+            <div className={`mb-3 text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-brand-50 text-emerald-700 border-brand-200'}`}>
               {importResult}
             </div>
           )}
           {stats && stats.newOpeningExcludedExisting > 0 && (
-            <div className="mb-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+            <div className="mb-3 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
               ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構，可能是客戶代碼未同步、換照換碼或同名同區資料，暫不列入新開業機會。
             </div>
           )}

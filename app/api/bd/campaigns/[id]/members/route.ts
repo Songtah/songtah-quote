@@ -23,7 +23,7 @@ export const maxDuration = 300
 const norm = (s: string) => s.replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').toLowerCase()
 const looksLikeCode = (s: string) => /^[A-Za-z0-9]{5,}$/.test(s.trim())
 
-export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
+export const POST = withApiAuth('central-management', async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
 

@@ -13,7 +13,7 @@ const TICKET_STATUS_STYLES: Record<string, string> = {
   '🔍 診斷問題中': 'bg-sky-100 text-sky-700',
   '⚙️ 測試中':     'bg-indigo-100 text-indigo-700',
   '🔍 後續追蹤':   'bg-purple-100 text-purple-700',
-  '✅ 結案':       'bg-green-100 text-green-700',
+  '✅ 結案':       'bg-brand-50 text-green-700',
 }
 
 type EquipmentDetail = {
@@ -36,9 +36,9 @@ type EquipmentDetail = {
 
 const STATUS_STYLES: Record<string, string> = {
   '正常':    'bg-blue-100 text-blue-700',
-  '新機':    'bg-green-100 text-green-700',
+  '新機':    'bg-brand-50 text-green-700',
   '高齡設備': 'bg-red-100 text-red-700',
-  '報廢':    'bg-gray-100 text-gray-500',
+  '報廢':    'bg-stone-100 text-stone-500',
   '借用中':  'bg-yellow-100 text-yellow-700',
   '狀態不明': 'bg-orange-100 text-orange-700',
 }
@@ -80,19 +80,19 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
       {loading && (
         <div className="space-y-4">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 p-6 h-40 animate-pulse" />
+            <div key={i} className="card-soft p-6 h-40 animate-pulse" />
           ))}
         </div>
       )}
 
       {error && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-red-600">{error}</div>
+        <div className="card-soft p-6 text-sm text-red-600">{error}</div>
       )}
 
       {data && (
         <div className="space-y-4">
           {/* Hero card */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="card-soft overflow-hidden">
             {data.thumbnail && (
               <div className="w-full bg-slate-50 flex items-center justify-center" style={{ maxHeight: 280 }}>
                 <img
@@ -109,7 +109,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                   {data.productName || data.manufacturer || '未知機型'}
                 </h1>
                 {data.status && (
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${STATUS_STYLES[data.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${STATUS_STYLES[data.status] ?? 'bg-stone-100 text-stone-500'}`}>
                     {data.status}
                   </span>
                 )}
@@ -129,8 +129,8 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
           </div>
 
           {/* Details */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-800 mb-4">設備資訊</h2>
+          <div className="card-soft p-6">
+            <h2 className="font-semibold text-stone-800 mb-4">設備資訊</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               {data.serialNumber && <InfoRow label="序號" value={data.serialNumber} />}
               {data.supportId && <InfoRow label="Support ID" value={data.supportId} />}
@@ -152,8 +152,8 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
           </div>
 
           {/* 維修紀錄 */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-800 mb-4">維修紀錄（{tickets.length} 筆）</h2>
+          <div className="card-soft p-6">
+            <h2 className="font-semibold text-stone-800 mb-4">維修紀錄（{tickets.length} 筆）</h2>
             {tickets.length === 0 ? (
               <p className="text-sm text-slate-400">這台設備尚無工單紀錄。</p>
             ) : (
@@ -162,7 +162,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                   <Link
                     key={t.id}
                     href={`/tickets/${t.id}`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-2.5 hover:border-emerald-200 hover:bg-slate-50 transition"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-2.5 hover:border-brand-200 hover:bg-slate-50 transition"
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-slate-800 truncate">
@@ -174,7 +174,7 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
                       </div>
                     </div>
                     {t.status && (
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${TICKET_STATUS_STYLES[t.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${TICKET_STATUS_STYLES[t.status] ?? 'bg-stone-100 text-stone-500'}`}>
                         {t.status}
                       </span>
                     )}

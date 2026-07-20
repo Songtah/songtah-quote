@@ -307,12 +307,16 @@ export async function createQuote(data: {
 export async function listQuotes(options?: {
   limit?: number
   cursor?: string
+  salesperson?: string
 }): Promise<{ items: Quote[]; hasMore: boolean; nextCursor: string | null }> {
   const limit = options?.limit ?? 10
   const resp: any = await notion.databases.query({
     database_id: DB.quotes,
     sorts: [{ property: '建立時間', direction: 'descending' }],
     page_size: limit,
+    ...(options?.salesperson
+      ? { filter: { property: '業務姓名', rich_text: { equals: options.salesperson } } }
+      : {}),
     ...(options?.cursor ? { start_cursor: options.cursor } : {}),
   })
 
