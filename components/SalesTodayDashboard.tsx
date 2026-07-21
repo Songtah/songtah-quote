@@ -114,8 +114,8 @@ export function SalesTodayDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-white text-stone-800">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-stone-900/[0.06] bg-[#fdfdfb] px-5 py-6 lg:flex">
+    <div className="min-h-screen bg-stone-50/70 text-stone-800">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-stone-900/[0.06] bg-white px-5 py-6 lg:flex">
         <Link href="/dashboard" className="mb-10 block px-2" aria-label="崧達首頁">
           <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-36" priority />
         </Link>
@@ -128,7 +128,7 @@ export function SalesTodayDashboard({
               className={`flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold transition-all active:scale-95 ${
                 href === '/dashboard'
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                  : 'text-stone-500 hover:bg-white hover:text-brand-700 hover:shadow-sm'
+                  : 'text-stone-500 hover:bg-stone-50 hover:text-brand-700'
               }`}
             >
               <Icon className="size-4.5" />
@@ -137,7 +137,7 @@ export function SalesTodayDashboard({
           ))}
         </nav>
         <div className="mt-3 space-y-2">
-          <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm text-stone-400 hover:bg-white hover:text-stone-700">
+          <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm text-stone-400 hover:bg-stone-50 hover:text-stone-700">
             <CircleUserRound className="size-4" /> {userName || '我的帳號'}・登出
           </button>
         </div>
@@ -177,10 +177,10 @@ export function SalesTodayDashboard({
           </div>
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,.75fr)]" aria-label="今天最重要的工作">
-            <MagicCard gradientColor="#f2ede3" gradientFrom="#ead8b4" gradientTo="#efe4c8" gradientOpacity={0.45} className="rounded-3xl border-0 shadow-[0_20px_60px_rgba(87,74,48,0.10)]">
-              <div className="relative z-30 min-h-[300px] bg-gradient-to-br from-[#fffdf8] via-[#fdfcf8] to-[#f8f1e3] p-6 sm:p-9">
+            <MagicCard gradientColor="#e7e5e4" gradientFrom="#d6d3d1" gradientTo="#f5f5f4" gradientOpacity={0.28} className="rounded-3xl border-0 shadow-[0_18px_55px_rgba(28,25,23,0.08)] ring-1 ring-stone-900/[0.05]">
+              <div className="relative z-30 min-h-[300px] bg-white p-6 sm:p-9">
                 <div className="mb-10 flex items-center justify-between gap-4">
-                  <span className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-bold tracking-wide text-emerald-700 shadow-sm">下一個動作</span>
+                  <span className="rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold tracking-wide text-brand-700">下一個動作</span>
                   {next?.overdue && <span className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600">已逾期</span>}
                 </div>
                 {next ? (
@@ -193,7 +193,7 @@ export function SalesTodayDashboard({
                         開始處理 <ArrowRight className="ml-2 size-4" />
                       </ShimmerButton>
                       {visibleModules.crm && (
-                        <Link href={`/customers?q=${encodeURIComponent(next.customer)}`} className="rounded-full bg-white/80 px-6 py-3 text-center text-sm font-semibold text-stone-600 shadow-sm transition-all hover:bg-white active:scale-95">查看客戶資料</Link>
+                        <Link href={`/customers?q=${encodeURIComponent(next.customer)}`} className="rounded-full bg-stone-50 px-6 py-3 text-center text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.05] transition-all hover:bg-stone-100 active:scale-95">查看客戶資料</Link>
                       )}
                     </div>
                   </>
@@ -214,11 +214,11 @@ export function SalesTodayDashboard({
               </div>
             </MagicCard>
 
-            <div className="rounded-3xl bg-[#fdfdfb] p-6 shadow-[0_16px_50px_rgba(87,74,48,0.07)] sm:p-7">
+            <div className="rounded-3xl bg-white p-6 shadow-[0_16px_45px_rgba(28,25,23,0.06)] ring-1 ring-stone-900/[0.05] sm:p-7">
               <h2 className="text-base font-bold text-stone-800">今天還有</h2>
               <div className="mt-5 divide-y divide-stone-900/[0.06]">
                 {summary.map((item) => (
-                  <Link key={`${item.href}-${item.label}`} href={item.href} className="flex items-center justify-between py-4 transition-colors hover:text-brand-700">
+                  <Link key={`${item.href}-${item.label}`} href={item.href} className="flex items-center justify-between rounded-2xl px-2 py-4 transition-colors hover:bg-stone-50 hover:text-brand-700">
                     <span className="text-sm font-medium text-stone-500">{item.label}</span>
                     <span className={`text-2xl font-bold tabular-nums ${item.danger ? 'text-rose-600' : 'text-stone-800'}`}><NumberTicker value={item.value} className={item.danger ? 'text-rose-600' : 'text-stone-800'} /></span>
                   </Link>
@@ -235,7 +235,7 @@ export function SalesTodayDashboard({
             {data.workItems.length > 0 ? (
               <AnimatedList delay={140} className="gap-3">
                 {data.workItems.map((item) => (
-                  <Link key={`${item.kind}-${item.id}`} href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-[0_10px_35px_rgba(87,74,48,0.07)] ring-1 ring-stone-900/[0.04] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(87,74,48,0.11)] active:scale-[0.99] sm:px-6">
+                  <Link key={`${item.kind}-${item.id}`} href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] sm:px-6">
                     <span className={`w-20 shrink-0 text-sm font-bold ${item.overdue ? 'text-rose-600' : 'text-brand-600'}`}>{item.time}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-stone-800 sm:text-base">{item.customer}</span>
@@ -247,7 +247,7 @@ export function SalesTodayDashboard({
                 ))}
               </AnimatedList>
             ) : (
-              <div className="rounded-3xl bg-[#fdfdfb] px-6 py-10 text-center text-sm text-stone-400">目前沒有待辦工作，從下方快速建立一筆。</div>
+              <div className="rounded-3xl bg-white px-6 py-10 text-center text-sm text-stone-400 shadow-sm ring-1 ring-stone-900/[0.05]">目前沒有待辦工作，從下方快速建立一筆。</div>
             )}
           </section>
 
@@ -256,8 +256,8 @@ export function SalesTodayDashboard({
               <h2 id="quick-actions-title" className="mb-4 text-lg font-bold text-stone-800">快速開始</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                 {visibleActions.map(({ href, label, icon: Icon }) => (
-                  <Link key={href} href={href} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-[#fdfdfb] px-3 py-4 text-sm font-semibold text-stone-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:text-brand-700 hover:shadow-md active:scale-95">
-                    <span className="rounded-full bg-white p-2.5 text-brand-600 shadow-sm"><Icon className="size-5" /></span>
+                  <Link key={href} href={href} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-white px-3 py-4 text-sm font-semibold text-stone-600 shadow-sm ring-1 ring-stone-900/[0.04] transition-all hover:-translate-y-0.5 hover:text-brand-700 hover:shadow-md active:scale-95">
+                    <span className="rounded-full bg-brand-50 p-2.5 text-brand-600"><Icon className="size-5" /></span>
                     {label}
                   </Link>
                 ))}
