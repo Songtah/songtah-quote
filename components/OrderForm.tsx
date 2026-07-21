@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import Fuse from 'fuse.js'
 import type { OrderItem, ItemType } from '@/lib/orders-notion'
 import type { PromotionItem } from '@/lib/promotion-items-notion'
 import { matchPromoRule, buyNGetMGiftQty, SERIES_CONDITION_TYPES } from '@/lib/order-pricing'
@@ -227,18 +228,36 @@ function ProductPicker({
   // 搜尋模式：以關鍵字比對系列名稱 / 品牌 / 分類，同時套用 brand/type 篩選
   const familySearchResults = useMemo(() => {
     if (!search.trim()) return []
-    const kw = search.trim().toLowerCase()
-    return families.filter((f) => {
+    const kw = search.normalize('NFKC').trim().toLowerCase()
+    const candidates = families.filter((f) => {
       if (filterBrand && f.brand !== filterBrand) return false
       if (filterType && f.productType !== filterType) return false
       if (filterCategory && f.category !== filterCategory) return false
-      return (
-        f.seriesName.toLowerCase().includes(kw) ||
-        f.brand.toLowerCase().includes(kw) ||
-        f.category.toLowerCase().includes(kw) ||
-        f.seriesCode.toLowerCase().includes(kw)
-      )
+      return true
     })
+    const tokens = kw.split(/[\s\-_/.,，。()（）]+/).filter(Boolean)
+    const exact = candidates.filter((family) => {
+      const text = [family.seriesCode, family.seriesName, family.brand, family.category, family.productType]
+        .join(' ')
+        .normalize('NFKC')
+        .toLowerCase()
+      return tokens.every((token) => text.includes(token))
+    })
+    const exactIds = new Set(exact.map((family) => family.id))
+    const fuzzy = new Fuse(candidates, {
+      keys: [
+        { name: 'seriesCode', weight: 0.32 },
+        { name: 'seriesName', weight: 0.32 },
+        { name: 'brand', weight: 0.14 },
+        { name: 'category', weight: 0.12 },
+        { name: 'productType', weight: 0.1 },
+      ],
+      threshold: 0.38,
+      distance: 100,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+    }).search(kw).map((result) => result.item)
+    return [...exact, ...fuzzy.filter((family) => !exactIds.has(family.id))]
   }, [families, search, filterBrand, filterType, filterCategory])
 
   // 所有已被規格系列涵蓋的貨品碼（skuMap 中的 value），用於過濾搜尋結果
@@ -338,7 +357,7 @@ function ProductPicker({
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null) }}
-            placeholder="搜尋全部 6,037 筆商品（品名 / 貨品碼）…"
+            placeholder="搜尋品名、貨號、系列、規格；可輸入部分文字…"
             className="input-soft"
             autoFocus
           />

@@ -569,7 +569,7 @@ export function ProductsContent({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜尋產品名稱、生產商、分類..."
+          placeholder="搜尋品名、貨號、系列、規格；可輸入部分文字…"
           className="input pl-10 pr-10"
           autoComplete="off"
         />

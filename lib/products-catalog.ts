@@ -8,6 +8,7 @@
 
 import path from 'path'
 import fs from 'fs'
+import Fuse from 'fuse.js'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,23 +87,73 @@ export interface CatalogSearchOptions {
   excludeCodes?: ReadonlySet<string>
 }
 
+function normalizeProductQuery(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\-_/.,，。()（）]+/g, ' ')
+    .trim()
+}
+
+function searchableText(product: CatalogProduct): string {
+  return normalizeProductQuery([
+    product.code,
+    product.name,
+    product.brand,
+    product.seriesName,
+    product.spec,
+    product.category,
+    product.mainCategory,
+    product.productType,
+  ].filter(Boolean).join(' '))
+}
+
 export function searchCatalog(
   opts: CatalogSearchOptions = {},
   source: CatalogProduct[] = getCatalog(),
 ): CatalogProduct[] {
   const { q = '', brand, productType, category, limit = 50, excludeCodes } = opts
-  const keyword = q.trim().toLowerCase()
+  const keyword = normalizeProductQuery(q)
 
   // 訂貨/報價選品器不顯示已停售／未販售品項（管理頁仍可見，走 getCatalog）
   let results = source.filter((p) => !p.discontinued)
 
   if (keyword) {
-    results = results.filter(
-      (p) =>
-        p.code.toLowerCase().includes(keyword) ||
-        p.name.toLowerCase().includes(keyword) ||
-        p.brand.toLowerCase().includes(keyword)
-    )
+    const tokens = keyword.split(' ').filter(Boolean)
+    const exactMatches = results
+      .filter((product) => {
+        const text = searchableText(product)
+        return tokens.every((token) => text.includes(token))
+      })
+      .sort((a, b) => {
+        const aCode = normalizeProductQuery(a.code)
+        const bCode = normalizeProductQuery(b.code)
+        const aName = normalizeProductQuery(a.name)
+        const bName = normalizeProductQuery(b.name)
+        const rank = (code: string, name: string) =>
+          code === keyword ? 0 : code.startsWith(keyword) ? 1 : name.startsWith(keyword) ? 2 : 3
+        return rank(aCode, aName) - rank(bCode, bName)
+      })
+
+    const exactCodes = new Set(exactMatches.map((product) => product.code))
+    const fuzzyMatches = new Fuse(results, {
+      keys: [
+        { name: 'code', weight: 0.3 },
+        { name: 'name', weight: 0.28 },
+        { name: 'seriesName', weight: 0.16 },
+        { name: 'brand', weight: 0.1 },
+        { name: 'category', weight: 0.07 },
+        { name: 'mainCategory', weight: 0.04 },
+        { name: 'productType', weight: 0.03 },
+        { name: 'spec', weight: 0.02 },
+      ],
+      threshold: 0.38,
+      distance: 120,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+    }).search(keyword).map((result) => result.item)
+
+    results = [...exactMatches, ...fuzzyMatches.filter((product) => !exactCodes.has(product.code))]
   }
   if (brand)       results = results.filter((p) => p.brand       === brand)
   if (productType) results = results.filter((p) => p.productType === productType)
