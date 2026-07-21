@@ -21,9 +21,10 @@
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
-/* ── 字體大小三段 ── 以 html font-size 控制，所有 rem 值等比縮放 */
-html[data-fs="large"]  { font-size: 118.75%; }   /* ≈ 19px */
-html[data-fs="xlarge"] { font-size: 137.5%;  }   /* ≈ 22px */
+/* ── 全站字體大小三段 ── Tailwind 文字與間距以 rem 為主，因此跨頁一致縮放 */
+html { font-size: 100%; }
+html[data-fs="large"]  { font-size: 112.5%; }  /* 16px → 18px */
+html[data-fs="xlarge"] { font-size: 125%; }    /* 16px → 20px */
 
 /* ── input[type=date] 正規化：讓行高、高度與 text/select 一致 ── */
 input[type="date"] {

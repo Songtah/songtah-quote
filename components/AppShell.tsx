@@ -8,7 +8,6 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
 import { fadeUp } from '@/lib/motion'
-import { FontSizeToggle } from '@/components/FontSizeToggle'
 import {
   BadgeDollarSign,
   BriefcaseBusiness,
@@ -191,7 +190,6 @@ export function AppShell({
         <div className="flex h-16 items-center justify-between px-4">
           <Link href="/dashboard"><Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-28" priority /></Link>
           <div className="flex items-center gap-2">
-            <FontSizeToggle />
             <button type="button" onClick={() => setMobileMenuOpen((open) => !open)} className="rounded-full bg-stone-100 p-3 text-stone-600 transition-all active:scale-95" aria-label={mobileMenuOpen ? '關閉選單' : '開啟選單'}>
               {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>

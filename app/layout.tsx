@@ -18,8 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
-            var fs = localStorage.getItem('songtah-fs');
-            if (fs && fs !== 'normal') document.documentElement.setAttribute('data-fs', fs);
+            try {
+              var fs = localStorage.getItem('songtah-fs');
+              if (fs === 'large' || fs === 'xlarge') document.documentElement.setAttribute('data-fs', fs);
+            } catch (e) {}
           })();
         `}} />
       </head>
