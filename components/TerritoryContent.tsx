@@ -410,6 +410,7 @@ function SalespersonReportModal({ accounts, initialType, onClose }: {
   onClose: () => void
 }) {
   const [salespersonId, setSalespersonId] = useState(accounts[0]?.id ?? '')
+  const isCompany = salespersonId === 'company'
   const query = (scope: 'territories' | 'customers') => {
     const params = new URLSearchParams({ scope })
     if (initialType) params.set('type', initialType)
@@ -418,11 +419,11 @@ function SalespersonReportModal({ accounts, initialType, onClose }: {
   return (
     <Modal title="列印業務總表" onClose={onClose}>
       <div className="space-y-4">
-        <p className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-500">先選擇業務，再決定要合併列印其全部轄區，或列印目前客戶主檔中掛名給他的既有客戶。</p>
-        <Field label="選擇業務"><select className="select-soft block w-full" value={salespersonId} onChange={(event) => setSalespersonId(event.target.value)}>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <a href={query('territories')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">全部轄區總名單</b><span className="mt-1 block text-xs leading-5 text-stone-400">合併該業務所有有效轄區的市場統計與客戶名單。</span></a>
-          <a href={query('customers')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">既有客戶名單</b><span className="mt-1 block text-xs leading-5 text-stone-400">列印目前負責業務為此人的客戶，不受轄區限制。</span></a>
+        <p className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-500">{isCompany ? '公司客戶依客戶主檔的負責業務「公司」產出，不會列入任何個人業績。' : '先選擇業務，再決定要合併列印其全部轄區，或列印目前客戶主檔中掛名給他的既有客戶。'}</p>
+        <Field label="選擇報表對象"><select className="select-soft block w-full" value={salespersonId} onChange={(event) => setSalespersonId(event.target.value)}>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}<option value="company">公司客戶（公司名下）</option></select></Field>
+        <div className={`grid gap-3 ${isCompany ? '' : 'sm:grid-cols-2'}`}>
+          {!isCompany && <a href={query('territories')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">全部轄區總名單</b><span className="mt-1 block text-xs leading-5 text-stone-400">合併該業務所有有效轄區的市場統計與客戶名單。</span></a>}
+          <a href={query('customers')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">{isCompany ? '公司客戶名單' : '既有客戶名單'}</b><span className="mt-1 block text-xs leading-5 text-stone-400">{isCompany ? '列印客戶主檔中負責業務為「公司」的客戶，不受轄區限制。' : '列印目前負責業務為此人的客戶，不受轄區限制。'}</span></a>
         </div>
         <div className="flex justify-end"><button onClick={onClose} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">關閉</button></div>
       </div>

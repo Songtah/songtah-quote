@@ -38,6 +38,7 @@ export default function SalespersonReportClient({
   initialType,
   hiddenOtherOwnedCount,
   hiddenOtherOwnedByType,
+  customerOnly = false,
 }: {
   salesperson: { id: string; name: string }
   scope: ReportScope
@@ -50,6 +51,7 @@ export default function SalespersonReportClient({
   initialType: '' | CustomerType
   hiddenOtherOwnedCount: number
   hiddenOtherOwnedByType: Record<CustomerType, number>
+  customerOnly?: boolean
 }) {
   const [type, setType] = useState<'' | CustomerType>(initialType)
   const [mode, setMode] = useState<ReportMode>('both')
@@ -102,8 +104,8 @@ export default function SalespersonReportClient({
           </div>
           <button onClick={printReport} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"><Printer className="size-4" />列印／另存 PDF</button>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-semibold text-stone-600">報表種類<select className="select-soft mt-1.5 block w-full" value={scope} onChange={(event) => changeScope(event.target.value as ReportScope)}><option value="territories">全部轄區總名單</option><option value="customers">既有客戶名單</option></select></label>
+        <div className={`mt-4 grid gap-3 ${customerOnly ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+          {!customerOnly && <label className="text-sm font-semibold text-stone-600">報表種類<select className="select-soft mt-1.5 block w-full" value={scope} onChange={(event) => changeScope(event.target.value as ReportScope)}><option value="territories">全部轄區總名單</option><option value="customers">既有客戶名單</option></select></label>}
           <label className="text-sm font-semibold text-stone-600">客戶類型<select className="select-soft mt-1.5 block w-full" value={type} onChange={(event) => setType(event.target.value as '' | CustomerType)}>{TYPE_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}</select></label>
           <label className="text-sm font-semibold text-stone-600">列印內容<select className="select-soft mt-1.5 block w-full" value={mode} onChange={(event) => setMode(event.target.value as ReportMode)}>{MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         </div>

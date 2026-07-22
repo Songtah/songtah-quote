@@ -179,10 +179,25 @@ try {
   if (combinedTerritoryReportHtml.includes('institutionCode') || combinedTerritoryReportHtml.includes('phone') || combinedTerritoryReportHtml.includes('address')) {
     throw new Error('業務轄區總報表洩漏未授權的敏感欄位')
   }
+  const companyReportResponse = await request('/bd/salespersons/company/report?scope=customers')
+  const companyReportHtml = await companyReportResponse.text()
+  if (!companyReportResponse.ok || !companyReportHtml.includes('公司客戶') || !companyReportHtml.includes('既有客戶名單')) {
+    throw new Error(`公司客戶報表無法開啟：HTTP ${companyReportResponse.status}`)
+  }
+  if (Number(companyReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0) <= 0) {
+    throw new Error('公司客戶報表沒有產出任何名下客戶')
+  }
+  if (companyReportHtml.includes('institutionCode') || companyReportHtml.includes('phone') || companyReportHtml.includes('address')) {
+    throw new Error('公司客戶報表洩漏未授權的敏感欄位')
+  }
   const businessCombinedReportResponse = await requestAs(`/bd/salespersons/${salesperson.id}/report?scope=territories`, businessToken)
   const businessCombinedReportHtml = await businessCombinedReportResponse.text()
   if (!businessCombinedReportResponse.ok || !businessCombinedReportHtml.includes('全部轄區總名單')) {
     throw new Error(`業務無法開啟自己的轄區總報表：HTTP ${businessCombinedReportResponse.status}`)
+  }
+  const forbiddenCompanyReport = await requestAs('/bd/salespersons/company/report?scope=customers', businessToken)
+  if (![302, 303, 307, 308].includes(forbiddenCompanyReport.status) || !forbiddenCompanyReport.headers.get('location')?.endsWith('/bd')) {
+    throw new Error(`一般業務仍可開啟公司客戶報表：HTTP ${forbiddenCompanyReport.status}`)
   }
   const businessPopupList = await json(await requestAs('/api/bd/my-customer-list?scope=territories', businessToken), '讀取業務端轄區彈跳清單')
   if (businessPopupList.items.some((item) => item.salesperson && item.salesperson !== salesperson.name)) {

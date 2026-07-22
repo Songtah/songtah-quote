@@ -23,15 +23,23 @@ export default async function SalespersonReportPage({
 
   const user = session.user as any
   const canViewAll = user?.role === 'admin' || user?.accountType === '中央管理' || user?.accountType === '總經理'
+  const isCompanyReport = params.id === 'company'
+  if (isCompanyReport && !canViewAll) redirect('/bd')
   if (!canViewAll && user?.id !== params.id) redirect('/bd')
 
-  const users = await getSystemUsers()
-  const salesperson = users.find((account) => account.id === params.id && account.accountType === '業務' && account.status !== '停用')
-  if (!salesperson) notFound()
-  const sameNameAccounts = users.filter((account) => account.accountType === '業務' && account.status !== '停用' && account.name === salesperson.name)
-  if (sameNameAccounts.length !== 1 || sameNameAccounts[0].id !== salesperson.id) redirect('/bd')
+  let salesperson: { id: string; name: string; ownerName: string }
+  if (isCompanyReport) {
+    salesperson = { id: 'company', name: '公司客戶', ownerName: '公司' }
+  } else {
+    const users = await getSystemUsers()
+    const account = users.find((item) => item.id === params.id && item.accountType === '業務' && item.status !== '停用')
+    if (!account) notFound()
+    const sameNameAccounts = users.filter((item) => item.accountType === '業務' && item.status !== '停用' && item.name === account.name)
+    if (sameNameAccounts.length !== 1 || sameNameAccounts[0].id !== account.id) redirect('/bd')
+    salesperson = { id: account.id, name: account.name, ownerName: account.name }
+  }
 
-  const scope = searchParams.scope === 'customers' ? 'customers' : 'territories'
+  const scope = isCompanyReport || searchParams.scope === 'customers' ? 'customers' : 'territories'
   const initialType = TERRITORY_CUSTOMER_TYPES.includes(searchParams.type as TerritoryCustomerType)
     ? searchParams.type as TerritoryCustomerType
     : ''
@@ -40,7 +48,7 @@ export default async function SalespersonReportPage({
 
   let rawCustomers: AreaCustomer[] = []
   if (scope === 'customers') {
-    rawCustomers = await listCustomersByArea({ salesperson: salesperson.name })
+    rawCustomers = await listCustomersByArea({ salesperson: salesperson.ownerName })
   } else {
     rawCustomers = await listCustomersByAreas(territories)
   }
@@ -48,7 +56,7 @@ export default async function SalespersonReportPage({
     .filter((customer) => !INACTIVE_STATUS.has(customer.status))
   const visibleCustomers = scope === 'customers' || canViewAll
     ? uniqueCustomers
-    : uniqueCustomers.filter((customer) => !customer.salesperson || customer.salesperson === salesperson.name)
+    : uniqueCustomers.filter((customer) => !customer.salesperson || customer.salesperson === salesperson.ownerName)
   const hiddenCustomers = uniqueCustomers.filter((customer) => !visibleCustomers.some((visible) => visible.id === customer.id))
   const hiddenOtherOwnedByType = Object.fromEntries(TERRITORY_CUSTOMER_TYPES.map((type) => [
     type, hiddenCustomers.filter((customer) => customer.type === type).length,
@@ -89,6 +97,7 @@ export default async function SalespersonReportPage({
       initialType={initialType}
       hiddenOtherOwnedCount={hiddenCustomers.length}
       hiddenOtherOwnedByType={hiddenOtherOwnedByType}
+      customerOnly={isCompanyReport}
     />
   )
 }
