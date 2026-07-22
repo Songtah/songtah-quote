@@ -100,6 +100,10 @@ export const DB = {
   campaignMembers:
     process.env.NOTION_CAMPAIGN_MEMBERS_DB ??
     '396dcdaa-fb2a-81b4-a63b-f8872ae3cf13',
+  // 業務轄區設定（只保存地理責任，不等於客戶「負責業務」）
+  territories:
+    process.env.NOTION_TERRITORIES_DB ??
+    '3a5dcdaa-fb2a-81a2-95b1-c368f569901d',
 } as const
 
 export function normalizeDatabaseId(value?: string) {

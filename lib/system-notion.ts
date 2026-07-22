@@ -69,3 +69,9 @@ export {
   getSystemUsers, getSystemUserByCredentials, createSystemUser,
   getSystemUserById, updateSystemUser, deleteSystemUser,
 } from './notion/accounts'
+
+// ─── 業務轄區設定 → ./notion/territories（葉領域）──────────────────────────────
+export type { Territory, TerritoryStatus } from './notion/territories'
+export {
+  TERRITORY_STATUSES, listTerritories, getTerritory, createTerritory, updateTerritory,
+} from './notion/territories'

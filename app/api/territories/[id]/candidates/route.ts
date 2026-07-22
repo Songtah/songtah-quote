@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { withApiAuth } from '@/lib/api-auth'
+import { listCustomersByArea } from '@/lib/notion/customers'
+import { getTerritory } from '@/lib/notion/territories'
+
+type Ctx = { params: { id: string } }
+
+function canAccess(session: any, salespersonId: string) {
+  const user = session.user as any
+  return user?.role === 'admin' || user?.accountType === '中央管理' ||
+    user?.accountType === '總經理' || (!!salespersonId && user?.id === salespersonId)
+}
+
+export const GET = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'view' }, async (_req: NextRequest, { params }, session) => {
+  try {
+    const territory = await getTerritory(params.id)
+    if (!canAccess(session, territory.salespersonId)) {
+      return NextResponse.json({ error: '只能查看自己的轄區名單' }, { status: 403 })
+    }
+    if (territory.status === '結束') return NextResponse.json({ error: '轄區已結束' }, { status: 400 })
+    const customers = await listCustomersByArea({
+      city: territory.city, district: territory.district, unassignedOnly: true,
+    })
+    const items = customers
+      .filter((customer) => !['已歇業', '停業', '撤銷'].includes(customer.status))
+      .map((customer) => ({
+        id: customer.id, name: customer.name, type: customer.type,
+        status: customer.status, devStage: customer.devStage,
+      }))
+    return NextResponse.json({ territory, items })
+  } catch (error: any) {
+    console.error('territory candidates GET error:', error)
+    return NextResponse.json({ error: error?.message || '讀取未開發名單失敗' }, { status: 500 })
+  }
+})

@@ -1,13 +1,12 @@
-import { getServerSession } from 'next-auth'
 import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
 import { ClinicMonitorContent } from '@/components/ClinicMonitorContent'
 import RegionStatsContent from '@/components/RegionStatsContent'
 import TerritoryContent from '@/components/TerritoryContent'
 import OpportunityContent from './OpportunityContent'
-import { requireViewPermission } from '@/lib/permissions'
+import { canEdit, requireViewPermission } from '@/lib/permissions'
 import { peekRegionStatsRows } from '@/lib/notion/customers'
-import { authOptions } from '@/lib/auth'
+import { getSystemUsers } from '@/lib/notion/accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,15 +15,15 @@ export default async function ClinicMonitorPage({
 }: {
   searchParams: { tab?: string }
 }) {
-  await requireViewPermission('clinic_monitor')
-
-  const session = await getServerSession(authOptions)
+  const session = await requireViewPermission('clinic_monitor')
   const role        = (session?.user as any)?.role        as string | undefined
   const accountType = (session?.user as any)?.accountType as string | undefined
   // 分派/轉移=改寫主檔的管理動作,限 admin/中央管理/總經理(與 /api/customers/assign|reassign 一致)
   const canAssign = role === 'admin' || accountType === '中央管理' || accountType === '總經理'
   // 公司既有客戶調度(公司↔業務)更嚴,僅限中央管理(與 /api/customers/assign-company 一致)
   const canManageCompany = role === 'admin' || accountType === '中央管理'
+  const canClaim = canEdit(session, 'clinic_monitor')
+  const currentUserId = (session.user as any)?.id ?? ''
 
   const tab = searchParams.tab === 'regions'
     ? 'regions'
@@ -38,6 +37,9 @@ export default async function ClinicMonitorPage({
   const regionInitial = tab === 'regions' || tab === 'territory'
     ? await peekRegionStatsRows()
     : null
+  const accountOptions = tab === 'territory'
+    ? (await getSystemUsers()).filter((user) => user.status !== '停用' && user.accountType === '業務').map((user) => ({ id: user.id, name: user.name }))
+    : []
 
   const TAB_ITEMS = [
     { id: 'monitor',   href: '/admin/clinic-monitor',                 label: '🩺 客戶監控' },
@@ -53,7 +55,7 @@ export default async function ClinicMonitorPage({
         tab === 'regions'
           ? '各鄉鎮市區的機構規模、公司既有客戶覆蓋與各業務轄區客戶數。'
           : tab === 'territory'
-            ? '以業務為主角:檢視每位業務涵蓋的鄉鎮市區,認領該區未分派客戶(新增)或釋出/轉走(移除)。'
+            ? '先設定業務負責開發的地區，再由業務逐筆認領客戶；新增轄區不會改動客戶歸屬或轉化統計。'
             : tab === 'opportunity'
               ? '從 Google 商家資訊挖出診所的設備/數位訊號(如一日假牙=院內技工室),標記商機、鎖定設備直客。'
               : '每月比對全台牙科單位的開業／停業狀況，關聯崧達客戶。'
@@ -80,7 +82,14 @@ export default async function ClinicMonitorPage({
       {tab === 'regions' ? (
         <RegionStatsContent initialData={regionInitial} canAssign={canAssign} />
       ) : tab === 'territory' ? (
-        <TerritoryContent initialData={regionInitial} canAssign={canAssign} canManageCompany={canManageCompany} />
+        <TerritoryContent
+          initialData={regionInitial}
+          canAssign={canAssign}
+          canManageCompany={canManageCompany}
+          canClaim={canClaim}
+          currentUserId={currentUserId}
+          accountOptions={accountOptions}
+        />
       ) : tab === 'opportunity' ? (
         <OpportunityContent canScan={canManageCompany} />
       ) : (

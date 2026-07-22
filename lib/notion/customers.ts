@@ -620,6 +620,87 @@ export async function updateCustomerDevStage(
 }
 
 /**
+ * 從獨立轄區認領明確勾選的客戶。
+ * 每筆都重新讀取並驗證：必須屬於客戶主檔、位於指定轄區、負責業務仍為空白。
+ * 通過後才以單次 update 同時寫入負責業務、線索階段與轄區開發來源。
+ */
+export async function claimTerritoryCustomers(
+  customerIds: string[],
+  area: { city: string; district: string },
+  salesperson: string,
+  dryRun = true,
+): Promise<{
+  claimed: number
+  eligible: { id: string; name: string; type: string; status: string; devStage: string; previousDevStage: string }[]
+  skipped: { id: string; name: string; reason: string }[]
+}> {
+  if (!DB.customers) throw new Error('客戶主檔未設定')
+  if (!area.city || !area.district || !salesperson) throw new Error('缺少轄區或業務')
+  const customersDb = normalizeDatabaseId(DB.customers).replace(/-/g, '')
+  const eligible: { id: string; name: string; type: string; status: string; devStage: string; previousDevStage: string }[] = []
+  const skipped: { id: string; name: string; reason: string }[] = []
+  let claimed = 0
+
+  for (const id of Array.from(new Set(customerIds))) {
+    const page: any = await notionCallWithRetry('claimTerritoryCustomers:check', () =>
+      notion.pages.retrieve({ page_id: id })
+    )
+    const name = getTitle(page, '客戶名稱')
+    const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+    if (targetDb !== customersDb || page.archived) {
+      skipped.push({ id, name, reason: '非有效客戶主檔' })
+      continue
+    }
+    const city = getSelect(page, '縣市')
+    const district = getSelect(page, '行政區') || getText(page, '行政區')
+    if (city !== area.city || district !== area.district) {
+      skipped.push({ id, name, reason: '不在此轄區' })
+      continue
+    }
+    const current = getSelect(page, '負責業務')
+    if (current) {
+      skipped.push({ id, name, reason: `已由 ${current} 負責` })
+      continue
+    }
+
+    const status = getSelect(page, '機構狀態')
+    if (['已歇業', '停業', '撤銷'].includes(status)) {
+      skipped.push({ id, name, reason: `機構狀態為 ${status}` })
+      continue
+    }
+
+    const previousDevStage = getSelect(page, '開發階段')
+    const previousDevSource = getSelect(page, '開發來源')
+    const finalDevStage = previousDevStage || '線索'
+
+    const item = {
+      id, name, type: getSelect(page, '客戶類型'), status,
+      devStage: finalDevStage, previousDevStage,
+    }
+    eligible.push(item)
+    if (dryRun) continue
+
+    await notionCallWithRetry('claimTerritoryCustomers:write', () =>
+      notion.pages.update({
+        page_id: id,
+        properties: {
+          '負責業務': { select: { name: salesperson } },
+          ...(!previousDevStage ? { '開發階段': { select: { name: '線索' } } } : {}),
+          ...(!previousDevSource ? { '開發來源': { select: { name: '轄區開發' } } } : {}),
+        } as any,
+      })
+    )
+    claimed++
+  }
+
+  if (claimed > 0) {
+    setCachedValue('pipeline-customers-v1', null as any, 1)
+    await invalidateCustomerCaches()
+  }
+  return { claimed, eligible, skipped }
+}
+
+/**
  * 由明確業務事件向前推進階段。只前進、不倒退，也不覆蓋「流失」；
  * 人工修正仍走 updateCustomerDevStage，避免自動化改掉業務判斷。
  */

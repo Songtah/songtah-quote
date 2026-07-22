@@ -1,11 +1,5 @@
 'use client'
 
-/**
- * 業務轄區管理(業務視角)——薄 UI,底層完全沿用已實測的安全分派/轉移 API:
- *   新增轄區 → POST /api/customers/assign(只認領該區「負責業務空白」的未分派池;公司/盤商/他人一律不動)
- *   移除轄區 → POST /api/customers/reassign(只改「負責業務仍等於該業務」者;釋出未分派或轉給別人)
- * 不新增資料表、不重寫任何寫入邏輯。轄區=從 region-stats 推導(客戶負責業務+行政區)。
- */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type Row = {
@@ -13,619 +7,535 @@ type Row = {
   salesperson: string; devStage: string; count: number
 }
 type Data = { rows: Row[]; updatedAt: string }
+type Territory = {
+  id: string; name: string; city: string; district: string; salesperson: string; salespersonId: string
+  status: string; startDate: string; note: string; creator: string; createdAt: string
+}
+type ClaimedCustomer = { id: string; name: string; type: string; status: string; devStage: string; previousDevStage?: string }
 
-const EXCLUDE_OWNER = new Set(['公司', '盤商'])
-
-// 地區排序(與區域儀表板一致的地理順序,讓新增轄區的縣市選單好找)
 const CITY_ORDER = [
   '臺北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '宜蘭縣',
-  '苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣',
-  '嘉義市', '嘉義縣', '臺南市', '高雄市', '屏東縣',
-  '花蓮縣', '臺東縣', '澎湖縣', '金門縣', '連江縣',
+  '苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣',
+  '臺南市', '高雄市', '屏東縣', '花蓮縣', '臺東縣', '澎湖縣', '金門縣', '連江縣',
 ]
-const cityRank = (c: string) => { const i = CITY_ORDER.indexOf(c); return i < 0 ? 999 : i }
+const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
+const EXCLUDED_OWNERS = new Set(['公司', '盤商'])
+const cityRank = (city: string) => {
+  const index = CITY_ORDER.indexOf(city)
+  return index < 0 ? 999 : index
+}
 
-export default function TerritoryContent({ initialData, canAssign = false, canManageCompany = false }: { initialData: Data | null; canAssign?: boolean; canManageCompany?: boolean }) {
+export default function TerritoryContent({
+  initialData,
+  canAssign = false,
+  canManageCompany = false,
+  canClaim = false,
+  currentUserId = '',
+  accountOptions = [],
+}: {
+  initialData: Data | null
+  canAssign?: boolean
+  canManageCompany?: boolean
+  canClaim?: boolean
+  currentUserId?: string
+  accountOptions?: { id: string; name: string }[]
+}) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
+  const [statsReady, setStatsReady] = useState(initialData !== null)
+  const [areaOptions, setAreaOptions] = useState<{ city: string; district: string; marketTotal: number }[]>([])
   const [updatedAt, setUpdatedAt] = useState(initialData?.updatedAt ?? '')
-  const [loading, setLoading] = useState(!initialData)
+  const [territories, setTerritories] = useState<Territory[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [sp, setSp] = useState('')
+  const [salespersonFilter, setSalespersonFilter] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Territory | null>(null)
+  const [claimTarget, setClaimTarget] = useState<Territory | null>(null)
   const [companyOpen, setCompanyOpen] = useState(false)
-  const [removeTarget, setRemoveTarget] = useState<{ city: string; district: string; count: number } | null>(null)
-  // 展開某區客戶清單(點客戶數):快取以 sp|city|district 為鍵(換業務不衝突)
-  const [openKey, setOpenKey] = useState<string | null>(null)
-  const [listCache, setListCache] = useState<Record<string, { loading: boolean; items: { id: string; name: string; type: string; status: string; phone: string }[]; err?: string }>>({})
+  const accountNames = useMemo(() => accountOptions.map((account) => account.name), [accountOptions])
 
-  const toggleDistrict = useCallback(async (city: string, district: string) => {
-    const key = `${sp}|${city}|${district}`
-    if (openKey === key) { setOpenKey(null); return }
-    setOpenKey(key)
-    if (listCache[key]) return
-    setListCache((c) => ({ ...c, [key]: { loading: true, items: [] } }))
+  const loadTerritories = useCallback(async () => {
+    setError('')
     try {
-      const q = new URLSearchParams({ city, district, salesperson: sp })
-      const r = await fetch('/api/customers/by-area?' + q)
-      const d = await r.json()
-      if (!r.ok) throw new Error(d.error || '讀取失敗')
-      setListCache((c) => ({ ...c, [key]: { loading: false, items: d.items ?? [] } }))
-    } catch (e: any) {
-      setListCache((c) => ({ ...c, [key]: { loading: false, items: [], err: e.message } }))
-    }
-  }, [sp, openKey, listCache])
-
-  const fetchData = useCallback(async () => {
-    setLoading(true); setError('')
-    try {
-      const r = await fetch('/api/customers/region-stats')
-      const d = await r.json()
-      if (!r.ok) throw new Error(d.error || '讀取失敗')
-      setRows(d.rows ?? []); setUpdatedAt(d.updatedAt ?? '')
-    } catch (e: any) {
-      setError(e.message)
+      const response = await fetch('/api/territories')
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '讀取轄區失敗')
+      setTerritories(json.items ?? [])
+    } catch (caught: any) {
+      setError(caught.message)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { if (!initialData) fetchData() }, [initialData, fetchData])
+  const loadStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/customers/region-stats')
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '讀取區域統計失敗')
+      setRows(json.rows ?? [])
+      setUpdatedAt(json.updatedAt ?? '')
+      setStatsReady(true)
+    } catch (caught: any) {
+      setError(caught.message)
+    }
+  }, [])
 
-  const salespersons = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.salesperson).filter((s) => s && !EXCLUDE_OWNER.has(s)))).sort(),
-    [rows])
+  const loadAreas = useCallback(async () => {
+    try {
+      const response = await fetch('/api/territories/areas')
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '讀取轄區選項失敗')
+      setAreaOptions(json.items ?? [])
+    } catch (caught: any) {
+      setError(caught.message)
+    }
+  }, [])
 
   useEffect(() => {
-    if (sp || !salespersons.length) return
-    setSp(salespersons[0])
-  }, [salespersons, sp])
+    loadTerritories()
+    loadAreas()
+  }, [loadAreas, loadTerritories])
 
-  // 該業務涵蓋的每個區(客戶數),依客戶數多→少
-  const myDistricts = useMemo(() => {
-    const m = new Map<string, { city: string; district: string; count: number }>()
-    for (const r of rows) {
-      if (r.salesperson !== sp) continue
-      const k = r.city + '|' + r.district
-      const cur = m.get(k)
-      if (cur) cur.count += r.count
-      else m.set(k, { city: r.city, district: r.district, count: r.count })
-    }
-    return Array.from(m.values()).sort((a, b) => b.count - a.count || cityRank(a.city) - cityRank(b.city))
-  }, [rows, sp])
-
-  const totalCust = myDistricts.reduce((s, d) => s + d.count, 0)
-
-  // 全部有效的 縣市→區(供公司調度挑區;去掉佔位值)
   const allAreas = useMemo(() => {
-    const m = new Map<string, { city: string; district: string }>()
-    for (const r of rows) {
-      if (r.city.startsWith('(') || r.district.startsWith('(')) continue
-      const k = r.city + '|' + r.district
-      if (!m.has(k)) m.set(k, { city: r.city, district: r.district })
+    const map = new Map<string, { city: string; district: string }>()
+    for (const area of areaOptions) map.set(`${area.city}|${area.district}`, { city: area.city, district: area.district })
+    for (const row of rows) {
+      if (!row.city || !row.district || row.city.startsWith('(') || row.district.startsWith('(')) continue
+      map.set(`${row.city}|${row.district}`, { city: row.city, district: row.district })
     }
-    return Array.from(m.values()).sort((a, b) => cityRank(a.city) - cityRank(b.city) || a.district.localeCompare(b.district, 'zh-TW'))
-  }, [rows])
+    return Array.from(map.values()).sort((a, b) =>
+      cityRank(a.city) - cityRank(b.city) || a.district.localeCompare(b.district, 'zh-TW')
+    )
+  }, [areaOptions, rows])
 
-  // 全區彙總(給新增轄區挑區用):每個 city|district 的 未分派/他人持有/該業務已有/公司盤商
-  const districtSummary = useMemo(() => {
-    const m = new Map<string, { city: string; district: string; total: number; unassigned: number; mine: number; others: number; corp: number }>()
-    for (const r of rows) {
-      if (r.city.startsWith('(') || r.district.startsWith('(')) continue
-      const k = r.city + '|' + r.district
-      let e = m.get(k)
-      if (!e) { e = { city: r.city, district: r.district, total: 0, unassigned: 0, mine: 0, others: 0, corp: 0 }; m.set(k, e) }
-      e.total += r.count
-      if (!r.salesperson) e.unassigned += r.count
-      else if (r.salesperson === sp) e.mine += r.count
-      else if (EXCLUDE_OWNER.has(r.salesperson)) e.corp += r.count
-      else e.others += r.count
+  const marketTotals = useMemo(() => new Map(areaOptions.map((area) => [
+    `${area.city}|${area.district}`, area.marketTotal,
+  ])), [areaOptions])
+
+  const salespersons = useMemo(() => Array.from(new Set([
+    ...accountNames,
+    ...territories.map((item) => item.salesperson),
+    ...rows.map((row) => row.salesperson).filter((name) => name && !EXCLUDED_OWNERS.has(name)),
+  ])).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-TW')), [accountNames, rows, territories])
+
+  const statsFor = useCallback((territory: Territory) => {
+    const areaRows = rows.filter((row) =>
+      row.city === territory.city && row.district === territory.district && !INACTIVE_STATUS.has(row.status)
+    )
+    return {
+      total: marketTotals.get(`${territory.city}|${territory.district}`) ?? areaRows.reduce((sum, row) => sum + row.count, 0),
+      unassigned: statsReady ? areaRows.filter((row) => !row.salesperson).reduce((sum, row) => sum + row.count, 0) : null,
+      developing: statsReady ? areaRows.filter((row) =>
+        row.salesperson === territory.salesperson && row.devStage && !['已成交', '流失'].includes(row.devStage)
+      ).reduce((sum, row) => sum + row.count, 0) : null,
+      converted: statsReady ? areaRows.filter((row) =>
+        row.salesperson === territory.salesperson && row.devStage === '已成交'
+      ).reduce((sum, row) => sum + row.count, 0) : null,
+      otherOwned: statsReady ? areaRows.filter((row) =>
+        row.salesperson && row.salesperson !== territory.salesperson
+      ).reduce((sum, row) => sum + row.count, 0) : null,
     }
-    return m
-  }, [rows, sp])
+  }, [marketTotals, rows, statsReady])
+
+  const visibleTerritories = useMemo(() => territories.filter((item) =>
+    !salespersonFilter || item.salesperson === salespersonFilter
+  ), [salespersonFilter, territories])
+
+  const summary = useMemo(() => visibleTerritories.reduce((result, territory) => {
+    const stats = statsFor(territory)
+    result.total += stats.total
+    result.unassigned += stats.unassigned ?? 0
+    result.developing += stats.developing ?? 0
+    result.converted += stats.converted ?? 0
+    return result
+  }, { total: 0, unassigned: 0, developing: 0, converted: 0 }), [statsFor, visibleTerritories])
+
+  const patchClaimedRows = useCallback((territory: Territory, customers: ClaimedCustomer[]) => {
+    if (!statsReady) return
+    setRows((current) => {
+      const next = current.map((row) => ({ ...row }))
+      for (const customer of customers) {
+        const oldIndex = next.findIndex((row) =>
+          row.city === territory.city && row.district === territory.district &&
+          row.type === (customer.type || '(未分類)') && row.status === (customer.status || '(空白)') &&
+          !row.salesperson && row.devStage === (customer.previousDevStage || '') && row.count > 0
+        )
+        if (oldIndex >= 0) next[oldIndex].count--
+        const newIndex = next.findIndex((row) =>
+          row.city === territory.city && row.district === territory.district &&
+          row.type === (customer.type || '(未分類)') && row.status === (customer.status || '(空白)') &&
+          row.salesperson === territory.salesperson && row.devStage === customer.devStage
+        )
+        if (newIndex >= 0) next[newIndex].count++
+        else next.push({
+          city: territory.city, district: territory.district,
+          type: customer.type || '(未分類)', status: customer.status || '(空白)',
+          salesperson: territory.salesperson, devStage: customer.devStage, count: 1,
+        })
+      }
+      return next.filter((row) => row.count > 0)
+    })
+  }, [statsReady])
 
   return (
     <div className="space-y-6">
-      {/* 業務選擇 + 說明 */}
-      <div className="card-soft p-4 sm:p-5 flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
-        <div className="w-full sm:w-auto">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務</label>
-          <select className="select-soft mt-1 block w-full sm:w-auto sm:min-w-[160px]" value={sp} onChange={(e) => setSp(e.target.value)}>
-            {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
+      <section className="card-soft overflow-hidden">
+        <div className="p-5 sm:p-7 bg-gradient-to-br from-white via-white to-brand-50/45">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+            <div className="max-w-2xl">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-brand-600">轄區與客戶分開管理</p>
+              <h2 className="mt-2 text-xl sm:text-2xl font-bold text-stone-800">先劃分市場，再由業務逐筆認領</h2>
+              <p className="mt-2 text-sm leading-6 text-stone-500">
+                新增轄區只指定誰負責開發這個地區，不會替任何客戶掛名，也不會改變客戶與轉化統計。
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-row lg:ml-auto lg:w-auto">
+              {canManageCompany && (
+                <button onClick={() => setCompanyOpen(true)} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
+                  公司客戶調度
+                </button>
+              )}
+              {canAssign && (
+                <button onClick={() => setAddOpen(true)} className="px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+                  ＋ 新增轄區
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-px bg-stone-900/[0.05] sm:grid-cols-4">
+          <Metric label="市場客戶" value={summary.total} />
+          <Metric label="尚未認領" value={statsReady ? summary.unassigned : null} accent />
+          <Metric label="開發中" value={statsReady ? summary.developing : null} />
+          <Metric label="已成交階段" value={statsReady ? summary.converted : null} />
+        </div>
+      </section>
+
+      <div className="card-soft p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="w-full sm:w-64">
+          <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">查看哪位業務</label>
+          <select className="select-soft mt-1 block w-full" value={salespersonFilter} onChange={(event) => setSalespersonFilter(event.target.value)}>
+            <option value="">全部業務</option>
+            {salespersons.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
         </div>
-        <p className="text-sm text-stone-500 self-center">
-          {sp ? <>{sp} 目前涵蓋 <b className="text-stone-700">{myDistricts.length}</b> 區、<b className="text-stone-700">{totalCust}</b> 家客戶</> : '—'}
+        <p className="text-sm text-stone-500 sm:pb-2">
+          顯示 {visibleTerritories.length} 個有效轄區
+          {updatedAt && <span className="ml-2 text-xs text-stone-400">市場資料 {updatedAt.slice(0, 10)}</span>}
         </p>
-        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-          {updatedAt && <span className="text-xs text-stone-400">資料 {updatedAt.slice(0, 10)}</span>}
-          {canManageCompany && (
-            <button onClick={() => setCompanyOpen(true)}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
-              🏢 公司客戶調度
-            </button>
-          )}
-          {canAssign && (
-            <button onClick={() => setAddOpen(true)}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
-              ＋ 新增轄區
-            </button>
-          )}
-        </div>
       </div>
 
       {!canAssign && (
         <div className="card-soft p-4 text-sm text-stone-500">
-          你有檢視權限但無分派權限,新增/移除轄區僅限管理員、中央管理與總經理。
+          你可以查看轄區；新增、調整與結束轄區限管理員、中央管理與總經理。
         </div>
       )}
       {error && <div className="card-soft p-4 text-sm text-red-600">{error}</div>}
-      {loading && <div className="card-soft p-8 text-center text-sm text-stone-400">載入中…</div>}
+      {loading && <div className="card-soft p-10 text-center text-sm text-stone-400">載入轄區設定…</div>}
 
-      {!loading && sp && (
-        <div className="card-soft overflow-hidden">
-          <header className="px-5 py-3.5 flex items-baseline gap-3 border-b border-stone-900/[0.06] bg-brand-50/40">
-            <h3 className="font-bold text-stone-800">🗺️ {sp} 的轄區</h3>
-            <span className="ml-auto text-xs text-stone-400">{myDistricts.length} 區</span>
-          </header>
-          {myDistricts.length === 0 ? (
-            <div className="p-8 text-center text-sm text-stone-400">{sp} 目前沒有持有任何客戶。用「＋ 新增轄區」認領某區的未分派客戶。</div>
-          ) : (
-            <ul className="divide-y divide-stone-900/[0.04]">
-              {myDistricts.map((d) => {
-                const key = `${sp}|${d.city}|${d.district}`
-                const isOpen = openKey === key
-                const cached = listCache[key]
-                return (
-                  <li key={d.city + '|' + d.district}>
-                    <div className="px-5 py-3 flex items-center gap-3 hover:bg-brand-50/50 transition-colors">
-                      <span className="font-medium text-stone-800">{d.city}{d.district}</span>
-                      <button onClick={() => toggleDistrict(d.city, d.district)}
-                              className={`chip text-[11px] active:scale-95 transition-all ${isOpen ? 'chip-active' : 'hover:outline-brand-400'}`}
-                              title="點擊看客戶名單">
-                        {d.count} 家 <span className="text-stone-400">{isOpen ? '▲' : '▾'}</span>
-                      </button>
-                      {canAssign && (
-                        <button onClick={() => setRemoveTarget(d)}
-                                className="ml-auto px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:scale-95 transition-all">
-                          移除
-                        </button>
-                      )}
-                    </div>
-                    {isOpen && (
-                      <div className="px-5 pb-3">
-                        {cached?.loading && <p className="text-xs text-stone-400 py-2">載入客戶名單…</p>}
-                        {cached?.err && <p className="text-xs text-red-600 py-2">{cached.err}</p>}
-                        {cached && !cached.loading && !cached.err && (
-                          cached.items.length === 0 ? (
-                            <p className="text-xs text-stone-400 py-2">此區目前查無客戶(資料可能剛異動,稍後會同步)。</p>
-                          ) : (
-                            <ul className="grid gap-1.5 sm:grid-cols-2 rounded-2xl bg-stone-50/70 p-2.5 ring-1 ring-stone-900/[0.05]">
-                              {cached.items.map((c) => (
-                                <li key={c.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-stone-900/[0.05]">
-                                  <span className="text-sm text-stone-800 flex-1 min-w-0 truncate">{c.name}</span>
-                                  {c.type && <span className="chip text-[10px] shrink-0">{c.type}</span>}
-                                  {c.phone && (
-                                    <a href={'tel:' + c.phone.replace(/[^\d+]/g, '')}
-                                       className="text-[11px] text-brand-600 hover:text-brand-700 shrink-0 active:scale-95 transition-all">
-                                      撥號
-                                    </a>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+      {!loading && visibleTerritories.length === 0 && (
+        <div className="card-soft p-10 text-center">
+          <p className="font-semibold text-stone-700">目前還沒有轄區設定</p>
+          <p className="mt-1 text-sm text-stone-400">建立第一個轄區也不會修改任何客戶資料。</p>
+          {canAssign && <button onClick={() => setAddOpen(true)} className="mt-4 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">＋ 新增轄區</button>}
         </div>
       )}
 
+      <div className="grid gap-4 xl:grid-cols-2">
+        {visibleTerritories.map((territory) => {
+          const stats = statsFor(territory)
+          const mayClaim = canClaim && (canAssign || (!!territory.salespersonId && territory.salespersonId === currentUserId))
+          return (
+            <article key={territory.id} className="card-soft card-soft-hover p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-bold text-stone-800">{territory.city}{territory.district}</h3>
+                    <StatusChip status={territory.status} />
+                  </div>
+                  <p className="mt-1 text-sm text-stone-500">負責開發：<span className="font-semibold text-stone-700">{territory.salesperson}</span></p>
+                </div>
+                {canAssign && (
+                  <button onClick={() => setEditTarget(territory)} className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">管理</button>
+                )}
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <SmallMetric label="市場" value={stats.total} />
+                <SmallMetric label="未認領" value={stats.unassigned} accent />
+                <SmallMetric label="開發中" value={stats.developing} />
+                <SmallMetric label="已成交" value={stats.converted} />
+              </div>
+
+              {(territory.startDate || territory.note || (stats.otherOwned ?? 0) > 0) && (
+                <div className="mt-4 space-y-1 text-xs text-stone-400">
+                  {territory.startDate && <p>生效日：{territory.startDate}</p>}
+                  {territory.note && <p className="line-clamp-2">備註：{territory.note}</p>}
+                  {(stats.otherOwned ?? 0) > 0 && <p>此區另有 {stats.otherOwned ?? 0} 家由其他業務／公司負責，保持原歸屬。</p>}
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                {mayClaim && territory.status !== '暫停' ? (
+                  <button onClick={() => setClaimTarget(territory)} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+                    查看未開發名單 {(stats.unassigned ?? 0) > 0 ? `(${stats.unassigned})` : ''}
+                  </button>
+                ) : (
+                  <div className="flex-1 rounded-2xl bg-stone-50 px-4 py-2.5 text-center text-xs text-stone-400">
+                    {territory.status === '暫停' ? '轄區已暫停認領' : '只有負責業務可認領此區客戶'}
+                  </div>
+                )}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
       {addOpen && (
-        <AddModal
-          sp={sp}
-          summary={districtSummary}
-          onClose={() => setAddOpen(false)}
-          onDone={() => { setAddOpen(false); fetchData() }}
+        <TerritoryFormModal
+          title="新增轄區" accounts={accountOptions} areas={allAreas} existing={territories}
+          onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); loadTerritories() }}
+        />
+      )}
+      {editTarget && (
+        <TerritoryEditModal
+          territory={editTarget}
+          accounts={accountOptions.some((account) => account.id === editTarget.salespersonId)
+            ? accountOptions
+            : [...accountOptions, { id: editTarget.salespersonId, name: editTarget.salesperson }]}
+          onClose={() => setEditTarget(null)} onDone={() => { setEditTarget(null); loadTerritories() }}
+        />
+      )}
+      {claimTarget && (
+        <ClaimModal
+          territory={claimTarget} onClose={() => setClaimTarget(null)}
+          onClaimed={(customers) => { patchClaimedRows(claimTarget, customers); setClaimTarget(null) }}
         />
       )}
       {companyOpen && (
         <CompanyModal
-          sp={sp}
-          allAreas={allAreas}
-          onClose={() => setCompanyOpen(false)}
-          onDone={() => { setCompanyOpen(false); fetchData() }}
-        />
-      )}
-      {removeTarget && (
-        <RemoveModal
-          sp={sp}
-          target={removeTarget}
-          salespersons={salespersons.filter((s) => s !== sp)}
-          onClose={() => setRemoveTarget(null)}
-          onDone={() => { setRemoveTarget(null); fetchData() }}
+          salespersons={accountNames} allAreas={allAreas} onClose={() => setCompanyOpen(false)}
+          onDone={() => { setCompanyOpen(false); loadStats() }}
         />
       )}
     </div>
   )
 }
 
-// ── 新增轄區:認領某區未分派池 ────────────────────────────────────────
-function AddModal({ sp, summary, onClose, onDone }: {
-  sp: string
-  summary: Map<string, { city: string; district: string; total: number; unassigned: number; mine: number; others: number; corp: number }>
-  onClose: () => void
-  onDone: () => void
-}) {
-  const areas = useMemo(
-    () => Array.from(summary.values()).sort((a, b) => cityRank(a.city) - cityRank(b.city) || a.district.localeCompare(b.district, 'zh-TW')),
-    [summary])
-  const cities = useMemo(() => Array.from(new Set(areas.map((a) => a.city))).sort((a, b) => cityRank(a) - cityRank(b)), [areas])
-
-  const [city, setCity] = useState('')
-  const [district, setDistrict] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const [pool, setPool] = useState<{ poolSize: number; sample: any[] } | null>(null)
-  const [ok, setOk] = useState('')
-
-  const districtsOfCity = useMemo(() => areas.filter((a) => a.city === city), [areas, city])
-  const picked = useMemo(() => summary.get(city + '|' + district) ?? null, [summary, city, district])
-
-  const preview = useCallback(async (c: string, d: string) => {
-    setPool(null); setErr(''); setOk('')
-    if (!c || !d) return
-    setBusy(true)
-    try {
-      const r = await fetch('/api/customers/assign', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city: c, district: d, salesperson: sp, dryRun: true }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '預覽失敗')
-      setPool({ poolSize: j.poolSize, sample: j.sample ?? [] })
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }, [sp])
-
-  const doAssign = async () => {
-    if (!pool || pool.poolSize === 0) return
-    setBusy(true); setErr('')
-    try {
-      const r = await fetch('/api/customers/assign', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city, district, salesperson: sp, dryRun: false }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '分派失敗')
-      setOk(`已將 ${city}${district} 的 ${j.assigned} 家未分派客戶認領給 ${sp}${j.skipped ? `(跳過 ${j.skipped} 家已被指派)` : ''}`)
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }
-
-  return (
-    <Modal onClose={onClose} title={`新增轄區 → ${sp}`}>
-      {ok ? (
-        <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
-          <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-xs text-stone-500 bg-stone-50 rounded-2xl p-3 leading-relaxed">
-            新增轄區只會把該區<b>「負責業務空白」的未分派客戶</b>認領給 {sp}。
-            公司、盤商、以及已由其他業務持有的客戶<b>一律不動</b>。
-          </p>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">縣市</label>
-              <select className="select-soft mt-1 block w-full" value={city}
-                      onChange={(e) => { setCity(e.target.value); setDistrict(''); setPool(null) }}>
-                <option value="">選擇縣市</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">鄉鎮市區</label>
-              <select className="select-soft mt-1 block w-full" value={district} disabled={!city}
-                      onChange={(e) => { setDistrict(e.target.value); preview(city, e.target.value) }}>
-                <option value="">選擇區</option>
-                {districtsOfCity.map((a) => (
-                  <option key={a.district} value={a.district}>
-                    {a.district}(未分派 {a.unassigned})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {picked && (
-            <div className="text-xs text-stone-600 bg-brand-50/50 rounded-2xl p-3 space-y-1">
-              <div>{picked.city}{picked.district} 共 <b>{picked.total}</b> 家:</div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-stone-500">
-                <span>未分派可認領 <b className="text-brand-700">{picked.unassigned}</b></span>
-                {picked.mine > 0 && <span>{sp} 已有 {picked.mine}</span>}
-                {picked.others > 0 && <span>其他業務持有 {picked.others}(不動)</span>}
-                {picked.corp > 0 && <span>公司/盤商 {picked.corp}(不動)</span>}
-              </div>
-            </div>
-          )}
-
-          {busy && <p className="text-sm text-stone-400">處理中…</p>}
-          {err && <p className="text-sm text-red-600">{err}</p>}
-          {pool && (
-            <p className="text-sm text-stone-600">
-              確認後會把 <b className="text-brand-700">{pool.poolSize}</b> 家未分派客戶認領給 {sp}。
-              {pool.poolSize === 0 && '(此區已無未分派客戶)'}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
-            <button onClick={doAssign} disabled={busy || !pool || pool.poolSize === 0}
-                    className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-              確認認領 {pool && pool.poolSize > 0 ? `(${pool.poolSize} 家)` : ''}
-            </button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  )
+function Metric({ label, value, accent = false }: { label: string; value: number | null; accent?: boolean }) {
+  return <div className="bg-white px-4 py-4 text-center"><p className={`text-xl font-bold ${accent ? 'text-brand-600' : 'text-stone-800'}`}>{value === null ? '—' : value.toLocaleString()}</p><p className="mt-0.5 text-xs text-stone-400">{label}</p></div>
 }
 
-// ── 移除轄區:釋出未分派 或 轉給別人 ──────────────────────────────────
-function RemoveModal({ sp, target, salespersons, onClose, onDone }: {
-  sp: string
-  target: { city: string; district: string; count: number }
-  salespersons: string[]
-  onClose: () => void
-  onDone: () => void
-}) {
-  const RELEASE = '__release__'
-  const [to, setTo] = useState(RELEASE)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const [preview, setPreview] = useState<number | null>(null)
-  const [ok, setOk] = useState('')
-
-  const runPreview = useCallback(async () => {
-    setBusy(true); setErr('')
-    try {
-      const r = await fetch('/api/customers/reassign', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: sp, moves: [{ city: target.city, district: target.district, to }], dryRun: true }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '預覽失敗')
-      setPreview(j.total ?? 0)
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }, [sp, target, to])
-
-  useEffect(() => { runPreview() }, [runPreview])
-
-  const doRemove = async () => {
-    setBusy(true); setErr('')
-    try {
-      const r = await fetch('/api/customers/reassign', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: sp, moves: [{ city: target.city, district: target.district, to }], dryRun: false }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '移除失敗')
-      const dest = to === RELEASE ? '釋出為未分派' : `轉給 ${to}`
-      setOk(`已把 ${sp} 在 ${target.city}${target.district} 的 ${j.totalReassigned} 家客戶${dest}${j.totalSkipped ? `(跳過 ${j.totalSkipped})` : ''}`)
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }
-
-  return (
-    <Modal onClose={onClose} title={`移除轄區:${target.city}${target.district}`}>
-      {ok ? (
-        <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
-          <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-xs text-stone-500 bg-stone-50 rounded-2xl p-3 leading-relaxed">
-            只會移動 <b>{sp}</b> 在此區持有的客戶(目前 {target.count} 家)。其他業務、公司、盤商的客戶不動。
-          </p>
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">移除後客戶去向</label>
-            <select className="select-soft mt-1 block w-full" value={to}
-                    onChange={(e) => { setTo(e.target.value); setPreview(null) }}>
-              <option value={RELEASE}>釋出為未分派(放回公池)</option>
-              {salespersons.map((s) => <option key={s} value={s}>轉給 {s}</option>)}
-            </select>
-          </div>
-          {busy && <p className="text-sm text-stone-400">處理中…</p>}
-          {err && <p className="text-sm text-red-600">{err}</p>}
-          {preview !== null && !busy && (
-            <p className="text-sm text-stone-600">
-              確認後會移動 <b className="text-brand-700">{preview}</b> 家客戶
-              {to === RELEASE ? ' → 釋出未分派' : ` → 轉給 ${to}`}。
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
-            <button onClick={doRemove} disabled={busy || preview === null || preview === 0}
-                    className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-red-500 text-white hover:bg-red-600 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-              確認移除 {preview ? `(${preview} 家)` : ''}
-            </button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  )
+function SmallMetric({ label, value, accent = false }: { label: string; value: number | null; accent?: boolean }) {
+  return <div className="rounded-2xl bg-stone-50/80 px-3 py-3"><p className={`text-lg font-bold ${accent ? 'text-brand-600' : 'text-stone-700'}`}>{value === null ? '—' : value.toLocaleString()}</p><p className="text-[11px] text-stone-400">{label}</p></div>
 }
 
-// ── 公司客戶調度(逐筆):公司 → 業務(指派) / 業務 → 公司(收回)。限中央管理 ──
-function CompanyModal({ sp, allAreas, onClose, onDone }: {
-  sp: string
-  allAreas: { city: string; district: string }[]
-  onClose: () => void
-  onDone: () => void
+function StatusChip({ status }: { status: string }) {
+  const tone = status === '開發中' ? 'bg-brand-100 text-brand-700' : status === '暫停' ? 'bg-amber-50 text-amber-700' : 'bg-stone-100 text-stone-500'
+  return <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone}`}>{status}</span>
+}
+
+function TerritoryFormModal({ title, accounts, areas, existing, onClose, onDone }: {
+  title: string; accounts: { id: string; name: string }[]; areas: { city: string; district: string }[]; existing: Territory[]
+  onClose: () => void; onDone: () => void
 }) {
-  const COMPANY = '公司'
-  const [dir, setDir] = useState<'assign' | 'collect'>('assign') // assign=公司→業務;collect=業務→公司
+  const [salespersonId, setSalespersonId] = useState(accounts[0]?.id ?? '')
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
-  const [items, setItems] = useState<{ id: string; name: string; type: string; status: string; phone: string }[] | null>(null)
-  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [status, setStatus] = useState('規劃中')
+  const [startDate, setStartDate] = useState('')
+  const [note, setNote] = useState('')
+  const [preview, setPreview] = useState<{ marketTotal: number; unassigned: number } | null>(null)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const [ok, setOk] = useState('')
+  const [error, setError] = useState('')
 
-  const cities = useMemo(() => Array.from(new Set(allAreas.map((a) => a.city))), [allAreas])
-  const districtsOfCity = useMemo(() => allAreas.filter((a) => a.city === city), [allAreas, city])
-  // 來源 owner:指派時撈「公司」的客戶;收回時撈該業務的客戶
-  const owner = dir === 'assign' ? COMPANY : sp
-  const from = dir === 'assign' ? COMPANY : sp
-  const to = dir === 'assign' ? sp : COMPANY
+  const occupied = useMemo(() => new Set(existing.map((item) => `${item.city}|${item.district}`)), [existing])
+  const available = useMemo(() => areas.filter((area) => !occupied.has(`${area.city}|${area.district}`)), [areas, occupied])
+  const cities = useMemo(() => Array.from(new Set(available.map((area) => area.city))), [available])
+  const districts = useMemo(() => available.filter((area) => area.city === city), [available, city])
 
-  const loadList = useCallback(async (c: string, d: string) => {
-    setItems(null); setChecked(new Set()); setErr(''); setOk('')
-    if (!c || !d) return
-    setBusy(true)
+  const submit = async (dryRun: boolean) => {
+    setBusy(true); setError('')
     try {
-      const q = new URLSearchParams({ city: c, district: d, owner })
-      const r = await fetch('/api/customers/assign-company?' + q)
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '讀取失敗')
-      setItems(j.items ?? [])
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }, [owner])
-
-  // 切換方向時,若已選區則重載清單
-  const changeDir = (nd: 'assign' | 'collect') => {
-    setDir(nd); setItems(null); setChecked(new Set()); setOk('')
-    if (city && district) {
-      // owner 會隨 dir 改;用新方向的 owner 立即重載
-      const newOwner = nd === 'assign' ? COMPANY : sp
-      const q = new URLSearchParams({ city, district, owner: newOwner })
-      setBusy(true)
-      fetch('/api/customers/assign-company?' + q).then((r) => r.json()).then((j) => {
-        if (j.items) setItems(j.items); else setErr(j.error || '讀取失敗')
-      }).catch((e) => setErr(e.message)).finally(() => setBusy(false))
+      const response = await fetch('/api/territories', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city, district, salespersonId, status, startDate, note, dryRun }),
+      })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '建立轄區失敗')
+      if (dryRun) setPreview({ marketTotal: json.marketTotal, unassigned: json.unassigned })
+      else onDone()
+    } catch (caught: any) {
+      setError(caught.message)
+    } finally {
+      setBusy(false)
     }
   }
 
-  const toggle = (id: string) => setChecked((prev) => {
-    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n
-  })
-  const allChecked = items && items.length > 0 && checked.size === items.length
-  const toggleAll = () => setChecked(allChecked ? new Set() : new Set((items ?? []).map((x) => x.id)))
-
-  const doMove = async () => {
-    if (checked.size === 0) return
-    setBusy(true); setErr('')
-    try {
-      const r = await fetch('/api/customers/assign-company', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerIds: Array.from(checked), from, to, dryRun: false }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || '調度失敗')
-      setOk(`已將 ${city}${district} 勾選的 ${j.reassigned} 家客戶:${from} → ${to}${j.skipped ? `(跳過 ${j.skipped} 家已非「${from}」持有)` : ''}`)
-    } catch (e: any) { setErr(e.message) } finally { setBusy(false) }
-  }
-
   return (
-    <Modal onClose={onClose} title="公司客戶調度">
-      {ok ? (
-        <div className="space-y-4">
-          <p className="text-sm text-emerald-700 bg-brand-50 rounded-2xl p-4">{ok}</p>
-          <button onClick={onDone} className="w-full px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all">完成</button>
+    <Modal title={title} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="rounded-2xl bg-brand-50/70 p-4 text-sm leading-6 text-stone-600">
+          <b className="text-brand-700">安全模式：</b>只建立轄區責任，客戶資料異動 <b>0</b> 筆。
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* 方向 */}
-          <div className="flex gap-2">
-            <button onClick={() => changeDir('assign')}
-                    className={`flex-1 px-3 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 ${dir === 'assign' ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25' : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'}`}>
-              公司 → {sp}(指派)
-            </button>
-            <button onClick={() => changeDir('collect')}
-                    className={`flex-1 px-3 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 ${dir === 'collect' ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25' : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'}`}>
-              {sp} → 公司(收回)
-            </button>
-          </div>
-          <p className="text-xs text-stone-500 bg-stone-50 rounded-2xl p-3 leading-relaxed">
-            {dir === 'assign'
-              ? <>把該區<b>「公司」持有的既有客戶</b>逐筆指派給 {sp}。盤商、其他業務、未分派一律不動。</>
-              : <>把 {sp} 在該區的客戶逐筆<b>收回為「公司」持有</b>。其他業務、盤商不動。</>}
-          </p>
-
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">縣市</label>
-              <select className="select-soft mt-1 block w-full" value={city}
-                      onChange={(e) => { setCity(e.target.value); setDistrict(''); setItems(null) }}>
-                <option value="">選擇縣市</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">鄉鎮市區</label>
-              <select className="select-soft mt-1 block w-full" value={district} disabled={!city}
-                      onChange={(e) => { setDistrict(e.target.value); loadList(city, e.target.value) }}>
-                <option value="">選擇區</option>
-                {districtsOfCity.map((a) => <option key={a.district} value={a.district}>{a.district}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {busy && <p className="text-sm text-stone-400">處理中…</p>}
-          {err && <p className="text-sm text-red-600">{err}</p>}
-
-          {items && !busy && (
-            items.length === 0 ? (
-              <p className="text-sm text-stone-400">此區沒有{dir === 'assign' ? '「公司」持有的' : `${sp} 的`}客戶。</p>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <button onClick={toggleAll} className="text-xs text-brand-600 hover:text-brand-700 active:scale-95 transition-all">
-                    {allChecked ? '取消全選' : '全選'}({items.length})
-                  </button>
-                  <span className="text-xs text-stone-400">已勾 {checked.size}</span>
-                </div>
-                <ul className="max-h-56 overflow-y-auto divide-y divide-stone-900/[0.04] rounded-2xl ring-1 ring-stone-900/[0.06]">
-                  {items.map((c) => (
-                    <li key={c.id} className="px-3 py-2 flex items-center gap-2.5 hover:bg-brand-50/50 transition-colors">
-                      <input type="checkbox" className="accent-[#b8956a] cursor-pointer" checked={checked.has(c.id)} onChange={() => toggle(c.id)} />
-                      <span className="text-sm text-stone-800 flex-1 min-w-0 truncate">{c.name}</span>
-                      {c.type && <span className="chip text-[10px] shrink-0">{c.type}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
+        <Field label="負責開發業務"><select className="select-soft block w-full" value={salespersonId} onChange={(event) => { setSalespersonId(event.target.value); setPreview(null) }}>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="縣市"><select className="select-soft block w-full" value={city} onChange={(event) => { setCity(event.target.value); setDistrict(''); setPreview(null) }}><option value="">請選擇</option>{cities.map((name) => <option key={name}>{name}</option>)}</select></Field>
+          <Field label="行政區"><select className="select-soft block w-full" value={district} disabled={!city} onChange={(event) => { setDistrict(event.target.value); setPreview(null) }}><option value="">請選擇</option>{districts.map((area) => <option key={area.district}>{area.district}</option>)}</select></Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="狀態"><select className="select-soft block w-full" value={status} onChange={(event) => setStatus(event.target.value)}><option>規劃中</option><option>開發中</option><option>暫停</option></select></Field>
+          <Field label="生效日"><input className="input-soft block w-full" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></Field>
+        </div>
+        <Field label="備註"><textarea className="input-soft block min-h-20 w-full resize-y" value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder="例如：本季優先開發數位牙科客戶" /></Field>
+        {preview && <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-600">此區市場共 <b>{preview.marketTotal}</b> 家，其中 <b className="text-brand-700">{preview.unassigned}</b> 家尚未認領。確認後仍不會修改客戶。</div>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
+          {!preview ? (
+            <button onClick={() => submit(true)} disabled={busy || !salespersonId || !city || !district} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40">{busy ? '檢查中…' : '下一步：確認範圍'}</button>
+          ) : (
+            <button onClick={() => submit(false)} disabled={busy} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40">{busy ? '建立中…' : '確認新增轄區'}</button>
           )}
-
-          <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>
-            <button onClick={doMove} disabled={busy || checked.size === 0}
-                    className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-              確認{dir === 'assign' ? '指派' : '收回'} {checked.size > 0 ? `(${checked.size} 家)` : ''}
-            </button>
-          </div>
         </div>
-      )}
+      </div>
     </Modal>
   )
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <header className="px-6 py-4 border-b border-stone-900/[0.06] flex items-center justify-between">
-          <h3 className="font-bold text-stone-800">{title}</h3>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600 active:scale-95 transition-all text-xl leading-none">×</button>
-        </header>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  )
+function TerritoryEditModal({ territory, accounts, onClose, onDone }: { territory: Territory; accounts: { id: string; name: string }[]; onClose: () => void; onDone: () => void }) {
+  const [salespersonId, setSalespersonId] = useState(territory.salespersonId)
+  const [status, setStatus] = useState(territory.status)
+  const [startDate, setStartDate] = useState(territory.startDate)
+  const [note, setNote] = useState(territory.note)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const save = async () => {
+    setBusy(true); setError('')
+    try {
+      const response = await fetch(`/api/territories/${territory.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salespersonId, status, startDate, note }) })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '更新失敗')
+      onDone()
+    } catch (caught: any) { setError(caught.message) } finally { setBusy(false) }
+  }
+  const end = async () => {
+    if (!window.confirm(`確定結束 ${territory.city}${territory.district} 的轄區設定？既有客戶歸屬與紀錄都會保留。`)) return
+    setBusy(true); setError('')
+    try {
+      const response = await fetch(`/api/territories/${territory.id}`, { method: 'DELETE' })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '結束轄區失敗')
+      onDone()
+    } catch (caught: any) { setError(caught.message) } finally { setBusy(false) }
+  }
+  return <Modal title={`管理 ${territory.city}${territory.district}`} onClose={onClose}><div className="space-y-4">
+    <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-500">調整負責人或狀態只會修改轄區設定，既有客戶不會轉移或解除掛名。</div>
+    <Field label="負責開發業務"><select className="select-soft block w-full" value={salespersonId} onChange={(event) => setSalespersonId(event.target.value)}>{accounts.filter((account) => account.id).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
+    <div className="grid grid-cols-2 gap-3"><Field label="狀態"><select className="select-soft block w-full" value={status} onChange={(event) => setStatus(event.target.value)}><option>規劃中</option><option>開發中</option><option>暫停</option></select></Field><Field label="生效日"><input className="input-soft block w-full" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></Field></div>
+    <Field label="備註"><textarea className="input-soft block min-h-20 w-full resize-y" value={note} onChange={(event) => setNote(event.target.value)} /></Field>
+    {error && <p className="text-sm text-red-600">{error}</p>}
+    <div className="flex flex-wrap gap-2"><button onClick={end} disabled={busy} className="px-4 py-2.5 rounded-full text-sm font-medium border border-red-200 bg-white text-red-600 hover:bg-red-50 active:scale-95 transition-all">結束轄區</button><button onClick={onClose} className="ml-auto px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button><button onClick={save} disabled={busy} className="px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40">{busy ? '儲存中…' : '儲存設定'}</button></div>
+  </div></Modal>
+}
+
+function ClaimModal({ territory, onClose, onClaimed }: { territory: Territory; onClose: () => void; onClaimed: (customers: ClaimedCustomer[]) => void }) {
+  const [items, setItems] = useState<ClaimedCustomer[]>([])
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [query, setQuery] = useState('')
+  const [preview, setPreview] = useState<ClaimedCustomer[] | null>(null)
+  const [busy, setBusy] = useState(true)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    fetch(`/api/territories/${territory.id}/candidates`).then(async (response) => {
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '讀取名單失敗')
+      setItems(json.items ?? [])
+    }).catch((caught) => setError(caught.message)).finally(() => setBusy(false))
+  }, [territory.id])
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    if (!needle) return items
+    return items.filter((item) => `${item.name} ${item.type} ${item.status}`.toLowerCase().includes(needle))
+  }, [items, query])
+  const toggle = (id: string) => setChecked((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); setPreview(null); return next })
+  const submit = async (dryRun: boolean) => {
+    setBusy(true); setError('')
+    try {
+      const response = await fetch(`/api/territories/${territory.id}/claim`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerIds: Array.from(checked), dryRun }) })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '認領失敗')
+      if (dryRun) setPreview(json.eligible ?? [])
+      else onClaimed(json.eligible ?? [])
+    } catch (caught: any) { setError(caught.message) } finally { setBusy(false) }
+  }
+  return <Modal title={`${territory.city}${territory.district}｜未開發名單`} onClose={onClose} wide><div className="space-y-4">
+    <div className="rounded-2xl bg-brand-50/70 p-4 text-sm leading-6 text-stone-600">只有你勾選並再次確認的客戶，才會認領給 <b>{territory.salesperson}</b>；開發階段或來源空白時才補上「線索／轄區開發」，既有歷程會保留。</div>
+    <input className="input-soft block w-full" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋客戶名稱或類型" />
+    {busy && <p className="py-8 text-center text-sm text-stone-400">載入中…</p>}
+    {error && <p className="text-sm text-red-600">{error}</p>}
+    {!busy && !error && <>
+      <div className="flex items-center justify-between text-xs"><span className="text-stone-400">找到 {filtered.length} 家，已選 {checked.size} 家</span><button onClick={() => { setChecked(new Set(filtered.map((item) => item.id))); setPreview(null) }} className="text-brand-600 hover:text-brand-700 active:scale-95 transition-all">選取目前結果</button></div>
+      <ul className="max-h-72 overflow-y-auto divide-y divide-stone-900/[0.04] rounded-2xl ring-1 ring-stone-900/[0.06]">
+        {filtered.map((item) => <li key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-brand-50/50 transition-colors"><input type="checkbox" className="h-4 w-4 accent-[#9a7041]" checked={checked.has(item.id)} onChange={() => toggle(item.id)} /><span className="min-w-0 flex-1 truncate text-sm font-medium text-stone-700">{item.name}</span>{item.type && <span className="chip text-[10px]">{item.type}</span>}</li>)}
+        {filtered.length === 0 && <li className="p-8 text-center text-sm text-stone-400">沒有符合條件的未認領客戶</li>}
+      </ul>
+    </>}
+    {preview && <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-600">再次確認後會認領 <b className="text-brand-700">{preview.length}</b> 家；其他客戶完全不動。</div>}
+    <div className="flex gap-2"><button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button>{!preview ? <button onClick={() => submit(true)} disabled={busy || checked.size === 0} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40">下一步：預覽認領</button> : <button onClick={() => submit(false)} disabled={busy || preview.length === 0} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-40">確認認領 {preview.length} 家</button>}</div>
+  </div></Modal>
+}
+
+function CompanyModal({ salespersons, allAreas, onClose, onDone }: { salespersons: string[]; allAreas: { city: string; district: string }[]; onClose: () => void; onDone: () => void }) {
+  const [salesperson, setSalesperson] = useState(salespersons[0] ?? '')
+  const [direction, setDirection] = useState<'assign' | 'collect'>('assign')
+  const [city, setCity] = useState('')
+  const [district, setDistrict] = useState('')
+  const [items, setItems] = useState<{ id: string; name: string; type: string }[]>([])
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const cities = useMemo(() => Array.from(new Set(allAreas.map((area) => area.city))), [allAreas])
+  const districts = useMemo(() => allAreas.filter((area) => area.city === city), [allAreas, city])
+  const load = async (nextDirection = direction, nextSalesperson = salesperson, nextCity = city, nextDistrict = district) => {
+    if (!nextCity || !nextDistrict || !nextSalesperson) return
+    setBusy(true); setError(''); setChecked(new Set())
+    try {
+      const owner = nextDirection === 'assign' ? '公司' : nextSalesperson
+      const response = await fetch('/api/customers/assign-company?' + new URLSearchParams({ city: nextCity, district: nextDistrict, owner }))
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '讀取名單失敗')
+      setItems(json.items ?? [])
+    } catch (caught: any) { setError(caught.message) } finally { setBusy(false) }
+  }
+  const move = async () => {
+    setBusy(true); setError('')
+    try {
+      const from = direction === 'assign' ? '公司' : salesperson
+      const to = direction === 'assign' ? salesperson : '公司'
+      const response = await fetch('/api/customers/assign-company', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerIds: Array.from(checked), from, to, dryRun: false }) })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '調度失敗')
+      onDone()
+    } catch (caught: any) { setError(caught.message) } finally { setBusy(false) }
+  }
+  return <Modal title="公司既有客戶調度" onClose={onClose} wide><div className="space-y-4">
+    <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-500">這是既有客戶的低頻管理功能，會修改勾選客戶的負責業務；與新增轄區完全分開。</div>
+    <Field label="目標業務"><select className="select-soft block w-full" value={salesperson} onChange={(event) => { setSalesperson(event.target.value); setItems([]) }}>{salespersons.map((name) => <option key={name}>{name}</option>)}</select></Field>
+    <div className="grid grid-cols-2 gap-2"><button onClick={() => { setDirection('assign'); setItems([]) }} className={`rounded-full px-3 py-2 text-xs font-semibold active:scale-95 transition-all ${direction === 'assign' ? 'bg-brand-500 text-white' : 'border border-stone-200 bg-white text-stone-600'}`}>公司 → 業務</button><button onClick={() => { setDirection('collect'); setItems([]) }} className={`rounded-full px-3 py-2 text-xs font-semibold active:scale-95 transition-all ${direction === 'collect' ? 'bg-brand-500 text-white' : 'border border-stone-200 bg-white text-stone-600'}`}>業務 → 公司</button></div>
+    <div className="grid grid-cols-2 gap-3"><Field label="縣市"><select className="select-soft block w-full" value={city} onChange={(event) => { setCity(event.target.value); setDistrict(''); setItems([]) }}><option value="">請選擇</option>{cities.map((name) => <option key={name}>{name}</option>)}</select></Field><Field label="行政區"><select className="select-soft block w-full" value={district} disabled={!city} onChange={(event) => { const value = event.target.value; setDistrict(value); load(direction, salesperson, city, value) }}><option value="">請選擇</option>{districts.map((area) => <option key={area.district}>{area.district}</option>)}</select></Field></div>
+    {busy && <p className="text-sm text-stone-400">處理中…</p>}{error && <p className="text-sm text-red-600">{error}</p>}
+    {items.length > 0 && <ul className="max-h-64 overflow-y-auto divide-y divide-stone-900/[0.04] rounded-2xl ring-1 ring-stone-900/[0.06]">{items.map((item) => <li key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-brand-50/50"><input type="checkbox" className="accent-[#9a7041]" checked={checked.has(item.id)} onChange={() => setChecked((current) => { const next = new Set(current); next.has(item.id) ? next.delete(item.id) : next.add(item.id); return next })} /><span className="min-w-0 flex-1 truncate text-sm text-stone-700">{item.name}</span>{item.type && <span className="chip text-[10px]">{item.type}</span>}</li>)}</ul>}
+    <div className="flex gap-2"><button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">取消</button><button onClick={move} disabled={busy || checked.size === 0} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-40">確認調度 {checked.size > 0 ? `${checked.size} 家` : ''}</button></div>
+  </div></Modal>
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-stone-400">{label}</span>{children}</label>
+}
+
+function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4 backdrop-blur-sm" onClick={onClose}><div className={`max-h-[92vh] w-full overflow-hidden rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] ${wide ? 'max-w-2xl' : 'max-w-lg'}`} onClick={(event) => event.stopPropagation()}><header className="flex items-center justify-between border-b border-stone-900/[0.06] px-5 py-4 sm:px-6"><h3 className="font-bold text-stone-800">{title}</h3><button onClick={onClose} className="text-xl leading-none text-stone-400 hover:text-stone-600 active:scale-95 transition-all">×</button></header><div className="max-h-[calc(92vh-62px)] overflow-y-auto p-5 sm:p-6">{children}</div></div></div>
 }
