@@ -269,6 +269,7 @@ export async function listSystemCustomersPaginated(options?: {
 // ── 區域儀表板：撈某區某業務的實際客戶清單(彈窗用;filtered query,不全掃)──────
 export interface AreaCustomer {
   id: string; name: string; type: string; status: string
+  city: string; district: string
   address: string; phone: string; salesperson: string; devStage: string
   institutionCode: string
 }
@@ -276,30 +277,24 @@ export interface AreaCustomer {
 // 儀表板的 city/district 佔位值 → Notion is_empty 過濾
 const AREA_EMPTY = new Set(['(未填縣市)', '(未填行政區)'])
 
-export async function listCustomersByArea(f: {
-  city?: string; district?: string; salesperson?: string
-  type?: string; status?: string; devStage?: string
-  unassignedOnly?: boolean   // true = 只撈「負責業務空白」的未分派池(忽略 salesperson)
-}): Promise<AreaCustomer[]> {
-  if (!DB.customers) return []
-  const clauses: any[] = []
-  if (f.city) clauses.push(AREA_EMPTY.has(f.city)
+function cityAreaFilter(city: string) {
+  return AREA_EMPTY.has(city)
     ? { property: '縣市', select: { is_empty: true } }
-    : { property: '縣市', select: { equals: f.city } })
-  if (f.district) clauses.push(AREA_EMPTY.has(f.district)
-    ? { property: '行政區', rich_text: { is_empty: true } }
-    : { property: '行政區', rich_text: { equals: f.district } })
-  if (f.unassignedOnly) clauses.push({ property: '負責業務', select: { is_empty: true } })
-  else if (f.salesperson) clauses.push({ property: '負責業務', select: { equals: f.salesperson } })
-  if (f.type)   clauses.push({ property: '客戶類型', select: { equals: f.type } })
-  if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
-  if (f.devStage) clauses.push({ property: '開發階段', select: { equals: f.devStage } })
-  const filter = clauses.length === 0 ? undefined : clauses.length === 1 ? clauses[0] : { and: clauses }
+    : { property: '縣市', select: { equals: city } }
+}
 
+function districtAreaFilter(district: string) {
+  return AREA_EMPTY.has(district)
+    ? { property: '行政區', rich_text: { is_empty: true } }
+    : { property: '行政區', rich_text: { equals: district } }
+}
+
+async function queryAreaCustomers(filter?: any): Promise<AreaCustomer[]> {
+  if (!DB.customers) return []
   const out: AreaCustomer[] = []
   let cursor: string | undefined
   do {
-    const res: any = await notionCallWithRetry('listCustomersByArea', () =>
+    const res: any = await notionCallWithRetry('queryAreaCustomers', () =>
       notion.databases.query({
         database_id: normalizeDatabaseId(DB.customers!),
         page_size: 100,
@@ -312,6 +307,8 @@ export async function listCustomersByArea(f: {
       if (!name) continue
       out.push({
         id: page.id, name,
+        city:        getSelect(page, '縣市'),
+        district:    getSelect(page, '行政區') || getText(page, '行政區'),
         type:        getSelect(page, '客戶類型'),
         status:      getSelect(page, '機構狀態'),
         address:     getText(page, '地址'),
@@ -325,6 +322,41 @@ export async function listCustomersByArea(f: {
   } while (cursor)
   out.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
   return out
+}
+
+export async function listCustomersByArea(f: {
+  city?: string; district?: string; salesperson?: string
+  type?: string; status?: string; devStage?: string
+  unassignedOnly?: boolean   // true = 只撈「負責業務空白」的未分派池(忽略 salesperson)
+}): Promise<AreaCustomer[]> {
+  if (!DB.customers) return []
+  const clauses: any[] = []
+  if (f.city) clauses.push(cityAreaFilter(f.city))
+  if (f.district) clauses.push(districtAreaFilter(f.district))
+  if (f.unassignedOnly) clauses.push({ property: '負責業務', select: { is_empty: true } })
+  else if (f.salesperson) clauses.push({ property: '負責業務', select: { equals: f.salesperson } })
+  if (f.type)   clauses.push({ property: '客戶類型', select: { equals: f.type } })
+  if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
+  if (f.devStage) clauses.push({ property: '開發階段', select: { equals: f.devStage } })
+  const filter = clauses.length === 0 ? undefined : clauses.length === 1 ? clauses[0] : { and: clauses }
+  return queryAreaCustomers(filter)
+}
+
+/** 合併查詢多個轄區；每 20 區一批，避免逐區 N+1 與過大的複合 filter。 */
+export async function listCustomersByAreas(areas: { city: string; district: string }[]): Promise<AreaCustomer[]> {
+  const uniqueAreas = Array.from(new Map(
+    areas.filter((area) => area.city && area.district).map((area) => [`${area.city}|${area.district}`, area])
+  ).values())
+  const out: AreaCustomer[] = []
+  for (let index = 0; index < uniqueAreas.length; index += 20) {
+    const filters = uniqueAreas.slice(index, index + 20).map((area) => ({
+      and: [cityAreaFilter(area.city), districtAreaFilter(area.district)],
+    }))
+    if (filters.length === 0) continue
+    out.push(...await queryAreaCustomers(filters.length === 1 ? filters[0] : { or: filters }))
+  }
+  return Array.from(new Map(out.map((customer) => [customer.id, customer])).values())
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'))
 }
 
 /**

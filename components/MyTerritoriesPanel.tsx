@@ -23,6 +23,7 @@ export default function MyTerritoriesPanel() {
   const [areas, setAreas] = useState<Area[]>([])
   const [scope, setScope] = useState<'mine' | 'team'>('mine')
   const [assignmentMode, setAssignmentMode] = useState('全面開發')
+  const [accountId, setAccountId] = useState('')
   const [type, setType] = useState<'' | CustomerType>('')
   const [salesperson, setSalesperson] = useState('')
   const [loading, setLoading] = useState(true)
@@ -36,6 +37,7 @@ export default function MyTerritoriesPanel() {
       setAreas(json.areas ?? [])
       setScope(json.scope === 'team' ? 'team' : 'mine')
       setAssignmentMode(json.assignmentMode ?? '全面開發')
+      setAccountId(json.accountId ?? '')
     }).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [])
 
@@ -74,6 +76,13 @@ export default function MyTerritoriesPanel() {
         </div>
 
         {scope === 'team' && people.length > 1 && <div className="mt-4 max-w-56"><select className="select-soft block w-full" value={salesperson} onChange={(event) => setSalesperson(event.target.value)}><option value="">全部業務</option>{people.map((name) => <option key={name}>{name}</option>)}</select></div>}
+
+        {scope === 'mine' && accountId && (
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            {territories.length > 0 ? <Link href={`/bd/salespersons/${accountId}/report?scope=territories${type ? `&type=${encodeURIComponent(type)}` : ''}`} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><Printer className="size-4" />列印全部轄區總名單</Link> : <div className="flex min-h-12 items-center justify-center rounded-full bg-stone-50 px-4 py-2.5 text-sm text-stone-400">目前沒有轄區可列印</div>}
+            <Link href={`/bd/salespersons/${accountId}/report?scope=customers${type ? `&type=${encodeURIComponent(type)}` : ''}`} target="_blank" rel="noopener noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95"><Printer className="size-4" />列印既有客戶名單</Link>
+          </div>
+        )}
 
         {visible.length === 0 ? (
           <div className="mt-5 rounded-2xl bg-stone-50 px-5 py-7 text-center">

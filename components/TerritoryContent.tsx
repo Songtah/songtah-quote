@@ -42,6 +42,7 @@ export default function TerritoryContent({
   currentUserId = '',
   accountOptions = [],
   maintenanceAccounts = [],
+  reportAccounts = [],
 }: {
   initialData: Data | null
   canAssign?: boolean
@@ -50,6 +51,7 @@ export default function TerritoryContent({
   currentUserId?: string
   accountOptions?: { id: string; name: string }[]
   maintenanceAccounts?: { id: string; name: string }[]
+  reportAccounts?: { id: string; name: string }[]
 }) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [statsReady, setStatsReady] = useState(initialData !== null)
@@ -64,6 +66,7 @@ export default function TerritoryContent({
   const [editTarget, setEditTarget] = useState<Territory | null>(null)
   const [claimTarget, setClaimTarget] = useState<Territory | null>(null)
   const [companyOpen, setCompanyOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
   const accountNames = useMemo(() => accountOptions.map((account) => account.name), [accountOptions])
 
   const loadTerritories = useCallback(async () => {
@@ -210,6 +213,11 @@ export default function TerritoryContent({
               </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row lg:ml-auto lg:w-auto">
+              {canAssign && reportAccounts.length > 0 && (
+                <button onClick={() => setReportOpen(true)} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
+                  列印業務總表
+                </button>
+              )}
               {canManageCompany && (
                 <button onClick={() => setCompanyOpen(true)} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
                   公司客戶調度
@@ -372,6 +380,13 @@ export default function TerritoryContent({
           onDone={() => { setCompanyOpen(false); loadStats() }}
         />
       )}
+      {reportOpen && (
+        <SalespersonReportModal
+          accounts={reportAccounts}
+          initialType={typeFilter}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -387,6 +402,32 @@ function SmallMetric({ label, value, accent = false }: { label: string; value: n
 function StatusChip({ status }: { status: string }) {
   const tone = status === '開發中' ? 'bg-brand-100 text-brand-700' : status === '暫停' ? 'bg-amber-50 text-amber-700' : 'bg-stone-100 text-stone-500'
   return <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone}`}>{status}</span>
+}
+
+function SalespersonReportModal({ accounts, initialType, onClose }: {
+  accounts: { id: string; name: string }[]
+  initialType: '' | CustomerType
+  onClose: () => void
+}) {
+  const [salespersonId, setSalespersonId] = useState(accounts[0]?.id ?? '')
+  const query = (scope: 'territories' | 'customers') => {
+    const params = new URLSearchParams({ scope })
+    if (initialType) params.set('type', initialType)
+    return `/bd/salespersons/${salespersonId}/report?${params}`
+  }
+  return (
+    <Modal title="列印業務總表" onClose={onClose}>
+      <div className="space-y-4">
+        <p className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-500">先選擇業務，再決定要合併列印其全部轄區，或列印目前客戶主檔中掛名給他的既有客戶。</p>
+        <Field label="選擇業務"><select className="select-soft block w-full" value={salespersonId} onChange={(event) => setSalespersonId(event.target.value)}>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <a href={query('territories')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">全部轄區總名單</b><span className="mt-1 block text-xs leading-5 text-stone-400">合併該業務所有有效轄區的市場統計與客戶名單。</span></a>
+          <a href={query('customers')} target="_blank" rel="noopener noreferrer" className="rounded-2xl bg-white p-4 text-left ring-1 ring-stone-900/[0.08] transition-all hover:bg-brand-50/50 hover:ring-brand-300 active:scale-[0.98]"><b className="text-stone-800">既有客戶名單</b><span className="mt-1 block text-xs leading-5 text-stone-400">列印目前負責業務為此人的客戶，不受轄區限制。</span></a>
+        </div>
+        <div className="flex justify-end"><button onClick={onClose} className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 active:scale-95 transition-all">關閉</button></div>
+      </div>
+    </Modal>
+  )
 }
 
 function TerritoryFormModal({ title, accounts, areas, existing, onClose, onDone }: {

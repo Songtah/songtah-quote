@@ -169,6 +169,19 @@ try {
   if (!businessReportResponse.ok || !businessReportHtml.includes('轄區客戶報表')) {
     throw new Error(`負責業務無法開啟自己的報表：HTTP ${businessReportResponse.status}`)
   }
+  const combinedTerritoryReportResponse = await request(`/bd/salespersons/${salesperson.id}/report?scope=territories`)
+  const combinedTerritoryReportHtml = await combinedTerritoryReportResponse.text()
+  if (!combinedTerritoryReportResponse.ok || !combinedTerritoryReportHtml.includes('全部轄區總名單') || !selectedAreas.every((area) => combinedTerritoryReportHtml.includes(area.district))) {
+    throw new Error(`業務轄區總報表無法合併多區：HTTP ${combinedTerritoryReportResponse.status}`)
+  }
+  if (combinedTerritoryReportHtml.includes('institutionCode') || combinedTerritoryReportHtml.includes('phone') || combinedTerritoryReportHtml.includes('address')) {
+    throw new Error('業務轄區總報表洩漏未授權的敏感欄位')
+  }
+  const businessCombinedReportResponse = await requestAs(`/bd/salespersons/${salesperson.id}/report?scope=territories`, businessToken)
+  const businessCombinedReportHtml = await businessCombinedReportResponse.text()
+  if (!businessCombinedReportResponse.ok || !businessCombinedReportHtml.includes('全部轄區總名單')) {
+    throw new Error(`業務無法開啟自己的轄區總報表：HTTP ${businessCombinedReportResponse.status}`)
+  }
   const maintenanceToken = await encode({
     secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
     token: {
@@ -180,6 +193,16 @@ try {
   const maintenanceTerritoriesResponse = await requestAs('/api/bd/territories', maintenanceToken)
   const maintenanceTerritories = await json(maintenanceTerritoriesResponse, '讀取既有客戶維護業務的轄區狀態')
   if (maintenanceTerritories.assignmentMode !== '既有客戶維護') throw new Error('業務端未顯示既有客戶維護模式')
+  const maintenanceCustomerReportResponse = await requestAs(`/bd/salespersons/${maintenanceUser.id}/report?scope=customers`, maintenanceToken)
+  const maintenanceCustomerReportHtml = await maintenanceCustomerReportResponse.text()
+  if (!maintenanceCustomerReportResponse.ok || !maintenanceCustomerReportHtml.includes('既有客戶名單') || !maintenanceCustomerReportHtml.includes('依客戶主檔目前負責業務產出')) {
+    throw new Error(`維護模式業務無法列印既有客戶名單：HTTP ${maintenanceCustomerReportResponse.status}`)
+  }
+  const maintenanceReportCount = Number(maintenanceCustomerReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)
+  if (maintenanceReportCount <= 0) throw new Error('既有客戶報表沒有產出任何名下客戶')
+  if (maintenanceCustomerReportHtml.includes('institutionCode') || maintenanceCustomerReportHtml.includes('phone') || maintenanceCustomerReportHtml.includes('address')) {
+    throw new Error('既有客戶名單報表洩漏未授權的敏感欄位')
+  }
   const maintenancePipeline = await json(await requestAs('/api/bd/pipeline', maintenanceToken), '讀取既有客戶維護業務的開發漏斗')
   if (!maintenancePipeline.existingOnly || maintenancePipeline.opportunityLeads.length !== 0 || maintenancePipeline.items.some((item) => item.salesperson !== maintenanceUser.name)) {
     throw new Error('既有客戶維護業務的漏斗仍混入未認領客戶或新商機')
@@ -209,6 +232,9 @@ try {
   if (hiddenSample && businessReportHtml.includes(hiddenSample.name)) {
     throw new Error(`一般業務報表洩漏其他負責人的客戶：${hiddenSample.name}`)
   }
+  if (hiddenSample && businessCombinedReportHtml.includes(hiddenSample.name)) {
+    throw new Error(`一般業務轄區總報表洩漏其他負責人的客戶：${hiddenSample.name}`)
+  }
   const otherUserToken = await encode({
     secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
     token: {
@@ -220,6 +246,10 @@ try {
   const forbiddenReport = await requestAs(`/bd/territories/${createdIds[0]}/report`, otherUserToken)
   if (forbiddenReport.status !== 307 || !forbiddenReport.headers.get('location')?.endsWith('/bd')) {
     throw new Error(`非負責業務未被報表頁拒絕：HTTP ${forbiddenReport.status}`)
+  }
+  const forbiddenCombinedReport = await requestAs(`/bd/salespersons/${salesperson.id}/report?scope=territories`, otherUserToken)
+  if (forbiddenCombinedReport.status !== 307 || !forbiddenCombinedReport.headers.get('location')?.endsWith('/bd')) {
+    throw new Error(`非本人仍可開啟業務總報表：HTTP ${forbiddenCombinedReport.status}`)
   }
 
   const concurrentPayload = {
@@ -272,6 +302,7 @@ try {
     authenticated: true, adminPage: true, bdPage: true, bulkPreview: 2, bulkCreated: 2,
     customerChanges: 0, ownershipUnchanged: true, bdTerritoriesSynced: true,
     typeStats: true, typeCandidateFilter: true, printableReport: true,
+    combinedTerritoryReport: true, existingCustomerReport: true, combinedReportAuthorization: true,
     sensitiveFieldsMinimized: true, businessOwnReport: true, otherBusinessRejected: true,
     maintenanceMode: true, maintenanceTerritoryBlocked: true, maintenanceNewAssignmentBlocked: true,
     maintenanceReassignBlocked: true, maintenanceCompanyAssignmentBlocked: true, maintenanceSuggestionsExistingOnly: true,

@@ -44,6 +44,9 @@ export default async function ClinicMonitorPage({
   const maintenanceAccounts = managementUsers
     .filter((user) => user.status !== '停用' && user.accountType === '業務' && user.assignmentMode === '既有客戶維護')
     .map((user) => ({ id: user.id, name: user.name }))
+  const reportAccounts = managementUsers
+    .filter((user) => user.status !== '停用' && user.accountType === '業務')
+    .map((user) => ({ id: user.id, name: user.name }))
 
   const TAB_ITEMS = [
     { id: 'monitor',   href: '/admin/clinic-monitor',                 label: '🩺 客戶監控' },
@@ -94,6 +97,7 @@ export default async function ClinicMonitorPage({
           currentUserId={currentUserId}
           accountOptions={accountOptions}
           maintenanceAccounts={maintenanceAccounts}
+          reportAccounts={reportAccounts}
         />
       ) : tab === 'opportunity' ? (
         <OpportunityContent canScan={canManageCompany} />

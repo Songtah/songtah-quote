@@ -23,6 +23,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _c
       updatedAt: areaResult.updatedAt,
       scope: canViewAll ? 'team' : 'mine',
       assignmentMode: currentAccount?.assignmentMode ?? '全面開發',
+      accountId: currentAccount?.id ?? '',
     })
   } catch (error) {
     console.error('bd territories GET error:', error)
