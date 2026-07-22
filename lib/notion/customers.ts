@@ -8,6 +8,7 @@ import {
   getProp, getTitle, getText, getSelect, getNumber,
 } from './shared'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
+import { canonicalSalespersonName, salespersonNameVariants } from '@/lib/salesperson-name'
 
 // ── 全庫掃描(分區版)──────────────────────────────────────────────────────
 // ⚠️ Notion API 無過濾的 databases.query 分頁在 10,000 筆處「靜默截斷」
@@ -313,7 +314,7 @@ async function queryAreaCustomers(filter?: any): Promise<AreaCustomer[]> {
         status:      getSelect(page, '機構狀態'),
         address:     getText(page, '地址'),
         phone:       page.properties?.['電話']?.phone_number ?? getText(page, '電話'),
-        salesperson: getSelect(page, '負責業務'),
+        salesperson: canonicalSalespersonName(getSelect(page, '負責業務')),
         devStage:    getSelect(page, '開發階段'),
         institutionCode: getText(page, '機構代碼'),
       })
@@ -334,7 +335,12 @@ export async function listCustomersByArea(f: {
   if (f.city) clauses.push(cityAreaFilter(f.city))
   if (f.district) clauses.push(districtAreaFilter(f.district))
   if (f.unassignedOnly) clauses.push({ property: '負責業務', select: { is_empty: true } })
-  else if (f.salesperson) clauses.push({ property: '負責業務', select: { equals: f.salesperson } })
+  else if (f.salesperson) {
+    const names = salespersonNameVariants(f.salesperson)
+    clauses.push(names.length === 1
+      ? { property: '負責業務', select: { equals: names[0] } }
+      : { or: names.map((name) => ({ property: '負責業務', select: { equals: name } })) })
+  }
   if (f.type)   clauses.push({ property: '客戶類型', select: { equals: f.type } })
   if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
   if (f.devStage) clauses.push({ property: '開發階段', select: { equals: f.devStage } })

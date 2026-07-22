@@ -64,6 +64,8 @@ const [before, users, areaOptions] = await Promise.all([
 ])
 const salesperson = users.find((user) => user.assignmentMode === '全面開發' && user.status !== '停用' && user.accountType === '業務' && user.name)
 if (!salesperson) throw new Error('找不到可用業務帳號')
+const legacyOwnerUser = users.find((user) => user.name === 'Duncan' && user.status !== '停用' && user.accountType === '業務')
+if (!legacyOwnerUser) throw new Error('找不到 Duncan 業務帳號，無法驗證客戶主檔舊名稱相容')
 const maintenanceUser = users.find((user) => user.assignmentMode === '既有客戶維護' && user.status !== '停用' && user.accountType === '業務' && user.name)
 if (!maintenanceUser) throw new Error('找不到「既有客戶維護」帳號')
 const occupied = new Set(before.items.map((item) => `${item.city}|${item.district}`))
@@ -188,6 +190,23 @@ try {
   }
   if (JSON.stringify(businessPopupList).includes('address') || JSON.stringify(businessPopupList).includes('phone') || JSON.stringify(businessPopupList).includes('institutionCode')) {
     throw new Error('業務端轄區彈跳清單洩漏敏感欄位')
+  }
+  const legacyOwnerToken = await encode({
+    secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
+    token: {
+      sub: legacyOwnerUser.id, uid: legacyOwnerUser.id, name: legacyOwnerUser.name,
+      role: 'user', accountType: '業務',
+      permissions: { bd: { view: true, edit: true }, clinic_monitor: { view: false, edit: false } },
+    },
+  })
+  const legacyOwnerReportResponse = await requestAs(`/bd/salespersons/${legacyOwnerUser.id}/report?scope=customers`, legacyOwnerToken)
+  const legacyOwnerReportHtml = await legacyOwnerReportResponse.text()
+  if (!legacyOwnerReportResponse.ok || !legacyOwnerReportHtml.includes('既有客戶名單')) {
+    throw new Error(`Duncan 既有客戶報表無法開啟：HTTP ${legacyOwnerReportResponse.status}`)
+  }
+  const legacyOwnerPopup = await json(await requestAs('/api/bd/my-customer-list?scope=customers', legacyOwnerToken), '讀取 Duncan 既有客戶彈跳清單')
+  if (legacyOwnerPopup.items.length <= 0 || legacyOwnerPopup.items.some((item) => item.salesperson !== legacyOwnerUser.name)) {
+    throw new Error('Duncan 舊負責業務名稱未正確轉換成目前帳號名稱')
   }
   const maintenanceToken = await encode({
     secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
