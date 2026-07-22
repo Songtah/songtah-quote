@@ -88,6 +88,7 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
   const [items, setItems] = useState<PipelineItem[]>([])
   const [stages, setStages] = useState<string[]>([])
   const [opportunityLeads, setOpportunityLeads] = useState<OpportunityLead[]>([])
+  const [existingOnly, setExistingOnly] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -105,6 +106,7 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
       setItems(data.items ?? [])
       setStages(data.stages ?? [])
       setOpportunityLeads(data.opportunityLeads ?? [])
+      setExistingOnly(data.existingOnly === true)
     } catch (e: any) {
       setError(e?.message ?? '讀取開發漏斗失敗')
     } finally {
@@ -220,6 +222,12 @@ export default function PipelineContent({ currentUser }: { currentUser?: string 
           </Link>
         </div>
       </section>
+
+      {existingOnly && (
+        <div className="card-soft p-4 text-sm leading-6 text-stone-500">
+          <b className="text-stone-700">目前只維護既有客戶。</b> 此頁只顯示你名下的客戶，不提供未認領名單或新商機認領。
+        </div>
+      )}
 
       {/* 單一篩選選單：避免多顆 chip 在手機擠壓，焦點狀態維持圓角 */}
       <div className="relative z-30 max-w-sm">

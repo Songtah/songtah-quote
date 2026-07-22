@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { createSystemUser, getSystemUsers } from '@/lib/system-notion'
+import { BUSINESS_ASSIGNMENT_MODES, createSystemUser, getSystemUsers, type BusinessAssignmentMode } from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const GET = withApiAuth('admin', async () => {
@@ -14,6 +14,10 @@ export const POST = withApiAuth('admin', async (req: NextRequest, _ctx, session)
     if (!body.name || !body.username || !body.password) {
       return NextResponse.json({ error: '缺少必填欄位' }, { status: 400 })
     }
+    const assignmentMode = body.accountType === '業務' ? (body.assignmentMode ?? '全面開發') : '全面開發'
+    if (!BUSINESS_ASSIGNMENT_MODES.includes(assignmentMode as BusinessAssignmentMode)) {
+      return NextResponse.json({ error: '無效的業務承接模式' }, { status: 400 })
+    }
 
     const user = await createSystemUser({
       name: body.name,
@@ -21,6 +25,7 @@ export const POST = withApiAuth('admin', async (req: NextRequest, _ctx, session)
       password: body.password,
       accountType: body.accountType ?? '業務',
       status: body.status ?? '未開始',
+      assignmentMode: assignmentMode as BusinessAssignmentMode,
       permissions: body.permissions,
     })
 

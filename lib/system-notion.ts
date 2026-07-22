@@ -64,8 +64,9 @@ export type { ModuleKey, ModulePermission, UserPermissions } from './notion/perm
 export { MODULE_KEYS, MODULE_LABELS, allPermissions, mapUserPermissions } from './notion/permissions-model'
 
 // ─── 系統帳號 / 登入 → 已抽至 ./notion/accounts（葉領域）─────────────────────────
-export type { SystemUser } from './notion/accounts'
+export type { SystemUser, BusinessAssignmentMode } from './notion/accounts'
 export {
+  BUSINESS_ASSIGNMENT_MODES, canAcceptNewBusiness,
   getSystemUsers, getSystemUserByCredentials, createSystemUser,
   getSystemUserById, updateSystemUser, deleteSystemUser,
 } from './notion/accounts'

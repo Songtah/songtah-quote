@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listCustomersByArea, reassignSalesperson } from '@/lib/notion/customers'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,17 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
     if (!from) return NextResponse.json({ error: '缺少離職業務' }, { status: 400 })
     if (moves.length === 0) return NextResponse.json({ error: '未指定任何轄區轉移' }, { status: 400 })
     const dryRun = b.dryRun !== false
+
+    const targetNames = Array.from(new Set(moves.map((move) => move.to).filter((name) => name && name !== RELEASE)))
+    if (targetNames.length > 0) {
+      const users = await getSystemUsers()
+      for (const targetName of targetNames) {
+        const matches = users.filter((user) => user.name === targetName)
+        if (matches.length !== 1 || !canAcceptNewBusiness(matches[0])) {
+          return NextResponse.json({ error: `${targetName} 目前不承接新客戶` }, { status: 400 })
+        }
+      }
+    }
 
     // 逐區撈「該區、負責業務=from」的客戶
     const perMove = await Promise.all(moves.map(async (m) => {

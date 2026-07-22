@@ -11,6 +11,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { getSystemCustomerById, listPipelineCustomers, updateCustomerDevStage, DEV_STAGES } from '@/lib/notion/customers'
 import { listOpenFollowUps } from '@/lib/notion/visits'
 import { listUnclaimedOpportunityLeads } from '@/lib/notion/opportunity'
+import { canAcceptNewBusiness, getSystemUserById, getSystemUsers } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 function canViewAll(session: any) {
@@ -20,16 +21,21 @@ function canViewAll(session: any) {
 
 export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _ctx, session) => {
   try {
-    const owner = canViewAll(session) ? undefined : (session.user?.name ?? '__NO_MATCH__')
+    const privileged = canViewAll(session)
+    const owner = privileged ? undefined : (session.user?.name ?? '__NO_MATCH__')
+    const account = privileged ? null : await getSystemUserById((session.user as any)?.id ?? '').catch(() => null)
+    const existingOnly = !privileged && (!account || !canAcceptNewBusiness(account))
     const [customers, followUps, opportunityLeads] = await Promise.all([
       listPipelineCustomers(),
       listOpenFollowUps(owner),
-      listUnclaimedOpportunityLeads().catch((e) => { console.error('bd/pipeline: 商機客戶讀取失敗', e); return [] }),
+      existingOnly
+        ? Promise.resolve([])
+        : listUnclaimedOpportunityLeads().catch((e) => { console.error('bd/pipeline: 商機客戶讀取失敗', e); return [] }),
     ])
     // 一般業務只看本人名下與尚未認領的開發客戶；已分派給他人的客情屬機密。
-    const scopedCustomers = canViewAll(session)
+    const scopedCustomers = privileged
       ? customers
-      : customers.filter((customer) => !customer.salesperson || customer.salesperson === owner)
+      : customers.filter((customer) => customer.salesperson === owner || (!existingOnly && !customer.salesperson))
 
     // 依客戶 relation id 彙總未結案追蹤：筆數 + 最近的下次追蹤日
     const fuByCustomer: Record<string, { count: number; nextDate: string }> = {}
@@ -49,7 +55,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _c
       nextFollowUpDate: fuByCustomer[c.id]?.nextDate ?? '',
     }))
 
-    return NextResponse.json({ items, stages: DEV_STAGES, opportunityLeads })
+    return NextResponse.json({ items, stages: DEV_STAGES, opportunityLeads, existingOnly })
   } catch (error) {
     console.error('bd/pipeline GET error:', error)
     return NextResponse.json({ error: '讀取開發漏斗失敗' }, { status: 500 })
@@ -74,6 +80,18 @@ export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (req: N
     if (!customer) return NextResponse.json({ error: '找不到客戶' }, { status: 404 })
     if (!privileged && customer.salesperson && customer.salesperson !== actorName) {
       return NextResponse.json({ error: '不可修改其他業務負責的客戶' }, { status: 403 })
+    }
+    if (!privileged && !customer.salesperson) {
+      const account = await getSystemUserById(user?.id ?? '').catch(() => null)
+      if (!account || !canAcceptNewBusiness(account)) {
+        return NextResponse.json({ error: '目前只維護既有客戶，不承接新的未認領客戶' }, { status: 403 })
+      }
+    }
+    if (privileged && salesperson && customer.salesperson !== salesperson) {
+      const matches = (await getSystemUsers()).filter((account) => account.name === salesperson)
+      if (matches.length !== 1 || !canAcceptNewBusiness(matches[0])) {
+        return NextResponse.json({ error: `${salesperson} 目前不承接新客戶` }, { status: 400 })
+      }
     }
     const scopedSalesperson = privileged ? salesperson : actorName
     const result = await updateCustomerDevStage(id, { devStage, salesperson: scopedSalesperson, devSource })

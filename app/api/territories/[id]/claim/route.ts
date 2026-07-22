@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { claimTerritoryCustomers } from '@/lib/notion/customers'
 import { getTerritory } from '@/lib/notion/territories'
+import { canAcceptNewBusiness, getSystemUserById } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const maxDuration = 300
@@ -21,6 +22,10 @@ export const POST = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'edit' 
     }
     if (territory.status === '暫停' || territory.status === '結束') {
       return NextResponse.json({ error: `轄區目前為「${territory.status}」，不可認領` }, { status: 400 })
+    }
+    const owner = await getSystemUserById(territory.salespersonId).catch(() => null)
+    if (!owner || !canAcceptNewBusiness(owner)) {
+      return NextResponse.json({ error: `${territory.salesperson} 目前只維護既有客戶，不可認領新客戶` }, { status: 400 })
     }
     const body = await req.json()
     const customerIds = Array.isArray(body.customerIds)

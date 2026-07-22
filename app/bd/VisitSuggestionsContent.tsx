@@ -15,6 +15,7 @@ type SuggestionResult = {
   groups: { A: Suggestion[]; B: Suggestion[]; C: Suggestion[] }
   more: { B: number; C: number }
   mapsBuiltAt: string
+  existingOnly?: boolean
 }
 type RegionRow = { city: string; district: string; salesperson: string; count: number }
 type AdoptionStats = {
@@ -198,6 +199,12 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
         <p className="text-xs text-stone-400 -mt-2">
           📊 近 30 天你複製了 {adoption.totalCopies} 次拜訪單,建議的 {adoption.totalSuggested} 家中有 {adoption.totalVisited} 家事後真的拜訪了(採納率 {(adoption.rate * 100).toFixed(0)}%)
         </p>
+      )}
+
+      {data?.existingOnly && (
+        <div className="card-soft p-4 text-sm leading-6 text-stone-500">
+          <b className="text-stone-700">目前只顯示既有客戶。</b> 系統不會提供未認領名單或陌生開發建議。
+        </div>
       )}
 
       {error && <div className="card-soft p-4 text-sm text-red-600">{error}</div>}

@@ -22,6 +22,7 @@ export default function MyTerritoriesPanel() {
   const [territories, setTerritories] = useState<Territory[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [scope, setScope] = useState<'mine' | 'team'>('mine')
+  const [assignmentMode, setAssignmentMode] = useState('全面開發')
   const [type, setType] = useState<'' | CustomerType>('')
   const [salesperson, setSalesperson] = useState('')
   const [loading, setLoading] = useState(true)
@@ -34,6 +35,7 @@ export default function MyTerritoriesPanel() {
       setTerritories(json.items ?? [])
       setAreas(json.areas ?? [])
       setScope(json.scope === 'team' ? 'team' : 'mine')
+      setAssignmentMode(json.assignmentMode ?? '全面開發')
     }).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [])
 
@@ -58,8 +60,12 @@ export default function MyTerritoriesPanel() {
             <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><MapPinned className="size-5" /></span>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">負責市場</p>
-              <h2 id="my-territories-title" className="mt-1 text-xl font-bold text-stone-800">{scope === 'team' ? '團隊轄區' : '我的轄區'}</h2>
-              <p className="mt-1 text-sm text-stone-500">選擇客戶類型，立即看目前負責區域的市場規模。</p>
+              <h2 id="my-territories-title" className="mt-1 text-xl font-bold text-stone-800">
+                {scope === 'team' ? '團隊轄區' : assignmentMode === '既有客戶維護' ? '既有客戶維護' : '我的轄區'}
+              </h2>
+              <p className="mt-1 text-sm text-stone-500">
+                {scope === 'mine' && assignmentMode === '既有客戶維護' ? '專注服務目前名下客戶，不另外配置陌生開發轄區。' : '選擇客戶類型，立即看目前負責區域的市場規模。'}
+              </p>
             </div>
           </div>
           <div className="flex gap-1 overflow-x-auto">
@@ -70,7 +76,13 @@ export default function MyTerritoriesPanel() {
         {scope === 'team' && people.length > 1 && <div className="mt-4 max-w-56"><select className="select-soft block w-full" value={salesperson} onChange={(event) => setSalesperson(event.target.value)}><option value="">全部業務</option>{people.map((name) => <option key={name}>{name}</option>)}</select></div>}
 
         {visible.length === 0 ? (
-          <div className="mt-5 rounded-2xl bg-stone-50 px-5 py-7 text-center"><p className="font-semibold text-stone-600">目前尚未設定轄區</p><p className="mt-1 text-sm text-stone-400">請主管至業務轄區管理新增負責區域。</p></div>
+          <div className="mt-5 rounded-2xl bg-stone-50 px-5 py-7 text-center">
+            {scope === 'mine' && assignmentMode === '既有客戶維護' ? (
+              <><p className="font-semibold text-stone-700">目前只維護既有客戶</p><p className="mt-1 text-sm text-stone-400">不需要設定轄區；客情紀錄、報價與訂單仍可照常使用。</p></>
+            ) : (
+              <><p className="font-semibold text-stone-600">目前尚未設定轄區</p><p className="mt-1 text-sm text-stone-400">請主管至業務轄區管理新增負責區域。</p></>
+            )}
+          </div>
         ) : (
           <>
             <div className="mt-5 flex items-end justify-between"><p className="text-sm text-stone-500">{visible.length} 個行政區</p><p className="text-sm text-stone-500">{type || '全部類型'}市場 <b className="text-xl text-brand-700">{total.toLocaleString()}</b> 家</p></div>
@@ -80,7 +92,7 @@ export default function MyTerritoriesPanel() {
           </>
         )}
       </div>
-      <Link href="/bd?tab=suggest" className="flex min-h-14 items-center justify-between border-t border-stone-900/[0.06] px-5 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50/50 active:scale-[0.99] sm:px-7"><span>依轄區安排拜訪建議</span><ArrowRight className="size-4" /></Link>
+      <Link href="/bd?tab=suggest" className="flex min-h-14 items-center justify-between border-t border-stone-900/[0.06] px-5 py-3 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50/50 active:scale-[0.99] sm:px-7"><span>{scope === 'mine' && assignmentMode === '既有客戶維護' ? '安排既有客戶拜訪' : '依轄區安排拜訪建議'}</span><ArrowRight className="size-4" /></Link>
     </section>
   )
 }

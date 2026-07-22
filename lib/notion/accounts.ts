@@ -18,7 +18,22 @@ export type SystemUser = {
   username: string
   accountType: string
   status: string
+  assignmentMode: BusinessAssignmentMode
   permissions: UserPermissions
+}
+
+export const BUSINESS_ASSIGNMENT_MODES = ['全面開發', '既有客戶維護', '暫停承接'] as const
+export type BusinessAssignmentMode = (typeof BUSINESS_ASSIGNMENT_MODES)[number]
+
+function assignmentMode(page: any): BusinessAssignmentMode {
+  const value = getSelect(page, '業務承接模式')
+  return BUSINESS_ASSIGNMENT_MODES.includes(value as BusinessAssignmentMode)
+    ? value as BusinessAssignmentMode
+    : '全面開發'
+}
+
+export function canAcceptNewBusiness(user: Pick<SystemUser, 'accountType' | 'status' | 'assignmentMode'>): boolean {
+  return user.accountType === '業務' && user.status !== '停用' && user.assignmentMode === '全面開發'
 }
 
 let _userFieldsEnsured = false
@@ -28,6 +43,9 @@ async function ensureUserDbFields() {
     const permProps: Record<string, any> = {
       帳號代碼: { rich_text: {} },   // username — needed for login filter
       密碼:   { rich_text: {} },   // password
+      業務承接模式: {
+        select: { options: BUSINESS_ASSIGNMENT_MODES.map((name) => ({ name })) },
+      },
     }
     for (const fields of Object.values(MODULE_NOTION_FIELDS)) {
       permProps[fields.view] = { checkbox: {} }
@@ -63,6 +81,7 @@ export async function getSystemUsers(): Promise<SystemUser[]> {
     username: getText(page, '帳號代碼'),
     accountType: getSelect(page, '帳號類型'),
     status: getSelect(page, '狀態'),
+    assignmentMode: assignmentMode(page),
     permissions: mapUserPermissions(page),
   }))
 
@@ -120,6 +139,7 @@ export async function getSystemUserByCredentials(
         username: getText(page, '帳號代碼'),
         accountType: getSelect(page, '帳號類型'),
         status,
+        assignmentMode: assignmentMode(page),
         permissions: mapUserPermissions(page),
       }
     }
@@ -133,6 +153,7 @@ export async function createSystemUser(data: {
   password: string
   accountType: string
   status?: string
+  assignmentMode?: BusinessAssignmentMode
   permissions: UserPermissions
 }): Promise<SystemUser> {
   await ensureUserDbFields()
@@ -152,6 +173,7 @@ export async function createSystemUser(data: {
         密碼: { rich_text: richText(hashedPassword) },
         ...(data.accountType ? { 帳號類型: { select: { name: data.accountType } } } : {}),
         ...(data.status ? { 狀態: { status: { name: data.status } } } : {}),
+        業務承接模式: { select: { name: data.assignmentMode ?? '全面開發' } },
         ...permProps,
       } as any,
     })
@@ -164,6 +186,7 @@ export async function createSystemUser(data: {
     username: data.username,
     accountType: data.accountType,
     status: getSelect(response, '狀態') || data.status || '未開始',
+    assignmentMode: data.assignmentMode ?? '全面開發',
     permissions: data.permissions,
   }
 }
@@ -180,6 +203,7 @@ export async function getSystemUserById(id: string): Promise<SystemUser> {
     username: getText(page, '帳號代碼'),
     accountType: getSelect(page, '帳號類型'),
     status: getSelect(page, '狀態'),
+    assignmentMode: assignmentMode(page),
     permissions: mapUserPermissions(page),
   }
 }
@@ -191,6 +215,7 @@ export async function updateSystemUser(
     password?: string
     accountType?: string
     status?: string
+    assignmentMode?: BusinessAssignmentMode
     permissions?: UserPermissions
   }
 ): Promise<void> {
@@ -199,6 +224,7 @@ export async function updateSystemUser(
   if (data.password !== undefined) properties['密碼'] = { rich_text: richText(await hashPassword(data.password)) }
   if (data.accountType !== undefined) properties['帳號類型'] = { select: { name: data.accountType } }
   if (data.status !== undefined) properties['狀態'] = { status: { name: data.status } }
+  if (data.assignmentMode !== undefined) properties['業務承接模式'] = { select: { name: data.assignmentMode } }
   if (data.permissions !== undefined) {
     for (const [mod, fields] of Object.entries(MODULE_NOTION_FIELDS)) {
       const p = data.permissions[mod as ModuleKey]

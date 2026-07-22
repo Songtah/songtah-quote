@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { getSystemUsers } from '@/lib/notion/accounts'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import {
   createTerritories, listTerritories, TERRITORY_STATUSES, TerritoryMutationBusyError,
   type TerritoryStatus,
@@ -46,6 +46,9 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
       user.id === salespersonId && user.status !== '停用' && user.accountType === '業務'
     )
     if (!selectedUser) return NextResponse.json({ error: '負責業務不是有效的啟用帳號' }, { status: 400 })
+    if (!canAcceptNewBusiness(selectedUser)) {
+      return NextResponse.json({ error: `${selectedUser.name} 目前為「${selectedUser.assignmentMode}」，不可承接新轄區` }, { status: 400 })
+    }
 
     const areaMap = new Map(areaResult.items.map((area) => [`${area.city}|${area.district}`, area]))
     const occupied = new Map(territories.map((item) => [`${item.city}|${item.district}`, item]))

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { SystemUser, UserPermissions, ModuleKey } from '@/lib/system-notion'
-import { MODULE_KEYS, MODULE_LABELS } from '@/lib/system-notion'
+import type { SystemUser, UserPermissions, ModuleKey, BusinessAssignmentMode } from '@/lib/system-notion'
+import { BUSINESS_ASSIGNMENT_MODES, MODULE_KEYS, MODULE_LABELS } from '@/lib/system-notion'
 
 const ACCOUNT_TYPE_OPTIONS = ['中央管理', '業務', '行政', '技術']
 const STATUS_OPTIONS = ['未開始', '進行中', '完成', '停用']
@@ -115,6 +115,7 @@ function AccountModal({
     password: '',
     accountType: initialData?.accountType ?? '業務',
     status: initialData?.status ?? '未開始',
+    assignmentMode: initialData?.assignmentMode ?? '全面開發' as BusinessAssignmentMode,
     permissions: initialData?.permissions ?? defaultPermissions(),
   })
   const [submitting, setSubmitting] = useState(false)
@@ -146,6 +147,7 @@ function AccountModal({
         username: form.username,
         accountType: form.accountType,
         status: form.status,
+        assignmentMode: form.accountType === '業務' ? form.assignmentMode : '全面開發',
         permissions: form.permissions,
       }
       if (form.password) payload.password = form.password
@@ -276,16 +278,21 @@ function AccountModal({
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-stone-500 mb-1.5">狀態</label>
-                    <select
-                      value={form.status}
-                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                      className={inputCls}
-                    >
-                      {statusOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">狀態</label>
+                      <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
+                        {statusOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    {form.accountType === '業務' && <div>
+                      <label className="block text-xs font-medium text-stone-500 mb-1.5">業務承接模式</label>
+                      <select value={form.assignmentMode} onChange={(e) => setForm((f) => ({ ...f, assignmentMode: e.target.value as BusinessAssignmentMode }))} className={inputCls}>
+                        {BUSINESS_ASSIGNMENT_MODES.map((mode) => <option key={mode}>{mode}</option>)}
+                      </select>
+                    </div>}
                   </div>
+                  {form.accountType === '業務' && form.assignmentMode === '既有客戶維護' && <p className="rounded-2xl bg-brand-50/70 px-3 py-2 text-xs leading-5 text-stone-600">保留既有客戶與日常操作，但不再承接新轄區、未認領客戶或陌生開發名單。</p>}
 
                   <div>
                     <label className="block text-xs font-medium text-stone-500 mb-2">頁面權限</label>
@@ -405,17 +412,19 @@ export default function AccountsContent() {
     ops: users.filter((u) => u.accountType === '行政').length,
     tech: users.filter((u) => u.accountType === '技術').length,
     disabled: users.filter((u) => u.status === '停用').length,
+    maintenance: users.filter((u) => u.accountType === '業務' && u.assignmentMode === '既有客戶維護').length,
   }
 
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {[
           { label: '中央管理', count: counts.admin },
           { label: '業務帳號', count: counts.sales },
           { label: '行政帳號', count: counts.ops },
           { label: '技術帳號', count: counts.tech },
+          { label: '既有客戶維護', count: counts.maintenance },
           { label: '已停用', count: counts.disabled, warn: counts.disabled > 0 },
         ].map(({ label, count, warn }) => (
           <div key={label} className="panel p-5">
@@ -456,6 +465,7 @@ export default function AccountsContent() {
                 {u.username && (
                   <p className="font-mono text-xs text-stone-400">{u.username}</p>
                 )}
+                {u.accountType === '業務' && u.assignmentMode !== '全面開發' && <p className="inline-flex w-fit rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700">{u.assignmentMode}</p>}
                 {viewableModules.length > 0 && u.status !== '停用' && (
                   <div className="flex flex-wrap gap-1">
                     {viewableModules.map((m) => (
@@ -529,6 +539,7 @@ export default function AccountsContent() {
                       <td className="px-4 py-3 text-stone-500 font-mono text-xs">{u.username || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge label={u.accountType || '—'} color={accountTypeBadge(u.accountType)} />
+                        {u.accountType === '業務' && u.assignmentMode !== '全面開發' && <div className="mt-1 text-[11px] font-semibold text-brand-700">{u.assignmentMode}</div>}
                       </td>
                       <td className="px-4 py-3">
                         {u.status === '停用' ? (

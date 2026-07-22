@@ -62,7 +62,15 @@ function CovRow({ label, c, bold }: { label: string; c: { total: number; existin
   )
 }
 
-export default function RegionStatsContent({ initialData, canAssign = false }: { initialData: Data | null; canAssign?: boolean }) {
+export default function RegionStatsContent({
+  initialData,
+  canAssign = false,
+  assignableSalespersons,
+}: {
+  initialData: Data | null
+  canAssign?: boolean
+  assignableSalespersons?: string[]
+}) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [updatedAt, setUpdatedAt] = useState(initialData?.updatedAt ?? '')
   const [loading, setLoading] = useState(!initialData)
@@ -115,6 +123,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
   const allSalespersons = useMemo(
     () => Array.from(new Set(rows.filter((r) => r.salesperson).map((r) => r.salesperson))).sort(),
     [rows])
+  const assignmentTargets = assignableSalespersons ?? allSalespersons.filter((name) => name !== '公司' && name !== '盤商')
 
   // 有效的行政區選擇:剔除已不在所選縣市裡的(避免換縣市後殘留把表格篩空)
   const effDistrictSel = useMemo(() => {
@@ -631,7 +640,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
       {assignTarget && (
         <AssignModal
           {...assignTarget}
-          salespersons={allSalespersons.filter((s) => s !== '公司' && s !== '盤商')}
+          salespersons={assignmentTargets}
           filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed, excludePersonal }}
           onClose={(assigned) => { setAssignTarget(null); if (assigned) fetchData(true) }}
         />
@@ -643,7 +652,7 @@ export default function RegionStatsContent({ initialData, canAssign = false }: {
           districts={Array.from(rows.filter((r) => r.salesperson === reassignFrom)
             .reduce((m, r) => { const k = r.city + '|' + r.district; m.set(k, (m.get(k) ?? 0) + r.count); return m }, new Map<string, number>())
             .entries()).map(([k, n]) => ({ city: k.split('|')[0], district: k.split('|')[1], count: n })).sort((a, b) => b.count - a.count)}
-          successors={allSalespersons.filter((s) => s !== reassignFrom && s !== '公司' && s !== '盤商')}
+          successors={assignmentTargets.filter((s) => s !== reassignFrom)}
           onClose={(changed) => { setReassignFrom(null); if (changed) fetchData(true) }}
         />
       )}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { getSystemUsers } from '@/lib/notion/accounts'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import {
   getTerritory, updateTerritory, TERRITORY_STATUSES, type TerritoryStatus,
 } from '@/lib/notion/territories'
@@ -31,6 +31,9 @@ export const PATCH = withApiAuth<Ctx>({ roles: ['中央管理', '總經理'] }, 
       const selectedUser = users.find((user) => user.id === requestedSalespersonId && user.status !== '停用' && user.accountType === '業務')
       if (!selectedUser) {
         return NextResponse.json({ error: '負責業務不是有效的啟用帳號' }, { status: 400 })
+      }
+      if (!canAcceptNewBusiness(selectedUser) && before.salespersonId !== selectedUser.id) {
+        return NextResponse.json({ error: `${selectedUser.name} 目前為「${selectedUser.assignmentMode}」，不可接手新轄區` }, { status: 400 })
       }
       salesperson = selectedUser.name
       salespersonId = selectedUser.id

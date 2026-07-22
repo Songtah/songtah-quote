@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { reassignSalesperson, listCustomersByArea } from '@/lib/notion/customers'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,12 @@ export const POST = withApiAuth({ roles: ['中央管理'] }, async (req: NextReq
     const isCollect = to === COMPANY && from && from !== COMPANY
     if (!isAssign && !isCollect) {
       return NextResponse.json({ error: '只允許「公司→業務」或「業務→公司」' }, { status: 400 })
+    }
+    if (isAssign) {
+      const matches = (await getSystemUsers()).filter((user) => user.name === to)
+      if (matches.length !== 1 || !canAcceptNewBusiness(matches[0])) {
+        return NextResponse.json({ error: `${to} 目前不承接新客戶` }, { status: 400 })
+      }
     }
     if (customerIds.length === 0) {
       return NextResponse.json({ error: '未勾選任何客戶' }, { status: 400 })

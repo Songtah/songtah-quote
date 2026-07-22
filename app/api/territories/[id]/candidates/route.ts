@@ -3,6 +3,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listCustomersByArea } from '@/lib/notion/customers'
 import { getTerritory } from '@/lib/notion/territories'
 import { TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
+import { canAcceptNewBusiness, getSystemUserById } from '@/lib/notion/accounts'
 
 type Ctx = { params: { id: string } }
 
@@ -19,6 +20,10 @@ export const GET = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'view' }
       return NextResponse.json({ error: '只能查看自己的轄區名單' }, { status: 403 })
     }
     if (territory.status === '結束') return NextResponse.json({ error: '轄區已結束' }, { status: 400 })
+    const owner = await getSystemUserById(territory.salespersonId).catch(() => null)
+    if (!owner || !canAcceptNewBusiness(owner)) {
+      return NextResponse.json({ error: `${territory.salesperson} 目前只維護既有客戶，不提供未認領名單` }, { status: 400 })
+    }
     const requestedType = req.nextUrl.searchParams.get('type') ?? ''
     const type = TERRITORY_CUSTOMER_TYPES.includes(requestedType as TerritoryCustomerType)
       ? requestedType as TerritoryCustomerType

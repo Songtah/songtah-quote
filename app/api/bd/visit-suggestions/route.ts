@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { buildVisitSuggestions } from '@/lib/notion/visit-suggestions'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -29,9 +30,14 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
     }
     const target = Math.min(30, Math.max(1, Number(sp.get('target')) || 8))
     const bCap = Math.min(30, Math.max(0, Number(sp.get('bcap')) || 4))
+    const users = await getSystemUsers()
+    const accountMatches = canViewAll
+      ? users.filter((account) => account.name === salesperson)
+      : users.filter((account) => account.id === user?.id)
+    const existingOnly = accountMatches.length !== 1 || !canAcceptNewBusiness(accountMatches[0])
 
-    const result = await buildVisitSuggestions({ city, district, salesperson, target, bCap })
-    return NextResponse.json(result)
+    const result = await buildVisitSuggestions({ city, district, salesperson, target, bCap, existingOnly })
+    return NextResponse.json({ ...result, existingOnly })
   } catch (error) {
     console.error('visit-suggestions error:', error)
     return NextResponse.json({ error: '產生拜訪建議失敗' }, { status: 500 })

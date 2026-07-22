@@ -90,6 +90,7 @@ export async function buildVisitSuggestions(params: {
   salesperson: string
   target?: number   // 一日拜訪量(軟性),預設 8
   bCap?: number     // B 類上限,預設 4
+  existingOnly?: boolean // 只維護既有客戶的業務不取得空白池或陌生開發名單
 }): Promise<VisitSuggestionResult> {
   const target = params.target ?? 8
   const bCap = params.bCap ?? 4
@@ -141,6 +142,7 @@ export async function buildVisitSuggestions(params: {
   for (const c of customers) {
     if (EXCLUDED_STATUS.has(c.status)) continue
     if (EXCLUDED_OWNER.has(c.salesperson)) continue
+    if (params.existingOnly && c.salesperson !== me) continue
     const isOthers = !!c.salesperson && c.salesperson !== me  // 同事的客戶,一律不推
     const key = c.id.replace(/-/g, '')
     const lastVisit = maps.visitRecency[key] ?? null

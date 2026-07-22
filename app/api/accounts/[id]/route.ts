@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { updateSystemUser, deleteSystemUser, getSystemUserById } from '@/lib/system-notion'
+import {
+  BUSINESS_ASSIGNMENT_MODES, updateSystemUser, deleteSystemUser, getSystemUserById,
+  type BusinessAssignmentMode,
+} from '@/lib/system-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const PATCH = withApiAuth('admin', async (req: NextRequest, { params }: { params: { id: string } }, session) => {
   try {
     const body = await req.json()
+    if (body.assignmentMode !== undefined && !BUSINESS_ASSIGNMENT_MODES.includes(body.assignmentMode as BusinessAssignmentMode)) {
+      return NextResponse.json({ error: '無效的業務承接模式' }, { status: 400 })
+    }
     const before = await getSystemUserById(params.id).catch(() => null)
     await updateSystemUser(params.id, {
       name: body.name,
       password: body.password || undefined,
       accountType: body.accountType,
       status: body.status,
+      assignmentMode: body.accountType && body.accountType !== '業務' ? '全面開發' : body.assignmentMode,
       permissions: body.permissions,
     })
 

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listCustomersByArea, assignSalesperson } from '@/lib/notion/customers'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,13 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
     const salesperson = (b.salesperson ?? '').trim()
     if (!city || !district) return NextResponse.json({ error: '缺少縣市/行政區' }, { status: 400 })
     const dryRun = b.dryRun !== false
+
+    if (salesperson) {
+      const matches = (await getSystemUsers()).filter((user) => user.name === salesperson)
+      if (matches.length !== 1 || !canAcceptNewBusiness(matches[0])) {
+        return NextResponse.json({ error: `${salesperson} 目前不承接新客戶` }, { status: 400 })
+      }
+    }
 
     // 撈該區未分派池(只含負責業務空白;跟隨類型/狀態篩選讓主管控顆粒度)
     let pool = await listCustomersByArea({

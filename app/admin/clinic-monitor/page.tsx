@@ -6,7 +6,7 @@ import TerritoryContent from '@/components/TerritoryContent'
 import OpportunityContent from './OpportunityContent'
 import { canEdit, requireViewPermission } from '@/lib/permissions'
 import { peekRegionStatsRows } from '@/lib/notion/customers'
-import { getSystemUsers } from '@/lib/notion/accounts'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,9 +37,13 @@ export default async function ClinicMonitorPage({
   const regionInitial = tab === 'regions' || tab === 'territory'
     ? await peekRegionStatsRows()
     : null
-  const accountOptions = tab === 'territory'
-    ? (await getSystemUsers()).filter((user) => user.status !== '停用' && user.accountType === '業務').map((user) => ({ id: user.id, name: user.name }))
-    : []
+  const managementUsers = tab === 'territory' || tab === 'regions' ? await getSystemUsers() : []
+  const accountOptions = managementUsers
+    .filter(canAcceptNewBusiness)
+    .map((user) => ({ id: user.id, name: user.name }))
+  const maintenanceAccounts = managementUsers
+    .filter((user) => user.status !== '停用' && user.accountType === '業務' && user.assignmentMode === '既有客戶維護')
+    .map((user) => ({ id: user.id, name: user.name }))
 
   const TAB_ITEMS = [
     { id: 'monitor',   href: '/admin/clinic-monitor',                 label: '🩺 客戶監控' },
@@ -80,7 +84,7 @@ export default async function ClinicMonitorPage({
       </div>
 
       {tab === 'regions' ? (
-        <RegionStatsContent initialData={regionInitial} canAssign={canAssign} />
+        <RegionStatsContent initialData={regionInitial} canAssign={canAssign} assignableSalespersons={accountOptions.map((account) => account.name)} />
       ) : tab === 'territory' ? (
         <TerritoryContent
           initialData={regionInitial}
@@ -89,6 +93,7 @@ export default async function ClinicMonitorPage({
           canClaim={canClaim}
           currentUserId={currentUserId}
           accountOptions={accountOptions}
+          maintenanceAccounts={maintenanceAccounts}
         />
       ) : tab === 'opportunity' ? (
         <OpportunityContent canScan={canManageCompany} />

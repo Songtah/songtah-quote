@@ -41,6 +41,7 @@ export default function TerritoryContent({
   canClaim = false,
   currentUserId = '',
   accountOptions = [],
+  maintenanceAccounts = [],
 }: {
   initialData: Data | null
   canAssign?: boolean
@@ -48,6 +49,7 @@ export default function TerritoryContent({
   canClaim?: boolean
   currentUserId?: string
   accountOptions?: { id: string; name: string }[]
+  maintenanceAccounts?: { id: string; name: string }[]
 }) {
   const [rows, setRows] = useState<Row[]>(initialData?.rows ?? [])
   const [statsReady, setStatsReady] = useState(initialData !== null)
@@ -105,7 +107,8 @@ export default function TerritoryContent({
   useEffect(() => {
     loadTerritories()
     loadAreas()
-  }, [loadAreas, loadTerritories])
+    if (!initialData) loadStats()
+  }, [initialData, loadAreas, loadStats, loadTerritories])
 
   const allAreas = useMemo(() => {
     const map = new Map<string, { city: string; district: string }>()
@@ -161,6 +164,11 @@ export default function TerritoryContent({
     result.converted += stats.converted ?? 0
     return result
   }, { total: 0, unassigned: 0, developing: 0, converted: 0 }), [statsFor, visibleTerritories])
+
+  const maintenanceCounts = useMemo(() => new Map(maintenanceAccounts.map((account) => [
+    account.id,
+    rows.filter((row) => row.salesperson === account.name).reduce((sum, row) => sum + row.count, 0),
+  ])), [maintenanceAccounts, rows])
 
   const patchClaimedRows = useCallback((territory: Territory, customers: ClaimedCustomer[]) => {
     if (!statsReady) return
@@ -222,6 +230,22 @@ export default function TerritoryContent({
           <Metric label="已成交階段" value={statsReady ? summary.converted : null} />
         </div>
       </section>
+
+      {maintenanceAccounts.length > 0 && (
+        <section className="card-soft p-5 sm:p-6">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">不參與新轄區</p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">只維護既有客戶</h2>
+          <p className="mt-1 text-sm leading-6 text-stone-500">保留名下客戶與日常服務，不會出現在新增轄區、未認領客戶或陌生開發的承接選項。</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {maintenanceAccounts.map((account) => (
+              <div key={account.id} className="rounded-full bg-stone-50 px-4 py-2 text-sm text-stone-600">
+                <b className="text-stone-800">{account.name}</b>
+                <span className="ml-2 text-stone-400">主檔名下 {maintenanceCounts.get(account.id)?.toLocaleString() ?? '—'} 家</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="card-soft p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="w-full sm:w-64">
