@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listCustomersByArea } from '@/lib/notion/customers'
 import { getTerritory } from '@/lib/notion/territories'
+import { TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
 
 type Ctx = { params: { id: string } }
 
@@ -11,15 +12,19 @@ function canAccess(session: any, salespersonId: string) {
     user?.accountType === '總經理' || (!!salespersonId && user?.id === salespersonId)
 }
 
-export const GET = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'view' }, async (_req: NextRequest, { params }, session) => {
+export const GET = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'view' }, async (req: NextRequest, { params }, session) => {
   try {
     const territory = await getTerritory(params.id)
     if (!canAccess(session, territory.salespersonId)) {
       return NextResponse.json({ error: '只能查看自己的轄區名單' }, { status: 403 })
     }
     if (territory.status === '結束') return NextResponse.json({ error: '轄區已結束' }, { status: 400 })
+    const requestedType = req.nextUrl.searchParams.get('type') ?? ''
+    const type = TERRITORY_CUSTOMER_TYPES.includes(requestedType as TerritoryCustomerType)
+      ? requestedType as TerritoryCustomerType
+      : undefined
     const customers = await listCustomersByArea({
-      city: territory.city, district: territory.district, unassignedOnly: true,
+      city: territory.city, district: territory.district, unassignedOnly: true, type,
     })
     const items = customers
       .filter((customer) => !['已歇業', '停業', '撤銷'].includes(customer.status))

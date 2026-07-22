@@ -7,6 +7,7 @@ import PipelineContent from '@/components/PipelineContent'
 import CampaignsContent from '@/components/CampaignsContent'
 import VisitSuggestionsContent from './VisitSuggestionsContent'
 import BdTodayContent from '@/components/BdTodayContent'
+import MyTerritoriesPanel from '@/components/MyTerritoriesPanel'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 import { getBdTodayDashboard } from '@/lib/dashboard-today'
@@ -93,7 +94,10 @@ export default async function BdPage({
       )}
 
       {tab === 'today' && todayData ? (
-        <BdTodayContent data={todayData} />
+        <div className="space-y-6">
+          <BdTodayContent data={todayData} />
+          <MyTerritoriesPanel />
+        </div>
       ) : tab === 'visits' ? (
         <VisitsContent
           initialOpenCreate={searchParams.action === 'new'}

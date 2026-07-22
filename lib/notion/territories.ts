@@ -8,6 +8,77 @@ import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
   richText, getTitle, getText, getSelect, getDate,
 } from './shared'
+import {
+  BlobNotFoundError, BlobPreconditionFailedError, del, head, put,
+} from '@vercel/blob'
+
+const TERRITORY_LOCK_PATH = 'system-locks/territory-mutation.lock'
+const TERRITORY_LOCK_STALE_MS = 6 * 60_000
+let localMutationRunning = false
+
+export class TerritoryMutationBusyError extends Error {
+  constructor() {
+    super('另一筆轄區設定正在處理，請稍後再試')
+    this.name = 'TerritoryMutationBusyError'
+  }
+}
+
+async function acquireTerritoryMutationLock(): Promise<() => Promise<void>> {
+  if (localMutationRunning) throw new TerritoryMutationBusyError()
+  localMutationRunning = true
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN
+  if (!token) {
+    if (process.env.VERCEL) {
+      localMutationRunning = false
+      throw new Error('缺少跨執行個體鎖定設定，已拒絕寫入轄區')
+    }
+    return async () => { localMutationRunning = false }
+  }
+
+  const createLock = async () => {
+    try {
+      return await put(TERRITORY_LOCK_PATH, new Date().toISOString(), {
+        access: 'public', addRandomSuffix: false, allowOverwrite: false,
+        cacheControlMaxAge: 60, contentType: 'text/plain', token,
+      })
+    } catch (error) {
+      if (error instanceof BlobPreconditionFailedError || /already exists|not allowed to overwrite/i.test(String(error))) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  try {
+    let lock = await createLock()
+    if (!lock) {
+      try {
+        const existing = await head(TERRITORY_LOCK_PATH, { token })
+        if (Date.now() - existing.uploadedAt.getTime() > TERRITORY_LOCK_STALE_MS) {
+          await del(TERRITORY_LOCK_PATH, { ifMatch: existing.etag, token })
+          lock = await createLock()
+        }
+      } catch (error) {
+        if (!(error instanceof BlobNotFoundError) && !(error instanceof BlobPreconditionFailedError)) throw error
+        lock = await createLock()
+      }
+    }
+    if (!lock) throw new TerritoryMutationBusyError()
+    return async () => {
+      try {
+        await del(TERRITORY_LOCK_PATH, { ifMatch: lock.etag, token })
+      } catch (error) {
+        console.error('territory mutation lock release error:', error)
+      } finally {
+        localMutationRunning = false
+      }
+    }
+  } catch (error) {
+    localMutationRunning = false
+    throw error
+  }
+}
 
 export const TERRITORY_STATUSES = ['規劃中', '開發中', '暫停', '結束'] as const
 export type TerritoryStatus = (typeof TERRITORY_STATUSES)[number]
@@ -62,17 +133,7 @@ export async function listTerritories(options: { includeEnded?: boolean } = {}):
   return out
 }
 
-async function assertAreaAvailable(city: string, district: string, excludeId?: string) {
-  const territories = await listTerritories()
-  const conflict = territories.find((item) =>
-    item.id !== excludeId && item.city === city && item.district === district
-  )
-  if (conflict) {
-    throw new Error(`${city}${district} 已由 ${conflict.salesperson} 負責`)
-  }
-}
-
-export async function createTerritory(data: {
+export type CreateTerritoryInput = {
   city: string
   district: string
   salesperson: string
@@ -81,8 +142,9 @@ export async function createTerritory(data: {
   startDate?: string
   note?: string
   creator?: string
-}): Promise<Territory> {
-  await assertAreaAvailable(data.city, data.district)
+}
+
+async function createTerritoryPage(data: CreateTerritoryInput): Promise<Territory> {
   const name = `${data.city}${data.district}｜${data.salesperson}`
   const page: any = await notionCallWithRetry('createTerritory', () =>
     notion.pages.create({
@@ -101,6 +163,43 @@ export async function createTerritory(data: {
     })
   )
   return mapTerritory(page)
+}
+
+export async function createTerritories(data: CreateTerritoryInput[]): Promise<Territory[]> {
+  const releaseLock = await acquireTerritoryMutationLock()
+  try {
+    const current = await listTerritories()
+    const occupied = new Map(current.map((item) => [`${item.city}|${item.district}`, item]))
+    const requested = new Set<string>()
+    for (const item of data) {
+      const key = `${item.city}|${item.district}`
+      const conflict = occupied.get(key)
+      if (conflict) throw new Error(`${item.city}${item.district} 已由 ${conflict.salesperson} 負責`)
+      if (requested.has(key)) throw new Error(`${item.city}${item.district} 重複選取`)
+      requested.add(key)
+    }
+    const created: Territory[] = []
+    try {
+      for (const item of data) created.push(await createTerritoryPage(item))
+    } catch (error) {
+      // 批次建立任一筆失敗時，逐筆重試封存；若仍有殘留，明確揭露 page IDs 供人工處理。
+      const rollback = await Promise.allSettled(created.map((item) =>
+        notionCallWithRetry('rollbackTerritoryBatch', () => notion.pages.update({ page_id: item.id, archived: true }))
+      ))
+      const residueIds = rollback.flatMap((result, index) => result.status === 'rejected' ? [created[index].id] : [])
+      if (residueIds.length) {
+        throw new Error(`批次建立失敗且部分回滾未完成；殘留轄區頁面：${residueIds.join('、')}；原始錯誤：${error instanceof Error ? error.message : String(error)}`)
+      }
+      throw error
+    }
+    return created
+  } finally {
+    await releaseLock()
+  }
+}
+
+export async function createTerritory(data: CreateTerritoryInput): Promise<Territory> {
+  return (await createTerritories([data]))[0]
 }
 
 export async function getTerritory(id: string): Promise<Territory> {

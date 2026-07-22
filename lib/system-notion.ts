@@ -71,7 +71,8 @@ export {
 } from './notion/accounts'
 
 // ─── 業務轄區設定 → ./notion/territories（葉領域）──────────────────────────────
-export type { Territory, TerritoryStatus } from './notion/territories'
+export type { Territory, TerritoryStatus, CreateTerritoryInput } from './notion/territories'
 export {
-  TERRITORY_STATUSES, listTerritories, getTerritory, createTerritory, updateTerritory,
+  TERRITORY_STATUSES, TerritoryMutationBusyError,
+  listTerritories, getTerritory, createTerritory, createTerritories, updateTerritory,
 } from './notion/territories'
