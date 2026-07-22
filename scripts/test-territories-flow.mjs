@@ -182,6 +182,13 @@ try {
   if (!businessCombinedReportResponse.ok || !businessCombinedReportHtml.includes('全部轄區總名單')) {
     throw new Error(`業務無法開啟自己的轄區總報表：HTTP ${businessCombinedReportResponse.status}`)
   }
+  const businessPopupList = await json(await requestAs('/api/bd/my-customer-list?scope=territories', businessToken), '讀取業務端轄區彈跳清單')
+  if (businessPopupList.items.some((item) => item.salesperson && item.salesperson !== salesperson.name)) {
+    throw new Error('業務端轄區彈跳清單洩漏其他負責人的客戶')
+  }
+  if (JSON.stringify(businessPopupList).includes('address') || JSON.stringify(businessPopupList).includes('phone') || JSON.stringify(businessPopupList).includes('institutionCode')) {
+    throw new Error('業務端轄區彈跳清單洩漏敏感欄位')
+  }
   const maintenanceToken = await encode({
     secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
     token: {
@@ -200,6 +207,10 @@ try {
   }
   const maintenanceReportCount = Number(maintenanceCustomerReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)
   if (maintenanceReportCount <= 0) throw new Error('既有客戶報表沒有產出任何名下客戶')
+  const maintenancePopupList = await json(await requestAs('/api/bd/my-customer-list?scope=customers', maintenanceToken), '讀取維護模式業務的既有客戶彈跳清單')
+  if (maintenancePopupList.items.length <= 0 || maintenancePopupList.items.some((item) => item.salesperson !== maintenanceUser.name)) {
+    throw new Error('維護模式業務的彈跳清單未正確顯示名下客戶')
+  }
   if (maintenanceCustomerReportHtml.includes('institutionCode') || maintenanceCustomerReportHtml.includes('phone') || maintenanceCustomerReportHtml.includes('address')) {
     throw new Error('既有客戶名單報表洩漏未授權的敏感欄位')
   }
@@ -251,6 +262,8 @@ try {
   if (forbiddenCombinedReport.status !== 307 || !forbiddenCombinedReport.headers.get('location')?.endsWith('/bd')) {
     throw new Error(`非本人仍可開啟業務總報表：HTTP ${forbiddenCombinedReport.status}`)
   }
+  const forbiddenPopupList = await requestAs('/api/bd/my-customer-list?scope=customers', otherUserToken)
+  if (forbiddenPopupList.status !== 403) throw new Error(`無正式業務帳號仍可讀取彈跳清單：HTTP ${forbiddenPopupList.status}`)
 
   const concurrentPayload = {
     city, districts: [concurrentArea.district], salespersonId: salesperson.id,
@@ -303,6 +316,7 @@ try {
     customerChanges: 0, ownershipUnchanged: true, bdTerritoriesSynced: true,
     typeStats: true, typeCandidateFilter: true, printableReport: true,
     combinedTerritoryReport: true, existingCustomerReport: true, combinedReportAuthorization: true,
+    businessPopupLists: true, popupListAuthorization: true,
     sensitiveFieldsMinimized: true, businessOwnReport: true, otherBusinessRejected: true,
     maintenanceMode: true, maintenanceTerritoryBlocked: true, maintenanceNewAssignmentBlocked: true,
     maintenanceReassignBlocked: true, maintenanceCompanyAssignmentBlocked: true, maintenanceSuggestionsExistingOnly: true,
