@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPinned, ArrowRight } from 'lucide-react'
+import { MapPinned, ArrowRight, Printer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 type CustomerType = '牙醫診所' | '牙體技術所' | '醫院'
@@ -75,7 +75,7 @@ export default function MyTerritoriesPanel() {
           <>
             <div className="mt-5 flex items-end justify-between"><p className="text-sm text-stone-500">{visible.length} 個行政區</p><p className="text-sm text-stone-500">{type || '全部類型'}市場 <b className="text-xl text-brand-700">{total.toLocaleString()}</b> 家</p></div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {visible.map((territory) => <article key={territory.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || '全部市場'}</p></div></div></article>)}
+              {visible.map((territory) => <article key={territory.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || '全部市場'}</p></div></div><Link href={`/bd/territories/${territory.id}/report${type ? `?type=${encodeURIComponent(type)}` : ''}`} target="_blank" rel="noopener noreferrer" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-full bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><Printer className="size-3.5" />列印名單／統計</Link></article>)}
             </div>
           </>
         )}

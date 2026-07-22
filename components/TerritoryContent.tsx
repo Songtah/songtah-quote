@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type Row = {
@@ -271,6 +272,7 @@ export default function TerritoryContent({
         {visibleTerritories.map((territory) => {
           const stats = statsFor(territory)
           const mayClaim = canClaim && (canAssign || (!!territory.salespersonId && territory.salespersonId === currentUserId))
+          const mayReport = canAssign || (!!territory.salespersonId && territory.salespersonId === currentUserId)
           return (
             <article key={territory.id} className="card-soft card-soft-hover p-5 sm:p-6">
               <div className="flex items-start gap-3">
@@ -311,6 +313,7 @@ export default function TerritoryContent({
                     {territory.status === '暫停' ? '轄區已暫停認領' : '只有負責業務可認領此區客戶'}
                   </div>
                 )}
+                {mayReport && <Link href={`/bd/territories/${territory.id}/report${typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : ''}`} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 rounded-full text-center text-sm font-semibold border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">列印報表</Link>}
               </div>
             </article>
           )

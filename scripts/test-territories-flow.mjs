@@ -1,4 +1,5 @@
 import { Client } from '@notionhq/client'
+import { encode } from 'next-auth/jwt'
 
 const baseUrl = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000'
 const username = process.env.APP_USERNAME
@@ -23,6 +24,16 @@ async function request(path, init = {}) {
   })
   absorbCookies(response)
   return response
+}
+async function requestAs(path, token, init = {}) {
+  return fetch(baseUrl + path, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      cookie: `next-auth.session-token=${token}; __Secure-next-auth.session-token=${token}`,
+    },
+    redirect: 'manual',
+  })
 }
 async function json(response, label) {
   const body = await response.json()
@@ -102,6 +113,45 @@ try {
   if (!createdIds.every((id) => bdTerritories.items.some((item) => item.id === id))) throw new Error('業務端沒有同步顯示批次轄區')
   if (!bdTerritories.areas.every((area) => typeof area.byType?.['牙體技術所'] === 'number')) throw new Error('業務端類型統計缺漏')
 
+  const reportResponse = await request(`/bd/territories/${createdIds[0]}/report?type=${encodeURIComponent('牙醫診所')}`)
+  const reportHtml = await reportResponse.text()
+  if (!reportResponse.ok || !reportHtml.includes('轄區客戶報表') || !reportHtml.includes('內部機密')) {
+    throw new Error(`轄區列印報表無法開啟：HTTP ${reportResponse.status}`)
+  }
+  if (reportHtml.includes('institutionCode') || reportHtml.includes('phone') || reportHtml.includes('address')) {
+    throw new Error('轄區列印報表洩漏未授權的敏感欄位')
+  }
+  if (!process.env.NEXTAUTH_SECRET) throw new Error('缺少 NEXTAUTH_SECRET，無法驗證一般業務報表權限')
+  const businessToken = await encode({
+    secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
+    token: {
+      sub: salesperson.id, uid: salesperson.id, name: salesperson.name,
+      role: 'user', accountType: '業務',
+      permissions: { bd: { view: true, edit: true }, clinic_monitor: { view: false, edit: false } },
+    },
+  })
+  const businessReportResponse = await requestAs(`/bd/territories/${createdIds[0]}/report`, businessToken)
+  const businessReportHtml = await businessReportResponse.text()
+  if (!businessReportResponse.ok || !businessReportHtml.includes('轄區客戶報表')) {
+    throw new Error(`負責業務無法開啟自己的報表：HTTP ${businessReportResponse.status}`)
+  }
+  const hiddenSample = customerSnapshots[0].items.find((item) => item.salesperson && item.salesperson !== salesperson.name)
+  if (hiddenSample && businessReportHtml.includes(hiddenSample.name)) {
+    throw new Error(`一般業務報表洩漏其他負責人的客戶：${hiddenSample.name}`)
+  }
+  const otherUserToken = await encode({
+    secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
+    token: {
+      sub: 'codex-other-account', uid: 'codex-other-account', name: 'Codex 其他業務',
+      role: 'user', accountType: '業務',
+      permissions: { bd: { view: true, edit: true }, clinic_monitor: { view: false, edit: false } },
+    },
+  })
+  const forbiddenReport = await requestAs(`/bd/territories/${createdIds[0]}/report`, otherUserToken)
+  if (forbiddenReport.status !== 307 || !forbiddenReport.headers.get('location')?.endsWith('/bd')) {
+    throw new Error(`非負責業務未被報表頁拒絕：HTTP ${forbiddenReport.status}`)
+  }
+
   const concurrentPayload = {
     city, districts: [concurrentArea.district], salespersonId: salesperson.id,
     status: '規劃中', note: 'Codex 並行唯一性驗收（完成後清除）', dryRun: false,
@@ -151,7 +201,9 @@ try {
   console.log(JSON.stringify({
     authenticated: true, adminPage: true, bdPage: true, bulkPreview: 2, bulkCreated: 2,
     customerChanges: 0, ownershipUnchanged: true, bdTerritoriesSynced: true,
-    typeStats: true, typeCandidateFilter: true, concurrentUnique: true, claimDryRun, inactiveGuard,
+    typeStats: true, typeCandidateFilter: true, printableReport: true,
+    sensitiveFieldsMinimized: true, businessOwnReport: true, otherBusinessRejected: true,
+    otherOwnerDetailsHidden: hiddenSample ? true : 'no-sample', concurrentUnique: true, claimDryRun, inactiveGuard,
   }, null, 2))
 } finally {
   if (createdIds.length && process.env.NOTION_TOKEN) {
