@@ -6,7 +6,7 @@ import TerritoryContent from '@/components/TerritoryContent'
 import OpportunityContent from './OpportunityContent'
 import { canEdit, requireViewPermission } from '@/lib/permissions'
 import { peekRegionStatsRows } from '@/lib/notion/customers'
-import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
+import { canAcceptNewBusiness, canAppearInSalesReports, getSystemUsers } from '@/lib/notion/accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +45,7 @@ export default async function ClinicMonitorPage({
     .filter((user) => user.status !== '停用' && user.accountType === '業務' && user.assignmentMode === '既有客戶維護')
     .map((user) => ({ id: user.id, name: user.name }))
   const reportAccounts = managementUsers
-    .filter((user) => user.status !== '停用' && user.accountType === '業務')
+    .filter(canAppearInSalesReports)
     .map((user) => ({ id: user.id, name: user.name }))
 
   const TAB_ITEMS = [

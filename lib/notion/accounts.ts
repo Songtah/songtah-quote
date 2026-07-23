@@ -36,6 +36,15 @@ export function canAcceptNewBusiness(user: Pick<SystemUser, 'accountType' | 'sta
   return user.accountType === '業務' && user.status !== '停用' && user.assignmentMode === '全面開發'
 }
 
+// 中央管理者可能仍保留既有客戶組合；這類帳號要能出現在業務總表，
+// 但不改變帳號角色，也不因此取得新轄區或新客戶承接資格。
+const RETAINED_CUSTOMER_PORTFOLIO_ACCOUNT_IDS = new Set(['349dcdaa-fb2a-81cf-b5a6-f15536fa1629'])
+
+export function canAppearInSalesReports(user: Pick<SystemUser, 'id' | 'accountType' | 'status'>): boolean {
+  return user.status !== '停用'
+    && (user.accountType === '業務' || RETAINED_CUSTOMER_PORTFOLIO_ACCOUNT_IDS.has(user.id))
+}
+
 let _userFieldsEnsured = false
 async function ensureUserDbFields() {
   if (_userFieldsEnsured) return

@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import SalespersonReportClient from '@/components/SalespersonReportClient'
 import { canView, requireSession } from '@/lib/permissions'
 import { listCustomersByArea, listCustomersByAreas, type AreaCustomer } from '@/lib/notion/customers'
-import { getSystemUsers } from '@/lib/notion/accounts'
+import { canAppearInSalesReports, getSystemUsers } from '@/lib/notion/accounts'
 import { listTerritories } from '@/lib/notion/territories'
 import { getTerritoryAreas, TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
 
@@ -32,9 +32,9 @@ export default async function SalespersonReportPage({
     salesperson = { id: 'company', name: '公司客戶', ownerName: '公司' }
   } else {
     const users = await getSystemUsers()
-    const account = users.find((item) => item.id === params.id && item.accountType === '業務' && item.status !== '停用')
+    const account = users.find((item) => item.id === params.id && canAppearInSalesReports(item))
     if (!account) notFound()
-    const sameNameAccounts = users.filter((item) => item.accountType === '業務' && item.status !== '停用' && item.name === account.name)
+    const sameNameAccounts = users.filter((item) => canAppearInSalesReports(item) && item.name === account.name)
     if (sameNameAccounts.length !== 1 || sameNameAccounts[0].id !== account.id) redirect('/bd')
     salesperson = { id: account.id, name: account.name, ownerName: account.name }
   }

@@ -66,6 +66,8 @@ const salesperson = users.find((user) => user.assignmentMode === '全面開發' 
 if (!salesperson) throw new Error('找不到可用業務帳號')
 const legacyOwnerUser = users.find((user) => user.name === 'Duncan' && user.status !== '停用' && user.accountType === '業務')
 if (!legacyOwnerUser) throw new Error('找不到 Duncan 業務帳號，無法驗證客戶主檔舊名稱相容')
+const retainedPortfolioManager = users.find((user) => user.id === '349dcdaa-fb2a-81cf-b5a6-f15536fa1629' && user.name === 'Gus' && user.status !== '停用')
+if (!retainedPortfolioManager) throw new Error('找不到保留既有客戶組合的 Gus 啟用帳號')
 const maintenanceUser = users.find((user) => user.assignmentMode === '既有客戶維護' && user.status !== '停用' && user.accountType === '業務' && user.name)
 if (!maintenanceUser) throw new Error('找不到「既有客戶維護」帳號')
 const occupied = new Set(before.items.map((item) => `${item.city}|${item.district}`))
@@ -114,7 +116,9 @@ if (blockedCompanyAssignment.status !== 400 || !(await blockedCompanyAssignment.
 }
 
 const adminPage = await request('/admin/clinic-monitor?tab=territory')
-if (!adminPage.ok || !(await adminPage.text()).includes('業務轄區管理')) throw new Error('主管轄區頁面無法開啟')
+const adminPageHtml = await adminPage.text()
+if (!adminPage.ok || !adminPageHtml.includes('業務轄區管理')) throw new Error('主管轄區頁面無法開啟')
+if (!adminPageHtml.includes('Gus')) throw new Error('列印業務總表選項仍未出現 Gus')
 const bdPage = await request('/bd')
 if (!bdPage.ok || !(await bdPage.text()).includes('業務開發')) throw new Error('業務開發頁面無法開啟')
 
@@ -205,6 +209,17 @@ try {
   const forbiddenCompanyReport = await requestAs('/bd/salespersons/company/report?scope=customers', businessToken)
   if (![302, 303, 307, 308].includes(forbiddenCompanyReport.status) || !forbiddenCompanyReport.headers.get('location')?.endsWith('/bd')) {
     throw new Error(`一般業務仍可開啟公司客戶報表：HTTP ${forbiddenCompanyReport.status}`)
+  }
+  const retainedPortfolioReportResponse = await request(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers`)
+  const retainedPortfolioReportHtml = await retainedPortfolioReportResponse.text()
+  if (!retainedPortfolioReportResponse.ok || !retainedPortfolioReportHtml.includes('Gus') || !retainedPortfolioReportHtml.includes('既有客戶名單')) {
+    throw new Error(`Gus 既有客戶報表無法開啟：HTTP ${retainedPortfolioReportResponse.status}`)
+  }
+  const retainedPortfolioCount = Number(retainedPortfolioReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)
+  if (retainedPortfolioCount <= 0) throw new Error('Gus 既有客戶報表沒有產出任何名下客戶')
+  const forbiddenRetainedPortfolioReport = await requestAs(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers`, businessToken)
+  if (forbiddenRetainedPortfolioReport.status !== 307 || !forbiddenRetainedPortfolioReport.headers.get('location')?.endsWith('/bd')) {
+    throw new Error(`一般業務仍可開啟 Gus 既有客戶報表：HTTP ${forbiddenRetainedPortfolioReport.status}`)
   }
   const businessPopupList = await json(await requestAs('/api/bd/my-customer-list?scope=territories', businessToken), '讀取業務端轄區彈跳清單')
   if (businessPopupList.items.some((item) => item.salesperson !== salesperson.name)) {
@@ -379,6 +394,7 @@ try {
     customerChanges: 0, ownershipUnchanged: true, bdTerritoriesSynced: true,
     typeStats: true, typeCandidateFilter: true, printableReport: true,
     combinedTerritoryReport: true, existingCustomerReport: true, combinedReportAuthorization: true,
+    retainedPortfolioManagerReport: true, retainedPortfolioManagerAuthorization: true,
     businessPopupLists: true, popupListAuthorization: true, teamTerritoryCustomerLookup: true,
     businessOwnCustomersOnly: true, customerDetailAuthorization: true, customerDetailClassification: true,
     sensitiveFieldsMinimized: true, businessOwnReport: true, otherBusinessRejected: true,
