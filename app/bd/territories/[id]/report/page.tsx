@@ -7,6 +7,7 @@ import { getTerritory } from '@/lib/notion/territories'
 import {
   getTerritoryAreas, TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType,
 } from '@/lib/territory-areas'
+import { isReportSort } from '@/lib/report-sort'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -18,7 +19,7 @@ export default async function TerritoryReportPage({
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { type?: string; format?: string }
+  searchParams: { type?: string; format?: string; sort?: string }
 }) {
   const session = await requireSession()
   if (!canView(session, 'bd') && !canView(session, 'clinic_monitor')) redirect('/dashboard')
@@ -72,7 +73,7 @@ export default async function TerritoryReportPage({
         salesperson: territory.salesperson, status: territory.status,
       }}
       customers={visibleCustomers.map((customer) => ({
-        id: customer.id, name: customer.name, type: customer.type,
+        id: customer.id, name: customer.name, city: customer.city, district: customer.district, type: customer.type,
         status: customer.status, devStage: customer.devStage,
         salesperson: customer.salesperson, phone: customer.phone, address: customer.address,
       }))}
@@ -82,6 +83,7 @@ export default async function TerritoryReportPage({
       generatedBy={session.user?.name ?? ''}
       initialType={initialType}
       initialFormat={searchParams.format === 'csv' ? 'csv' : 'pdf'}
+      initialSort={isReportSort(searchParams.sort) ? searchParams.sort : 'location'}
       hiddenOtherOwnedCount={hiddenOtherOwnedCount}
       hiddenOtherOwnedByType={hiddenOtherOwnedByType}
       ownershipIdentityAmbiguous={!canViewAll && !ownerIdentityUnique}

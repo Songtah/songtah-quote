@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TAIWAN_CITY_ORDER } from '@/lib/taiwan-geography'
 
 type Row = {
   city: string; district: string; type: string; status: string
@@ -22,15 +23,10 @@ const CUSTOMER_TYPES: { value: '' | CustomerType; label: string }[] = [
   { value: '醫院', label: '醫院' },
 ]
 
-const CITY_ORDER = [
-  '臺北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '宜蘭縣',
-  '苗栗縣', '臺中市', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣',
-  '臺南市', '高雄市', '屏東縣', '花蓮縣', '臺東縣', '澎湖縣', '金門縣', '連江縣',
-]
 const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 const EXCLUDED_OWNERS = new Set(['公司', '盤商'])
 const cityRank = (city: string) => {
-  const index = CITY_ORDER.indexOf(city)
+  const index = TAIWAN_CITY_ORDER.indexOf(city as (typeof TAIWAN_CITY_ORDER)[number])
   return index < 0 ? 999 : index
 }
 
@@ -413,7 +409,7 @@ function SalespersonReportModal({ accounts, initialType, onClose }: {
   const [format, setFormat] = useState<'pdf' | 'csv'>('pdf')
   const isCompany = salespersonId === 'company'
   const query = (scope: 'territories' | 'customers') => {
-    const params = new URLSearchParams({ scope, format })
+    const params = new URLSearchParams({ scope, format, sort: 'location' })
     if (initialType) params.set('type', initialType)
     return `/bd/salespersons/${salespersonId}/report?${params}`
   }

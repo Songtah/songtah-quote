@@ -5,6 +5,7 @@ import { listCustomersByArea, listCustomersByAreas, type AreaCustomer } from '@/
 import { canAppearInSalesReports, getSystemUsers } from '@/lib/notion/accounts'
 import { listTerritories } from '@/lib/notion/territories'
 import { getTerritoryAreas, TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
+import { isReportSort } from '@/lib/report-sort'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -16,7 +17,7 @@ export default async function SalespersonReportPage({
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { scope?: string; type?: string; format?: string }
+  searchParams: { scope?: string; type?: string; format?: string; sort?: string }
 }) {
   const session = await requireSession()
   if (!canView(session, 'bd') && !canView(session, 'clinic_monitor')) redirect('/dashboard')
@@ -97,6 +98,7 @@ export default async function SalespersonReportPage({
       generatedBy={session.user?.name ?? ''}
       initialType={initialType}
       initialFormat={searchParams.format === 'csv' ? 'csv' : 'pdf'}
+      initialSort={isReportSort(searchParams.sort) ? searchParams.sort : 'location'}
       hiddenOtherOwnedCount={hiddenCustomers.length}
       hiddenOtherOwnedByType={hiddenOtherOwnedByType}
       customerOnly={isCompanyReport}

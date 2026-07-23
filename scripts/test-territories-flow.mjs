@@ -162,6 +162,9 @@ try {
   if (!reportHtml.includes('匯出格式') || !reportHtml.includes('下載 CSV') || !reportHtml.includes('CSV 將匯出')) {
     throw new Error('轄區報表沒有提供 PDF／CSV 匯出格式')
   }
+  if (!reportHtml.includes('排序方式') || !reportHtml.includes('data-report-sort="location"') || !reportHtml.includes('縣市／行政區')) {
+    throw new Error('轄區報表沒有預設依縣市／行政區排序')
+  }
   if (!reportHtml.includes('負責人') || !reportHtml.includes('電話') || !reportHtml.includes('地址') || reportHtml.includes('institutionCode')) {
     throw new Error('轄區列印報表缺少授權聯絡資料或洩漏機構代碼')
   }
@@ -214,9 +217,9 @@ try {
   if (![302, 303, 307, 308].includes(forbiddenCompanyReport.status) || !forbiddenCompanyReport.headers.get('location')?.endsWith('/bd')) {
     throw new Error(`一般業務仍可開啟公司客戶報表：HTTP ${forbiddenCompanyReport.status}`)
   }
-  const retainedPortfolioReportResponse = await request(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers&format=csv`)
+  const retainedPortfolioReportResponse = await request(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers&format=csv&sort=salesperson`)
   const retainedPortfolioReportHtml = await retainedPortfolioReportResponse.text()
-  if (!retainedPortfolioReportResponse.ok || !retainedPortfolioReportHtml.includes('Gus') || !retainedPortfolioReportHtml.includes('既有客戶名單') || !retainedPortfolioReportHtml.includes('下載 CSV')) {
+  if (!retainedPortfolioReportResponse.ok || !retainedPortfolioReportHtml.includes('Gus') || !retainedPortfolioReportHtml.includes('既有客戶名單') || !retainedPortfolioReportHtml.includes('下載 CSV') || !retainedPortfolioReportHtml.includes('data-report-sort="salesperson"')) {
     throw new Error(`Gus 既有客戶報表無法開啟：HTTP ${retainedPortfolioReportResponse.status}`)
   }
   const retainedPortfolioCount = Number(retainedPortfolioReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)

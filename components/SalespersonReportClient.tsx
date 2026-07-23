@@ -3,6 +3,9 @@
 import { ArrowLeft, Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { downloadCustomerCsv, taipeiDateStamp, type ExportFormat } from '@/lib/report-csv'
+import {
+  compareReportPlace, REPORT_SORT_OPTIONS, sortReportCustomers, type ReportSort,
+} from '@/lib/report-sort'
 
 type ReportScope = 'territories' | 'customers'
 type ReportMode = 'both' | 'summary' | 'list'
@@ -38,6 +41,7 @@ export default function SalespersonReportClient({
   generatedBy,
   initialType,
   initialFormat,
+  initialSort,
   hiddenOtherOwnedCount,
   hiddenOtherOwnedByType,
   customerOnly = false,
@@ -52,6 +56,7 @@ export default function SalespersonReportClient({
   generatedBy: string
   initialType: '' | CustomerType
   initialFormat: ExportFormat
+  initialSort: ReportSort
   hiddenOtherOwnedCount: number
   hiddenOtherOwnedByType: Record<CustomerType, number>
   customerOnly?: boolean
@@ -59,18 +64,23 @@ export default function SalespersonReportClient({
   const [type, setType] = useState<'' | CustomerType>(initialType)
   const [mode, setMode] = useState<ReportMode>('both')
   const [exportFormat, setExportFormat] = useState<ExportFormat>(initialFormat)
-  const visibleCustomers = useMemo(() => customers.filter((customer) => !type || customer.type === type), [customers, type])
+  const [sort, setSort] = useState<ReportSort>(initialSort)
+  const visibleCustomers = useMemo(
+    () => sortReportCustomers(customers.filter((customer) => !type || customer.type === type), sort),
+    [customers, type, sort],
+  )
   const filteredHiddenCount = type ? hiddenOtherOwnedByType[type] : hiddenOtherOwnedCount
   const customerCounts = useMemo(() => Object.fromEntries(CUSTOMER_TYPES.map((item) => [
     item, customers.filter((customer) => customer.type === item).length,
   ])) as Record<CustomerType, number>, [customers])
   const filteredTerritories = useMemo(() => territories.map((territory) => ({
-    ...territory,
-    filteredMarket: type ? territory.marketByType[type] : territory.marketTotal,
-    filteredCustomers: customers.filter((customer) =>
-      customer.city === territory.city && customer.district === territory.district && (!type || customer.type === type)
-    ).length,
-  })), [customers, territories, type])
+      ...territory,
+      filteredMarket: type ? territory.marketByType[type] : territory.marketTotal,
+      filteredCustomers: customers.filter((customer) =>
+        customer.city === territory.city && customer.district === territory.district && (!type || customer.type === type)
+      ).length,
+    }))
+    .sort(compareReportPlace), [customers, territories, type])
   const areaGroups = useMemo(() => {
     const counts = new Map<string, number>()
     for (const customer of visibleCustomers) {
@@ -86,6 +96,7 @@ export default function SalespersonReportClient({
     const query = new URLSearchParams({ scope: nextScope })
     if (type) query.set('type', type)
     query.set('format', exportFormat)
+    query.set('sort', sort)
     window.location.assign(`/bd/salespersons/${salesperson.id}/report?${query}`)
   }
   const exportReport = () => {
@@ -116,16 +127,17 @@ export default function SalespersonReportClient({
           </div>
           <button onClick={exportReport} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"><Download className="size-4" />{exportFormat === 'csv' ? '下載 CSV' : '匯出 PDF'}</button>
         </div>
-        <div className={`mt-4 grid gap-3 ${customerOnly ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`mt-4 grid gap-3 sm:grid-cols-2 ${customerOnly ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
           {!customerOnly && <label className="text-sm font-semibold text-stone-600">報表種類<select className="select-soft mt-1.5 block w-full" value={scope} onChange={(event) => changeScope(event.target.value as ReportScope)}><option value="territories">全部轄區總名單</option><option value="customers">既有客戶名單</option></select></label>}
           <label className="text-sm font-semibold text-stone-600">客戶類型<select className="select-soft mt-1.5 block w-full" value={type} onChange={(event) => setType(event.target.value as '' | CustomerType)}>{TYPE_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}</select></label>
+          <label className="text-sm font-semibold text-stone-600">排序方式<select className="select-soft mt-1.5 block w-full" value={sort} onChange={(event) => setSort(event.target.value as ReportSort)}>{REPORT_SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <label className="text-sm font-semibold text-stone-600">匯出格式<select className="select-soft mt-1.5 block w-full" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as ExportFormat)}><option value="pdf">PDF</option><option value="csv">CSV</option></select></label>
           {exportFormat === 'pdf' && <label className="text-sm font-semibold text-stone-600">PDF 內容<select className="select-soft mt-1.5 block w-full" value={mode} onChange={(event) => setMode(event.target.value as ReportMode)}>{MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
         </div>
         {exportFormat === 'csv' && <p className="mt-3 rounded-2xl bg-stone-50 px-4 py-3 text-xs leading-5 text-stone-500">CSV 將匯出目前篩選後的客戶名單，包含負責人、電話與地址；使用 Excel 開啟不會出現中文亂碼。</p>}
       </section>
 
-      <article className="report-page mx-auto min-h-[297mm] max-w-[210mm] bg-white px-[12mm] py-[11mm] shadow-xl" data-report-scope={scope} data-customer-count={customers.length} data-territory-count={territories.length}>
+      <article className="report-page mx-auto min-h-[297mm] max-w-[210mm] bg-white px-[12mm] py-[11mm] shadow-xl" data-report-scope={scope} data-report-sort={sort} data-customer-count={customers.length} data-territory-count={territories.length}>
         <header className="border-b-2 border-brand-500 pb-5">
           <div className="flex items-start justify-between gap-5"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-600">SONGTAH SALES REPORT</p><h2 className="mt-2 text-2xl font-bold text-stone-900">{salesperson.name}｜{scopeLabel}</h2><p className="mt-2 text-sm text-stone-500">{scope === 'territories' ? `合併 ${territories.length} 個有效轄區，一次查看市場與客戶名單。` : '依客戶主檔目前負責業務產出，不受轄區設定限制。'}</p></div><div className="rounded-full bg-stone-900 px-3 py-1.5 text-[10px] font-bold tracking-wider text-white">內部機密</div></div>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-stone-400"><span>報表範圍：{reportLabel}</span><span>產出時間：{generatedAt}</span><span>產出人員：{generatedBy || '系統使用者'}</span></div>
