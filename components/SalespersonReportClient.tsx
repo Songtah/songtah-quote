@@ -1,7 +1,8 @@
 'use client'
 
-import { ArrowLeft, Printer } from 'lucide-react'
+import { ArrowLeft, Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { downloadCustomerCsv, taipeiDateStamp, type ExportFormat } from '@/lib/report-csv'
 
 type ReportScope = 'territories' | 'customers'
 type ReportMode = 'both' | 'summary' | 'list'
@@ -22,8 +23,8 @@ const TYPE_OPTIONS: { value: '' | CustomerType; label: string }[] = [
 ]
 const MODE_OPTIONS: { value: ReportMode; label: string }[] = [
   { value: 'both', label: '統計＋名單' },
-  { value: 'summary', label: '只印數量統計' },
-  { value: 'list', label: '只印客戶名單' },
+  { value: 'summary', label: '只顯示數量統計' },
+  { value: 'list', label: '只顯示客戶名單' },
 ]
 
 export default function SalespersonReportClient({
@@ -36,6 +37,7 @@ export default function SalespersonReportClient({
   generatedAt,
   generatedBy,
   initialType,
+  initialFormat,
   hiddenOtherOwnedCount,
   hiddenOtherOwnedByType,
   customerOnly = false,
@@ -49,12 +51,14 @@ export default function SalespersonReportClient({
   generatedAt: string
   generatedBy: string
   initialType: '' | CustomerType
+  initialFormat: ExportFormat
   hiddenOtherOwnedCount: number
   hiddenOtherOwnedByType: Record<CustomerType, number>
   customerOnly?: boolean
 }) {
   const [type, setType] = useState<'' | CustomerType>(initialType)
   const [mode, setMode] = useState<ReportMode>('both')
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(initialFormat)
   const visibleCustomers = useMemo(() => customers.filter((customer) => !type || customer.type === type), [customers, type])
   const filteredHiddenCount = type ? hiddenOtherOwnedByType[type] : hiddenOtherOwnedCount
   const customerCounts = useMemo(() => Object.fromEntries(CUSTOMER_TYPES.map((item) => [
@@ -81,16 +85,24 @@ export default function SalespersonReportClient({
   const changeScope = (nextScope: ReportScope) => {
     const query = new URLSearchParams({ scope: nextScope })
     if (type) query.set('type', type)
+    query.set('format', exportFormat)
     window.location.assign(`/bd/salespersons/${salesperson.id}/report?${query}`)
   }
-  const printReport = () => {
+  const exportReport = () => {
     fetch('/api/audit-pageview', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
       body: JSON.stringify({
         pathname: `/bd/salespersons/${salesperson.id}/report`,
-        title: `列印業務報表：${salesperson.name}｜${scopeLabel}｜${reportLabel}`,
+        title: `匯出業務報表：${salesperson.name}｜${scopeLabel}｜${reportLabel}｜${exportFormat.toUpperCase()}`,
       }),
     }).catch(() => {})
+    if (exportFormat === 'csv') {
+      downloadCustomerCsv(
+        visibleCustomers,
+        `${salesperson.name}_${scopeLabel}_${reportLabel}_${taipeiDateStamp()}`,
+      )
+      return
+    }
     window.print()
   }
 
@@ -100,15 +112,17 @@ export default function SalespersonReportClient({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <button onClick={() => window.history.length > 1 ? window.history.back() : window.location.assign('/bd')} aria-label="返回上一頁" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-stone-50 text-stone-500 transition-all hover:bg-stone-100 active:scale-95"><ArrowLeft className="size-4" /></button>
-            <div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">列印前設定</p><h1 className="mt-1 text-lg font-bold">{salesperson.name}｜{scopeLabel}</h1><p className="mt-1 text-sm text-stone-500">可切換報表種類、客戶類型及列印內容，再另存為 PDF。</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">匯出設定</p><h1 className="mt-1 text-lg font-bold">{salesperson.name}｜{scopeLabel}</h1><p className="mt-1 text-sm text-stone-500">選擇報表範圍與格式；PDF 保留版面，CSV 適合篩選與後續整理。</p></div>
           </div>
-          <button onClick={printReport} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"><Printer className="size-4" />列印／另存 PDF</button>
+          <button onClick={exportReport} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95"><Download className="size-4" />{exportFormat === 'csv' ? '下載 CSV' : '匯出 PDF'}</button>
         </div>
-        <div className={`mt-4 grid gap-3 ${customerOnly ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        <div className={`mt-4 grid gap-3 ${customerOnly ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
           {!customerOnly && <label className="text-sm font-semibold text-stone-600">報表種類<select className="select-soft mt-1.5 block w-full" value={scope} onChange={(event) => changeScope(event.target.value as ReportScope)}><option value="territories">全部轄區總名單</option><option value="customers">既有客戶名單</option></select></label>}
           <label className="text-sm font-semibold text-stone-600">客戶類型<select className="select-soft mt-1.5 block w-full" value={type} onChange={(event) => setType(event.target.value as '' | CustomerType)}>{TYPE_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}</select></label>
-          <label className="text-sm font-semibold text-stone-600">列印內容<select className="select-soft mt-1.5 block w-full" value={mode} onChange={(event) => setMode(event.target.value as ReportMode)}>{MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          <label className="text-sm font-semibold text-stone-600">匯出格式<select className="select-soft mt-1.5 block w-full" value={exportFormat} onChange={(event) => setExportFormat(event.target.value as ExportFormat)}><option value="pdf">PDF</option><option value="csv">CSV</option></select></label>
+          {exportFormat === 'pdf' && <label className="text-sm font-semibold text-stone-600">PDF 內容<select className="select-soft mt-1.5 block w-full" value={mode} onChange={(event) => setMode(event.target.value as ReportMode)}>{MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
         </div>
+        {exportFormat === 'csv' && <p className="mt-3 rounded-2xl bg-stone-50 px-4 py-3 text-xs leading-5 text-stone-500">CSV 將匯出目前篩選後的客戶名單，包含負責人、電話與地址；使用 Excel 開啟不會出現中文亂碼。</p>}
       </section>
 
       <article className="report-page mx-auto min-h-[297mm] max-w-[210mm] bg-white px-[12mm] py-[11mm] shadow-xl" data-report-scope={scope} data-customer-count={customers.length} data-territory-count={territories.length}>
@@ -120,8 +134,8 @@ export default function SalespersonReportClient({
         {(mode === 'both' || mode === 'summary') && (
           <section className="mt-6">
             <div className="avoid-break flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">SUMMARY</p><h3 className="mt-1 text-lg font-bold">報表數量統計</h3></div><p className="text-xs text-stone-400">客戶主檔／轄區市場資料</p></div>
-            <div className="mt-4 grid grid-cols-3 gap-3"><div className="rounded-2xl bg-brand-50/70 p-4"><p className="text-xs text-stone-500">{scope === 'territories' ? '有效轄區' : '分布行政區'}</p><p className="mt-2 text-2xl font-bold text-brand-700">{(scope === 'territories' ? territories.length : areaGroups.length).toLocaleString()}</p></div><div className="rounded-2xl bg-stone-50 p-4"><p className="text-xs text-stone-500">{scope === 'territories' ? '市場總數' : '名下客戶'}</p><p className="mt-2 text-2xl font-bold text-stone-800">{(scope === 'territories' ? (type ? marketByType[type] : marketTotal) : visibleCustomers.length).toLocaleString()}</p></div><div className="rounded-2xl bg-stone-50 p-4"><p className="text-xs text-stone-500">可列印名單</p><p className="mt-2 text-2xl font-bold text-stone-800">{visibleCustomers.length.toLocaleString()}</p></div></div>
-            <div className="mt-3 grid grid-cols-3 gap-3">{CUSTOMER_TYPES.filter((item) => !type || type === item).map((item) => <div key={item} className="rounded-2xl bg-stone-50 p-4"><p className="text-xs font-semibold text-stone-500">{item}</p><p className="mt-2 text-xl font-bold text-stone-800">{customerCounts[item].toLocaleString()}</p><p className="mt-1 text-[10px] text-stone-400">主檔可列印</p></div>)}</div>
+            <div className="mt-4 grid grid-cols-3 gap-3"><div className="rounded-2xl bg-brand-50/70 p-4"><p className="text-xs text-stone-500">{scope === 'territories' ? '有效轄區' : '分布行政區'}</p><p className="mt-2 text-2xl font-bold text-brand-700">{(scope === 'territories' ? territories.length : areaGroups.length).toLocaleString()}</p></div><div className="rounded-2xl bg-stone-50 p-4"><p className="text-xs text-stone-500">{scope === 'territories' ? '市場總數' : '名下客戶'}</p><p className="mt-2 text-2xl font-bold text-stone-800">{(scope === 'territories' ? (type ? marketByType[type] : marketTotal) : visibleCustomers.length).toLocaleString()}</p></div><div className="rounded-2xl bg-stone-50 p-4"><p className="text-xs text-stone-500">可匯出名單</p><p className="mt-2 text-2xl font-bold text-stone-800">{visibleCustomers.length.toLocaleString()}</p></div></div>
+            <div className="mt-3 grid grid-cols-3 gap-3">{CUSTOMER_TYPES.filter((item) => !type || type === item).map((item) => <div key={item} className="rounded-2xl bg-stone-50 p-4"><p className="text-xs font-semibold text-stone-500">{item}</p><p className="mt-2 text-xl font-bold text-stone-800">{customerCounts[item].toLocaleString()}</p><p className="mt-1 text-[10px] text-stone-400">主檔可匯出</p></div>)}</div>
             {filteredHiddenCount > 0 && <p className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-[10px] text-stone-400">依權限已隱藏 {filteredHiddenCount.toLocaleString()} 家由其他業務負責的客戶明細；市場總數不受影響。</p>}
             <div className="mt-5 avoid-break"><p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{scope === 'territories' ? 'TERRITORIES' : 'CUSTOMER DISTRIBUTION'}</p><h4 className="mt-1 font-bold text-stone-800">{scope === 'territories' ? '轄區明細' : '客戶地區分布'}</h4><div className="mt-3 grid grid-cols-2 gap-2">{scope === 'territories' ? filteredTerritories.map((territory) => <div key={territory.id} className="rounded-xl bg-stone-50 px-3 py-2.5"><div className="flex justify-between gap-3 text-xs"><b>{territory.city}{territory.district}</b><span className="text-stone-400">市場 {territory.filteredMarket}／名單 {territory.filteredCustomers}</span></div></div>) : areaGroups.map((area) => <div key={area.label} className="rounded-xl bg-stone-50 px-3 py-2.5"><div className="flex justify-between gap-3 text-xs"><b>{area.label}</b><span className="text-stone-400">{area.count} 家</span></div></div>)}</div>{(scope === 'territories' ? filteredTerritories : areaGroups).length === 0 && <p className="mt-3 text-sm text-stone-400">目前沒有資料</p>}</div>
           </section>
@@ -134,7 +148,7 @@ export default function SalespersonReportClient({
               <thead><tr className="border-b border-stone-300 text-stone-500"><th className="w-[4%] py-2 pr-1 font-semibold">#</th><th className="w-[21%] py-2 pr-2 font-semibold">客戶名稱</th><th className="w-[15%] py-2 pr-2 font-semibold">地區／階段</th><th className="w-[11%] py-2 pr-2 font-semibold">負責人</th><th className="w-[17%] py-2 pr-2 font-semibold">電話</th><th className="w-[32%] py-2 font-semibold">地址</th></tr></thead>
               <tbody>
                 {visibleCustomers.map((customer, index) => <tr key={customer.id} className="border-b border-stone-900/[0.06] align-top"><td className="py-2.5 pr-1 text-stone-400">{index + 1}</td><td className="py-2.5 pr-2 font-semibold text-stone-800">{customer.name}<span className="mt-0.5 block text-[8px] font-normal leading-4 text-stone-400">{customer.type || '未分類'}｜{customer.status || '機構狀態未標示'}</span></td><td className="py-2.5 pr-2 leading-4 text-stone-600">{customer.city || '—'}{customer.district || ''}<span className="block text-stone-400">{customer.devStage || '尚未設定'}</span></td><td className="py-2.5 pr-2 break-words leading-4 text-stone-600">{customer.salesperson || '尚未認領'}</td><td className="py-2.5 pr-2 break-words leading-4 text-stone-600">{customer.phone || '—'}</td><td className="py-2.5 break-words leading-4 text-stone-600">{customer.address || '—'}</td></tr>)}
-                {visibleCustomers.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-sm text-stone-400">此篩選條件沒有可列印的客戶</td></tr>}
+                {visibleCustomers.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-sm text-stone-400">此篩選條件沒有可匯出的客戶</td></tr>}
               </tbody>
             </table>
           </section>

@@ -16,7 +16,7 @@ export default async function SalespersonReportPage({
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { scope?: string; type?: string }
+  searchParams: { scope?: string; type?: string; format?: string }
 }) {
   const session = await requireSession()
   if (!canView(session, 'bd') && !canView(session, 'clinic_monitor')) redirect('/dashboard')
@@ -96,6 +96,7 @@ export default async function SalespersonReportPage({
       generatedAt={generatedAt}
       generatedBy={session.user?.name ?? ''}
       initialType={initialType}
+      initialFormat={searchParams.format === 'csv' ? 'csv' : 'pdf'}
       hiddenOtherOwnedCount={hiddenCustomers.length}
       hiddenOtherOwnedByType={hiddenOtherOwnedByType}
       customerOnly={isCompanyReport}

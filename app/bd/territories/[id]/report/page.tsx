@@ -18,7 +18,7 @@ export default async function TerritoryReportPage({
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { type?: string }
+  searchParams: { type?: string; format?: string }
 }) {
   const session = await requireSession()
   if (!canView(session, 'bd') && !canView(session, 'clinic_monitor')) redirect('/dashboard')
@@ -81,6 +81,7 @@ export default async function TerritoryReportPage({
       generatedAt={generatedAt}
       generatedBy={session.user?.name ?? ''}
       initialType={initialType}
+      initialFormat={searchParams.format === 'csv' ? 'csv' : 'pdf'}
       hiddenOtherOwnedCount={hiddenOtherOwnedCount}
       hiddenOtherOwnedByType={hiddenOtherOwnedByType}
       ownershipIdentityAmbiguous={!canViewAll && !ownerIdentityUnique}

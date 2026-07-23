@@ -119,6 +119,7 @@ const adminPage = await request('/admin/clinic-monitor?tab=territory')
 const adminPageHtml = await adminPage.text()
 if (!adminPage.ok || !adminPageHtml.includes('業務轄區管理')) throw new Error('主管轄區頁面無法開啟')
 if (!adminPageHtml.includes('Gus')) throw new Error('列印業務總表選項仍未出現 Gus')
+if (!adminPageHtml.includes('匯出業務總表') || adminPageHtml.includes('列印業務總表')) throw new Error('業務總表入口尚未統一改名為匯出')
 const bdPage = await request('/bd')
 if (!bdPage.ok || !(await bdPage.text()).includes('業務開發')) throw new Error('業務開發頁面無法開啟')
 
@@ -153,10 +154,13 @@ try {
   if (!createdIds.every((id) => bdTerritories.items.some((item) => item.id === id))) throw new Error('業務端沒有同步顯示批次轄區')
   if (!bdTerritories.areas.every((area) => typeof area.byType?.['牙體技術所'] === 'number')) throw new Error('業務端類型統計缺漏')
 
-  const reportResponse = await request(`/bd/territories/${createdIds[0]}/report?type=${encodeURIComponent('牙醫診所')}`)
+  const reportResponse = await request(`/bd/territories/${createdIds[0]}/report?type=${encodeURIComponent('牙醫診所')}&format=csv`)
   const reportHtml = await reportResponse.text()
   if (!reportResponse.ok || !reportHtml.includes('轄區客戶報表') || !reportHtml.includes('內部機密')) {
     throw new Error(`轄區列印報表無法開啟：HTTP ${reportResponse.status}`)
+  }
+  if (!reportHtml.includes('匯出格式') || !reportHtml.includes('下載 CSV') || !reportHtml.includes('CSV 將匯出')) {
+    throw new Error('轄區報表沒有提供 PDF／CSV 匯出格式')
   }
   if (!reportHtml.includes('負責人') || !reportHtml.includes('電話') || !reportHtml.includes('地址') || reportHtml.includes('institutionCode')) {
     throw new Error('轄區列印報表缺少授權聯絡資料或洩漏機構代碼')
@@ -210,9 +214,9 @@ try {
   if (![302, 303, 307, 308].includes(forbiddenCompanyReport.status) || !forbiddenCompanyReport.headers.get('location')?.endsWith('/bd')) {
     throw new Error(`一般業務仍可開啟公司客戶報表：HTTP ${forbiddenCompanyReport.status}`)
   }
-  const retainedPortfolioReportResponse = await request(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers`)
+  const retainedPortfolioReportResponse = await request(`/bd/salespersons/${retainedPortfolioManager.id}/report?scope=customers&format=csv`)
   const retainedPortfolioReportHtml = await retainedPortfolioReportResponse.text()
-  if (!retainedPortfolioReportResponse.ok || !retainedPortfolioReportHtml.includes('Gus') || !retainedPortfolioReportHtml.includes('既有客戶名單')) {
+  if (!retainedPortfolioReportResponse.ok || !retainedPortfolioReportHtml.includes('Gus') || !retainedPortfolioReportHtml.includes('既有客戶名單') || !retainedPortfolioReportHtml.includes('下載 CSV')) {
     throw new Error(`Gus 既有客戶報表無法開啟：HTTP ${retainedPortfolioReportResponse.status}`)
   }
   const retainedPortfolioCount = Number(retainedPortfolioReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)
