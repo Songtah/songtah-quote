@@ -11,7 +11,35 @@ const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 
 export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
-    const userId = (session.user as any)?.id ?? ''
+    const sessionUser = session.user as any
+    const userId = sessionUser?.id ?? ''
+    const canViewAll = sessionUser?.role === 'admin' || sessionUser?.accountType === '中央管理' || sessionUser?.accountType === '總經理'
+    const territoryId = req.nextUrl.searchParams.get('territoryId') ?? ''
+    if (canViewAll) {
+      if (!/^[0-9a-f]{32}$/i.test(territoryId.replace(/-/g, ''))) {
+        return NextResponse.json({ error: '請先選擇要查看的轄區' }, { status: 400 })
+      }
+      const territory = (await listTerritories()).find((item) => item.id === territoryId)
+      if (!territory) return NextResponse.json({ error: '找不到有效轄區' }, { status: 404 })
+      if (!territory.salesperson || !territory.salespersonId) {
+        return NextResponse.json({ error: '此轄區尚未完成負責業務設定' }, { status: 409 })
+      }
+      const customers = await listCustomersByArea({
+        city: territory.city,
+        district: territory.district,
+        salesperson: territory.salesperson,
+      })
+      const items = customers
+        .filter((customer) => !INACTIVE_STATUS.has(customer.status))
+        .map(toListItem)
+      return NextResponse.json({
+        scope: 'territories',
+        salesperson: territory.salesperson,
+        territoryCount: 1,
+        territory: { id: territory.id, city: territory.city, district: territory.district },
+        items,
+      })
+    }
     if (!/^[0-9a-f]{32}$/i.test(userId.replace(/-/g, ''))) {
       return NextResponse.json({ error: '此清單只提供業務本人查看' }, { status: 403 })
     }
@@ -33,24 +61,19 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       customers = await listCustomersByArea({ salesperson: account.name })
     } else {
       const territories = (await listTerritories()).filter((territory) => territory.salespersonId === account.id)
-      territoryCount = territories.length
-      customers = (await listCustomersByAreas(territories)).filter((customer) =>
-        !customer.salesperson || customer.salesperson === account.name
-      )
+      if (territoryId && !territories.some((territory) => territory.id === territoryId)) {
+        return NextResponse.json({ error: '你沒有此轄區的查看權限' }, { status: 403 })
+      }
+      const targetTerritories = territoryId
+        ? territories.filter((territory) => territory.id === territoryId)
+        : territories
+      territoryCount = targetTerritories.length
+      customers = (await listCustomersByAreas(targetTerritories)).filter((customer) => customer.salesperson === account.name)
     }
 
     const items = customers
       .filter((customer) => !INACTIVE_STATUS.has(customer.status))
-      .map((customer) => ({
-        id: customer.id,
-        name: customer.name,
-        city: customer.city,
-        district: customer.district,
-        type: customer.type,
-        status: customer.status,
-        devStage: customer.devStage,
-        salesperson: customer.salesperson,
-      }))
+      .map(toListItem)
 
     return NextResponse.json({
       scope,
@@ -63,3 +86,16 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
     return NextResponse.json({ error: '讀取客戶清單失敗' }, { status: 500 })
   }
 })
+
+function toListItem(customer: Awaited<ReturnType<typeof listCustomersByArea>>[number]) {
+  return {
+    id: customer.id,
+    name: customer.name,
+    city: customer.city,
+    district: customer.district,
+    type: customer.type,
+    status: customer.status,
+    devStage: customer.devStage,
+    salesperson: customer.salesperson,
+  }
+}

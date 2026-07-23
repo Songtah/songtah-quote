@@ -179,6 +179,13 @@ try {
   if (combinedTerritoryReportHtml.includes('institutionCode') || combinedTerritoryReportHtml.includes('phone') || combinedTerritoryReportHtml.includes('address')) {
     throw new Error('業務轄區總報表洩漏未授權的敏感欄位')
   }
+  const teamTerritoryList = await json(await request(`/api/bd/my-customer-list?scope=territories&territoryId=${createdIds[0]}`), '主管讀取團隊轄區客戶')
+  if (teamTerritoryList.items.some((item) => item.salesperson !== salesperson.name)) {
+    throw new Error('團隊轄區清單混入非該轄區負責業務的客戶')
+  }
+  if (JSON.stringify(teamTerritoryList).includes('address') || JSON.stringify(teamTerritoryList).includes('phone') || JSON.stringify(teamTerritoryList).includes('institutionCode')) {
+    throw new Error('團隊轄區清單一次洩漏敏感欄位')
+  }
   const companyReportResponse = await request('/bd/salespersons/company/report?scope=customers')
   const companyReportHtml = await companyReportResponse.text()
   if (!companyReportResponse.ok || !companyReportHtml.includes('公司客戶') || !companyReportHtml.includes('既有客戶名單')) {
@@ -200,11 +207,15 @@ try {
     throw new Error(`一般業務仍可開啟公司客戶報表：HTTP ${forbiddenCompanyReport.status}`)
   }
   const businessPopupList = await json(await requestAs('/api/bd/my-customer-list?scope=territories', businessToken), '讀取業務端轄區彈跳清單')
-  if (businessPopupList.items.some((item) => item.salesperson && item.salesperson !== salesperson.name)) {
-    throw new Error('業務端轄區彈跳清單洩漏其他負責人的客戶')
+  if (businessPopupList.items.some((item) => item.salesperson !== salesperson.name)) {
+    throw new Error('業務端轄區彈跳清單混入未認領或其他負責人的客戶')
   }
   if (JSON.stringify(businessPopupList).includes('address') || JSON.stringify(businessPopupList).includes('phone') || JSON.stringify(businessPopupList).includes('institutionCode')) {
     throw new Error('業務端轄區彈跳清單洩漏敏感欄位')
+  }
+  const businessExistingList = await json(await requestAs('/api/bd/my-customer-list?scope=customers', businessToken), '讀取業務本人既有客戶')
+  if (businessExistingList.items.length <= 0 || businessExistingList.items.some((item) => item.salesperson !== salesperson.name)) {
+    throw new Error('業務本人既有客戶清單範圍錯誤')
   }
   const legacyOwnerToken = await encode({
     secret: process.env.NEXTAUTH_SECRET, maxAge: 600,
@@ -244,6 +255,24 @@ try {
   const maintenancePopupList = await json(await requestAs('/api/bd/my-customer-list?scope=customers', maintenanceToken), '讀取維護模式業務的既有客戶彈跳清單')
   if (maintenancePopupList.items.length <= 0 || maintenancePopupList.items.some((item) => item.salesperson !== maintenanceUser.name)) {
     throw new Error('維護模式業務的彈跳清單未正確顯示名下客戶')
+  }
+  const detailCustomerId = maintenancePopupList.items[0].id
+  const maintenanceDetail = await json(await requestAs(`/api/bd/customer-detail/${detailCustomerId}`, maintenanceToken), '讀取本人客戶詳細資料')
+  if (maintenanceDetail.customer.salesperson !== maintenanceUser.name || maintenanceDetail.classification?.level !== '內部機密') {
+    throw new Error('本人客戶詳細資料權限或分級錯誤')
+  }
+  if ('taxId' in maintenanceDetail.customer || 'institutionCode' in maintenanceDetail.customer) {
+    throw new Error('業務客戶詳細資料回傳超出業務必要的敏感欄位')
+  }
+  const forbiddenOtherDetail = await requestAs(`/api/bd/customer-detail/${detailCustomerId}`, businessToken)
+  if (forbiddenOtherDetail.status !== 403) {
+    throw new Error(`業務仍可查看其他業務客戶詳情：HTTP ${forbiddenOtherDetail.status}`)
+  }
+  const adminDetail = await json(await request(`/api/bd/customer-detail/${detailCustomerId}`), '主管讀取團隊客戶詳情')
+  if (adminDetail.customer.id !== detailCustomerId) throw new Error('主管團隊客戶詳情回傳錯誤')
+  const forbiddenMaintenanceTerritory = await requestAs(`/api/bd/my-customer-list?scope=territories&territoryId=${createdIds[0]}`, maintenanceToken)
+  if (forbiddenMaintenanceTerritory.status !== 403) {
+    throw new Error(`業務仍可查看非本人轄區清單：HTTP ${forbiddenMaintenanceTerritory.status}`)
   }
   if (maintenanceCustomerReportHtml.includes('institutionCode') || maintenanceCustomerReportHtml.includes('phone') || maintenanceCustomerReportHtml.includes('address')) {
     throw new Error('既有客戶名單報表洩漏未授權的敏感欄位')
@@ -350,7 +379,8 @@ try {
     customerChanges: 0, ownershipUnchanged: true, bdTerritoriesSynced: true,
     typeStats: true, typeCandidateFilter: true, printableReport: true,
     combinedTerritoryReport: true, existingCustomerReport: true, combinedReportAuthorization: true,
-    businessPopupLists: true, popupListAuthorization: true,
+    businessPopupLists: true, popupListAuthorization: true, teamTerritoryCustomerLookup: true,
+    businessOwnCustomersOnly: true, customerDetailAuthorization: true, customerDetailClassification: true,
     sensitiveFieldsMinimized: true, businessOwnReport: true, otherBusinessRejected: true,
     maintenanceMode: true, maintenanceTerritoryBlocked: true, maintenanceNewAssignmentBlocked: true,
     maintenanceReassignBlocked: true, maintenanceCompanyAssignmentBlocked: true, maintenanceSuggestionsExistingOnly: true,

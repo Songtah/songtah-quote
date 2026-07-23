@@ -80,10 +80,14 @@ export type SystemCustomerDetail = {
 }
 
 export async function getSystemCustomerById(id: string): Promise<SystemCustomerDetail | null> {
+  if (!DB.customers) return null
   try {
     const page: any = await notionCallWithRetry('getSystemCustomerById', () =>
       notion.pages.retrieve({ page_id: id })
     )
+    const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+    const customersDb = normalizeDatabaseId(DB.customers).replace(/-/g, '')
+    if (!targetDb || targetDb !== customersDb || page.archived) return null
     return {
       id: page.id,
       name: getTitle(page, '客戶名稱'),
