@@ -158,8 +158,8 @@ try {
   if (!reportResponse.ok || !reportHtml.includes('轄區客戶報表') || !reportHtml.includes('內部機密')) {
     throw new Error(`轄區列印報表無法開啟：HTTP ${reportResponse.status}`)
   }
-  if (reportHtml.includes('institutionCode') || reportHtml.includes('phone') || reportHtml.includes('address')) {
-    throw new Error('轄區列印報表洩漏未授權的敏感欄位')
+  if (!reportHtml.includes('負責人') || !reportHtml.includes('電話') || !reportHtml.includes('地址') || reportHtml.includes('institutionCode')) {
+    throw new Error('轄區列印報表缺少授權聯絡資料或洩漏機構代碼')
   }
   if (!process.env.NEXTAUTH_SECRET) throw new Error('缺少 NEXTAUTH_SECRET，無法驗證一般業務報表權限')
   const businessToken = await encode({
@@ -180,8 +180,8 @@ try {
   if (!combinedTerritoryReportResponse.ok || !combinedTerritoryReportHtml.includes('全部轄區總名單') || !selectedAreas.every((area) => combinedTerritoryReportHtml.includes(area.district))) {
     throw new Error(`業務轄區總報表無法合併多區：HTTP ${combinedTerritoryReportResponse.status}`)
   }
-  if (combinedTerritoryReportHtml.includes('institutionCode') || combinedTerritoryReportHtml.includes('phone') || combinedTerritoryReportHtml.includes('address')) {
-    throw new Error('業務轄區總報表洩漏未授權的敏感欄位')
+  if (!combinedTerritoryReportHtml.includes('負責人') || !combinedTerritoryReportHtml.includes('電話') || !combinedTerritoryReportHtml.includes('地址') || combinedTerritoryReportHtml.includes('institutionCode')) {
+    throw new Error('業務轄區總報表缺少授權聯絡資料或洩漏機構代碼')
   }
   const teamTerritoryList = await json(await request(`/api/bd/my-customer-list?scope=territories&territoryId=${createdIds[0]}`), '主管讀取團隊轄區客戶')
   if (teamTerritoryList.items.some((item) => item.salesperson !== salesperson.name)) {
@@ -198,8 +198,8 @@ try {
   if (Number(companyReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0) <= 0) {
     throw new Error('公司客戶報表沒有產出任何名下客戶')
   }
-  if (companyReportHtml.includes('institutionCode') || companyReportHtml.includes('phone') || companyReportHtml.includes('address')) {
-    throw new Error('公司客戶報表洩漏未授權的敏感欄位')
+  if (!companyReportHtml.includes('負責人') || !companyReportHtml.includes('電話') || !companyReportHtml.includes('地址') || companyReportHtml.includes('institutionCode')) {
+    throw new Error('公司客戶報表缺少授權聯絡資料或洩漏機構代碼')
   }
   const businessCombinedReportResponse = await requestAs(`/bd/salespersons/${salesperson.id}/report?scope=territories`, businessToken)
   const businessCombinedReportHtml = await businessCombinedReportResponse.text()
@@ -267,6 +267,17 @@ try {
   }
   const maintenanceReportCount = Number(maintenanceCustomerReportHtml.match(/data-customer-count="(\d+)"/)?.[1] ?? 0)
   if (maintenanceReportCount <= 0) throw new Error('既有客戶報表沒有產出任何名下客戶')
+  const maintenanceContactSource = await json(
+    await request(`/api/customers/by-area?salesperson=${encodeURIComponent(maintenanceUser.name)}`),
+    '讀取維護模式業務的聯絡資料驗收樣本',
+  )
+  const maintenanceContactSample = maintenanceContactSource.items.find((item) =>
+    item.phone && item.address && !['已歇業', '停業', '撤銷'].includes(item.status)
+  )
+  if (!maintenanceContactSample) throw new Error('找不到同時具備電話與地址的既有客戶，無法驗證列印聯絡資料')
+  if (!maintenanceCustomerReportHtml.includes(maintenanceContactSample.phone) || !maintenanceCustomerReportHtml.includes(maintenanceContactSample.address)) {
+    throw new Error('既有客戶報表沒有印出已授權客戶的實際電話與地址')
+  }
   const maintenancePopupList = await json(await requestAs('/api/bd/my-customer-list?scope=customers', maintenanceToken), '讀取維護模式業務的既有客戶彈跳清單')
   if (maintenancePopupList.items.length <= 0 || maintenancePopupList.items.some((item) => item.salesperson !== maintenanceUser.name)) {
     throw new Error('維護模式業務的彈跳清單未正確顯示名下客戶')
@@ -289,8 +300,8 @@ try {
   if (forbiddenMaintenanceTerritory.status !== 403) {
     throw new Error(`業務仍可查看非本人轄區清單：HTTP ${forbiddenMaintenanceTerritory.status}`)
   }
-  if (maintenanceCustomerReportHtml.includes('institutionCode') || maintenanceCustomerReportHtml.includes('phone') || maintenanceCustomerReportHtml.includes('address')) {
-    throw new Error('既有客戶名單報表洩漏未授權的敏感欄位')
+  if (!maintenanceCustomerReportHtml.includes('負責人') || !maintenanceCustomerReportHtml.includes('電話') || !maintenanceCustomerReportHtml.includes('地址') || maintenanceCustomerReportHtml.includes('institutionCode')) {
+    throw new Error('既有客戶名單報表缺少授權聯絡資料或洩漏機構代碼')
   }
   const maintenancePipeline = await json(await requestAs('/api/bd/pipeline', maintenanceToken), '讀取既有客戶維護業務的開發漏斗')
   if (!maintenancePipeline.existingOnly || maintenancePipeline.opportunityLeads.length !== 0 || maintenancePipeline.items.some((item) => item.salesperson !== maintenanceUser.name)) {

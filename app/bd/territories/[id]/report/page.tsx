@@ -73,7 +73,8 @@ export default async function TerritoryReportPage({
       }}
       customers={visibleCustomers.map((customer) => ({
         id: customer.id, name: customer.name, type: customer.type,
-        status: customer.status, devStage: customer.devStage, salesperson: customer.salesperson,
+        status: customer.status, devStage: customer.devStage,
+        salesperson: customer.salesperson, phone: customer.phone, address: customer.address,
       }))}
       marketByType={marketByType}
       marketTotal={TERRITORY_CUSTOMER_TYPES.reduce((sum, type) => sum + marketByType[type], 0)}

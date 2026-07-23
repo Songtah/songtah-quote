@@ -87,7 +87,8 @@ export default async function SalespersonReportPage({
       scope={scope}
       customers={visibleCustomers.map((customer) => ({
         id: customer.id, name: customer.name, city: customer.city, district: customer.district,
-        type: customer.type, status: customer.status, devStage: customer.devStage, salesperson: customer.salesperson,
+        type: customer.type, status: customer.status, devStage: customer.devStage,
+        salesperson: customer.salesperson, phone: customer.phone, address: customer.address,
       }))}
       territories={territorySummaries}
       marketByType={marketByType}

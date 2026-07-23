@@ -12,6 +12,8 @@ type ReportCustomer = {
   status: string
   devStage: string
   salesperson: string
+  phone: string
+  address: string
 }
 
 const TERRITORY_CUSTOMER_TYPES: TerritoryCustomerType[] = ['牙醫診所', '牙體技術所', '醫院']
@@ -107,11 +109,11 @@ export default function TerritoryReportClient({
         {(mode === 'both' || mode === 'list') && (
           <section className="mt-7">
             <div className="avoid-break flex items-end justify-between gap-3 border-b border-stone-900/[0.08] pb-3"><div><p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">CUSTOMER LIST</p><h3 className="mt-1 text-lg font-bold">客戶名單</h3></div><p className="text-xs text-stone-400">共 {visibleCustomers.length.toLocaleString()} 家</p></div>
-            <table className="mt-3 w-full border-collapse text-left text-[11px]">
-              <thead><tr className="border-b border-stone-300 text-stone-500"><th className="w-10 py-2 pr-2 font-semibold">#</th><th className="py-2 pr-3 font-semibold">客戶名稱</th><th className="py-2 pr-3 font-semibold">類型</th><th className="py-2 pr-3 font-semibold">開發階段</th><th className="py-2 font-semibold">負責業務</th></tr></thead>
+            <table className="mt-3 w-full table-fixed border-collapse text-left text-[9px]">
+              <thead><tr className="border-b border-stone-300 text-stone-500"><th className="w-[4%] py-2 pr-1 font-semibold">#</th><th className="w-[23%] py-2 pr-2 font-semibold">客戶名稱</th><th className="w-[13%] py-2 pr-2 font-semibold">開發階段</th><th className="w-[11%] py-2 pr-2 font-semibold">負責人</th><th className="w-[17%] py-2 pr-2 font-semibold">電話</th><th className="w-[32%] py-2 font-semibold">地址</th></tr></thead>
               <tbody>
-                {visibleCustomers.map((customer, index) => <tr key={customer.id} className="border-b border-stone-900/[0.06]"><td className="py-2.5 pr-2 text-stone-400">{index + 1}</td><td className="py-2.5 pr-3 font-semibold text-stone-800">{customer.name}<span className="mt-0.5 block text-[9px] font-normal text-stone-400">{customer.status || '機構狀態未標示'}</span></td><td className="py-2.5 pr-3 text-stone-600">{customer.type || '未分類'}</td><td className="py-2.5 pr-3 text-stone-600">{customer.devStage || '尚未設定'}</td><td className="py-2.5 text-stone-600">{customer.salesperson || '尚未認領'}</td></tr>)}
-                {visibleCustomers.length === 0 && <tr><td colSpan={5} className="py-12 text-center text-sm text-stone-400">此篩選條件沒有可列印的客戶</td></tr>}
+                {visibleCustomers.map((customer, index) => <tr key={customer.id} className="border-b border-stone-900/[0.06] align-top"><td className="py-2.5 pr-1 text-stone-400">{index + 1}</td><td className="py-2.5 pr-2 font-semibold text-stone-800">{customer.name}<span className="mt-0.5 block text-[8px] font-normal leading-4 text-stone-400">{customer.type || '未分類'}｜{customer.status || '機構狀態未標示'}</span></td><td className="py-2.5 pr-2 leading-4 text-stone-600">{customer.devStage || '尚未設定'}</td><td className="py-2.5 pr-2 break-words leading-4 text-stone-600">{customer.salesperson || '尚未認領'}</td><td className="py-2.5 pr-2 break-words leading-4 text-stone-600">{customer.phone || '—'}</td><td className="py-2.5 break-words leading-4 text-stone-600">{customer.address || '—'}</td></tr>)}
+                {visibleCustomers.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-sm text-stone-400">此篩選條件沒有可列印的客戶</td></tr>}
               </tbody>
             </table>
           </section>
