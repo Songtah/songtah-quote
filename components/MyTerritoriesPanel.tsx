@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPinned, ArrowRight, ListFilter, Users, X } from 'lucide-react'
+import { MapPinned, ArrowRight, ListFilter, Users, X, Download } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type CustomerType = '牙醫診所' | '牙體技術所' | '醫院'
@@ -32,6 +32,7 @@ export default function MyTerritoriesPanel() {
   const [areas, setAreas] = useState<Area[]>([])
   const [scope, setScope] = useState<'mine' | 'team'>('mine')
   const [assignmentMode, setAssignmentMode] = useState('全面開發')
+  const [accountId, setAccountId] = useState('')
   const [type, setType] = useState<'' | CustomerType>('')
   const [salesperson, setSalesperson] = useState('')
   const [loading, setLoading] = useState(true)
@@ -57,6 +58,7 @@ export default function MyTerritoriesPanel() {
       setAreas(json.areas ?? [])
       setScope(json.scope === 'team' ? 'team' : 'mine')
       setAssignmentMode(json.assignmentMode ?? '全面開發')
+      setAccountId(json.accountId ?? '')
     }).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [])
 
@@ -192,6 +194,14 @@ export default function MyTerritoriesPanel() {
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {territories.length > 0 ? <button onClick={() => openList('territories')} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-4" />查看全部轄區名單</button> : <div className="flex min-h-12 items-center justify-center rounded-full bg-stone-50 px-4 py-2.5 text-sm text-stone-400">目前沒有轄區名單</div>}
             <button onClick={() => openList('customers')} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95"><Users className="size-4" />查看既有客戶名單</button>
+            {accountId && (
+              <Link
+                href={`/bd/salespersons/${accountId}/report?scope=${territories.length > 0 ? 'territories' : 'customers'}`}
+                className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 sm:col-span-2"
+              >
+                <Download className="size-4" />匯出我的客戶總表（PDF／CSV）
+              </Link>
+            )}
           </div>
         )}
 
@@ -219,6 +229,14 @@ export default function MyTerritoriesPanel() {
           <section className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-stone-900/[0.08] sm:rounded-3xl">
             <header className="flex items-start gap-3 border-b border-stone-900/[0.06] px-5 py-4 sm:px-6">
               <div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">客戶清單</p><h2 id="customer-list-title" className="mt-1 text-xl font-bold text-stone-800">{listDialog.area ? `${listDialog.area.city}${listDialog.area.district}｜${listDialog.area.salesperson}` : listDialog.scope === 'customers' ? '我的既有客戶' : '我的全部轄區'}</h2><p className="mt-1 text-sm text-stone-400">{listDialog.area ? `只顯示 ${listDialog.area.salesperson} 名下的客戶` : '只顯示你名下的客戶'}，共 {visibleListItems.length.toLocaleString()} 家。</p></div>
+              {scope === 'mine' && accountId && (
+                <Link
+                  href={`/bd/salespersons/${accountId}/report?scope=${listDialog.scope}${listType ? `&type=${encodeURIComponent(listType)}` : ''}`}
+                  className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95"
+                >
+                  <Download className="size-3.5" />匯出
+                </Link>
+              )}
               <button onClick={closeList} aria-label="關閉清單" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-stone-50 text-stone-500 transition-all hover:bg-stone-100 active:scale-95"><X className="size-4" /></button>
             </header>
             <div className="border-b border-stone-900/[0.06] px-5 py-3 sm:px-6"><input className="input-soft block w-full" value={listSearch} onChange={(event) => setListSearch(event.target.value)} placeholder="搜尋客戶名稱、地區或類型" /><div className="mt-3 flex gap-1 overflow-x-auto">{TYPES.map((option) => <button key={option.value || 'all'} onClick={() => setListType(option.value)} className={`min-w-max rounded-full px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${listType === option.value ? 'bg-brand-500 text-white' : 'bg-stone-50 text-stone-500 hover:bg-brand-50 hover:text-brand-700'}`}>{option.label}</button>)}</div></div>
