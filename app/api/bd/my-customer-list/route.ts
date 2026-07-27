@@ -54,7 +54,9 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       return NextResponse.json({ error: '偵測到同名業務帳號，為保護客戶資料暫停顯示' }, { status: 409 })
     }
 
-    const scope = req.nextUrl.searchParams.get('scope') === 'customers' ? 'customers' : 'territories'
+    const rawScope = req.nextUrl.searchParams.get('scope')
+    // claimable:自己轄區內「負責業務空白」的可認領客戶(給業務自助認領用)
+    const scope = rawScope === 'customers' ? 'customers' : rawScope === 'claimable' ? 'claimable' : 'territories'
     let customers
     let territoryCount = 0
     if (scope === 'customers') {
@@ -64,11 +66,19 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       if (territoryId && !territories.some((territory) => territory.id === territoryId)) {
         return NextResponse.json({ error: '你沒有此轄區的查看權限' }, { status: 403 })
       }
+      // 認領一次只針對單一轄區(對應 /api/territories/[id]/claim 的範圍與稽核粒度)
+      if (scope === 'claimable' && !territoryId) {
+        return NextResponse.json({ error: '請先選擇要認領的轄區' }, { status: 400 })
+      }
       const targetTerritories = territoryId
         ? territories.filter((territory) => territory.id === territoryId)
         : territories
       territoryCount = targetTerritories.length
-      customers = (await listCustomersByAreas(targetTerritories)).filter((customer) => customer.salesperson === account.name)
+      const areaCustomers = await listCustomersByAreas(targetTerritories)
+      customers = scope === 'claimable'
+        // 可認領池:只列尚未有人負責者;真正寫入時 claimTerritoryCustomers 會再逐筆重驗
+        ? areaCustomers.filter((customer) => !customer.salesperson)
+        : areaCustomers.filter((customer) => customer.salesperson === account.name)
     }
 
     const items = customers

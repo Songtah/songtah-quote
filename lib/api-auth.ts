@@ -29,6 +29,7 @@ export type ApiAuthRule =
   | 'central-management'
   | { roles: string[] }
   | { module: ModuleKey; action: 'view' | 'edit' }
+  | { anyOf: ApiAuthRule[] }
 
 function passes(session: Session, rule: ApiAuthRule): boolean {
   const user = session.user as any
@@ -37,6 +38,10 @@ function passes(session: Session, rule: ApiAuthRule): boolean {
   // admin 放行:role==='admin' 是系統最高權限(與 {roles} 規則慣例一致);
   // 亦避免 env admin 帳號因舊 JWT 缺 accountType 而被整個產品後台鎖死。
   if (rule === 'central-management') return user?.role === 'admin' || user?.accountType === '中央管理'
+  // anyOf:同一支 API 有多條合法進入路徑時使用(例:轄區認領同時開放給
+  // 業務本人的 bd:edit 與主管的 clinic_monitor:edit)。只放寬「誰進得來」,
+  // 不取代 route 內針對「能動哪些資料」的擁有者/範圍檢查。
+  if ('anyOf' in rule) return rule.anyOf.some((item) => passes(session, item))
   if ('roles' in rule) return user?.role === 'admin' || rule.roles.includes(user?.accountType)
   if ('module' in rule) {
     return rule.action === 'edit' ? canEdit(session, rule.module) : canView(session, rule.module)

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPinned, ArrowRight, ListFilter, Users, X, Download } from 'lucide-react'
+import { MapPinned, ArrowRight, ListFilter, Users, X, Download, UserPlus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type CustomerType = '牙醫診所' | '牙體技術所' | '醫院'
@@ -37,7 +37,11 @@ export default function MyTerritoriesPanel() {
   const [salesperson, setSalesperson] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [listDialog, setListDialog] = useState<{ scope: 'territories' | 'customers'; area?: ListArea } | null>(null)
+  const [listDialog, setListDialog] = useState<{ scope: 'territories' | 'customers' | 'claimable'; area?: ListArea } | null>(null)
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [claiming, setClaiming] = useState(false)
+  const [claimError, setClaimError] = useState('')
+  const [claimDone, setClaimDone] = useState('')
   const [listItems, setListItems] = useState<CustomerListItem[]>([])
   const [listLoading, setListLoading] = useState(false)
   const [listError, setListError] = useState('')
@@ -62,6 +66,9 @@ export default function MyTerritoriesPanel() {
     }).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [])
 
+  // 與伺服器端 canAcceptNewBusiness 一致:只有「全面開發」模式的業務能認領新客戶。
+  // 這只是前端不顯示按鈕;真正的把關在 /api/territories/[id]/claim。
+  const canClaim = scope === 'mine' && assignmentMode === '全面開發'
   const people = useMemo(() => Array.from(new Set(territories.map((item) => item.salesperson))).sort((a, b) => a.localeCompare(b, 'zh-TW')), [territories])
   const visible = useMemo(() => territories.filter((item) => !salesperson || item.salesperson === salesperson), [salesperson, territories])
   const areaMap = useMemo(() => new Map(areas.map((area) => [`${area.city}|${area.district}`, area])), [areas])
@@ -80,7 +87,7 @@ export default function MyTerritoriesPanel() {
     setListDialog(null)
   }, [])
 
-  const openList = async (nextScope: 'territories' | 'customers', area?: ListArea) => {
+  const openList = async (nextScope: 'territories' | 'customers' | 'claimable', area?: ListArea) => {
     listRequestRef.current?.abort()
     const controller = new AbortController()
     listRequestRef.current = controller
@@ -92,6 +99,9 @@ export default function MyTerritoriesPanel() {
     setDetailId('')
     setDetail(null)
     setDetailError('')
+    setChecked(new Set())
+    setClaimError('')
+    setClaimDone('')
     setListLoading(true)
     try {
       const query = new URLSearchParams({ scope: nextScope })
@@ -109,6 +119,50 @@ export default function MyTerritoriesPanel() {
         listRequestRef.current = null
         setListLoading(false)
       }
+    }
+  }
+
+  // 認領:先 dryRun 預覽可認領/被略過筆數,使用者確認後才真正寫入。
+  // 伺服器端 claimTerritoryCustomers 會逐筆重驗轄區與「負責業務空白」,不會蓋掉別人的客戶。
+  const claimChecked = async () => {
+    const territoryId = listDialog?.area?.id
+    if (!territoryId || checked.size === 0) return
+    setClaiming(true)
+    setClaimError('')
+    setClaimDone('')
+    try {
+      const customerIds = Array.from(checked)
+      const preview = await fetch(`/api/territories/${territoryId}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds, dryRun: true }),
+      })
+      const previewJson = await preview.json()
+      if (!preview.ok) throw new Error(previewJson.error || '認領預覽失敗')
+      const willClaim = previewJson.eligible?.length ?? 0
+      const willSkip = previewJson.skipped?.length ?? 0
+      if (willClaim === 0) {
+        setClaimError(`勾選的 ${customerIds.length} 家都無法認領${willSkip ? `（${previewJson.skipped[0]?.reason ?? ''}）` : ''}`)
+        return
+      }
+      const skipNote = willSkip ? `\n（另有 ${willSkip} 家不符合條件會自動略過）` : ''
+      if (!window.confirm(`確定認領 ${willClaim} 家客戶到你名下？${skipNote}\n\n認領後這些客戶的「負責業務」會寫入你的名字。`)) return
+      const response = await fetch(`/api/territories/${territoryId}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerIds, dryRun: false }),
+      })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '認領失敗')
+      setClaimDone(`已認領 ${json.claimed} 家客戶${json.skipped?.length ? `，略過 ${json.skipped.length} 家` : ''}`)
+      setChecked(new Set())
+      // 重新整理可認領池(已認領的會消失)
+      setListItems((prev) => prev.filter((item) => !customerIds.includes(item.id) ||
+        json.skipped?.some((skip: { id: string }) => skip.id === item.id)))
+    } catch (caught: any) {
+      setClaimError(caught.message)
+    } finally {
+      setClaiming(false)
     }
   }
 
@@ -217,7 +271,7 @@ export default function MyTerritoriesPanel() {
           <>
             <div className="mt-5 flex items-end justify-between"><p className="text-sm text-stone-500">{visible.length} 個行政區</p><p className="text-sm text-stone-500">{type || '全部類型'}市場 <b className="text-xl text-brand-700">{total.toLocaleString()}</b> 家</p></div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {visible.map((territory) => <article key={territory.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || '全部市場'}</p></div></div><button onClick={() => openList('territories', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-3.5" />{scope === 'team' ? `查看 ${territory.salesperson} 客戶` : '查看我的客戶'}</button></article>)}
+              {visible.map((territory) => <article key={territory.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || '全部市場'}</p></div></div><button onClick={() => openList('territories', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-3.5" />{scope === 'team' ? `查看 ${territory.salesperson} 客戶` : '查看我的客戶'}</button>{scope === 'mine' && canClaim && <button onClick={() => openList('claimable', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95"><UserPlus className="size-3.5" />認領此區客戶</button>}</article>)}
             </div>
           </>
         )}
@@ -228,8 +282,8 @@ export default function MyTerritoriesPanel() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-stone-950/30 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="customer-list-title" onMouseDown={(event) => { if (event.target === event.currentTarget) closeList() }}>
           <section className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-stone-900/[0.08] sm:rounded-3xl">
             <header className="flex items-start gap-3 border-b border-stone-900/[0.06] px-5 py-4 sm:px-6">
-              <div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">客戶清單</p><h2 id="customer-list-title" className="mt-1 text-xl font-bold text-stone-800">{listDialog.area ? `${listDialog.area.city}${listDialog.area.district}｜${listDialog.area.salesperson}` : listDialog.scope === 'customers' ? '我的既有客戶' : '我的全部轄區'}</h2><p className="mt-1 text-sm text-stone-400">{listDialog.area ? `只顯示 ${listDialog.area.salesperson} 名下的客戶` : '只顯示你名下的客戶'}，共 {visibleListItems.length.toLocaleString()} 家。</p></div>
-              {scope === 'mine' && accountId && (
+              <div className="min-w-0 flex-1"><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{listDialog.scope === 'claimable' ? '可認領客戶' : '客戶清單'}</p><h2 id="customer-list-title" className="mt-1 text-xl font-bold text-stone-800">{listDialog.scope === 'claimable' ? `${listDialog.area?.city ?? ''}${listDialog.area?.district ?? ''}｜尚未有人負責` : listDialog.area ? `${listDialog.area.city}${listDialog.area.district}｜${listDialog.area.salesperson}` : listDialog.scope === 'customers' ? '我的既有客戶' : '我的全部轄區'}</h2><p className="mt-1 text-sm text-stone-400">{listDialog.scope === 'claimable' ? '勾選後認領到你名下；已有人負責的客戶不會出現在這裡' : listDialog.area ? `只顯示 ${listDialog.area.salesperson} 名下的客戶` : '只顯示你名下的客戶'}，共 {visibleListItems.length.toLocaleString()} 家。</p></div>
+              {scope === 'mine' && accountId && listDialog.scope !== 'claimable' && (
                 <Link
                   href={`/bd/salespersons/${accountId}/report?scope=${listDialog.scope}${listType ? `&type=${encodeURIComponent(listType)}` : ''}`}
                   className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 text-xs font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95"
@@ -243,8 +297,36 @@ export default function MyTerritoriesPanel() {
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
               {listLoading && <div className="py-12 text-center text-sm text-stone-400">正在整理客戶清單…</div>}
               {listError && <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-600">{listError}</div>}
-              {!listLoading && !listError && <div className="space-y-2">{visibleListItems.map((item) => <article key={item.id} className="rounded-2xl bg-stone-50/80 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="font-bold text-stone-800">{item.name}</h3><p className="mt-1 text-xs text-stone-400">{item.city || '未填縣市'}{item.district || ''}</p></div><span className="chip shrink-0 text-[11px]">{item.type || '未分類'}</span></div><div className="mt-3 flex flex-wrap gap-2 text-[11px] text-stone-500"><span className="rounded-full bg-white px-2.5 py-1">{item.status || '狀態未標示'}</span><span className="rounded-full bg-white px-2.5 py-1">{item.devStage || '尚未設定階段'}</span><span className="rounded-full bg-white px-2.5 py-1">{item.salesperson || '尚未認領'}</span></div><button onClick={() => toggleDetail(item.id)} className="mt-3 flex min-h-10 w-full items-center justify-center rounded-full bg-white px-3 py-2 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:bg-brand-50 active:scale-95">{detailId === item.id ? '收起詳細資料' : '查看詳細資料'}</button>{detailId === item.id && <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.05]">{detailLoading && <p className="py-4 text-center text-xs text-stone-400">讀取詳細資料…</p>}{detailError && <p className="rounded-xl bg-red-50 p-3 text-xs text-red-600">{detailError}</p>}{detail && <div className="space-y-3 text-sm"><div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">內部機密</p><p className="mt-1 text-stone-700">{detail.address || '未填寫地址'}</p><p className="mt-1 font-semibold text-stone-800">{detail.phone || '未填寫電話'}</p></div><div className="grid grid-cols-3 gap-2"><SmallDetail label="牙醫師" value={detail.dentistCount} /><SmallDetail label="技術師" value={detail.technicianCount} /><SmallDetail label="技術生" value={detail.technicianTraineeCount} /></div><p className="text-xs text-stone-400">僅限負責業務與授權主管使用。</p></div>}</div>}</article>)}{visibleListItems.length === 0 && <div className="py-12 text-center text-sm text-stone-400">此條件下沒有客戶</div>}</div>}
+              {!listLoading && !listError && <div className="space-y-2">{visibleListItems.map((item) => <article key={item.id} className="rounded-2xl bg-stone-50/80 p-4"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3">{listDialog.scope === 'claimable' && <input type="checkbox" checked={checked.has(item.id)} onChange={(event) => setChecked((prev) => { const next = new Set(prev); if (event.target.checked) next.add(item.id); else next.delete(item.id); return next })} className="mt-1 size-4 shrink-0 accent-[#b8956a]" aria-label={`選擇 ${item.name}`} />}<div className="min-w-0"><h3 className="font-bold text-stone-800">{item.name}</h3><p className="mt-1 text-xs text-stone-400">{item.city || '未填縣市'}{item.district || ''}</p></div></div><span className="chip shrink-0 text-[11px]">{item.type || '未分類'}</span></div><div className="mt-3 flex flex-wrap gap-2 text-[11px] text-stone-500"><span className="rounded-full bg-white px-2.5 py-1">{item.status || '狀態未標示'}</span><span className="rounded-full bg-white px-2.5 py-1">{item.devStage || '尚未設定階段'}</span><span className="rounded-full bg-white px-2.5 py-1">{item.salesperson || '尚未認領'}</span></div>{/* 尚未認領的客戶不開放看地址/電話(內部機密,customer-detail 也只放行名下客戶);
+    認領後即可查看 */}
+{listDialog.scope !== 'claimable' && <button onClick={() => toggleDetail(item.id)} className="mt-3 flex min-h-10 w-full items-center justify-center rounded-full bg-white px-3 py-2 text-xs font-semibold text-brand-700 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:bg-brand-50 active:scale-95">{detailId === item.id ? '收起詳細資料' : '查看詳細資料'}</button>}{detailId === item.id && <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.05]">{detailLoading && <p className="py-4 text-center text-xs text-stone-400">讀取詳細資料…</p>}{detailError && <p className="rounded-xl bg-red-50 p-3 text-xs text-red-600">{detailError}</p>}{detail && <div className="space-y-3 text-sm"><div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">內部機密</p><p className="mt-1 text-stone-700">{detail.address || '未填寫地址'}</p><p className="mt-1 font-semibold text-stone-800">{detail.phone || '未填寫電話'}</p></div><div className="grid grid-cols-3 gap-2"><SmallDetail label="牙醫師" value={detail.dentistCount} /><SmallDetail label="技術師" value={detail.technicianCount} /><SmallDetail label="技術生" value={detail.technicianTraineeCount} /></div><p className="text-xs text-stone-400">僅限負責業務與授權主管使用。</p></div>}</div>}</article>)}{visibleListItems.length === 0 && <div className="py-12 text-center text-sm text-stone-400">{listDialog.scope === 'claimable' ? '此區目前沒有可認領的客戶' : '此條件下沒有客戶'}</div>}</div>}
             </div>
+            {listDialog.scope === 'claimable' && (
+              <footer className="border-t border-stone-900/[0.06] px-5 py-4 sm:px-6">
+                {claimError && <p className="mb-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{claimError}</p>}
+                {claimDone && <p className="mb-3 rounded-2xl bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700">{claimDone}</p>}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setChecked((prev) => prev.size === visibleListItems.length ? new Set() : new Set(visibleListItems.map((item) => item.id)))}
+                      disabled={visibleListItems.length === 0}
+                      className="min-h-11 rounded-full bg-stone-50 px-4 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-100 active:scale-95 disabled:opacity-40"
+                    >
+                      {checked.size === visibleListItems.length && visibleListItems.length > 0 ? '取消全選' : '全選'}
+                    </button>
+                    <span className="text-sm text-stone-500">已選 <b className="text-brand-700">{checked.size}</b> 家</span>
+                  </div>
+                  <button
+                    onClick={claimChecked}
+                    disabled={claiming || checked.size === 0}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand-500 px-6 text-sm font-bold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40"
+                  >
+                    <UserPlus className="size-4" />{claiming ? '認領中…' : '認領所選客戶'}
+                  </button>
+                </div>
+                <p className="mt-3 text-xs text-stone-400">認領會把這些客戶的「負責業務」寫成你的名字；已有人負責的客戶不會被更動。</p>
+              </footer>
+            )}
           </section>
         </div>
       )}

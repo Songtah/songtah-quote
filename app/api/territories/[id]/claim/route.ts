@@ -14,7 +14,15 @@ function canAccess(session: any, salespersonId: string) {
     user?.accountType === '總經理' || (!!salespersonId && user?.id === salespersonId)
 }
 
-export const POST = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'edit' }, async (req: NextRequest, { params }, session) => {
+// 進入權限:業務本人(bd:edit,從業務開發頁自助認領)或主管(clinic_monitor:edit,從轄區管理頁)。
+// 能動哪些資料仍由下方 canAccess(只限自己轄區)與 claimTerritoryCustomers(逐筆重驗、
+// 只寫負責業務空白者)把關,放寬入口不等於放寬可寫範圍。
+export const POST = withApiAuth<Ctx>({
+  anyOf: [
+    { module: 'bd', action: 'edit' },
+    { module: 'clinic_monitor', action: 'edit' },
+  ],
+}, async (req: NextRequest, { params }, session) => {
   try {
     const territory = await getTerritory(params.id)
     if (!canAccess(session, territory.salespersonId)) {
