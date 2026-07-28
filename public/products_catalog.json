@@ -50953,6 +50953,16 @@
   "categoryId": "ceramic-material"
  },
  {
+  "code": "ZZ-02-1",
+  "name": "Sinter Oven 600型 強化爐(230V)",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "燒結爐",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "sintering-furnace"
+ },
+ {
   "code": "ZZ-46-02-1",
   "name": "Prettau Color Liquid Tissue A (20ml)",
   "brand": "Zirkonzahn",
@@ -52383,6 +52393,16 @@
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
   "categoryId": "zirconia-blank"
+ },
+ {
+  "code": "ZZ-999-010-2",
+  "name": "Scanner S300 掃描機",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "掃描儀",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "scanner"
  },
  {
   "code": "ZZ-999-010-6-0.3C",
@@ -60188,6 +60208,166 @@
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
   "categoryId": "dental-instrument"
+ },
+ {
+  "code": "ZZ-SYAA0620",
+  "name": "Zirkonfen 600/V3 強化爐 (230V)",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "燒結爐",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "sintering-furnace"
+ },
+ {
+  "code": "ZZ-SYAA0621",
+  "name": "Zirkonfen 600/V3 強化爐 (120V)",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "燒結爐",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "sintering-furnace"
+ },
+ {
+  "code": "ZZ-SYAB0100",
+  "name": "M6 Teleskoper Blank Changer milling unit",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0250",
+  "name": "Milling Unit M4 Wet Heavy Metal",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0350",
+  "name": "Milling Unit M1 Soft",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0352",
+  "name": "Milling Unit M1 Soft 98mm",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0370",
+  "name": "Milling Unit M1 Wet Heavy Metal",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0372",
+  "name": "Milling Unit M1 Wet Heavy Metal 98mm",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0380",
+  "name": "Milling Unit M1 Wet",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0600",
+  "name": "Scanner S300 ARTI 掃描機",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "掃描儀",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "scanner"
+ },
+ {
+  "code": "ZZ-SYAB0720",
+  "name": "Milling Unit M2 Teleskoper",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0750",
+  "name": "Milling Unit M2-Touch Dual Wet Heavy Metal",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0770",
+  "name": "Milling Unit M2 Dual Double Teleskoper",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "車機／研磨機",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "milling-machine"
+ },
+ {
+  "code": "ZZ-SYAB0830",
+  "name": "Sinterofen 300S 燒結爐 230V",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "燒結爐",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "sintering-furnace"
+ },
+ {
+  "code": "ZZ-SYAB0850",
+  "name": "Zirkonofen Turbo 快速燒結爐 230V",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "燒結爐",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "sintering-furnace"
+ },
+ {
+  "code": "ZZ-SYAB0910",
+  "name": "Scanner S900 ARTI 掃描機",
+  "brand": "Zirkonzahn",
+  "productType": "設備",
+  "category": "掃描儀",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "scanner"
  },
  {
   "code": "ZZ-TMAE0116",
