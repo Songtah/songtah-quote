@@ -22,6 +22,8 @@ type CatalogPick = {
   category: string
   price: number | null
   salePrice: number | null
+  /** 產品圖(存於 Notion 產品資料庫,由 SKU→圖片索引帶出);無圖為空字串 */
+  imageUrl: string
 }
 
 /** 有效售價:優惠價 > 目錄價;與 OrderForm 同一套取法。 */
@@ -53,7 +55,7 @@ function createItemFromProduct(product: CatalogPick): DraftItem {
     quantity: 1,
     subtotal: unitPrice,
     note: '',
-    imageUrl: '',
+    imageUrl: product.imageUrl || '',
     isCustom: false,
   }
 }
@@ -554,10 +556,10 @@ export default function QuoteForm({ onCreated, onClose }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-stone-50 sticky top-0 text-xs text-stone-500">
               <tr>
+                <th className="px-3 py-2 text-left">產品圖</th>
                 <th className="px-3 py-2 text-left">品名／貨號</th>
                 <th className="px-3 py-2 text-left">品牌</th>
                 <th className="px-3 py-2 text-left">型態</th>
-                <th className="px-3 py-2 text-left">分類</th>
                 <th className="px-3 py-2 text-right">售價</th>
                 <th className="px-3 py-2 text-center">加入</th>
               </tr>
@@ -577,12 +579,25 @@ export default function QuoteForm({ onCreated, onClose }: Props) {
                 return (
                 <tr key={product.skuCode} className="hover:bg-brand-50/50">
                   <td className="px-3 py-2">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        loading="lazy"
+                        className="h-12 w-12 rounded-lg border border-stone-200 bg-white object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50 text-[10px] text-stone-400">
+                        無圖
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
                     <div className="font-medium">{product.name}</div>
                     <div className="text-xs text-stone-400">{product.skuCode}</div>
                   </td>
                   <td className="px-3 py-2 text-stone-500">{product.manufacturer || '—'}</td>
                   <td className="px-3 py-2 text-stone-500">{product.productType || '—'}</td>
-                  <td className="px-3 py-2 text-stone-500">{product.category || '—'}</td>
                   <td className="px-3 py-2 text-right font-medium">
                     {price != null
                       ? formatMoney(price)
