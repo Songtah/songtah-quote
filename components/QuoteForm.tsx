@@ -1,15 +1,32 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Customer, Product, QuoteItem } from '@/types'
+import type { Customer, QuoteItem } from '@/types'
 
 interface Props {
-  /** Pass server-fetched products to skip the client-side fetch */
-  products?: Product[]
   /** Called immediately after the quote is created (e.g. to refresh a list) */
   onCreated?: (result: { shareUrl: string; id: string; quoteNumber: string }) => void
   /** Called when the user wants to close/cancel (e.g. to close a drawer) */
   onClose?: () => void
+}
+
+/**
+ * 產品資料庫(products_catalog.json)的選品結果。
+ * 與訂貨頁共用 /api/products/search,價格已套用中央售價覆寫。
+ */
+type CatalogPick = {
+  skuCode: string
+  name: string
+  manufacturer: string
+  productType: string
+  category: string
+  price: number | null
+  salePrice: number | null
+}
+
+/** 有效售價:優惠價 > 目錄價;與 OrderForm 同一套取法。 */
+function effectivePrice(product: CatalogPick): number | null {
+  return product.salePrice ?? product.price ?? null
 }
 
 type DraftItem = QuoteItem & { tempId: string }
@@ -22,21 +39,21 @@ function createTempId() {
   return Math.random().toString(36).slice(2)
 }
 
-function createItemFromProduct(product: Product): DraftItem {
-  const unitPrice = product.price ?? 0
+function createItemFromProduct(product: CatalogPick): DraftItem {
+  const unitPrice = effectivePrice(product) ?? 0
   return {
     tempId: createTempId(),
-    productId: product.id,
+    productId: product.skuCode,
     name: product.name,
-    brand: product.brand,
+    brand: product.manufacturer,
     category: product.category,
-    spec: product.spec,
-    unit: product.unit || '個',
+    spec: product.productType,
+    unit: '個',
     unitPrice,
     quantity: 1,
     subtotal: unitPrice,
     note: '',
-    imageUrl: product.imageUrl || '',
+    imageUrl: '',
     isCustom: false,
   }
 }
@@ -59,22 +76,17 @@ function createCustomItem(): DraftItem {
   }
 }
 
-export default function QuoteForm({ products: productsProp, onCreated, onClose }: Props) {
+export default function QuoteForm({ onCreated, onClose }: Props) {
   const router = useRouter()
   const detailSectionRef = useRef<HTMLDivElement | null>(null)
   const latestAddedItemRef = useRef<HTMLDivElement | null>(null)
 
-  // ── Product loading (client-side fetch when prop not provided) ─
-  const [products, setProducts] = useState<Product[]>(productsProp ?? [])
-  const [productsLoading, setProductsLoading] = useState(!productsProp)
-  useEffect(() => {
-    if (productsProp) return
-    fetch('/api/products')
-      .then((r) => r.json())
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setProductsLoading(false))
-  }, [productsProp])
+  // ── 選品:與訂貨頁共用產品資料庫(/api/products/search) ─────────
+  // 目錄有 6,000+ 品項,不可一次全載,改為伺服器端搜尋 + debounce。
+  const [products, setProducts] = useState<CatalogPick[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [brands, setBrands] = useState<string[]>([])
+  const [categories, setCategories] = useState<string[]>([])
 
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
@@ -140,22 +152,47 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
   const [highlightedItemId, setHighlightedItemId] = useState('')
   const [expandedItemIds, setExpandedItemIds] = useState<string[]>([])
 
-  const brands = Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort()
-  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort()
+  // 品牌/品類選項來自整份目錄(非當前搜尋結果),避免選項隨搜尋忽有忽無
+  useEffect(() => {
+    fetch('/api/products/options')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return
+        setBrands(Array.isArray(data.brands) ? data.brands : [])
+        setCategories(Array.isArray(data.categories) ? data.categories : [])
+      })
+      .catch(() => {})
+  }, [])
 
-  const filteredProducts = products.filter((product) => {
-    const q = productQuery.toLowerCase()
-    const matchQuery =
-      !q ||
-      product.name.toLowerCase().includes(q) ||
-      product.spec.toLowerCase().includes(q) ||
-      product.brand.toLowerCase().includes(q)
-    const matchBrand = !brandFilter || product.brand === brandFilter
-    const matchCat = !categoryFilter || product.category === categoryFilter
-    return matchQuery && matchBrand && matchCat
-  })
+  // 搜尋結果:debounce 250ms,並以 AbortController 取消過期請求
+  useEffect(() => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      setProductsLoading(true)
+      const params = new URLSearchParams()
+      if (productQuery.trim()) params.set('q', productQuery.trim())
+      if (brandFilter) params.set('brand', brandFilter)
+      if (categoryFilter) params.set('category', categoryFilter)
+      params.set('limit', '100')
+      fetch(`/api/products/search?${params}`, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => setProducts(Array.isArray(data) ? data : []))
+        .catch((error) => {
+          if (error?.name !== 'AbortError') setProducts([])
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setProductsLoading(false)
+        })
+    }, 250)
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [productQuery, brandFilter, categoryFilter])
 
-  function addProduct(product: Product) {
+  const filteredProducts = products
+
+  function addProduct(product: CatalogPick) {
     const newItem = createItemFromProduct(product)
     setItems((prev) => [...prev, newItem])
     setExpandedItemIds((prev) => [...prev, newItem.tempId])
@@ -512,16 +549,16 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
 
         <div className="max-h-72 overflow-y-auto border border-stone-100 rounded-xl">
           {productsLoading ? (
-            <div className="py-8 text-center text-sm text-stone-400">載入產品清單中…</div>
+            <div className="py-8 text-center text-sm text-stone-400">搜尋產品資料庫中…</div>
           ) : (
           <table className="w-full text-sm">
             <thead className="bg-stone-50 sticky top-0 text-xs text-stone-500">
               <tr>
-                <th className="px-3 py-2 text-left">品名</th>
+                <th className="px-3 py-2 text-left">品名／貨號</th>
                 <th className="px-3 py-2 text-left">品牌</th>
-                <th className="px-3 py-2 text-left">規格</th>
-                <th className="px-3 py-2 text-left">產品圖</th>
-                <th className="px-3 py-2 text-right">定價</th>
+                <th className="px-3 py-2 text-left">型態</th>
+                <th className="px-3 py-2 text-left">分類</th>
+                <th className="px-3 py-2 text-right">售價</th>
                 <th className="px-3 py-2 text-center">加入</th>
               </tr>
             </thead>
@@ -529,29 +566,27 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               {filteredProducts.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-stone-400">
-                    無符合的產品
+                    {productQuery || brandFilter || categoryFilter
+                      ? '產品資料庫中沒有符合的品項'
+                      : '輸入關鍵字或選擇品牌／分類以搜尋產品'}
                   </td>
                 </tr>
               )}
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-brand-50/50">
+              {filteredProducts.map((product) => {
+                const price = effectivePrice(product)
+                return (
+                <tr key={product.skuCode} className="hover:bg-brand-50/50">
                   <td className="px-3 py-2">
                     <div className="font-medium">{product.name}</div>
-                    {product.series && <div className="text-xs text-stone-400">{product.series}</div>}
+                    <div className="text-xs text-stone-400">{product.skuCode}</div>
                   </td>
-                  <td className="px-3 py-2 text-stone-500">{product.brand}</td>
-                  <td className="px-3 py-2 text-stone-500">{product.spec || '—'}</td>
-                  <td className="px-3 py-2">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-lg object-cover border border-stone-200" />
-                    ) : (
-                      <div className="h-12 w-12 rounded-lg border border-dashed border-stone-300 bg-stone-50 flex items-center justify-center text-[10px] text-stone-400">
-                        預留圖
-                      </div>
-                    )}
-                  </td>
+                  <td className="px-3 py-2 text-stone-500">{product.manufacturer || '—'}</td>
+                  <td className="px-3 py-2 text-stone-500">{product.productType || '—'}</td>
+                  <td className="px-3 py-2 text-stone-500">{product.category || '—'}</td>
                   <td className="px-3 py-2 text-right font-medium">
-                    {product.price != null ? formatMoney(product.price) : <span className="text-stone-400">—</span>}
+                    {price != null
+                      ? formatMoney(price)
+                      : <span className="text-stone-400">待定價</span>}
                   </td>
                   <td className="px-3 py-2 text-center">
                     <button
@@ -563,7 +598,8 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                     </button>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
           )}
