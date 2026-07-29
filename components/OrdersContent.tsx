@@ -6,7 +6,7 @@ import Link from 'next/link'
 import type { Order } from '@/lib/orders-notion'
 
 const STATUS_COLOR: Record<string, string> = {
-  草稿:   'bg-gray-100 text-gray-600',
+  草稿:   'bg-stone-100 text-stone-600',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
   已到貨: 'bg-brand-50 text-green-700',
@@ -102,7 +102,7 @@ export default function OrdersContent() {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-stone-400">
             共 {filtered.length} 筆
             {hasDisplayMore && <span className="ml-1 text-amber-500">（顯示前 {displayLimit} 筆）</span>}
           </span>
@@ -111,9 +111,9 @@ export default function OrdersContent() {
 
       {/* Content */}
       {loading ? (
-        <div className="text-center text-gray-400 py-16">載入中...</div>
+        <div className="text-center text-stone-400 py-16">載入中...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center text-gray-400 py-16">
+        <div className="text-center text-stone-400 py-16">
           <div className="text-3xl mb-2">📋</div>
           <div className="text-sm">尚無訂貨單，點擊右上角新增</div>
         </div>
@@ -135,7 +135,7 @@ export default function OrdersContent() {
                     value={order.status}
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}
                     disabled={updatingId === order.id}
-                    className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                    className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-stone-100 text-stone-600'}`}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>{s}</option>
@@ -143,7 +143,7 @@ export default function OrdersContent() {
                   </select>
                 </div>
                 {/* Meta info */}
-                <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                <div className="text-xs text-stone-500 flex flex-wrap gap-x-4 gap-y-1">
                   <span>📅 {order.date}</span>
                   <span>👤 {order.salesperson}</span>
                   {order.items.length > 0 && (
@@ -151,7 +151,7 @@ export default function OrdersContent() {
                   )}
                 </div>
                 {order.note && (
-                  <p className="text-xs text-gray-400 truncate">備註：{order.note}</p>
+                  <p className="text-xs text-stone-400 truncate">備註：{order.note}</p>
                 )}
                 {/* Actions */}
                 <div className="flex items-center gap-3 pt-3 border-t border-stone-900/[0.06]">
@@ -163,7 +163,7 @@ export default function OrdersContent() {
                   </Link>
                   {confirmDeleteId === order.id ? (
                     <span className="flex items-center gap-2 ml-auto">
-                      <span className="text-xs text-gray-500">確定刪除？</span>
+                      <span className="text-xs text-stone-500">確定刪除？</span>
                       <button
                         onClick={() => handleDelete(order.id)}
                         disabled={deletingId === order.id}
@@ -173,7 +173,7 @@ export default function OrdersContent() {
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs text-gray-400"
+                        className="text-xs text-stone-400"
                       >
                         取消
                       </button>
@@ -182,7 +182,7 @@ export default function OrdersContent() {
                     <button
                       onClick={() => setConfirmDeleteId(order.id)}
                       disabled={deletingId === order.id}
-                      className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50 ml-auto"
+                      className="text-xs text-stone-300 hover:text-red-400 transition-colors disabled:opacity-50 ml-auto"
                     >
                       刪除
                     </button>
@@ -218,9 +218,9 @@ export default function OrdersContent() {
                           {order.orderNumber || '—'}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{order.date}</td>
-                      <td className="px-4 py-3 text-gray-700">{order.salesperson}</td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{order.date}</td>
+                      <td className="px-4 py-3 text-stone-700">{order.salesperson}</td>
+                      <td className="px-4 py-3 text-stone-500">
                         {order.items.length > 0 ? (
                           <span>
                             {order.items.length} 種・
@@ -228,13 +228,13 @@ export default function OrdersContent() {
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{order.note || '—'}</td>
+                      <td className="px-4 py-3 text-stone-500 max-w-[160px] truncate">{order.note || '—'}</td>
                       <td className="px-4 py-3 text-center">
                         <select
                           value={order.status}
                           onChange={(e) => handleStatusChange(order.id, e.target.value)}
                           disabled={updatingId === order.id}
-                          className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-gray-100 text-gray-600'}`}
+                          className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer focus:outline-none ${STATUS_COLOR[order.status] ?? 'bg-stone-100 text-stone-600'}`}
                         >
                           {STATUS_OPTIONS.map((s) => (
                             <option key={s} value={s}>{s}</option>
@@ -251,7 +251,7 @@ export default function OrdersContent() {
                           </Link>
                           {confirmDeleteId === order.id ? (
                             <span className="flex items-center gap-1.5">
-                              <span className="text-xs text-gray-500">確定刪除？</span>
+                              <span className="text-xs text-stone-500">確定刪除？</span>
                               <button
                                 onClick={() => handleDelete(order.id)}
                                 disabled={deletingId === order.id}
@@ -261,7 +261,7 @@ export default function OrdersContent() {
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs text-gray-400 hover:text-gray-600"
+                                className="text-xs text-stone-400 hover:text-stone-600"
                               >
                                 取消
                               </button>
@@ -270,7 +270,7 @@ export default function OrdersContent() {
                             <button
                               onClick={() => setConfirmDeleteId(order.id)}
                               disabled={deletingId === order.id}
-                              className="text-xs text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50"
+                              className="text-xs text-stone-300 hover:text-red-400 transition-colors disabled:opacity-50"
                             >
                               刪除
                             </button>

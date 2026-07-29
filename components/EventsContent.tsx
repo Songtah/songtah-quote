@@ -8,7 +8,7 @@ const EVENT_TYPES = ['研討會', '產品發表', '培訓', '展覽', '其他']
 const EVENT_STATUSES = ['籌備中', '開放報名', '已結束']
 
 const STATUS_STYLE: Record<string, string> = {
-  '籌備中': 'bg-gray-100 text-gray-600',
+  '籌備中': 'bg-stone-100 text-stone-600',
   '開放報名': 'bg-brand-50 text-green-700',
   '已結束': 'bg-red-100 text-red-600',
 }
@@ -18,7 +18,7 @@ const TYPE_STYLE: Record<string, string> = {
   '產品發表': 'bg-purple-50 text-purple-700',
   '培訓': 'bg-brand-50 text-emerald-700',
   '展覽': 'bg-orange-50 text-orange-700',
-  '其他': 'bg-gray-50 text-gray-600',
+  '其他': 'bg-stone-50 text-stone-600',
 }
 
 type FormState = {
@@ -174,7 +174,7 @@ export function EventsContent() {
               className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 filter === s
                   ? 'bg-brand-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
               }`}
             >
               {s}
@@ -218,10 +218,10 @@ export function EventsContent() {
 
               <Link href={`/events/${ev.id}`} className="block p-5">
                 <div className="flex items-start justify-between gap-2 mb-3 pr-16">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_STYLE[ev.type] ?? 'bg-gray-50 text-gray-600'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_STYLE[ev.type] ?? 'bg-stone-50 text-stone-600'}`}>
                     {ev.type || '未分類'}
                   </span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[ev.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[ev.status] ?? 'bg-stone-100 text-stone-600'}`}>
                     {ev.status}
                   </span>
                 </div>
@@ -272,7 +272,7 @@ export function EventsContent() {
               <button
                 type="button"
                 onClick={() => { setShowForm(false); setEditId(null) }}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                className="text-stone-400 hover:text-stone-600 text-xl leading-none"
               >✕</button>
             </div>
 
@@ -367,7 +367,7 @@ export function EventsContent() {
             <div>
               <label className="label">關聯追蹤名單（選填）</label>
               {campaignOptions.length === 0 ? (
-                <p className="text-xs text-gray-400">目前沒有可選的追蹤名單</p>
+                <p className="text-xs text-stone-400">目前沒有可選的追蹤名單</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
                   {campaignOptions.map((c) => {

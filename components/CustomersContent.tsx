@@ -62,7 +62,7 @@ const STATUS_STYLE: Record<string, string> = {
 }
 function statusBadge(status: string) {
   if (!status || status === '正常' || status === '正常營業') return null
-  const cls = STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'
+  const cls = STATUS_STYLE[status] ?? 'bg-stone-100 text-stone-500 border border-stone-200'
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>{status}</span>
 }
 
@@ -395,7 +395,7 @@ function CustomerRow({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-stone-800 truncate">{customer.name}</span>
           {customer.type && (
-            <span className="shrink-0 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+            <span className="shrink-0 text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
               {customer.type}
             </span>
           )}
@@ -403,12 +403,12 @@ function CustomerRow({
         </div>
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
           {(customer.city || customer.district) && (
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-stone-400">
               {[customer.city, customer.district].filter(Boolean).join('・')}
             </span>
           )}
           {customer.salesperson && (
-            <span className="text-sm text-gray-400 hidden sm:inline">
+            <span className="text-sm text-stone-400 hidden sm:inline">
               業務：{customer.salesperson}
             </span>
           )}
@@ -434,7 +434,7 @@ function CustomerRow({
         <button
           onClick={onNavigate}
           tabIndex={-1}
-          className="text-gray-300 group-hover:text-gray-500 transition-colors"
+          className="text-stone-300 group-hover:text-stone-500 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -490,7 +490,7 @@ function FilterSelect({
         ))}
       </select>
       <svg
-        className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${value ? 'text-white' : 'text-gray-400'}`}
+        className={`absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${value ? 'text-white' : 'text-stone-400'}`}
         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -504,10 +504,10 @@ function LoadingSkeleton() {
     <div className="card-soft divide-y divide-stone-900/[0.06] overflow-hidden">
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-          <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse shrink-0" />
+          <div className="w-9 h-9 rounded-full bg-stone-100 animate-pulse shrink-0" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-gray-100 rounded animate-pulse w-2/5" />
-            <div className="h-3 bg-gray-50 rounded animate-pulse w-1/3" />
+            <div className="h-4 bg-stone-100 rounded animate-pulse w-2/5" />
+            <div className="h-3 bg-stone-50 rounded animate-pulse w-1/3" />
           </div>
         </div>
       ))}
@@ -519,7 +519,7 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
   return (
     <div className="card-soft px-6 py-16 text-center">
       <div className="text-3xl mb-3">{hasFilter ? '🔍' : '📋'}</div>
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-stone-400">
         {hasFilter ? '找不到符合條件的客戶' : '尚無客戶資料'}
       </p>
     </div>

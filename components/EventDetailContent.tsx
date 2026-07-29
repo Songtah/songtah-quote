@@ -11,7 +11,7 @@ const STATUS_STYLE: Record<string, string> = {
 }
 
 const EVENT_STATUS_STYLE: Record<string, string> = {
-  '籌備中': 'bg-gray-100 text-gray-600',
+  '籌備中': 'bg-stone-100 text-stone-600',
   '開放報名': 'bg-brand-50 text-green-700',
   '已結束': 'bg-red-100 text-red-600',
 }
@@ -21,7 +21,7 @@ const TYPE_STYLE: Record<string, string> = {
   '產品發表': 'bg-purple-50 text-purple-700',
   '培訓': 'bg-brand-50 text-emerald-700',
   '展覽': 'bg-orange-50 text-orange-700',
-  '其他': 'bg-gray-50 text-gray-600',
+  '其他': 'bg-stone-50 text-stone-600',
 }
 
 export function EventDetailContent({ id }: { id: string }) {
@@ -81,10 +81,10 @@ export function EventDetailContent({ id }: { id: string }) {
       <div className="card-soft p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div className="flex gap-2 flex-wrap">
-            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${TYPE_STYLE[event.type] ?? 'bg-gray-50 text-gray-600'}`}>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${TYPE_STYLE[event.type] ?? 'bg-stone-50 text-stone-600'}`}>
               {event.type || '未分類'}
             </span>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${EVENT_STATUS_STYLE[event.status] ?? 'bg-gray-100 text-gray-600'}`}>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${EVENT_STATUS_STYLE[event.status] ?? 'bg-stone-100 text-stone-600'}`}>
               {event.status}
             </span>
           </div>
@@ -115,7 +115,7 @@ export function EventDetailContent({ id }: { id: string }) {
         </div>
 
         {event.description && (
-          <p className="mt-4 text-sm text-gray-500 border-t border-gray-100 pt-4">
+          <p className="mt-4 text-sm text-stone-500 border-t border-stone-100 pt-4">
             {event.description}
           </p>
         )}
@@ -124,14 +124,14 @@ export function EventDetailContent({ id }: { id: string }) {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: '報名總數', value: regs.length, color: 'text-gray-900' },
+          { label: '報名總數', value: regs.length, color: 'text-stone-900' },
           { label: '已確認', value: confirmed.length, color: 'text-green-600' },
           { label: '待確認', value: pending.length, color: 'text-blue-600' },
           { label: '預計出席人數', value: totalAttendees, color: 'text-purple-600' },
         ].map(s => (
           <div key={s.label} className="card-soft p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+            <p className="text-xs text-stone-500 mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -140,14 +140,14 @@ export function EventDetailContent({ id }: { id: string }) {
       {courseCost && (
         <div className="card-soft p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">💰 課程成本試算</h3>
+            <h3 className="font-semibold text-stone-900">💰 課程成本試算</h3>
             <Link href="/course-costs" className="text-xs text-brand-600 hover:underline">查看明細 →</Link>
           </div>
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div><p className="text-xs text-gray-400">總成本</p><p className="font-semibold text-red-600">${courseCost.totalCost.toLocaleString()}</p></div>
-            <div><p className="text-xs text-gray-400">總收入</p><p className="font-semibold text-blue-600">${courseCost.totalRevenue.toLocaleString()}</p></div>
+            <div><p className="text-xs text-stone-400">總成本</p><p className="font-semibold text-red-600">${courseCost.totalCost.toLocaleString()}</p></div>
+            <div><p className="text-xs text-stone-400">總收入</p><p className="font-semibold text-blue-600">${courseCost.totalRevenue.toLocaleString()}</p></div>
             <div>
-              <p className="text-xs text-gray-400">淨利</p>
+              <p className="text-xs text-stone-400">淨利</p>
               <p className={`font-semibold ${courseCost.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ${courseCost.netProfit.toLocaleString()}{courseCost.marginPct ? ` (${courseCost.marginPct.toFixed(1)}%)` : ''}
               </p>
@@ -158,13 +158,13 @@ export function EventDetailContent({ id }: { id: string }) {
 
       {/* Registrations table */}
       <div className="card-soft overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">報名名單</h3>
-          <span className="text-sm text-gray-400">{regs.length} 筆</span>
+        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+          <h3 className="font-semibold text-stone-900">報名名單</h3>
+          <span className="text-sm text-stone-400">{regs.length} 筆</span>
         </div>
 
         {regs.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">尚無報名紀錄</div>
+          <div className="py-12 text-center text-stone-400 text-sm">尚無報名紀錄</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -183,23 +183,23 @@ export function EventDetailContent({ id }: { id: string }) {
               <tbody className="divide-y divide-stone-900/[0.06]">
                 {regs.map(reg => (
                   <tr key={reg.id} className="transition-colors hover:bg-brand-50/50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{reg.institution}</td>
-                    <td className="px-4 py-3 text-gray-600">{reg.contact || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 font-medium text-stone-900">{reg.institution}</td>
+                    <td className="px-4 py-3 text-stone-600">{reg.contact || '—'}</td>
+                    <td className="px-4 py-3 text-stone-600">
                       {reg.email
                         ? <a href={`mailto:${reg.email}`} className="text-brand-600 hover:underline">{reg.email}</a>
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{reg.phone || '—'}</td>
-                    <td className="px-4 py-3 text-center text-gray-900">{reg.attendees || 1}</td>
+                    <td className="px-4 py-3 text-stone-600">{reg.phone || '—'}</td>
+                    <td className="px-4 py-3 text-center text-stone-900">{reg.attendees || 1}</td>
                     <td className="px-4 py-3">
                       {reg.customerId
                         ? <Link href={`/customers/${reg.customerId}`} className="text-xs text-brand-600 hover:underline">查看客戶 →</Link>
-                        : <span className="text-gray-300 text-xs">未配對</span>}
+                        : <span className="text-stone-300 text-xs">未配對</span>}
                     </td>
                     <td className="px-4 py-3">
                       <select
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${STATUS_STYLE[reg.status] ?? 'bg-gray-100 text-gray-600'}`}
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${STATUS_STYLE[reg.status] ?? 'bg-stone-100 text-stone-600'}`}
                         value={reg.status}
                         disabled={updatingId === reg.id}
                         onChange={e => changeStatus(reg.id, e.target.value)}
@@ -209,7 +209,7 @@ export function EventDetailContent({ id }: { id: string }) {
                         <option value="取消">取消</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
                       {reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString('zh-TW') : '—'}
                     </td>
                   </tr>
@@ -220,7 +220,7 @@ export function EventDetailContent({ id }: { id: string }) {
         )}
 
         {cancelled.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
+          <div className="px-5 py-3 border-t border-stone-100 text-xs text-stone-400">
             另有 {cancelled.length} 筆已取消報名未顯示於統計
           </div>
         )}

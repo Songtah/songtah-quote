@@ -185,7 +185,7 @@ export default function TicketForm() {
 
         {/* 設備搜尋 */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">客戶設備搜尋</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">客戶設備搜尋</label>
           <div className="flex gap-2">
             <input
               value={equipmentQuery}
@@ -204,7 +204,7 @@ export default function TicketForm() {
             )}
           </div>
           {showEquipmentList && equipmentResults.length > 0 && (
-            <div className="mt-1 border border-gray-200 rounded-xl bg-white shadow-lg max-h-60 overflow-y-auto">
+            <div className="mt-1 border border-stone-200 rounded-xl bg-white shadow-lg max-h-60 overflow-y-auto">
               {equipmentResults.map((item) => (
                 <button
                   key={item.id}
@@ -212,8 +212,8 @@ export default function TicketForm() {
                   onClick={() => selectEquipment(item)}
                   className="w-full text-left px-4 py-3 hover:bg-brand-50/50 text-sm border-b border-stone-900/[0.06] last:border-0 transition-colors"
                 >
-                  <div className="font-medium text-gray-800">{item.customerName}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">
+                  <div className="font-medium text-stone-800">{item.customerName}</div>
+                  <div className="text-xs text-stone-400 mt-0.5">
                     {[
                       item.manufacturer,
                       item.serialNumber && `序號 ${item.serialNumber}`,
@@ -224,9 +224,9 @@ export default function TicketForm() {
               ))}
             </div>
           )}
-          {equipmentLoading && <p className="mt-2 text-xs text-gray-400">正在搜尋設備資料...</p>}
+          {equipmentLoading && <p className="mt-2 text-xs text-stone-400">正在搜尋設備資料...</p>}
           {!equipmentLoading && equipmentQuery.trim() && showEquipmentList && equipmentResults.length === 0 && !equipmentError && (
-            <p className="mt-2 text-xs text-gray-400">目前沒有符合的設備資料。</p>
+            <p className="mt-2 text-xs text-stone-400">目前沒有符合的設備資料。</p>
           )}
           {equipmentError && <p className="mt-2 text-xs text-amber-600">{equipmentError}</p>}
           {selectedEquipment && (
@@ -241,7 +241,7 @@ export default function TicketForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* 客戶名稱 */}
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               客戶名稱 <span className="text-red-500">*</span>
             </label>
             <input
@@ -258,10 +258,10 @@ export default function TicketForm() {
               autoComplete="off"
             />
             {customerLoading && (
-              <span className="absolute right-3 top-[34px] text-xs text-gray-400">搜尋中...</span>
+              <span className="absolute right-3 top-[34px] text-xs text-stone-400">搜尋中...</span>
             )}
             {showCustomerList && customerResults.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg max-h-64 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 border border-stone-200 rounded-xl bg-white shadow-lg max-h-64 overflow-y-auto">
                 {customerResults.map((item) => (
                   <button
                     key={item.id}
@@ -271,7 +271,7 @@ export default function TicketForm() {
                   >
                     <div className="font-medium">{item.name}</div>
                     {(item.city || item.type) && (
-                      <div className="text-xs text-gray-400 mt-0.5">
+                      <div className="text-xs text-stone-400 mt-0.5">
                         {item.city && <span>{item.city}</span>}
                         {item.city && item.type && <span> · </span>}
                         {item.type && <span className="text-green-600">{item.type}</span>}
@@ -289,7 +289,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               聯絡人 <span className="text-red-500">*</span>
             </label>
             <input
@@ -301,7 +301,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               案件標題 <span className="text-red-500">*</span>
             </label>
             <input
@@ -313,7 +313,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               案件類型 <span className="text-red-500">*</span>
             </label>
             <select
@@ -328,7 +328,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">優先級</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">優先級</label>
             <select
               value={form.priority}
               onChange={(e) => updateField('priority', e.target.value)}
@@ -341,7 +341,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">預計維修日期</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">預計維修日期</label>
             <input
               type="date"
               value={form.scheduledDate ?? ''}
@@ -351,7 +351,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">技術支援對口</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">技術支援對口</label>
             <select
               value={form.supportOwner}
               onChange={(e) => updateField('supportOwner', e.target.value)}
@@ -364,7 +364,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">業務窗口</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">業務窗口</label>
             <select
               value={form.salesOwner}
               onChange={(e) => updateField('salesOwner', e.target.value)}
@@ -386,7 +386,7 @@ export default function TicketForm() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               問題描述 <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -398,7 +398,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">原因判斷</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">原因判斷</label>
             <textarea
               value={form.cause ?? ''}
               onChange={(e) => updateField('cause', e.target.value)}
@@ -408,7 +408,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">暫定解法</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">暫定解法</label>
             <textarea
               value={form.solution ?? ''}
               onChange={(e) => updateField('solution', e.target.value)}
@@ -418,7 +418,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">關鍵料件</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">關鍵料件</label>
             <input
               value={form.keyPart ?? ''}
               onChange={(e) => updateField('keyPart', e.target.value)}
@@ -428,7 +428,7 @@ export default function TicketForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">備註</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">備註</label>
             <input
               value={form.note ?? ''}
               onChange={(e) => updateField('note', e.target.value)}

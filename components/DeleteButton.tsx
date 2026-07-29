@@ -32,7 +32,7 @@ export default function DeleteButton({ id }: { id: string }) {
         <button onClick={handleDelete} disabled={loading} className="text-red-600 hover:text-red-800 text-xs font-semibold">
           {loading ? '刪除中' : '確認刪除'}
         </button>
-        <button onClick={() => setConfirming(false)} className="text-gray-400 hover:text-gray-600 text-xs">
+        <button onClick={() => setConfirming(false)} className="text-stone-400 hover:text-stone-600 text-xs">
           取消
         </button>
         {error && <span className="text-[11px] text-red-500">{error}</span>}

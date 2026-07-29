@@ -97,7 +97,7 @@ const TYPE_STYLE: Record<ActivityType, { bg: string; border: string; text: strin
   '參觀': { bg: 'bg-brand-50', border: 'border-brand-400',text: 'text-emerald-900',dot: 'bg-brand-400' },
   '會議': { bg: 'bg-violet-50',  border: 'border-violet-400', text: 'text-violet-900', dot: 'bg-violet-400' },
   '住宿': { bg: 'bg-brand-50',    border: 'border-brand-400',   text: 'text-teal-900',   dot: 'bg-brand-400' },
-  '其他': { bg: 'bg-gray-50',    border: 'border-gray-400',   text: 'text-gray-900',   dot: 'bg-gray-400' },
+  '其他': { bg: 'bg-stone-50',    border: 'border-stone-400',   text: 'text-stone-900',   dot: 'bg-stone-400' },
 }
 const TYPES: ActivityType[] = ['交通', '餐飲', '參觀', '會議', '住宿', '其他']
 
@@ -142,13 +142,13 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
       <div className="w-full max-w-md rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-stone-900/[0.06] p-5">
           <h2 className="font-bold text-stone-800">{initial.id ? '編輯活動' : '新增活動'}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
           {/* 活動名稱 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">活動名稱 *</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">活動名稱 *</label>
             <input value={form.name} onChange={e => setF('name', e.target.value)}
               placeholder="例：機場接送、晚宴、工廠參觀"
               className="input-soft w-full" />
@@ -156,14 +156,14 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
           {/* 類型 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">類型</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">類型</label>
             <div className="flex flex-wrap gap-2">
               {TYPES.map(t => (
                 <button key={t} onClick={() => setF('type', t)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                     form.type === t
                       ? `${TYPE_STYLE[t].bg} ${TYPE_STYLE[t].border} ${TYPE_STYLE[t].text}`
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                      : 'border-stone-200 text-stone-500 hover:bg-stone-50'
                   }`}>
                   {t}
                 </button>
@@ -174,7 +174,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
           {/* 時間 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">開始時間</label>
+              <label className="text-xs font-semibold text-stone-500 mb-1 block">開始時間</label>
               <select value={form.startMin} onChange={e => setF('startMin', +e.target.value)}
                 className="select-soft w-full">
                 {timeOptions.map(m => (
@@ -183,7 +183,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">結束時間</label>
+              <label className="text-xs font-semibold text-stone-500 mb-1 block">結束時間</label>
               <select value={form.endMin} onChange={e => setF('endMin', +e.target.value)}
                 className="select-soft w-full">
                 {timeOptions.filter(m => m > form.startMin).map(m => (
@@ -195,7 +195,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
           {/* 地點 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">地點</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">地點</label>
             <input value={form.location} onChange={e => setF('location', e.target.value)}
               placeholder="飯店名稱、地址、場所"
               className="input-soft w-full" />
@@ -203,7 +203,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
           {/* 參與客戶 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">參與客戶</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">參與客戶</label>
             <input value={form.clients} onChange={e => setF('clients', e.target.value)}
               placeholder="客戶名稱，多人以逗號分隔"
               className="input-soft w-full" />
@@ -211,7 +211,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
           {/* 負責業務 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">負責業務</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">負責業務</label>
             <input value={form.salesperson} onChange={e => setF('salesperson', e.target.value)}
               placeholder="業務姓名"
               className="input-soft w-full" />
@@ -219,7 +219,7 @@ function ActivityForm({ initial, onSave, onDelete, onClose }: ActivityFormProps)
 
           {/* 備註 */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">備註</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">備註</label>
             <textarea value={form.notes} onChange={e => setF('notes', e.target.value)}
               rows={2} placeholder="補充說明"
               className="input-soft w-full resize-none" />
@@ -260,38 +260,38 @@ function TripForm({ onSave, onClose }: { onSave: (t: Trip) => void; onClose: () 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-sm rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06]" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-bold text-gray-900">建立新行程</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400">✕</button>
+        <div className="p-5 border-b border-stone-100 flex items-center justify-between">
+          <h2 className="font-bold text-stone-900">建立新行程</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">行程名稱 *</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">行程名稱 *</label>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="例：2025 日本醫材參訪"
               className="input-soft w-full" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">目的地</label>
+            <label className="text-xs font-semibold text-stone-500 mb-1 block">目的地</label>
             <input value={dest} onChange={e => setDest(e.target.value)}
               placeholder="例：日本大阪"
               className="input-soft w-full" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">出發日期</label>
+              <label className="text-xs font-semibold text-stone-500 mb-1 block">出發日期</label>
               <input type="date" value={start} onChange={e => setStart(e.target.value)}
                 className="input-soft w-full" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">返回日期</label>
+              <label className="text-xs font-semibold text-stone-500 mb-1 block">返回日期</label>
               <input type="date" value={end} min={start} onChange={e => setEnd(e.target.value)}
                 className="input-soft w-full" />
             </div>
           </div>
         </div>
-        <div className="p-5 border-t border-gray-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+        <div className="p-5 border-t border-stone-100 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm border border-stone-200 text-stone-600 hover:bg-stone-50">取消</button>
           <button onClick={handleSave}
             disabled={!name.trim() || !start || !end || start > end}
             className="button-primary disabled:opacity-40">
@@ -523,10 +523,10 @@ export function TripPlannerContent() {
           {TYPES.map(t => (
             <div key={t} className="flex items-center gap-1.5">
               <span className={`w-2.5 h-2.5 rounded-sm ${TYPE_STYLE[t].dot}`} />
-              <span className="text-xs text-gray-500">{t}</span>
+              <span className="text-xs text-stone-500">{t}</span>
             </div>
           ))}
-          <span className="text-xs text-gray-300 ml-2">拖曳色塊移動時間 · 拖曳底部調整長度 · 點擊空白新增活動</span>
+          <span className="text-xs text-stone-300 ml-2">拖曳色塊移動時間 · 拖曳底部調整長度 · 點擊空白新增活動</span>
         </div>
       )}
 
@@ -534,7 +534,7 @@ export function TripPlannerContent() {
       {!selectedTrip && (
         <div className="card-soft flex flex-1 flex-col items-center justify-center py-24 text-stone-400">
           <div className="text-5xl mb-4">✈️</div>
-          <p className="text-base font-medium text-gray-500">尚無選取行程</p>
+          <p className="text-base font-medium text-stone-500">尚無選取行程</p>
           <p className="text-sm mt-1">請從上方選擇行程，或點「新增行程」建立新的出國計畫</p>
           <button
             onClick={() => setShowTripModal(true)}
@@ -582,10 +582,10 @@ export function TripPlannerContent() {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-3xl bg-[#fdfdfb] p-6 shadow-2xl ring-1 ring-stone-900/[0.06]">
-            <p className="font-bold text-gray-900 mb-2">刪除行程？</p>
-            <p className="text-sm text-gray-500 mb-5">此行程的所有活動也會一併刪除，無法復原。</p>
+            <p className="font-bold text-stone-900 mb-2">刪除行程？</p>
+            <p className="text-sm text-stone-500 mb-5">此行程的所有活動也會一併刪除，無法復原。</p>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 rounded-xl text-sm border border-stone-200 text-stone-600 hover:bg-stone-50">取消</button>
               <button onClick={() => handleDeleteTrip(deleteConfirm)} className="px-4 py-2 rounded-xl text-sm bg-red-600 text-white hover:bg-red-700">確認刪除</button>
             </div>
           </div>
@@ -647,18 +647,18 @@ function TimelineGrid({ dates, activities, dragLive, onActivityMouseDown, onColu
   return (
     <div className="card-soft flex flex-1 flex-col overflow-hidden">
       {/* Header row with day labels */}
-      <div className="flex border-b border-gray-200 shrink-0">
+      <div className="flex border-b border-stone-200 shrink-0">
         {/* Time label gutter */}
-        <div className="w-[52px] shrink-0 border-r border-gray-100 bg-gray-50" />
+        <div className="w-[52px] shrink-0 border-r border-stone-100 bg-stone-50" />
         {/* Day headers */}
         <div className="flex-1 overflow-x-auto">
           <div className="flex" style={{ minWidth: dates.length * COL_MIN_W }}>
             {dates.map((d, i) => (
               <div key={d}
-                className="flex-1 min-w-0 px-3 py-2 border-r border-gray-100 last:border-0"
+                className="flex-1 min-w-0 px-3 py-2 border-r border-stone-100 last:border-0"
                 style={{ minWidth: COL_MIN_W }}
               >
-                <p className="text-xs font-semibold text-gray-700 truncate">{fmtDate(d, i)}</p>
+                <p className="text-xs font-semibold text-stone-700 truncate">{fmtDate(d, i)}</p>
               </div>
             ))}
           </div>
@@ -670,14 +670,14 @@ function TimelineGrid({ dates, activities, dragLive, onActivityMouseDown, onColu
         <div className="flex" style={{ minWidth: dates.length * COL_MIN_W + 52 }}>
 
           {/* Time labels (sticky left) */}
-          <div className="w-[52px] shrink-0 border-r border-gray-100 relative" style={{ height: TIMELINE_H }}>
+          <div className="w-[52px] shrink-0 border-r border-stone-100 relative" style={{ height: TIMELINE_H }}>
             {timeLabels.map((h, i) => (
               <div key={h}
                 className="absolute left-0 right-0 flex items-center justify-end pr-2"
                 style={{ top: i * HOUR_PX - 8, height: 16 }}
               >
                 {h < 24 && (
-                  <span className="text-[10px] text-gray-400 font-mono tabular-nums">
+                  <span className="text-[10px] text-stone-400 font-mono tabular-nums">
                     {String(h).padStart(2, '0')}:00
                   </span>
                 )}
@@ -691,20 +691,20 @@ function TimelineGrid({ dates, activities, dragLive, onActivityMouseDown, onColu
             return (
               <div key={date}
                 ref={colRef}
-                className="flex-1 relative border-r border-gray-100 last:border-0 cursor-crosshair"
+                className="flex-1 relative border-r border-stone-100 last:border-0 cursor-crosshair"
                 style={{ height: TIMELINE_H, minWidth: COL_MIN_W }}
                 onClick={e => onColumnClick(e, date)}
               >
                 {/* Hour grid lines */}
                 {timeLabels.slice(0, -1).map((h, i) => (
-                  <div key={h} className="absolute left-0 right-0 border-t border-gray-100"
+                  <div key={h} className="absolute left-0 right-0 border-t border-stone-100"
                     style={{ top: i * HOUR_PX }} />
                 ))}
                 {/* 15-min sub-lines */}
                 {timeLabels.slice(0, -1).flatMap((h, hi) =>
                   [1, 2, 3].map(q => (
                     <div key={`${h}-${q}`}
-                      className="absolute left-0 right-0 border-t border-gray-50"
+                      className="absolute left-0 right-0 border-t border-stone-50"
                       style={{ top: hi * HOUR_PX + q * SNAP_PX }} />
                   ))
                 )}

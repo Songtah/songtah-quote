@@ -82,7 +82,7 @@ function TagInput({
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-xl min-h-[42px] focus-within:ring-2 focus-within:ring-brand-400 focus-within:border-transparent">
+    <div className="flex flex-wrap gap-1.5 p-2 border border-stone-300 rounded-xl min-h-[42px] focus-within:ring-2 focus-within:ring-brand-400 focus-within:border-transparent">
       {tags.map((t) => (
         <span key={t} className="flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-200 px-2.5 py-0.5 rounded-full text-xs font-medium">
           {t}
@@ -262,13 +262,13 @@ function UploadModal({
         transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* Header */}
-        <div className="px-7 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">
+        <div className="px-7 pt-6 pb-4 flex items-center justify-between border-b border-stone-100">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-500 mb-0.5">品牌素材庫</p>
             <h2 className="text-lg font-bold text-slate-900">上傳素材</h2>
           </div>
           <button onClick={onClose} disabled={isUploading}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition disabled:opacity-40">
+            className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition disabled:opacity-40">
             ✕
           </button>
         </div>
@@ -287,22 +287,22 @@ function UploadModal({
                 'w-full rounded-2xl border-2 border-dashed cursor-pointer transition flex flex-col items-center justify-center gap-3 py-14',
                 dragging
                   ? 'border-brand-400 bg-brand-50 scale-[1.01]'
-                  : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40',
+                  : 'border-stone-200 bg-stone-50 hover:border-brand-300 hover:bg-brand-50/40',
               ].join(' ')}
             >
-              <span className="text-5xl text-gray-300">🖼</span>
+              <span className="text-5xl text-stone-300">🖼</span>
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-600">{dragging ? '放開以上傳' : '拖曳圖片到這裡'}</p>
-                <p className="text-xs text-gray-400 mt-1">或點擊選擇檔案</p>
+                <p className="text-sm font-semibold text-stone-600">{dragging ? '放開以上傳' : '拖曳圖片到這裡'}</p>
+                <p className="text-xs text-stone-400 mt-1">或點擊選擇檔案</p>
               </div>
-              <span className="text-xs text-gray-300 bg-white border border-gray-200 px-3 py-1 rounded-full">
+              <span className="text-xs text-stone-300 bg-white border border-stone-200 px-3 py-1 rounded-full">
                 JPG / PNG / WebP · 最大 20 MB
               </span>
             </div>
           ) : (
             <div className="space-y-3">
               {/* Preview */}
-              <div className="relative w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 max-h-64 flex items-center justify-center">
+              <div className="relative w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 max-h-64 flex items-center justify-center">
                 <img src={us.previewUrl} alt="預覽" className="max-h-64 w-full object-contain" />
                 {/* Progress overlay during upload */}
                 {isUploading && (
@@ -335,19 +335,19 @@ function UploadModal({
               {us.stage !== 'compressing' && us.compressedBlob && (
                 <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5 text-xs">
                   <span className="text-emerald-600 font-semibold">✓ 已壓縮</span>
-                  <span className="text-gray-400">原圖</span>
-                  <span className="font-medium text-gray-700">{formatBytes(us.file.size)}</span>
-                  <span className="text-gray-300">→</span>
+                  <span className="text-stone-400">原圖</span>
+                  <span className="font-medium text-stone-700">{formatBytes(us.file.size)}</span>
+                  <span className="text-stone-300">→</span>
                   <span className="font-medium text-emerald-700">{formatBytes(us.compressedBlob.size)}</span>
-                  <span className="text-gray-400 ml-auto">
+                  <span className="text-stone-400 ml-auto">
                     {us.compW}×{us.compH}px
                   </span>
-                  <span className="text-gray-300 text-[10px]">（原圖保留供下載）</span>
+                  <span className="text-stone-300 text-[10px]">（原圖保留供下載）</span>
                 </div>
               )}
 
               {us.stage === 'compressing' && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                <div className="flex items-center gap-2 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
                   <svg className="animate-spin h-3.5 w-3.5 text-brand-400" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -372,7 +372,7 @@ function UploadModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="例如：3D Master 色板正面照"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
               disabled={isUploading}
             />
           </div>
@@ -391,7 +391,7 @@ function UploadModal({
                     'px-3.5 py-1.5 rounded-full text-xs font-medium border transition',
                     category === c
                       ? 'bg-brand-500 border-brand-500 text-white'
-                      : 'bg-white border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+                      : 'bg-white border-stone-300 text-stone-600 hover:border-brand-400 hover:text-brand-600',
                   ].join(' ')}
                 >
                   {c}
@@ -403,7 +403,7 @@ function UploadModal({
           {/* Tags */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              標籤 <span className="text-gray-400 font-normal text-xs">（按 Enter 或逗號新增）</span>
+              標籤 <span className="text-stone-400 font-normal text-xs">（按 Enter 或逗號新增）</span>
             </label>
             <TagInput tags={tags} onChange={setTags} />
           </div>
@@ -415,9 +415,9 @@ function UploadModal({
         </div>
 
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+        <div className="px-7 py-4 border-t border-stone-100 flex items-center justify-end gap-3">
           <button onClick={onClose} disabled={isUploading}
-            className="px-5 py-2 rounded-full text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+            className="px-5 py-2 rounded-full text-sm font-medium border border-stone-300 text-stone-600 hover:bg-stone-50 transition disabled:opacity-50">
             取消
           </button>
           <button
@@ -585,13 +585,13 @@ function AssetLightbox({
         </button>
 
         {/* Image */}
-        <div className="bg-gray-900 flex items-center justify-center min-h-[280px] max-h-[55vh] overflow-hidden">
+        <div className="bg-stone-900 flex items-center justify-center min-h-[280px] max-h-[55vh] overflow-hidden">
           {asset.compressedUrl && !imgErr ? (
             <img src={asset.compressedUrl} alt={asset.name}
               className="max-h-full max-w-full object-contain"
               onError={() => setImgErr(true)} />
           ) : (
-            <span className="text-6xl text-gray-600">🖼</span>
+            <span className="text-6xl text-stone-600">🖼</span>
           )}
         </div>
 
@@ -599,13 +599,13 @@ function AssetLightbox({
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-gray-900 leading-snug">{asset.name}</h2>
+              <h2 className="text-lg font-bold text-stone-900 leading-snug">{asset.name}</h2>
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
                 <span className="text-xs bg-brand-50 text-brand-700 border border-brand-200 px-2 py-0.5 rounded-full font-medium">
                   {asset.category}
                 </span>
                 {asset.tags.map((t) => (
-                  <span key={t} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{t}</span>
+                  <span key={t} className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{t}</span>
                 ))}
               </div>
             </div>
@@ -627,7 +627,7 @@ function AssetLightbox({
                   download
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 transition whitespace-nowrap"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition whitespace-nowrap"
                 >
                   ↓ 下載原圖
                 </a>
@@ -636,15 +636,15 @@ function AssetLightbox({
           </div>
 
           {/* Meta */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-400 border-t border-gray-100 pt-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-stone-400 border-t border-stone-100 pt-3">
             {asset.originalSize > 0 && (
               <>
                 <div>
-                  <span className="text-gray-300 mr-1">原圖</span>
-                  <span className="text-gray-600 font-medium">{formatBytes(asset.originalSize)}</span>
+                  <span className="text-stone-300 mr-1">原圖</span>
+                  <span className="text-stone-600 font-medium">{formatBytes(asset.originalSize)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-300 mr-1">壓縮版</span>
+                  <span className="text-stone-300 mr-1">壓縮版</span>
                   <span className="text-emerald-600 font-medium">{formatBytes(asset.compressedSize)}</span>
                   {savedRatio > 0 && <span className="text-emerald-500 ml-1">（省 {savedRatio}%）</span>}
                 </div>
@@ -652,14 +652,14 @@ function AssetLightbox({
             )}
             {asset.uploadedBy && (
               <div>
-                <span className="text-gray-300 mr-1">上傳者</span>
-                <span className="text-gray-600">{asset.uploadedBy}</span>
+                <span className="text-stone-300 mr-1">上傳者</span>
+                <span className="text-stone-600">{asset.uploadedBy}</span>
               </div>
             )}
             {asset.createdAt && (
               <div>
-                <span className="text-gray-300 mr-1">上傳日期</span>
-                <span className="text-gray-600">{formatDate(asset.createdAt)}</span>
+                <span className="text-stone-300 mr-1">上傳日期</span>
+                <span className="text-stone-600">{formatDate(asset.createdAt)}</span>
               </div>
             )}
           </div>

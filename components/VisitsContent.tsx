@@ -14,7 +14,7 @@ const LEGACY_STATUS_COLORS: Record<string, string> = {
   展覽: 'bg-purple-100 text-purple-700',
   電話拜訪: 'bg-slate-100 text-slate-600',
   視訊拜訪: 'bg-cyan-100 text-cyan-700',
-  其他: 'bg-gray-100 text-gray-600',
+  其他: 'bg-stone-100 text-stone-600',
 }
 
 // 互動類型 badge colors
@@ -80,7 +80,7 @@ function formatDate(d: string) {
 
 function InteractionBadge({ interactionType, fallbackStatus }: { interactionType: string; fallbackStatus: string }) {
   const label = interactionType || fallbackStatus
-  const cls = INTERACTION_TYPE_COLORS[interactionType] ?? LEGACY_STATUS_COLORS[fallbackStatus] ?? 'bg-gray-100 text-gray-600'
+  const cls = INTERACTION_TYPE_COLORS[interactionType] ?? LEGACY_STATUS_COLORS[fallbackStatus] ?? 'bg-stone-100 text-stone-600'
   return label
     ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
     : <span className="text-xs text-stone-300">—</span>
@@ -88,7 +88,7 @@ function InteractionBadge({ interactionType, fallbackStatus }: { interactionType
 
 function ReactionBadge({ reaction }: { reaction: string }) {
   if (!reaction) return null
-  const cls = REACTION_COLORS[reaction] ?? 'bg-gray-100 text-gray-600'
+  const cls = REACTION_COLORS[reaction] ?? 'bg-stone-100 text-stone-600'
   return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{reaction}</span>
 }
 
@@ -158,19 +158,19 @@ function ReactionCombobox({
         <button
           type="button"
           onClick={() => commit('')}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-base leading-none"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500 text-base leading-none"
         >×</button>
       )}
       {/* 下拉選單 */}
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+        <div className="absolute z-20 mt-1 w-full bg-white border border-stone-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
           {filtered.map((o) => (
             <button
               key={o}
               type="button"
               onMouseDown={() => commit(o)}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-blue-50 ${
-                value === o ? 'text-blue-600 font-medium bg-blue-50/50' : 'text-gray-700'
+              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-brand-50 ${
+                value === o ? 'text-brand-600 font-medium bg-brand-50/50' : 'text-stone-700'
               }`}
             >
               {o}
@@ -181,7 +181,7 @@ function ReactionCombobox({
             <button
               type="button"
               onMouseDown={() => commit(query.trim())}
-              className="w-full text-left px-3 py-2 text-sm text-blue-500 border-t border-gray-100 hover:bg-blue-50 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-brand-500 border-t border-stone-100 hover:bg-brand-50 transition-colors"
             >
               ＋ 新增「{query.trim()}」
             </button>
@@ -1103,12 +1103,12 @@ export default function VisitsContent({
                     <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                       {deleteConfirmId === v.id ? (
                         <div className="flex flex-col items-end gap-1.5">
-                          <span className="text-xs text-gray-500">確認刪除？</span>
+                          <span className="text-xs text-stone-500">確認刪除？</span>
                           <div className="flex gap-2">
                             <button onClick={() => handleDelete(v.id)} disabled={deleting} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">
                               {deleting ? '…' : '確認'}
                             </button>
-                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-stone-400 hover:text-stone-600">取消</button>
                           </div>
                         </div>
                       ) : (
@@ -1171,9 +1171,9 @@ export default function VisitsContent({
                       <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {deleteConfirmId === v.id ? (
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="text-xs text-gray-500">確認刪除？</span>
+                            <span className="text-xs text-stone-500">確認刪除？</span>
                             <button onClick={() => handleDelete(v.id)} disabled={deleting} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">{deleting ? '…' : '確認'}</button>
-                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                            <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-stone-400 hover:text-stone-600">取消</button>
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100">
@@ -1330,29 +1330,29 @@ export default function VisitsContent({
                         <div className="text-2xl font-bold text-green-700">{autoLinkStats.linked}</div>
                         <div className="text-xs text-green-600 mt-0.5">成功關聯</div>
                       </div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl py-3">
-                        <div className="text-2xl font-bold text-gray-700">{autoLinkStats.skipped}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">略過</div>
+                      <div className="bg-stone-50 border border-stone-200 rounded-xl py-3">
+                        <div className="text-2xl font-bold text-stone-700">{autoLinkStats.skipped}</div>
+                        <div className="text-xs text-stone-500 mt-0.5">略過</div>
                       </div>
                     </div>
 
                     {autoLinkStats.noMatch > 0 && (
-                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                        <span className="font-medium text-gray-700">找不到客戶（{autoLinkStats.noMatch} 筆）：</span>
+                      <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2">
+                        <span className="font-medium text-stone-700">找不到客戶（{autoLinkStats.noMatch} 筆）：</span>
                         {' '}{autoLinkStats.noMatchNames.slice(0, 5).join('、')}
                         {autoLinkStats.noMatchNames.length > 5 ? '…' : ''}
                       </div>
                     )}
                     {autoLinkStats.multiMatch > 0 && (
-                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                        <span className="font-medium text-gray-700">多個候選（{autoLinkStats.multiMatch} 筆）：</span>
+                      <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2">
+                        <span className="font-medium text-stone-700">多個候選（{autoLinkStats.multiMatch} 筆）：</span>
                         {' '}{autoLinkStats.multiMatchNames.slice(0, 5).join('、')}
                         {autoLinkStats.multiMatchNames.length > 5 ? '…' : ''}
                       </div>
                     )}
 
                     {autoLinkRunning && (
-                      <p className="text-xs text-blue-500 text-center animate-pulse">處理中，請稍候…</p>
+                      <p className="text-xs text-brand-500 text-center animate-pulse">處理中，請稍候…</p>
                     )}
                     {autoLinkDone && (
                       <p className="text-sm text-emerald-600 text-center font-medium">✅ 完成！</p>
@@ -1372,7 +1372,7 @@ export default function VisitsContent({
                   {autoLinkRunning && (
                     <button
                       onClick={() => { autoLinkAbort.current = true }}
-                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition"
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-300 text-stone-600 hover:bg-stone-50 transition"
                     >
                       停止
                     </button>
@@ -1413,7 +1413,7 @@ export default function VisitsContent({
 
                 {/* 預覽掃描中 */}
                 {dedupRunning && !dedupDone && (
-                  <p className="text-sm text-blue-500 text-center animate-pulse py-4">
+                  <p className="text-sm text-brand-500 text-center animate-pulse py-4">
                     {dedupStats ? '刪除中，請稍候…' : '掃描重複紀錄中…'}
                   </p>
                 )}
@@ -1435,8 +1435,8 @@ export default function VisitsContent({
                     </div>
 
                     {dedupStats.examples.length > 0 && (
-                      <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 space-y-0.5 max-h-40 overflow-y-auto">
-                        <p className="font-medium text-gray-700">重複範例：</p>
+                      <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2 space-y-0.5 max-h-40 overflow-y-auto">
+                        <p className="font-medium text-stone-700">重複範例：</p>
                         {dedupStats.examples.map((ex, i) => (
                           <div key={i}>
                             {ex.date}　{ex.customerName}　{ex.salesperson || '—'}
@@ -1468,7 +1468,7 @@ export default function VisitsContent({
                   <button
                     onClick={() => { if (!dedupRunning) setDedupOpen(false) }}
                     disabled={dedupRunning}
-                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-300 text-stone-600 hover:bg-stone-50 transition disabled:opacity-40"
                   >
                     {dedupDone ? '關閉' : '取消'}
                   </button>
@@ -1493,14 +1493,14 @@ export default function VisitsContent({
               <div className="max-h-[94vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06] sm:rounded-3xl">
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-brand-100/60 bg-brand-50/40">
-                  <h3 className="font-bold text-gray-900">🔍 自動偵測競品</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">掃描拜訪內文，比對 Notion 競品選項並自動填入</p>
+                  <h3 className="font-bold text-stone-900">🔍 自動偵測競品</h3>
+                  <p className="text-xs text-stone-500 mt-0.5">掃描拜訪內文，比對 Notion 競品選項並自動填入</p>
                 </div>
 
                 <div className="px-5 py-4 space-y-4">
                   {/* 說明 */}
                   {!detectRunning && !detectDone && (
-                    <div className="text-sm text-gray-600 space-y-1.5">
+                    <div className="text-sm text-stone-600 space-y-1.5">
                       <p>• 只處理<span className="font-medium">競品欄位為空</span>的紀錄，不覆蓋已填資料</p>
                       <p>• 以 Notion 競品選項名稱直接比對內文關鍵字</p>
                       <p>• 如需新增競品選項，請至 Notion 競品欄位新增後再執行</p>
@@ -1513,12 +1513,12 @@ export default function VisitsContent({
                       <div className="grid grid-cols-3 gap-3">
                         {[
                           { label: '成功填入', value: detectStats.filled, color: 'text-emerald-600' },
-                          { label: '無匹配', value: detectStats.skipped, color: 'text-gray-500' },
-                          { label: '無內文', value: detectStats.noContent, color: 'text-gray-400' },
+                          { label: '無匹配', value: detectStats.skipped, color: 'text-stone-500' },
+                          { label: '無內文', value: detectStats.noContent, color: 'text-stone-400' },
                         ].map(({ label, value, color }) => (
-                          <div key={label} className="text-center bg-gray-50 rounded-xl py-3">
+                          <div key={label} className="text-center bg-stone-50 rounded-xl py-3">
                             <div className={`text-xl font-bold ${color}`}>{value}</div>
-                            <div className="text-[11px] text-gray-400 mt-0.5">{label}</div>
+                            <div className="text-[11px] text-stone-400 mt-0.5">{label}</div>
                           </div>
                         ))}
                       </div>
@@ -1526,7 +1526,7 @@ export default function VisitsContent({
                       {/* 競品選項清單 */}
                       {detectStats.competitorOptions.length > 0 && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1.5">比對的競品選項（共 {detectStats.competitorOptions.length} 項）</p>
+                          <p className="text-xs text-stone-400 mb-1.5">比對的競品選項（共 {detectStats.competitorOptions.length} 項）</p>
                           <div className="flex flex-wrap gap-1">
                             {detectStats.competitorOptions.map((opt) => (
                               <span key={opt} className="text-[11px] px-2 py-0.5 bg-brand-50 text-emerald-700 border border-brand-100 rounded-full">{opt}</span>
@@ -1538,11 +1538,11 @@ export default function VisitsContent({
                       {/* 成功範例 */}
                       {detectStats.examples.length > 0 && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1.5">填入範例</p>
+                          <p className="text-xs text-stone-400 mb-1.5">填入範例</p>
                           <div className="space-y-1">
                             {detectStats.examples.map((ex, i) => (
-                              <div key={i} className="text-xs bg-gray-50 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
-                                <span className="text-gray-700 truncate">{ex.customerName || '（未知客戶）'}</span>
+                              <div key={i} className="text-xs bg-stone-50 rounded-lg px-3 py-1.5 flex items-center justify-between gap-2">
+                                <span className="text-stone-700 truncate">{ex.customerName || '（未知客戶）'}</span>
                                 <span className="text-emerald-600 font-medium shrink-0">{ex.detected.join('、')}</span>
                               </div>
                             ))}
@@ -1573,7 +1573,7 @@ export default function VisitsContent({
                   {detectRunning && (
                     <button
                       onClick={() => { detectAbort.current = true }}
-                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition"
+                      className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-300 text-stone-600 hover:bg-stone-50 transition"
                     >
                       停止
                     </button>
@@ -1581,7 +1581,7 @@ export default function VisitsContent({
                   <button
                     onClick={() => { if (!detectRunning) setDetectOpen(false) }}
                     disabled={detectRunning}
-                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-300 text-stone-600 hover:bg-stone-50 transition disabled:opacity-40"
                   >
                     {detectDone ? '關閉' : '取消'}
                   </button>

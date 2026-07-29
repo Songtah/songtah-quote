@@ -332,7 +332,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
       {fAll.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-stone-500">已選 <strong>{selectedIds.size}</strong> 筆</span>
-          <button onClick={() => onToggleAll(fAll)} className="text-xs text-blue-600 hover:underline">
+          <button onClick={() => onToggleAll(fAll)} className="text-xs text-brand-600 hover:underline">
             {fAll.every(i => selectedIds.has(i.code)) ? '取消全選' : '全選此頁'}
           </button>
           <div className="flex-1" />
@@ -379,8 +379,8 @@ function NewOpeningRow({ inst, selected, onToggle }: {
 }) {
   return (
     <div onClick={onToggle}
-      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-stone-50 last:border-0 ${selected ? 'bg-blue-50' : 'hover:bg-stone-50'}`}>
-      <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-blue-500 border-blue-500' : 'border-stone-300'}`}>
+      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-stone-50 last:border-0 ${selected ? 'bg-brand-50' : 'hover:bg-stone-50'}`}>
+      <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? 'bg-brand-500 border-brand-500' : 'border-stone-300'}`}>
         {selected && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round"/></svg>}
       </div>
       <div className="flex-1 min-w-0">
@@ -471,7 +471,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
         <input
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="搜尋客戶名稱 / 縣市 / 類型…"
-          className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
         />
         <span className="text-xs text-stone-400 shrink-0">{filtered.length} / {items.length} 筆</span>
       </div>

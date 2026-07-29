@@ -187,28 +187,28 @@ export function LineImportContent({
         {stage === 'parsing' && (
           <>
             <div className="text-3xl mb-3 animate-pulse">📊</div>
-            <p className="font-medium text-gray-700">解析中：{fileName}</p>
-            <p className="text-sm text-gray-400 mt-1">正在識別每日報表訊息…</p>
+            <p className="font-medium text-stone-700">解析中：{fileName}</p>
+            <p className="text-sm text-stone-400 mt-1">正在識別每日報表訊息…</p>
           </>
         )}
 
         {stage === 'importing' && progress && (
           <div className="space-y-4">
             <div className="text-3xl">⬆️</div>
-            <p className="font-medium text-gray-700">匯入中…</p>
+            <p className="font-medium text-stone-700">匯入中…</p>
             {/* 進度條 */}
-            <div className="w-full bg-gray-100 rounded-full h-2.5">
+            <div className="w-full bg-stone-100 rounded-full h-2.5">
               <div
                 className="h-2.5 rounded-full bg-brand-500 transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-stone-500">
               {progress.processed} / {progress.total} 筆（{pct}%）
             </p>
             <div className="flex justify-center gap-6 text-sm">
               <span className="text-green-600">✅ 匯入 {progress.imported}</span>
-              <span className="text-gray-400">⏭ 跳過 {progress.skipped}</span>
+              <span className="text-stone-400">⏭ 跳過 {progress.skipped}</span>
               {progress.errors > 0 && <span className="text-red-500">❌ 失敗 {progress.errors}</span>}
             </div>
           </div>
@@ -217,8 +217,8 @@ export function LineImportContent({
         {stage === 'done' && progress && (
           <>
             <div className="text-3xl mb-3">✅</div>
-            <p className="font-medium text-gray-700">匯入完成！</p>
-            <p className="text-sm text-gray-400 mt-1">點選或拖曳新檔案可再次匯入</p>
+            <p className="font-medium text-stone-700">匯入完成！</p>
+            <p className="text-sm text-stone-400 mt-1">點選或拖曳新檔案可再次匯入</p>
           </>
         )}
 
@@ -226,7 +226,7 @@ export function LineImportContent({
           <>
             <div className="text-3xl mb-3">❌</div>
             <p className="font-medium text-red-600">{errorMsg}</p>
-            <p className="text-sm text-gray-400 mt-1">點選重新嘗試</p>
+            <p className="text-sm text-stone-400 mt-1">點選重新嘗試</p>
           </>
         )}
       </div>

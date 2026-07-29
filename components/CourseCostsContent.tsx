@@ -5,7 +5,7 @@ import type { CourseCost } from '@/lib/system-notion'
 
 const STATUS_OPTIONS = ['規劃中', '已確認', '已結算']
 const STATUS_STYLE: Record<string, string> = {
-  '規劃中': 'bg-gray-100 text-gray-600',
+  '規劃中': 'bg-stone-100 text-stone-600',
   '已確認': 'bg-blue-100 text-blue-700',
   '已結算': 'bg-brand-50 text-green-700',
 }
@@ -127,7 +127,7 @@ export function CourseCostsContent() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: '試算筆數', value: filtered.length, fmt: (v: number) => String(v), color: 'text-gray-900' },
+          { label: '試算筆數', value: filtered.length, fmt: (v: number) => String(v), color: 'text-stone-900' },
           { label: '總成本合計', value: filtered.reduce((s,i) => s + (i.totalCost||0), 0), fmt: (v: number) => `$${v.toLocaleString()}`, color: 'text-red-600' },
           { label: '總收入合計', value: filtered.reduce((s,i) => s + (i.totalRevenue||0), 0), fmt: (v: number) => `$${v.toLocaleString()}`, color: 'text-blue-600' },
           { label: '淨利合計', value: totalNetProfit, fmt: (v: number) => `$${v.toLocaleString()}`, color: totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600' },
@@ -165,9 +165,9 @@ export function CourseCostsContent() {
               <tbody className="divide-y divide-stone-900/[0.06]">
                 {filtered.map(item => (
                   <tr key={item.id} className="transition-colors hover:bg-brand-50/50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">{item.totalCost ? `$${item.totalCost.toLocaleString()}` : '—'}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">{item.totalRevenue ? `$${item.totalRevenue.toLocaleString()}` : '—'}</td>
+                    <td className="px-4 py-3 font-medium text-stone-900">{item.name}</td>
+                    <td className="px-4 py-3 text-right text-stone-600">{item.totalCost ? `$${item.totalCost.toLocaleString()}` : '—'}</td>
+                    <td className="px-4 py-3 text-right text-stone-600">{item.totalRevenue ? `$${item.totalRevenue.toLocaleString()}` : '—'}</td>
                     <td className={`px-4 py-3 text-right font-medium ${(item.netProfit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {item.netProfit ? `$${item.netProfit.toLocaleString()}` : '—'}
                     </td>
@@ -175,11 +175,11 @@ export function CourseCostsContent() {
                       {fmtPct(item.marginPct)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[item.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[item.status] ?? 'bg-stone-100 text-stone-600'}`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate">{item.note || '—'}</td>
+                    <td className="px-4 py-3 text-stone-500 text-xs max-w-xs truncate">{item.note || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end">
                         <button onClick={() => openEdit(item)} className="text-xs text-brand-600 hover:underline">編輯</button>
@@ -200,7 +200,7 @@ export function CourseCostsContent() {
           <form onSubmit={handleSave} className="max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-[#fdfdfb] p-6 shadow-2xl ring-1 ring-stone-900/[0.06]">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{editId ? '編輯成本試算' : '新增成本試算'}</h2>
-              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+              <button type="button" onClick={() => setShowForm(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">✕</button>
             </div>
 
             <div>
@@ -216,7 +216,7 @@ export function CourseCostsContent() {
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">支出費用</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide pt-1">支出費用</p>
             <div className="grid grid-cols-2 gap-3">
               {([['場地費', 'venueFee'], ['講師費', 'speakerFee'], ['教材費', 'materialFee'], ['行銷費', 'marketingFee'], ['餐飲費', 'cateringFee'], ['交通費', 'transportFee'], ['其他費用', 'otherFee']] as [string, keyof FormState][]).map(([label, key]) => (
                 <div key={key}>
@@ -226,7 +226,7 @@ export function CourseCostsContent() {
               ))}
             </div>
 
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">收入估算</p>
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide pt-1">收入估算</p>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">報名費 / 人</label>
                 <input type="number" className="input w-full" min="0" value={form.feePerPerson} onChange={e => setForm(f => ({ ...f, feePerPerson: e.target.value }))} placeholder="0" />
@@ -243,10 +243,10 @@ export function CourseCostsContent() {
               const net = rev - cost
               const pct = rev > 0 ? (net / rev * 100).toFixed(1) : null
               return (
-                <div className="rounded-lg bg-gray-50 p-3 text-sm grid grid-cols-3 gap-2 text-center">
-                  <div><p className="text-xs text-gray-400">總成本</p><p className="font-semibold text-red-600">${cost.toLocaleString()}</p></div>
-                  <div><p className="text-xs text-gray-400">總收入</p><p className="font-semibold text-blue-600">${rev.toLocaleString()}</p></div>
-                  <div><p className="text-xs text-gray-400">淨利</p><p className={`font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>${net.toLocaleString()}{pct && ` (${pct}%)`}</p></div>
+                <div className="rounded-lg bg-stone-50 p-3 text-sm grid grid-cols-3 gap-2 text-center">
+                  <div><p className="text-xs text-stone-400">總成本</p><p className="font-semibold text-red-600">${cost.toLocaleString()}</p></div>
+                  <div><p className="text-xs text-stone-400">總收入</p><p className="font-semibold text-blue-600">${rev.toLocaleString()}</p></div>
+                  <div><p className="text-xs text-stone-400">淨利</p><p className={`font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>${net.toLocaleString()}{pct && ` (${pct}%)`}</p></div>
                 </div>
               )
             })()}
@@ -256,7 +256,7 @@ export function CourseCostsContent() {
                 <option value="">— 不關聯 —</option>
                 {eventOptions.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
               </select>
-              <p className="text-[11px] text-gray-400 mt-1">關聯後，活動詳情頁會顯示這筆成本試算</p>
+              <p className="text-[11px] text-stone-400 mt-1">關聯後，活動詳情頁會顯示這筆成本試算</p>
             </div>
 
             <div><label className="label">備註</label>

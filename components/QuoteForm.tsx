@@ -280,12 +280,12 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
       <div className="card-soft rounded-3xl p-7 sm:p-10 text-center">
         <div className="text-5xl mb-4">✅</div>
         <h2 className="text-xl font-bold text-stone-800 mb-2">報價單已建立</h2>
-        <p className="text-gray-500 text-sm mb-6">報價單號：{result.quoteNumber}</p>
+        <p className="text-stone-500 text-sm mb-6">報價單號：{result.quoteNumber}</p>
         <div className="rounded-2xl bg-stone-50 p-4 mb-6 flex items-center gap-3 ring-1 ring-stone-900/[0.06]">
           <input
             readOnly
             value={shareUrl}
-            className="flex-1 bg-transparent text-sm text-gray-600 outline-none"
+            className="flex-1 bg-transparent text-sm text-stone-600 outline-none"
           />
           <button
             onClick={() => navigator.clipboard.writeText(shareUrl)}
@@ -329,7 +329,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               客戶名稱 <span className="text-red-500">*</span>
             </label>
             <input
@@ -348,7 +348,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             {selectedCustomer && (
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs text-green-600 bg-brand-50 px-2 py-1 rounded-full">✓ 已從清單選取</span>
-                <button type="button" onClick={clearCustomer} className="text-xs text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={clearCustomer} className="text-xs text-stone-400 hover:text-stone-600">
                   清除
                 </button>
               </div>
@@ -359,21 +359,21 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               </div>
             )}
             {showCustomerList && customerResults.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-64 overflow-y-auto">
+              <div className="absolute z-10 w-full bg-white border border-stone-200 rounded-xl shadow-lg mt-1 max-h-64 overflow-y-auto">
                 {customerResults.map((customer) => (
                   <button
                     key={customer.id}
                     type="button"
                     onMouseDown={() => selectCustomer(customer)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-brand-50 text-sm border-b border-gray-50 last:border-0"
+                    className="w-full text-left px-4 py-2.5 hover:bg-brand-50 text-sm border-b border-stone-50 last:border-0"
                   >
                     <div className="font-medium">{customer.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5 flex gap-2">
+                    <div className="text-xs text-stone-400 mt-0.5 flex gap-2">
                       {customer.city && <span>{customer.city}</span>}
                       {customer.type && <span className="text-green-600">{customer.type}</span>}
                       {customer.phone && <span>{customer.phone}</span>}
                     </div>
-                    {customer.address && <div className="text-xs text-gray-300 truncate">{customer.address}</div>}
+                    {customer.address && <div className="text-xs text-stone-300 truncate">{customer.address}</div>}
                   </button>
                 ))}
               </div>
@@ -381,7 +381,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">電話</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">電話</label>
             <input
               type="text"
               value={customerPhone}
@@ -391,7 +391,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">統一編號</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">統一編號</label>
             <input
               type="text"
               value={customerTaxId}
@@ -401,8 +401,8 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              公司抬頭 <span className="text-gray-400 font-normal text-xs">（選填）</span>
+            <label className="block text-sm font-medium text-stone-700 mb-1">
+              公司抬頭 <span className="text-stone-400 font-normal text-xs">（選填）</span>
             </label>
             <input
               type="text"
@@ -413,7 +413,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div className="col-span-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">地址</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">地址</label>
             <input
               type="text"
               value={customerAddress}
@@ -423,7 +423,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">業務姓名</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">業務姓名</label>
             <input
               type="text"
               value={salesperson}
@@ -433,7 +433,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">有效期限</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">有效期限</label>
             <input
               type="date"
               value={validUntil}
@@ -442,7 +442,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">付款條件</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">付款條件</label>
             <input
               type="text"
               value={paymentTerms}
@@ -452,7 +452,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
             />
           </div>
           <div className="col-span-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">備註</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">備註</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -510,12 +510,12 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
           </select>
         </div>
 
-        <div className="max-h-72 overflow-y-auto border border-gray-100 rounded-xl">
+        <div className="max-h-72 overflow-y-auto border border-stone-100 rounded-xl">
           {productsLoading ? (
             <div className="py-8 text-center text-sm text-stone-400">載入產品清單中…</div>
           ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 sticky top-0 text-xs text-gray-500">
+            <thead className="bg-stone-50 sticky top-0 text-xs text-stone-500">
               <tr>
                 <th className="px-3 py-2 text-left">品名</th>
                 <th className="px-3 py-2 text-left">品牌</th>
@@ -525,10 +525,10 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 <th className="px-3 py-2 text-center">加入</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-stone-50">
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-400">
+                  <td colSpan={6} className="px-3 py-6 text-center text-stone-400">
                     無符合的產品
                   </td>
                 </tr>
@@ -537,21 +537,21 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 <tr key={product.id} className="hover:bg-brand-50/50">
                   <td className="px-3 py-2">
                     <div className="font-medium">{product.name}</div>
-                    {product.series && <div className="text-xs text-gray-400">{product.series}</div>}
+                    {product.series && <div className="text-xs text-stone-400">{product.series}</div>}
                   </td>
-                  <td className="px-3 py-2 text-gray-500">{product.brand}</td>
-                  <td className="px-3 py-2 text-gray-500">{product.spec || '—'}</td>
+                  <td className="px-3 py-2 text-stone-500">{product.brand}</td>
+                  <td className="px-3 py-2 text-stone-500">{product.spec || '—'}</td>
                   <td className="px-3 py-2">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-lg object-cover border border-gray-200" />
+                      <img src={product.imageUrl} alt={product.name} className="h-12 w-12 rounded-lg object-cover border border-stone-200" />
                     ) : (
-                      <div className="h-12 w-12 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400">
+                      <div className="h-12 w-12 rounded-lg border border-dashed border-stone-300 bg-stone-50 flex items-center justify-center text-[10px] text-stone-400">
                         預留圖
                       </div>
                     )}
                   </td>
                   <td className="px-3 py-2 text-right font-medium">
-                    {product.price != null ? formatMoney(product.price) : <span className="text-gray-400">—</span>}
+                    {product.price != null ? formatMoney(product.price) : <span className="text-stone-400">—</span>}
                   </td>
                   <td className="px-3 py-2 text-center">
                     <button
@@ -574,7 +574,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
         <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第三步</p>
         <h2 className="mt-1 text-lg font-bold text-stone-800 mb-4">確認報價明細 ({items.length} 項)</h2>
         {items.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">尚未新增任何品項</div>
+          <div className="text-center py-8 text-stone-400 text-sm">尚未新增任何品項</div>
         ) : (
           <div className="space-y-4">
             {items.map((item, index) => (
@@ -584,7 +584,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 className={`border rounded-2xl p-4 transition ${
                   item.tempId === highlightedItemId
                     ? 'border-brand-500 bg-brand-50/60 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]'
-                    : 'border-gray-200'
+                    : 'border-stone-200'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -594,19 +594,19 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                     className="flex-1 text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 shrink-0 rounded-xl border border-dashed border-gray-300 bg-gray-50 overflow-hidden flex items-center justify-center">
+                      <div className="h-14 w-14 shrink-0 rounded-xl border border-dashed border-stone-300 bg-stone-50 overflow-hidden flex items-center justify-center">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.name || '產品圖片'} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="text-[10px] text-gray-400 text-center px-1">圖片預留</div>
+                          <div className="text-[10px] text-stone-400 text-center px-1">圖片預留</div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs text-gray-400">品項 {index + 1}</div>
-                        <div className="text-sm font-semibold text-gray-800 truncate">
+                        <div className="text-xs text-stone-400">品項 {index + 1}</div>
+                        <div className="text-sm font-semibold text-stone-800 truncate">
                           {item.isCustom ? (item.name || '客製化品項') : item.name}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-stone-500 mt-1">
                           {item.brand || '未填品牌'}
                           {item.spec ? ` · ${item.spec}` : ''}
                           {` · ${item.quantity}${item.unit || ''}`}
@@ -635,13 +635,13 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
+                <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between">
+                  <div className="text-sm text-stone-500">
                     {item.brand || '未填品牌'}
                     {item.category ? ` · ${item.category}` : ''}
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-gray-400">小計</div>
+                    <div className="text-xs text-stone-400">小計</div>
                     <div className="text-lg font-bold text-green-800">{formatMoney(item.subtotal)}</div>
                   </div>
                 </div>
@@ -658,13 +658,13 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                 </div>
 
                 {expandedItemIds.includes(item.tempId) && (
-                  <div className="grid grid-cols-1 md:grid-cols-[132px,1fr] gap-4 mt-4 pt-4 border-t border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-[132px,1fr] gap-4 mt-4 pt-4 border-t border-stone-100">
                     <div>
-                      <div className="h-32 w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 overflow-hidden flex items-center justify-center">
+                      <div className="h-32 w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 overflow-hidden flex items-center justify-center">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.name || '產品圖片'} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="text-center text-xs text-gray-400 px-3">
+                          <div className="text-center text-xs text-stone-400 px-3">
                             <div className="font-medium mb-1">圖片預留位置</div>
                             <div>可由產品價目表自動帶入</div>
                           </div>
@@ -674,7 +674,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-stone-700 mb-1">
                           品名 <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -686,7 +686,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">規格</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">規格</label>
                         <input
                           type="text"
                           value={item.spec}
@@ -696,7 +696,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">品牌</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">品牌</label>
                         <input
                           type="text"
                           value={item.brand}
@@ -706,7 +706,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">品類</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">品類</label>
                         <input
                           type="text"
                           value={item.category}
@@ -716,7 +716,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">單位</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">單位</label>
                         <input
                           type="text"
                           value={item.unit}
@@ -726,7 +726,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">圖片網址</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">圖片網址</label>
                         <input
                           type="url"
                           value={item.imageUrl}
@@ -736,7 +736,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">單價</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">單價</label>
                         <input
                           type="number"
                           value={item.unitPrice}
@@ -746,7 +746,7 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">數量</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">數量</label>
                         <input
                           type="number"
                           value={item.quantity}
@@ -761,8 +761,8 @@ export default function QuoteForm({ products: productsProp, onCreated, onClose }
               </div>
             ))}
 
-            <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
-              <span className="text-gray-500 text-sm">合計</span>
+            <div className="pt-4 border-t border-stone-100 flex justify-between items-center">
+              <span className="text-stone-500 text-sm">合計</span>
               <span className="text-2xl font-bold text-green-800">{formatMoney(total)}</span>
             </div>
           </div>

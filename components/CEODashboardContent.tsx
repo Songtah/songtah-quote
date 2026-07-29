@@ -27,7 +27,7 @@ function delta(cur: number, prev: number): { pct: number; up: boolean } {
 // ── Skeleton ───────────────────────────────────────────────────
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-gray-100 ${className ?? ''}`} />
+  return <div className={`animate-pulse rounded-lg bg-stone-100 ${className ?? ''}`} />
 }
 
 // ── KPI Card ───────────────────────────────────────────────────
@@ -60,10 +60,10 @@ function KPICard({
   const inner = (
     <div
       onClick={onClick}
-      className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between gap-2 transition-shadow ${interactive ? 'hover:shadow-md hover:border-gray-200 cursor-pointer' : ''}`}
+      className={`h-full bg-white rounded-2xl border border-stone-100 shadow-sm p-5 flex flex-col justify-between gap-2 transition-shadow ${interactive ? 'hover:shadow-md hover:border-stone-200 cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider leading-snug">{label}</span>
+        <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider leading-snug">{label}</span>
         <span
           className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
           style={{ background: `${accent}18`, color: accent }}
@@ -72,8 +72,8 @@ function KPICard({
         </span>
       </div>
       <div>
-        <div className="text-2xl sm:text-3xl font-bold text-gray-900 tabular-nums leading-none">{value}</div>
-        {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+        <div className="text-2xl sm:text-3xl font-bold text-stone-900 tabular-nums leading-none">{value}</div>
+        {sub && <div className="text-xs text-stone-400 mt-1">{sub}</div>}
       </div>
       {/* trend 區域固定佔位，確保各卡片高度一致 */}
       <div className="min-h-[18px]">
@@ -150,44 +150,44 @@ function FollowUpModal({
       />
       {/* Panel */}
       <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 overflow-y-auto">
-        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-stone-100 overflow-hidden">
           {/* Header */}
           <div className="px-5 py-4 border-b border-red-100/60 bg-red-50/40 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-red-400">待追蹤（跨月未結案）</p>
-              <h3 className="text-base font-bold text-gray-900 mt-0.5">
+              <h3 className="text-base font-bold text-stone-900 mt-0.5">
                 {title ?? '⚠️ 客情追蹤清單'}
                 <span className="ml-2 text-sm font-medium text-red-500">（{visibleItems.length} 筆）</span>
               </h3>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition text-lg leading-none"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition text-lg leading-none"
             >✕</button>
           </div>
           {/* List */}
-          <div className="divide-y divide-gray-50 max-h-[65vh] overflow-y-auto">
+          <div className="divide-y divide-stone-50 max-h-[65vh] overflow-y-auto">
             {visibleItems.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">無待追蹤客情</div>
+              <div className="px-5 py-10 text-center text-sm text-stone-400">無待追蹤客情</div>
             ) : visibleItems.map((v, i) => {
               const overdue = isOverdue(v.nextFollowUpDate)
               return (
-                <div key={v.id || i} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                <div key={v.id || i} className="px-5 py-4 hover:bg-stone-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       {/* 客戶名 + 業務 */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 text-sm">{v.customerName}</span>
+                        <span className="font-semibold text-stone-900 text-sm">{v.customerName}</span>
                         {v.salesperson && (
-                          <span className="text-xs text-gray-400">{v.salesperson}</span>
+                          <span className="text-xs text-stone-400">{v.salesperson}</span>
                         )}
                         {v.city && (
-                          <span className="text-xs text-gray-400">{v.city}</span>
+                          <span className="text-xs text-stone-400">{v.city}</span>
                         )}
                       </div>
                       {/* 後續動作 */}
                       {v.followUpAction && (
-                        <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-stone-600 mt-1 leading-relaxed line-clamp-2">
                           {v.followUpAction}
                         </p>
                       )}
@@ -197,7 +197,7 @@ function FollowUpModal({
                           <span className="text-xs bg-blue-50 text-blue-600 border border-blue-100 rounded-full px-2 py-0.5">{v.interactionPurpose}</span>
                         )}
                         {v.customerReaction && (
-                          <span className="text-xs bg-gray-100 text-gray-600 border border-gray-200 rounded-full px-2 py-0.5">{v.customerReaction}</span>
+                          <span className="text-xs bg-stone-100 text-stone-600 border border-stone-200 rounded-full px-2 py-0.5">{v.customerReaction}</span>
                         )}
                       </div>
                     </div>
@@ -212,7 +212,7 @@ function FollowUpModal({
                           {overdue ? '⚠ 已逾期' : '📅'} {formatDate(v.nextFollowUpDate)}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300">未排期</span>
+                        <span className="text-xs text-stone-300">未排期</span>
                       )}
                       {v.id && (
                         <button
@@ -230,13 +230,13 @@ function FollowUpModal({
             })}
           </div>
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <Link href="/bd" className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
+          <div className="px-5 py-3 border-t border-stone-100 bg-stone-50/50 flex justify-between items-center">
+            <Link href="/bd" className="text-xs text-brand-500 hover:text-brand-700 font-medium transition-colors">
               前往客情紀錄 →
             </Link>
             <button
               onClick={onClose}
-              className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 transition"
+              className="text-xs text-stone-400 hover:text-stone-600 border border-stone-200 rounded-lg px-3 py-1.5 transition"
             >
               關閉
             </button>
@@ -369,7 +369,7 @@ function BarChart({
             {/* 柱頂數值 */}
             <span
               className={`text-[9px] font-semibold leading-none ${
-                isLast ? 'text-teal-700' : 'text-gray-400'
+                isLast ? 'text-teal-700' : 'text-stone-400'
               }`}
             >
               {label}
@@ -384,7 +384,7 @@ function BarChart({
               />
             </div>
             {/* 月份標籤 */}
-            <span className="text-[10px] text-gray-400 leading-none mt-0.5">{d.label}</span>
+            <span className="text-[10px] text-stone-400 leading-none mt-0.5">{d.label}</span>
           </div>
         )
       })}
@@ -405,7 +405,7 @@ function SalespersonTable({
 }) {
   if (loading) return <Skeleton className="h-48" />
   if (!stats.length) return (
-    <div className="text-center text-gray-400 py-8 text-sm">本月尚無業務活動紀錄</div>
+    <div className="text-center text-stone-400 py-8 text-sm">本月尚無業務活動紀錄</div>
   )
 
   const maxAmt = Math.max(...stats.map((s) => s.amount), 1)
@@ -414,7 +414,7 @@ function SalespersonTable({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-xs text-gray-400 border-b border-gray-100">
+          <tr className="text-xs text-stone-400 border-b border-stone-100">
             <th className="text-left pb-2 font-medium pr-3">#</th>
             <th className="text-left pb-2 font-medium">業務</th>
             <th className="text-center pb-2 font-medium">拜訪</th>
@@ -423,24 +423,24 @@ function SalespersonTable({
             <th className="text-center pb-2 font-medium">待追蹤</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50">
+        <tbody className="divide-y divide-stone-50">
           {stats.map((s, i) => {
             const barPct = maxAmt > 0 ? (s.amount / maxAmt) * 100 : 0
             return (
               <tr key={s.name} className="group">
-                <td className="py-2.5 pr-3 text-gray-400 text-xs">{i + 1}</td>
-                <td className="py-2.5 font-medium text-gray-800">{s.name}</td>
-                <td className="py-2.5 text-center tabular-nums text-gray-600">{s.visits}</td>
-                <td className="py-2.5 text-center tabular-nums text-gray-600">{s.orders}</td>
+                <td className="py-2.5 pr-3 text-stone-400 text-xs">{i + 1}</td>
+                <td className="py-2.5 font-medium text-stone-800">{s.name}</td>
+                <td className="py-2.5 text-center tabular-nums text-stone-600">{s.visits}</td>
+                <td className="py-2.5 text-center tabular-nums text-stone-600">{s.orders}</td>
                 <td className="py-2.5 text-right tabular-nums">
                   <div className="flex items-center justify-end gap-2">
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
+                    <div className="w-16 h-1.5 bg-stone-100 rounded-full overflow-hidden hidden sm:block">
                       <div
-                        className="h-full rounded-full bg-blue-500 transition-all"
+                        className="h-full rounded-full bg-brand-500 transition-all"
                         style={{ width: `${barPct}%` }}
                       />
                     </div>
-                    <span className={`font-semibold ${s.amount > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                    <span className={`font-semibold ${s.amount > 0 ? 'text-stone-900' : 'text-stone-300'}`}>
                       {s.amount > 0 ? fmtAmt(s.amount) : '—'}
                     </span>
                   </div>
@@ -455,7 +455,7 @@ function SalespersonTable({
                       {s.followUps}
                     </button>
                   ) : (
-                    <span className="text-gray-200">—</span>
+                    <span className="text-stone-200">—</span>
                   )}
                 </td>
               </tr>
@@ -470,7 +470,7 @@ function SalespersonTable({
 // ── Order Status Pills ─────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, string> = {
-  草稿:   'bg-gray-100 text-gray-500',
+  草稿:   'bg-stone-100 text-stone-500',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
   已到貨: 'bg-brand-50 text-emerald-700',
@@ -528,15 +528,15 @@ function TodaySalespersonWidget() {
       : groups
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 gap-2">
-        <h3 className="font-semibold text-gray-900 shrink-0">📋 今日業務動態</h3>
+        <h3 className="font-semibold text-stone-900 shrink-0">📋 今日業務動態</h3>
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
+          className="text-xs border border-stone-200 rounded-lg px-2 py-1 text-stone-600 focus:outline-none focus:ring-1 focus:ring-brand-300"
         />
       </div>
 
@@ -544,11 +544,11 @@ function TodaySalespersonWidget() {
       {fetching ? (
         <div className="flex gap-2 flex-wrap">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-9 w-20 bg-gray-100 animate-pulse rounded-xl" />
+            <div key={i} className="h-9 w-20 bg-stone-100 animate-pulse rounded-xl" />
           ))}
         </div>
       ) : displayGroups.length === 0 ? (
-        <p className="text-sm text-gray-400 py-2">今日尚無拜訪紀錄</p>
+        <p className="text-sm text-stone-400 py-2">今日尚無拜訪紀錄</p>
       ) : (
         <div className="flex gap-2 flex-wrap">
           {displayGroups.map((g) => (
@@ -557,13 +557,13 @@ function TodaySalespersonWidget() {
               onClick={() => setSelected(g)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all border ${
                 g.count > 0
-                  ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 active:bg-blue-200'
-                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
+                  ? 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 active:bg-brand-200'
+                  : 'bg-stone-50 border-stone-200 text-stone-400 hover:bg-stone-100'
               }`}
             >
               {g.salesperson}
               {g.count > 0 && (
-                <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-blue-500 text-white rounded-full">
+                <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-brand-500 text-white rounded-full">
                   {g.count}
                 </span>
               )}
@@ -573,8 +573,8 @@ function TodaySalespersonWidget() {
       )}
 
       {/* 快速連結 */}
-      <div className="mt-3 pt-3 border-t border-gray-50">
-        <Link href="/bd?tab=report" className="text-xs text-blue-500 hover:text-blue-700 font-medium">
+      <div className="mt-3 pt-3 border-t border-stone-50">
+        <Link href="/bd?tab=report" className="text-xs text-brand-500 hover:text-brand-700 font-medium">
           前往業務日報工具 →
         </Link>
       </div>
@@ -590,14 +590,14 @@ function TodaySalespersonWidget() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-stone-100 shrink-0">
               <div>
-                <h3 className="font-bold text-gray-900 text-lg">{selected.salesperson}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{date} · {selected.count} 筆拜訪紀錄</p>
+                <h3 className="font-bold text-stone-900 text-lg">{selected.salesperson}</h3>
+                <p className="text-xs text-stone-400 mt-0.5">{date} · {selected.count} 筆拜訪紀錄</p>
               </div>
               <button
                 onClick={() => setSelected(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 text-lg"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100 text-stone-400 text-lg"
               >
                 ✕
               </button>
@@ -606,15 +606,15 @@ function TodaySalespersonWidget() {
             {/* Visit cards */}
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
               {selected.visits.length === 0 ? (
-                <p className="text-sm text-gray-400 py-8 text-center">今日尚無拜訪紀錄</p>
+                <p className="text-sm text-stone-400 py-8 text-center">今日尚無拜訪紀錄</p>
               ) : (
                 selected.visits.map((v, i) => (
-                  <div key={i} className="border border-gray-100 rounded-xl p-4 space-y-1.5 hover:border-gray-200 transition-colors">
+                  <div key={i} className="border border-stone-100 rounded-xl p-4 space-y-1.5 hover:border-stone-200 transition-colors">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-semibold text-gray-900 leading-snug">{v.customerName}</h4>
+                      <h4 className="font-semibold text-stone-900 leading-snug">{v.customerName}</h4>
                       <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
                         {v.city && (
-                          <span className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
+                          <span className="text-[10px] bg-stone-100 text-stone-500 rounded-full px-2 py-0.5">
                             {v.city}
                           </span>
                         )}
@@ -629,10 +629,10 @@ function TodaySalespersonWidget() {
                       <p className="text-xs text-blue-600 font-medium">目的：{v.interactionPurpose}</p>
                     )}
                     {v.content && (
-                      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{v.content}</p>
+                      <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{v.content}</p>
                     )}
                     {v.followUpAction && (
-                      <p className="text-xs text-gray-500 border-t border-gray-50 pt-1.5 mt-1.5">
+                      <p className="text-xs text-stone-500 border-t border-stone-50 pt-1.5 mt-1.5">
                         後續：{v.followUpAction}
                       </p>
                     )}
@@ -642,10 +642,10 @@ function TodaySalespersonWidget() {
             </div>
 
             {/* Footer */}
-            <div className="px-5 pb-5 pt-3 border-t border-gray-100 shrink-0">
+            <div className="px-5 pb-5 pt-3 border-t border-stone-100 shrink-0">
               <Link
                 href="/bd"
-                className="block w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium py-1"
+                className="block w-full text-center text-sm text-brand-600 hover:text-brand-800 font-medium py-1"
                 onClick={() => setSelected(null)}
               >
                 查看完整客情紀錄 →
@@ -820,14 +820,14 @@ export function CEODashboardContent({
       <div className="grid gap-4 lg:grid-cols-2">
 
         {/* Revenue Trend */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">近 6 月訂單趨勢</p>
-              <h3 className="font-semibold text-gray-900">月度業績走勢</h3>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">近 6 月訂單趨勢</p>
+              <h3 className="font-semibold text-stone-900">月度業績走勢</h3>
             </div>
             {s && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-stone-400">
                 最高 {fmtAmt(Math.max(...s.monthlyTrend.map((m) => m.amount)))}
               </span>
             )}
@@ -839,7 +839,7 @@ export function CEODashboardContent({
                 <LineChart data={s.monthlyTrend} valueKey="amount" color="#2563eb" height={80} formatValue={fmtAmt} />
                 <div className="flex justify-between mt-2">
                   {s.monthlyTrend.map((m) => (
-                    <span key={m.month} className="text-[10px] text-gray-400 flex-1 text-center">{m.label}</span>
+                    <span key={m.month} className="text-[10px] text-stone-400 flex-1 text-center">{m.label}</span>
                   ))}
                 </div>
               </>
@@ -848,14 +848,14 @@ export function CEODashboardContent({
         </div>
 
         {/* Visits Trend */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">近 6 月拜訪趨勢</p>
-              <h3 className="font-semibold text-gray-900">客情活動量</h3>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">近 6 月拜訪趨勢</p>
+              <h3 className="font-semibold text-stone-900">客情活動量</h3>
             </div>
             {s && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-stone-400">
                 最高 {Math.max(...s.monthlyTrend.map((m) => m.visits))} 筆
               </span>
             )}
@@ -875,13 +875,13 @@ export function CEODashboardContent({
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
 
         {/* Salesperson ranking */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">本月業務排行</p>
-              <h3 className="font-semibold text-gray-900">業績 & 拜訪量</h3>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">本月業務排行</p>
+              <h3 className="font-semibold text-stone-900">業績 & 拜訪量</h3>
             </div>
-            <Link href="/bd" className="text-xs text-blue-500 hover:text-blue-700">
+            <Link href="/bd" className="text-xs text-brand-500 hover:text-brand-700">
               查看客情拜訪紀錄 →
             </Link>
           </div>
@@ -896,9 +896,9 @@ export function CEODashboardContent({
         <div className="space-y-4">
 
           {/* Order status breakdown */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">本月訂單狀態</p>
-            <h3 className="font-semibold text-gray-900 mb-3">訂單分佈</h3>
+          <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
+            <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider mb-1">本月訂單狀態</p>
+            <h3 className="font-semibold text-stone-900 mb-3">訂單分佈</h3>
             {loading
               ? <Skeleton className="h-20" />
               : s && Object.keys(s.ordersByStatus).length > 0
@@ -911,22 +911,22 @@ export function CEODashboardContent({
                         const pct   = total > 0 ? Math.round((count / total) * 100) : 0
                         return (
                           <div key={status} className="flex items-center gap-2">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOR[status] ?? 'bg-gray-100 text-gray-500'}`}>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOR[status] ?? 'bg-stone-100 text-stone-500'}`}>
                               {status}
                             </span>
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-blue-500 transition-all"
+                                className="h-full rounded-full bg-brand-500 transition-all"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-xs tabular-nums text-gray-500 w-8 text-right">{count}</span>
+                            <span className="text-xs tabular-nums text-stone-500 w-8 text-right">{count}</span>
                           </div>
                         )
                       })}
                   </div>
                 )
-                : <p className="text-sm text-gray-400">本月尚無訂單</p>
+                : <p className="text-sm text-stone-400">本月尚無訂單</p>
             }
           </div>
 
@@ -937,16 +937,16 @@ export function CEODashboardContent({
 
       {/* ── 近期高風險操作(帳號/權限異動) ── */}
       {isAdmin && s && s.recentHighRiskAudit.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">🔒 近期高風險操作</h3>
-            <Link href="/settings/audit" className="text-xs text-gray-400 hover:text-gray-600">查看全部 →</Link>
+            <h3 className="font-semibold text-stone-900">🔒 近期高風險操作</h3>
+            <Link href="/settings/audit" className="text-xs text-stone-400 hover:text-stone-600">查看全部 →</Link>
           </div>
           <div className="space-y-2">
             {s.recentHighRiskAudit.map((log) => (
-              <div key={log.id} className="flex items-center justify-between gap-3 text-sm rounded-xl border border-gray-100 px-3 py-2">
-                <span className="text-gray-700 truncate">{log.summary || log.action}</span>
-                <span className="text-xs text-gray-400 shrink-0">
+              <div key={log.id} className="flex items-center justify-between gap-3 text-sm rounded-xl border border-stone-100 px-3 py-2">
+                <span className="text-stone-700 truncate">{log.summary || log.action}</span>
+                <span className="text-xs text-stone-400 shrink-0">
                   {log.actorName}{log.occurredAt && `・${log.occurredAt.slice(0, 16).replace('T', ' ')}`}
                 </span>
               </div>
@@ -956,8 +956,8 @@ export function CEODashboardContent({
       )}
 
       {/* ── Quick Actions ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-gray-900 mb-3">快速操作</h3>
+      <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
+        <h3 className="font-semibold text-stone-900 mb-3">快速操作</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             { href: '/quote/new',   label: '建立報價單', icon: '📄' },
@@ -968,17 +968,17 @@ export function CEODashboardContent({
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-100 px-3 py-3 hover:border-blue-200 hover:bg-blue-50 transition-all text-center group"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-stone-100 px-3 py-3 hover:border-brand-200 hover:bg-brand-50 transition-all text-center group"
             >
               <span className="text-2xl group-hover:scale-110 transition-transform">{item.icon}</span>
-              <span className="text-xs font-medium text-gray-600 group-hover:text-blue-700">{item.label}</span>
+              <span className="text-xs font-medium text-stone-600 group-hover:text-brand-700">{item.label}</span>
             </Link>
           ))}
         </div>
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex items-center justify-between text-xs text-gray-400">
+      <div className="flex items-center justify-between text-xs text-stone-400">
         <span>資料每 15 分鐘自動更新</span>
         <div className="flex items-center gap-3">
           {refreshed && (
@@ -987,7 +987,7 @@ export function CEODashboardContent({
           <button
             onClick={fetchStats}
             disabled={loading}
-            className="text-blue-500 hover:text-blue-700 disabled:opacity-40 font-medium"
+            className="text-brand-500 hover:text-brand-700 disabled:opacity-40 font-medium"
           >
             {loading ? '更新中...' : '立即更新'}
           </button>

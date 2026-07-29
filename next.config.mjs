@@ -3,7 +3,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['@react-pdf/renderer'],
+  // Next 14 的 key 是 experimental.serverComponentsExternalPackages;
+  // serverExternalPackages 要 Next 15 才認得,寫在這裡會被靜默忽略。
+  experimental: {
+    serverComponentsExternalPackages: ['@react-pdf/renderer'],
+  },
   async headers() {
     return [
       {

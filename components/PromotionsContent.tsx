@@ -34,13 +34,13 @@ const TYPE_COLOR: Record<string, string> = {
   '季度展場': 'bg-orange-100 text-orange-700',
   '月度促銷': 'bg-blue-100   text-blue-700',
   '課程':     'bg-brand-50  text-green-700',
-  '其他':     'bg-gray-100   text-gray-600',
+  '其他':     'bg-stone-100   text-stone-600',
 }
 
 function TypeBadge({ type }: { type: string }) {
   if (!type) return null
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLOR[type] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLOR[type] ?? 'bg-stone-100 text-stone-600'}`}>
       {type}
     </span>
   )
@@ -108,7 +108,7 @@ function ConditionChip({ conditionType, conditionParams }: {
   if (!conditionType) return null
   const label   = CONDITION_TYPE_LABEL[conditionType] ?? conditionType
   const summary = conditionSummary(conditionParams)
-  const color   = CONDITION_TYPE_COLOR[conditionType] ?? 'bg-gray-50 text-gray-600 border-gray-200'
+  const color   = CONDITION_TYPE_COLOR[conditionType] ?? 'bg-stone-50 text-stone-600 border-stone-200'
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
       <span className="opacity-60">{label}</span>
@@ -145,19 +145,19 @@ function SkuSearchField({ label, value, onChange }: {
 
   if (value && !open) return (
     <div>
-      <label className="block text-[11px] font-semibold text-gray-400 mb-1">{label}</label>
-      <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-gray-50">
-        <span className="text-xs font-medium text-gray-800 flex-1">{value.name}</span>
-        <span className="text-xs text-gray-400 font-mono">{value.skuCode}</span>
+      <label className="block text-[11px] font-semibold text-stone-400 mb-1">{label}</label>
+      <div className="flex items-center gap-2 border rounded-lg px-3 py-1.5 bg-stone-50">
+        <span className="text-xs font-medium text-stone-800 flex-1">{value.name}</span>
+        <span className="text-xs text-stone-400 font-mono">{value.skuCode}</span>
         <button type="button" onClick={() => { onChange(null); setQ('') }}
-          className="text-gray-300 hover:text-red-400 text-xs transition">✕</button>
+          className="text-stone-300 hover:text-red-400 text-xs transition">✕</button>
       </div>
     </div>
   )
 
   return (
     <div className="relative">
-      <label className="block text-[11px] font-semibold text-gray-400 mb-1">{label}</label>
+      <label className="block text-[11px] font-semibold text-stone-400 mb-1">{label}</label>
       <input
         type="search"
         value={q}
@@ -172,8 +172,8 @@ function SkuSearchField({ label, value, onChange }: {
             <button key={r.skuCode} type="button"
               onClick={() => { onChange(r); setQ(''); setOpen(false); setResults([]) }}
               className="w-full text-left px-3 py-2 hover:bg-brand-50 transition">
-              <p className="text-sm font-medium text-gray-800">{r.name}</p>
-              <p className="text-xs text-gray-400 font-mono mt-0.5">{r.skuCode} · {r.manufacturer}</p>
+              <p className="text-sm font-medium text-stone-800">{r.name}</p>
+              <p className="text-xs text-stone-400 font-mono mt-0.5">{r.skuCode} · {r.manufacturer}</p>
             </button>
           ))}
         </div>
@@ -279,11 +279,11 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
     <div className="space-y-3">
       {/* Type selector */}
       <div>
-        <label className="block text-[11px] font-semibold text-gray-400 mb-1">條件類型</label>
+        <label className="block text-[11px] font-semibold text-stone-400 mb-1">條件類型</label>
         <select
           value={conditionType ?? ''}
           onChange={(e) => setType(e.target.value as ConditionType | '')}
-          className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-700"
+          className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 text-stone-700"
         >
           <option value="">— 不設定結構化條件 —</option>
           {CONDITION_GROUPS.map((g) => {
@@ -299,7 +299,7 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
             )
           })}
         </select>
-        <p className="mt-1 text-[11px] text-gray-400">
+        <p className="mt-1 text-[11px] text-stone-400">
           {isSeries ? '此為「系列」品項，僅能套用系列類促銷' : '此為單品品項，可套用單品/贈品/加購類促銷'}
         </p>
       </div>
@@ -307,9 +307,9 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
       {/* Type-specific inputs */}
       {conditionType === 'single_price' && (
         <div>
-          <label className="block text-[11px] font-semibold text-gray-400 mb-1">特價金額</label>
+          <label className="block text-[11px] font-semibold text-stone-400 mb-1">特價金額</label>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">NT$</span>
+            <span className="text-xs text-stone-400">NT$</span>
             <input type="number" min={0} value={p?.price ?? ''} onChange={(e) => patch({ price: parseFloat(e.target.value) || 0 })}
               className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
           </div>
@@ -318,12 +318,12 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
 
       {conditionType === 'series_discount' && (
         <div>
-          <label className="block text-[11px] font-semibold text-gray-400 mb-1">折扣率</label>
+          <label className="block text-[11px] font-semibold text-stone-400 mb-1">折扣率</label>
           <div className="flex items-center gap-2">
             <input type="number" min={0} max={100} step={5} value={Math.round((p?.rate ?? 0.7) * 100)}
               onChange={(e) => patch({ rate: (parseInt(e.target.value) || 0) / 100 })}
               className="w-24 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-            <span className="text-xs text-gray-500">%（例：70 = 七折）</span>
+            <span className="text-xs text-stone-500">%（例：70 = 七折）</span>
           </div>
         </div>
       )}
@@ -331,12 +331,12 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
       {conditionType === 'buy_n_get_m' && (
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">買 N 件</label>
+            <label className="block text-[11px] font-semibold text-stone-400 mb-1">買 N 件</label>
             <input type="number" min={1} value={p?.n ?? ''} onChange={(e) => patch({ n: parseInt(e.target.value) || 1 })}
               className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
           </div>
           <div className="flex-1">
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">送 M 件</label>
+            <label className="block text-[11px] font-semibold text-stone-400 mb-1">送 M 件</label>
             <input type="number" min={1} value={p?.m ?? ''} onChange={(e) => patch({ m: parseInt(e.target.value) || 1 })}
               className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
           </div>
@@ -347,12 +347,12 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
         <div className="space-y-2">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">系列合計買 N 件</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">系列合計買 N 件</label>
               <input type="number" min={1} value={p?.n ?? ''} onChange={(e) => patch({ n: parseInt(e.target.value) || 1 })}
                 className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">送 M 件（自選）</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">送 M 件（自選）</label>
               <input type="number" min={1} value={p?.m ?? ''} onChange={(e) => patch({ m: parseInt(e.target.value) || 1 })}
                 className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
@@ -365,20 +365,20 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
 
       {conditionType === 'fixed_set_price' && (
         <div>
-          <label className="block text-[11px] font-semibold text-gray-400 mb-1">固定價格方案（可多個）</label>
+          <label className="block text-[11px] font-semibold text-stone-400 mb-1">固定價格方案（可多個）</label>
           <div className="space-y-2">
             {(p?.tiers as FixedSetPriceTier[] ?? []).map((tier, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <input type="number" min={1} placeholder="件數" value={tier.qty || ''}
                   onChange={(e) => updateFixedTier(idx, 'qty', e.target.value)}
                   className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                <span className="text-xs text-gray-400">件</span>
-                <span className="text-xs text-gray-400">NT$</span>
+                <span className="text-xs text-stone-400">件</span>
+                <span className="text-xs text-stone-400">NT$</span>
                 <input type="number" min={0} placeholder="總價" value={tier.totalPrice || ''}
                   onChange={(e) => updateFixedTier(idx, 'totalPrice', e.target.value)}
                   className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 <button type="button" onClick={() => removeFixedTier(idx)}
-                  className="text-gray-300 hover:text-red-400 text-sm transition">✕</button>
+                  className="text-stone-300 hover:text-red-400 text-sm transition">✕</button>
               </div>
             ))}
             <button type="button" onClick={addFixedTier}
@@ -389,24 +389,24 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
 
       {conditionType === 'qty_discount' && (
         <div>
-          <label className="block text-[11px] font-semibold text-gray-400 mb-1">數量折扣門檻（可多階）</label>
+          <label className="block text-[11px] font-semibold text-stone-400 mb-1">數量折扣門檻（可多階）</label>
           <div className="space-y-2">
             {(p?.tiers as QtyDiscountTier[] ?? []).map((tier, idx) => (
               <div key={idx} className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-400">滿</span>
+                <span className="text-xs text-stone-400">滿</span>
                 <input type="number" min={1} placeholder="件數" value={tier.minQty || ''}
                   onChange={(e) => updateQtyTier(idx, 'minQty', e.target.value)}
                   className="w-16 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                <span className="text-xs text-gray-400">件</span>
+                <span className="text-xs text-stone-400">件</span>
                 <input type="number" min={0} max={100} step={5} placeholder="折扣%" value={tier.rate != null ? Math.round(tier.rate * 100) : ''}
                   onChange={(e) => updateQtyTier(idx, 'rate', String((parseInt(e.target.value) || 0) / 100))}
                   className="w-16 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                <span className="text-xs text-gray-400">% 或單價 NT$</span>
+                <span className="text-xs text-stone-400">% 或單價 NT$</span>
                 <input type="number" min={0} placeholder="單價" value={tier.price ?? ''}
                   onChange={(e) => updateQtyTier(idx, 'price', e.target.value)}
                   className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 <button type="button" onClick={() => removeQtyTier(idx)}
-                  className="text-gray-300 hover:text-red-400 text-sm transition">✕</button>
+                  className="text-stone-300 hover:text-red-400 text-sm transition">✕</button>
               </div>
             ))}
             <button type="button" onClick={addQtyTier}
@@ -423,7 +423,7 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
             onChange={(r) => patch({ giftSkuCode: r?.skuCode ?? '', giftSkuName: r?.name ?? '' })}
           />
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">贈品數量</label>
+            <label className="block text-[11px] font-semibold text-stone-400 mb-1">贈品數量</label>
             <input type="number" min={1} value={p?.giftQty ?? 1} onChange={(e) => patch({ giftQty: parseInt(e.target.value) || 1 })}
               className="w-24 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
           </div>
@@ -433,9 +433,9 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
       {conditionType === 'add_on' && (
         <>
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">加購價格</label>
+            <label className="block text-[11px] font-semibold text-stone-400 mb-1">加購價格</label>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">NT$</span>
+              <span className="text-xs text-stone-400">NT$</span>
               <input type="number" min={0} value={p?.addOnPrice ?? ''} onChange={(e) => patch({ addOnPrice: parseFloat(e.target.value) || 0 })}
                 className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
@@ -457,20 +457,20 @@ function ConditionEditor({ conditionType, conditionParams, onChange, isSeries = 
           />
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">組合優惠總價（擇一）</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">組合優惠總價（擇一）</label>
               <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-400">NT$</span>
+                <span className="text-xs text-stone-400">NT$</span>
                 <input type="number" min={0} value={p?.bundlePrice ?? ''} onChange={(e) => patch({ bundlePrice: parseFloat(e.target.value) || undefined })}
                   className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
               </div>
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">或折扣率</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">或折扣率</label>
               <div className="flex items-center gap-1">
                 <input type="number" min={0} max={100} step={5} value={p?.rate != null ? Math.round(p.rate * 100) : ''}
                   onChange={(e) => patch({ rate: (parseInt(e.target.value) || 0) / 100 || undefined })}
                   className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-                <span className="text-xs text-gray-400">%</span>
+                <span className="text-xs text-stone-400">%</span>
               </div>
             </div>
           </div>
@@ -523,9 +523,9 @@ function SeriesPicker({ onSelect }: { onSelect: (s: SeriesResult) => void }) {
         autoFocus
         className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
       />
-      {loading && <p className="text-xs text-gray-400 mt-2 text-center">載入中…</p>}
+      {loading && <p className="text-xs text-stone-400 mt-2 text-center">載入中…</p>}
       {!loading && filtered.length === 0 && (
-        <p className="text-xs text-gray-400 mt-2 text-center">找不到符合的系列</p>
+        <p className="text-xs text-stone-400 mt-2 text-center">找不到符合的系列</p>
       )}
       {filtered.length > 0 && (
         <div className="mt-2 border rounded-lg divide-y overflow-hidden max-h-64 overflow-y-auto">
@@ -536,8 +536,8 @@ function SeriesPicker({ onSelect }: { onSelect: (s: SeriesResult) => void }) {
               onClick={() => onSelect(f)}
               className="w-full text-left px-3 py-2.5 hover:bg-brand-50 transition"
             >
-              <p className="text-sm font-medium text-gray-800">{f.seriesName}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{f.brand} · {f.productType}</p>
+              <p className="text-sm font-medium text-stone-800">{f.seriesName}</p>
+              <p className="text-xs text-stone-400 mt-0.5">{f.brand} · {f.productType}</p>
             </button>
           ))}
         </div>
@@ -580,9 +580,9 @@ function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void
         autoFocus
         className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
       />
-      {loading && <p className="text-xs text-gray-400 mt-2 text-center">搜尋中…</p>}
+      {loading && <p className="text-xs text-stone-400 mt-2 text-center">搜尋中…</p>}
       {!loading && q.trim() && results.length === 0 && (
-        <p className="text-xs text-gray-400 mt-2 text-center">找不到符合的商品</p>
+        <p className="text-xs text-stone-400 mt-2 text-center">找不到符合的商品</p>
       )}
       {results.length > 0 && (
         <div className="mt-2 border rounded-lg divide-y overflow-hidden max-h-64 overflow-y-auto">
@@ -593,8 +593,8 @@ function ProductSearchPicker({ onSelect }: { onSelect: (r: SearchResult) => void
               onClick={() => { onSelect(r); setQ(''); setResults([]) }}
               className="w-full text-left px-3 py-2.5 hover:bg-brand-50 transition"
             >
-              <p className="text-sm font-medium text-gray-800">{r.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{r.skuCode} · {r.manufacturer}</p>
+              <p className="text-sm font-medium text-stone-800">{r.name}</p>
+              <p className="text-xs text-stone-400 mt-0.5">{r.skuCode} · {r.manufacturer}</p>
             </button>
           ))}
         </div>
@@ -669,12 +669,12 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">{item.skuName}</span>
+            <span className="text-sm font-semibold text-stone-800">{item.skuName}</span>
             {item.seriesId
               ? <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600 border border-violet-200">系列</span>
-              : item.skuCode && <span className="text-xs text-gray-400 font-mono">{item.skuCode}</span>
+              : item.skuCode && <span className="text-xs text-stone-400 font-mono">{item.skuCode}</span>
             }
-            {item.brand && <span className="text-xs text-gray-400">{item.brand}</span>}
+            {item.brand && <span className="text-xs text-stone-400">{item.brand}</span>}
           </div>
 
           {/* Condition + price (view) */}
@@ -687,13 +687,13 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
               )}
               {/* Legacy free-text condition */}
               {!item.conditionType && item.condition && (
-                <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{item.condition}</span>
+                <span className="text-xs text-stone-600 bg-stone-100 px-2 py-0.5 rounded-full">{item.condition}</span>
               )}
               {item.price != null && (
                 <span className="text-xs font-semibold text-brand-700">NT${item.price.toLocaleString()}</span>
               )}
               {item.adminNote && (
-                <span className="text-xs text-gray-400 italic">備注：{item.adminNote}</span>
+                <span className="text-xs text-stone-400 italic">備注：{item.adminNote}</span>
               )}
             </div>
           )}
@@ -705,7 +705,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
             <select
               value={item.status}
               onChange={(e) => handleStatusChange(e.target.value as ItemStatus)}
-              className="text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 text-gray-600"
+              className="text-xs border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 text-stone-600"
             >
               <option value="待定價">待定價</option>
               <option value="已確認">已確認</option>
@@ -714,13 +714,13 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
           )}
           {isAdmin && (
             <button onClick={() => setEditing((e) => !e)}
-              className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 transition">
+              className="px-2 py-1 rounded text-xs border border-stone-200 text-stone-500 hover:border-brand-400 hover:text-brand-600 transition">
               {editing ? '收起' : '編輯'}
             </button>
           )}
           {isAdmin && (
             <button onClick={handleDelete} disabled={deleting}
-              className="px-2 py-1 rounded text-xs border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition disabled:opacity-40">
+              className="px-2 py-1 rounded text-xs border border-stone-200 text-stone-400 hover:border-red-300 hover:text-red-500 transition disabled:opacity-40">
               {deleting ? '…' : '移除'}
             </button>
           )}
@@ -740,7 +740,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
 
           {/* Free-text condition label */}
           <div>
-            <label className="block text-[11px] font-semibold text-gray-400 mb-1">
+            <label className="block text-[11px] font-semibold text-stone-400 mb-1">
               促銷條件說明（自由文字，業務可見）
             </label>
             <input
@@ -754,7 +754,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">促銷價格（參考，選填）</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">促銷價格（參考，選填）</label>
               <input
                 type="number" min={0} value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -763,7 +763,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-gray-400 mb-1">行政備注</label>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">行政備注</label>
               <input
                 type="text" value={adminNote}
                 onChange={(e) => setAdminNote(e.target.value)}
@@ -775,7 +775,7 @@ function ItemRow({ item, onUpdate, onDelete, isAdmin }: {
 
           <div className="flex gap-2">
             <button onClick={() => setEditing(false)}
-              className="px-3 py-1.5 rounded-lg border text-xs text-gray-500 hover:bg-gray-50 transition">
+              className="px-3 py-1.5 rounded-lg border text-xs text-stone-500 hover:bg-stone-50 transition">
               取消
             </button>
             <button onClick={handleSave} disabled={saving}
@@ -936,7 +936,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
           {/* Meta row */}
           <div className="flex flex-wrap items-center gap-4 mt-3">
             {promo.description && (
-              <p className="text-xs text-gray-500 leading-relaxed flex-1">{promo.description}</p>
+              <p className="text-xs text-stone-500 leading-relaxed flex-1">{promo.description}</p>
             )}
             {promo.dmUrl && (
               <a href={promo.dmUrl} target="_blank" rel="noopener noreferrer"
@@ -952,7 +952,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
               <span className="text-green-600 font-semibold">✅ 已確認 {confirmed}</span>
               <span className="text-yellow-600 font-semibold">⏳ 待定價 {pending}</span>
               {dropped > 0 && <span className="text-red-500">❌ 不採用 {dropped}</span>}
-              <span className="text-gray-400">共 {items.length} 項</span>
+              <span className="text-stone-400">共 {items.length} 項</span>
               {isAdmin && pending > 0 && (
                 <button
                   onClick={handleConfirmAll}
@@ -969,7 +969,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
         {/* Items — scrollable */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {/* Add item toolbar */}
-          <div className="px-4 sm:px-5 py-3 border-b bg-gray-50/80 sticky top-0 z-10">
+          <div className="px-4 sm:px-5 py-3 border-b bg-stone-50/80 sticky top-0 z-10">
             <div className="flex items-center justify-between mb-2">
               {/* Status filter tabs */}
               <div className="flex gap-1 flex-wrap">
@@ -983,7 +983,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
                         'px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition',
                         statusFilter === val
                           ? 'bg-brand-500 border-brand-500 text-white'
-                          : 'border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 bg-white',
+                          : 'border-stone-200 text-stone-500 hover:border-brand-300 hover:text-brand-600 bg-white',
                       ].join(' ')}>
                       {label} {count > 0 && <span className="opacity-70">({count})</span>}
                     </button>
@@ -1016,7 +1016,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
                             'px-3 py-1 rounded-full text-xs font-medium border transition',
                             addMode === m
                               ? 'bg-brand-500 border-brand-500 text-white'
-                              : 'border-gray-300 text-gray-500 hover:border-brand-400 hover:text-brand-600',
+                              : 'border-stone-300 text-stone-500 hover:border-brand-400 hover:text-brand-600',
                           ].join(' ')}>
                           {m === 'sku' ? '單一商品' : '商品系列'}
                         </button>
@@ -1037,13 +1037,13 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
             <div className="divide-y">
               {[1,2,3].map((i) => (
                 <div key={i} className="h-14 px-5 py-3 animate-pulse">
-                  <div className="h-3 bg-gray-100 rounded w-3/4" />
+                  <div className="h-3 bg-stone-100 rounded w-3/4" />
                 </div>
               ))}
             </div>
           )}
           {!loadingItems && items.length === 0 && (
-            <div className="text-center py-16 text-gray-400">
+            <div className="text-center py-16 text-stone-400">
               <div className="text-4xl mb-2">📋</div>
               <p className="text-sm">尚未加入任何品項</p>
               <button onClick={() => setShowSearch(true)}
@@ -1053,7 +1053,7 @@ function PromotionDetailPanel({ promo, onClose, onEdit, isAdmin }: {
             </div>
           )}
           {!loadingItems && items.length > 0 && displayedItems.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-stone-400">
               <p className="text-sm">此篩選條件下無品項</p>
               <button onClick={() => setStatusFilter('all')}
                 className="mt-1 text-xs text-brand-600 hover:underline">顯示全部</button>
@@ -1149,18 +1149,18 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-5 space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">活動名稱 *</label>
+            <label className="block text-xs font-semibold text-stone-500 mb-1">活動名稱 *</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="例：2026 年 Q2 季度展場"
               className="input-soft w-full" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">活動類型</label>
+            <label className="block text-xs font-semibold text-stone-500 mb-1">活動類型</label>
             <div className="flex flex-wrap gap-2">
               {(['', ...PROMOTION_TYPES] as (PromotionType | '')[]).map((t) => (
                 <button key={t || 'none'} type="button" onClick={() => setType(t)}
                   className={['px-3 py-1.5 rounded-full text-xs font-medium border transition',
-                    type === t ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+                    type === t ? 'bg-brand-500 border-brand-500 text-white' : 'border-stone-300 text-stone-600 hover:border-brand-400 hover:text-brand-600',
                   ].join(' ')}>
                   {t || '不指定'}
                 </button>
@@ -1169,33 +1169,33 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">開始日期</label>
+              <label className="block text-xs font-semibold text-stone-500 mb-1">開始日期</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
                 className="input-soft w-full" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">結束日期</label>
+              <label className="block text-xs font-semibold text-stone-500 mb-1">結束日期</label>
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                 className="input-soft w-full" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">活動說明</label>
+            <label className="block text-xs font-semibold text-stone-500 mb-1">活動說明</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               placeholder="活動內容、優惠條件說明…" rows={4}
               className="input-soft w-full resize-none" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">DM 附件連結</label>
+            <label className="block text-xs font-semibold text-stone-500 mb-1">DM 附件連結</label>
             <input type="url" value={dmUrl} onChange={(e) => setDmUrl(e.target.value)}
               placeholder="https://…（Notion 附件、Google Drive 等）"
               className="input-soft w-full" />
-            <p className="text-[11px] text-gray-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
+            <p className="text-[11px] text-stone-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">關聯追蹤名單（選填）</label>
+            <label className="block text-xs font-semibold text-stone-500 mb-1">關聯追蹤名單（選填）</label>
             {campaignOptions.length === 0 ? (
-              <p className="text-xs text-gray-400">目前沒有可選的追蹤名單</p>
+              <p className="text-xs text-stone-400">目前沒有可選的追蹤名單</p>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                 {campaignOptions.map((c) => {
@@ -1204,7 +1204,7 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
                     <button key={c.id} type="button"
                       onClick={() => setCampaignIds((prev) => active ? prev.filter((id) => id !== c.id) : [...prev, c.id])}
                       className={['px-2.5 py-1 rounded-full text-xs font-medium border transition',
-                        active ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300 text-gray-600 hover:border-brand-400 hover:text-brand-600',
+                        active ? 'bg-brand-500 border-brand-500 text-white' : 'border-stone-300 text-stone-600 hover:border-brand-400 hover:text-brand-600',
                       ].join(' ')}>
                       {c.name}
                     </button>
@@ -1212,7 +1212,7 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
                 })}
               </div>
             )}
-            <p className="text-[11px] text-gray-400 mt-1">讓行銷準備與業務執行(追蹤名單)可互相對照,同一檔活動可連多份名單</p>
+            <p className="text-[11px] text-stone-400 mt-1">讓行銷準備與業務執行(追蹤名單)可互相對照,同一檔活動可連多份名單</p>
           </div>
         </div>
         <div className="shrink-0 border-t border-stone-900/[0.06] bg-white/70 px-4 py-4 sm:px-6">
@@ -1274,21 +1274,21 @@ function PromotionCard({ promo, onView, onEdit, onCopy, onDelete, isAdmin, usage
         {isAdmin && (
           <div className="flex shrink-0 gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
             <button onClick={(e) => { e.stopPropagation(); onEdit() }}
-              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
+              className="px-2.5 py-1 rounded-lg border border-stone-200 text-xs text-stone-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">
               編輯
             </button>
             <button onClick={(e) => { e.stopPropagation(); onCopy() }}
-              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition"
+              className="px-2.5 py-1 rounded-lg border border-stone-200 text-xs text-stone-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50 transition"
               title="複製此活動（建立新活動並預填欄位）">
               複製
             </button>
             <button onClick={handleDelete} disabled={deleting}
-              className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
+              className="px-2.5 py-1 rounded-lg border border-stone-200 text-xs text-stone-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
               {deleting ? '…' : '刪除'}
             </button>
           </div>
         )}
-        <div className="text-gray-300 group-hover:text-brand-400 transition-colors text-sm shrink-0 mt-0.5">›</div>
+        <div className="text-stone-300 group-hover:text-brand-400 transition-colors text-sm shrink-0 mt-0.5">›</div>
       </div>
     </div>
   )

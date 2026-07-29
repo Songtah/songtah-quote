@@ -151,7 +151,7 @@ export function DashboardContent({
           <>
             <RecordList title="重點客戶" items={s.customers.recent} emptyLabel="目前尚未讀到客戶資料。" />
             <div className="panel p-6">
-              <h3 className="text-base font-semibold text-gray-900">快速操作</h3>
+              <h3 className="text-base font-semibold text-stone-900">快速操作</h3>
               <motion.div
                 className="mt-4 grid gap-3"
                 variants={staggerFast}

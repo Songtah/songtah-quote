@@ -29,7 +29,7 @@ function accountTypeBadge(type: string) {
     行政: 'bg-blue-100 text-blue-800',
     技術: 'bg-purple-100 text-purple-800',
   }
-  return map[type] ?? 'bg-gray-100 text-gray-600'
+  return map[type] ?? 'bg-stone-100 text-stone-600'
 }
 
 function statusTextClass(status: string) {

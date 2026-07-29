@@ -20,7 +20,7 @@ const calcTotal = (items: OrderItem[]): number =>
 
 const ITEM_TYPE_LABEL: Record<ItemType, string>  = { normal: '一般', gift: '贈品', sample: '樣品' }
 const ITEM_TYPE_COLOR: Record<ItemType, string>  = {
-  normal: 'bg-gray-100 text-gray-600',
+  normal: 'bg-stone-100 text-stone-600',
   gift:   'bg-brand-50 text-green-700',
   sample: 'bg-blue-100 text-blue-700',
 }
@@ -117,7 +117,7 @@ const STATUS_OPTIONS = ['草稿', '已送出', '確認中', '已到貨', '已取
 type StatusType = typeof STATUS_OPTIONS[number]
 
 const STATUS_COLOR: Record<StatusType, string> = {
-  草稿:   'bg-gray-100 text-gray-600',
+  草稿:   'bg-stone-100 text-stone-600',
   已送出: 'bg-blue-100 text-blue-700',
   確認中: 'bg-yellow-100 text-yellow-700',
   已到貨: 'bg-brand-50 text-green-700',
@@ -344,7 +344,7 @@ function ProductPicker({
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-lg leading-none transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 text-lg leading-none transition-colors"
           >
             ✕
           </button>
@@ -395,9 +395,9 @@ function ProductPicker({
           {isSearching ? (
             /* ── 搜尋模式：規格系列優先，再顯示其餘個別品項 ── */
             searchLoading ? (
-              <div className="text-center text-gray-400 py-12 text-sm animate-pulse">搜尋中...</div>
+              <div className="text-center text-stone-400 py-12 text-sm animate-pulse">搜尋中...</div>
             ) : familySearchResults.length === 0 && remainingSearchResults.length === 0 ? (
-              <div className="text-center text-gray-400 py-12 text-sm">無符合品項</div>
+              <div className="text-center text-stone-400 py-12 text-sm">無符合品項</div>
             ) : (
               <div className="divide-y divide-stone-900/[0.05]">
                 {/* ① 符合的規格系列 */}
@@ -414,7 +414,7 @@ function ProductPicker({
                         </span>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-stone-800">{family.seriesName}</div>
-                          <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
+                          <div className="text-xs text-stone-400 flex flex-wrap gap-1.5">
                             <span>{family.brand}</span>
                             <span>·</span>
                             <span>{family.productType}</span>
@@ -463,8 +463,8 @@ function ProductPicker({
                         className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
-                          <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                          <div className="text-sm font-medium text-stone-800 truncate">{item.name}</div>
+                          <div className="text-xs text-stone-400 flex gap-2 flex-wrap">
                             <span className="font-mono">{item.skuCode}</span>
                             <span>{item.manufacturer} · {item.category}</span>
                           </div>
@@ -478,7 +478,7 @@ function ProductPicker({
                       </div>
                     ))}
                     {remainingSearchResults.length >= 80 && (
-                      <div className="text-center text-xs text-gray-400 py-3 bg-gray-50">
+                      <div className="text-center text-xs text-stone-400 py-3 bg-stone-50">
                         顯示前 80 筆，請輸入更精確的關鍵字
                       </div>
                     )}
@@ -489,15 +489,15 @@ function ProductPicker({
           ) : (
             /* ── 瀏覽模式：規格系列 Accordion ── */
             familiesLoading ? (
-              <div className="text-center text-gray-400 py-12 text-sm animate-pulse">載入中...</div>
+              <div className="text-center text-stone-400 py-12 text-sm animate-pulse">載入中...</div>
             ) : filteredFamilies.length === 0 ? (
               browseItems.length > 0 ? (
                 <div className="divide-y divide-stone-900/[0.05]">
                   {browseItems.map((item) => (
                     <div key={item.skuCode} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item">
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
-                        <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                        <div className="text-sm font-medium text-stone-800 truncate">{item.name}</div>
+                        <div className="text-xs text-stone-400 flex gap-2 flex-wrap">
                           <span className="font-mono">{item.skuCode}</span>
                           <span>{item.manufacturer} · {item.category}</span>
                         </div>
@@ -512,7 +512,7 @@ function ProductPicker({
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-gray-400 py-12 text-sm">沒有符合條件的品項</div>
+                <div className="text-center text-stone-400 py-12 text-sm">沒有符合條件的品項</div>
               )
             ) : (
               <div className="divide-y divide-stone-900/[0.05]">
@@ -529,7 +529,7 @@ function ProductPicker({
                         </span>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-stone-800">{family.seriesName}</div>
-                          <div className="text-xs text-gray-400 flex flex-wrap gap-1.5">
+                          <div className="text-xs text-stone-400 flex flex-wrap gap-1.5">
                             <span>{family.brand}</span>
                             <span>·</span>
                             <span>{family.productType}</span>
@@ -573,8 +573,8 @@ function ProductPicker({
                     {browseItems.map((item) => (
                       <div key={item.skuCode} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/50 transition-colors group/item">
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-800 truncate">{item.name}</div>
-                          <div className="text-xs text-gray-400 flex gap-2 flex-wrap">
+                          <div className="text-sm font-medium text-stone-800 truncate">{item.name}</div>
+                          <div className="text-xs text-stone-400 flex gap-2 flex-wrap">
                             <span className="font-mono">{item.skuCode}</span>
                             <span>{item.manufacturer} · {item.category}</span>
                           </div>
@@ -603,7 +603,7 @@ function ProductPicker({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-gray-400 text-center bg-gray-50">
+        <div className="px-5 py-2.5 border-t rounded-b-2xl text-xs text-stone-400 text-center bg-stone-50">
           {isSearching
             ? `${familySearchResults.length} 個系列・${remainingSearchResults.length} 筆其他品項`
             : browseItems.length > 0
@@ -714,7 +714,7 @@ function CustomerNameInput({
           className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50 disabled:text-stone-500 pr-16"
         />
         {searching && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">搜尋中…</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 animate-pulse">搜尋中…</span>
         )}
         {!searching && customer.id && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ 已連結</span>
@@ -1378,12 +1378,12 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-start gap-3">
           {isEdit && (
             <div className="col-span-1">
-              <label className="block text-xs text-gray-500 mb-1">訂單編號</label>
-              <span className="font-mono text-sm font-semibold text-gray-700">{initialOrder?.orderNumber}</span>
+              <label className="block text-xs text-stone-500 mb-1">訂單編號</label>
+              <span className="font-mono text-sm font-semibold text-stone-700">{initialOrder?.orderNumber}</span>
             </div>
           )}
           <div className="col-span-1">
-            <label className="block text-xs text-gray-500 mb-1">訂貨日期</label>
+            <label className="block text-xs text-stone-500 mb-1">訂貨日期</label>
             <input
               type="date"
               value={date}
@@ -1392,7 +1392,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             />
           </div>
           <div className="col-span-1">
-            <label className="block text-xs text-gray-500 mb-1">業務姓名 *</label>
+            <label className="block text-xs text-stone-500 mb-1">業務姓名 *</label>
             {salespersonOptions.length > 0 ? (
               <select
                 value={salesperson}
@@ -1416,7 +1416,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
           </div>
           {isEdit && (
             <div className="col-span-1">
-              <label className="block text-xs text-gray-500 mb-1">狀態</label>
+              <label className="block text-xs text-stone-500 mb-1">狀態</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -1429,7 +1429,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             </div>
           )}
           <div className="col-span-2 sm:flex-1 sm:min-w-0">
-            <label className="block text-xs text-gray-500 mb-1">備註</label>
+            <label className="block text-xs text-stone-500 mb-1">備註</label>
             <input
               type="text"
               value={note}
@@ -1441,7 +1441,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
 
           {/* Promotion selector */}
           <div className="col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">關聯促銷活動</label>
+            <label className="block text-xs text-stone-500 mb-1">關聯促銷活動</label>
             <select
               value={promotionId}
               onChange={(e) => {
@@ -1478,11 +1478,11 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* 客戶名稱：單一欄位，打字即搜尋 CRM */}
           <div className="sm:col-span-2">
-            <label className="block text-xs text-gray-500 mb-1">客戶名稱</label>
+            <label className="block text-xs text-stone-500 mb-1">客戶名稱</label>
             <CustomerNameInput customer={customer} onChange={setCustomer} disabled={!canEdit} />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">聯絡人</label>
+            <label className="block text-xs text-stone-500 mb-1">聯絡人</label>
             <input
               type="text"
               value={customer.contactPerson}
@@ -1493,7 +1493,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">電話</label>
+            <label className="block text-xs text-stone-500 mb-1">電話</label>
             <input
               type="text"
               value={customer.phone}
@@ -1504,7 +1504,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">統一編號</label>
+            <label className="block text-xs text-stone-500 mb-1">統一編號</label>
             <input
               type="text"
               value={customer.taxId}
@@ -1515,8 +1515,8 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
-              公司抬頭 <span className="text-gray-400 text-[10px]">（選填）</span>
+            <label className="block text-xs text-stone-500 mb-1">
+              公司抬頭 <span className="text-stone-400 text-[10px]">（選填）</span>
             </label>
             <input
               type="text"
@@ -1528,7 +1528,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">地址</label>
+            <label className="block text-xs text-stone-500 mb-1">地址</label>
             <input
               type="text"
               value={customer.address}
@@ -1547,7 +1547,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
           <h2 className="font-bold text-stone-800 min-w-0 truncate tracking-wide">
             <span className="mr-2 text-[11px] font-bold uppercase tracking-widest text-stone-400">第三步</span>訂貨品項
             {items.length > 0 && (
-              <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-gray-400 whitespace-nowrap">
+              <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-stone-400 whitespace-nowrap">
                 {items.length} 種 · 共 {totalQty} 件
               </span>
             )}
@@ -1575,7 +1575,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
               className={`mx-4 sm:mx-5 my-3 rounded-xl border px-4 py-3 text-sm ${
                 reached
                   ? 'bg-brand-50 border-brand-200 text-teal-800'
-                  : 'bg-gray-50 border-gray-200 text-gray-600'
+                  : 'bg-stone-50 border-stone-200 text-stone-600'
               }`}
             >
               <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
@@ -1583,15 +1583,15 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                   {reached ? '🎁' : '🏷'} {seriesName}
                   <span className="ml-2 font-normal text-xs opacity-70">買{n}送{m}（同系列跨規格合計）</span>
                 </span>
-                <span className={`text-xs font-semibold ${reached ? 'text-teal-700' : 'text-gray-500'}`}>
+                <span className={`text-xs font-semibold ${reached ? 'text-teal-700' : 'text-stone-500'}`}>
                   {totalQty} / {n} 件
                   {freeQty > 0 && ` → 可自選 ${freeQty} 件贈品`}
                 </span>
               </div>
               {/* progress bar */}
-              <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-stone-200 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${reached ? 'bg-brand-400' : 'bg-gray-400'}`}
+                  className={`h-full rounded-full transition-all ${reached ? 'bg-brand-400' : 'bg-stone-400'}`}
                   style={{ width: `${totalQty === 0 ? 0 : Math.min(100, (totalQty / n) * 100)}%` }}
                 />
               </div>
@@ -1637,18 +1637,18 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-[10px] text-gray-400 shrink-0">{idx + 1}.</span>
-                          <span className="font-semibold text-gray-800 text-sm leading-snug">{item.skuName}</span>
+                          <span className="text-[10px] text-stone-400 shrink-0">{idx + 1}.</span>
+                          <span className="font-semibold text-stone-800 text-sm leading-snug">{item.skuName}</span>
                         </div>
                         {(item.skuCode || item.brand) && (
-                          <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                          <p className="text-[11px] text-stone-400 font-mono mt-0.5">
                             {[item.skuCode, item.brand].filter(Boolean).join(' · ')}
                           </p>
                         )}
                       </div>
                       {canEdit && (
                         <button onClick={() => removeItem(item.id)}
-                          className="text-gray-300 hover:text-red-400 text-2xl leading-none shrink-0 -mt-0.5 px-1">×</button>
+                          className="text-stone-300 hover:text-red-400 text-2xl leading-none shrink-0 -mt-0.5 px-1">×</button>
                       )}
                     </div>
 
@@ -1663,7 +1663,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                     {/* 類型 + 數量 */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 mb-1">類型</label>
+                        <label className="block text-[10px] font-medium text-stone-400 mb-1">類型</label>
                         <select
                           value={type}
                           onChange={(e) => {
@@ -1682,7 +1682,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 mb-1">數量</label>
+                        <label className="block text-[10px] font-medium text-stone-400 mb-1">數量</label>
                         {canEdit ? (
                           <div className="flex items-center gap-1">
                             <button
@@ -1690,7 +1690,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
                                 else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
                               }}
-                              className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 flex items-center justify-center text-base leading-none"
+                              className="w-8 h-8 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100 flex items-center justify-center text-base leading-none"
                             >−</button>
                             <input
                               type="number"
@@ -1708,11 +1708,11 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, qty + 1)
                                 else updateItem(item.id, { quantity: qty + 1 })
                               }}
-                              className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 flex items-center justify-center text-base leading-none"
+                              className="w-8 h-8 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100 flex items-center justify-center text-base leading-none"
                             >+</button>
                           </div>
                         ) : (
-                          <span className="text-sm font-semibold text-gray-700">{qty} 件</span>
+                          <span className="text-sm font-semibold text-stone-700">{qty} 件</span>
                         )}
                       </div>
                     </div>
@@ -1720,7 +1720,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                     {/* 單價 + 小計 */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 mb-1">單價</label>
+                        <label className="block text-[10px] font-medium text-stone-400 mb-1">單價</label>
                         {isGift ? (
                           <span className="text-sm text-green-600 font-medium">$0</span>
                         ) : canEdit ? (
@@ -1736,18 +1736,18 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                             className="w-full border-b border-dashed border-stone-300 bg-transparent py-0.5 text-sm focus:outline-none focus:border-brand-500"
                           />
                         ) : (
-                          <span className="text-sm text-gray-700">{price > 0 ? price.toLocaleString() : '—'}</span>
+                          <span className="text-sm text-stone-700">{price > 0 ? price.toLocaleString() : '—'}</span>
                         )}
                         {!isGift && price <= 0 && item.skuCode && (
                           <span className="block text-[10px] text-amber-600 mt-0.5">⚠ 此商品尚未定價</span>
                         )}
                       </div>
                       <div>
-                        <label className="block text-[10px] font-medium text-gray-400 mb-1">小計</label>
+                        <label className="block text-[10px] font-medium text-stone-400 mb-1">小計</label>
                         {isGift
                           ? <span className="text-sm text-green-500 font-medium">贈送</span>
                           : price > 0
-                            ? <span className="text-sm font-bold tabular-nums text-gray-800">{lineAmt.toLocaleString()}</span>
+                            ? <span className="text-sm font-bold tabular-nums text-stone-800">{lineAmt.toLocaleString()}</span>
                             : <span className="text-sm text-amber-500">待定價</span>
                         }
                       </div>
@@ -1763,7 +1763,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                         className="w-full border-b border-dashed border-stone-200 bg-transparent py-1 text-sm text-stone-600 placeholder:text-stone-300 focus:outline-none focus:border-brand-500"
                       />
                     ) : item.note ? (
-                      <p className="text-xs text-gray-400">{item.note}</p>
+                      <p className="text-xs text-stone-400">{item.note}</p>
                     ) : null}
                   </div>
                 )
@@ -1771,9 +1771,9 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
 
               {/* 手機合計 */}
               {totalAmount > 0 && (
-                <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t-2">
-                  <span className="text-sm text-gray-600 font-medium">合計（不含贈品）</span>
-                  <span className="text-sm font-bold tabular-nums text-gray-800">{totalAmount.toLocaleString()}</span>
+                <div className="flex justify-between items-center px-4 py-3 bg-stone-50 border-t-2">
+                  <span className="text-sm text-stone-600 font-medium">合計（不含贈品）</span>
+                  <span className="text-sm font-bold tabular-nums text-stone-800">{totalAmount.toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -1782,7 +1782,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[680px] text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                  <tr className="bg-stone-50 text-xs text-stone-500 uppercase tracking-wide">
                     <th className="px-3 py-2.5 text-left w-8">#</th>
                     <th className="px-3 py-2.5 text-left">貨品碼</th>
                     <th className="px-3 py-2.5 text-left">品牌</th>
@@ -1803,12 +1803,12 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                     const price   = isGift ? 0 : (item.unitPrice || 0)
                     const lineAmt = qty * price
                     return (
-                      <tr key={item.id} className={isGift ? 'bg-brand-50/40 hover:bg-brand-50' : 'hover:bg-gray-50'}>
-                        <td className="px-3 py-2.5 text-gray-400 text-xs">{idx + 1}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{item.skuCode}</td>
-                        <td className="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">{item.brand}</td>
+                      <tr key={item.id} className={isGift ? 'bg-brand-50/40 hover:bg-brand-50' : 'hover:bg-stone-50'}>
+                        <td className="px-3 py-2.5 text-stone-400 text-xs">{idx + 1}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-stone-500 whitespace-nowrap">{item.skuCode}</td>
+                        <td className="px-3 py-2.5 text-stone-600 text-xs whitespace-nowrap">{item.brand}</td>
                         <td className="px-3 py-2.5">
-                          <div className="font-medium text-gray-800">{item.skuName}</div>
+                          <div className="font-medium text-stone-800">{item.skuName}</div>
                           {promoHints[item.id] && (
                             <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
                               <span>⚡</span>
@@ -1841,7 +1841,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
                                 else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
                               }}
-                              className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                              className="w-6 h-6 rounded border text-stone-500 hover:bg-stone-100 flex items-center justify-center text-sm leading-none"
                             >−</button>
                             <input
                               type="number"
@@ -1859,7 +1859,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                                 if (!isGift) handleQtyChange(item, qty + 1)
                                 else updateItem(item.id, { quantity: qty + 1 })
                               }}
-                              className="w-6 h-6 rounded border text-gray-500 hover:bg-gray-100 flex items-center justify-center text-sm leading-none"
+                              className="w-6 h-6 rounded border text-stone-500 hover:bg-stone-100 flex items-center justify-center text-sm leading-none"
                             >+</button>
                           </div>
                         </td>
@@ -1883,7 +1883,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                             <span className="block text-right text-[10px] text-amber-600 mt-0.5">⚠ 尚未定價</span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-sm text-gray-700 tabular-nums">
+                        <td className="px-3 py-2.5 text-right text-sm text-stone-700 tabular-nums">
                           {isGift
                             ? <span className="text-green-500 text-xs">贈送</span>
                             : price > 0
@@ -1902,7 +1902,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                         <td className="px-3 py-2.5 text-center">
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-gray-300 hover:text-red-400 text-lg leading-none"
+                            className="text-stone-300 hover:text-red-400 text-lg leading-none"
                           >×</button>
                         </td>
                       </tr>
@@ -1910,9 +1910,9 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                   })}
                 </tbody>
                 <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
-                  <tr className="border-t-2 bg-gray-50">
-                    <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-gray-600">合計（不含贈品）</td>
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-800 tabular-nums">
+                  <tr className="border-t-2 bg-stone-50">
+                    <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-stone-600">合計（不含贈品）</td>
+                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-stone-800 tabular-nums">
                       {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
                     </td>
                     <td colSpan={2}></td>
@@ -1931,14 +1931,14 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-gray-500 border-b">
+                <tr className="text-xs text-stone-500 border-b">
                   <th className="text-left pb-2 font-medium">品牌</th>
                   <th className="text-center pb-2 font-medium">種類</th>
                   <th className="text-center pb-2 font-medium">件數</th>
                   {totalAmount > 0 && <th className="text-right pb-2 font-medium">小計</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-stone-50">
                 {Object.entries(
                   items.reduce((acc, it) => {
                     if (!acc[it.brand]) acc[it.brand] = { kinds: 0, qty: 0, amt: 0 }
@@ -1950,12 +1950,12 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                 )
                   .sort((a, b) => b[1].qty - a[1].qty)
                   .map(([brand, stat]) => (
-                    <tr key={brand} className="text-gray-700">
+                    <tr key={brand} className="text-stone-700">
                       <td className="py-1.5">{brand || '—'}</td>
                       <td className="text-center py-1.5 tabular-nums">{stat.kinds} 種</td>
                       <td className="text-center py-1.5 tabular-nums font-medium">{stat.qty} 件</td>
                       {totalAmount > 0 && (
-                        <td className="text-right py-1.5 tabular-nums text-gray-500">
+                        <td className="text-right py-1.5 tabular-nums text-stone-500">
                           {stat.amt > 0 ? stat.amt.toLocaleString() : '—'}
                         </td>
                       )}
@@ -1963,7 +1963,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
                   ))}
               </tbody>
               <tfoot>
-                <tr className="border-t font-semibold text-gray-800">
+                <tr className="border-t font-semibold text-stone-800">
                   <td className="pt-2">合計</td>
                   <td className="text-center pt-2 tabular-nums">{items.length} 種</td>
                   <td className="text-center pt-2 tabular-nums">{totalQty} 件</td>
