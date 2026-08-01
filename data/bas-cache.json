@@ -67814,5 +67814,29 @@
   "address": "臺中市北屯區",
   "kind": "牙醫診所",
   "fetchedAt": "2026-07-18T15:36:24.356Z"
+ },
+ "jl14lwwmcAE27zkUjo1tWw%253D%253D__eCwbLOlOQHjXVOJ6tlBXIg%253D%253D": {
+  "code": "2Y31010661",
+  "status": "開業",
+  "name": "湘禾牙體技術所",
+  "address": "新北市板橋區",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-08-01T10:43:31.508Z"
+ },
+ "zwlOjAOmH612vGtmpkrqaw%253D%253D__pZVbB0Wl0Q4AkQICQ29fTA%253D%253D": {
+  "code": "2Y32070134",
+  "status": "開業",
+  "name": "寬豪牙體技術所",
+  "address": "桃園市龜山區",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-08-01T10:43:31.508Z"
+ },
+ "xTQUSIPVsa9f5P5oyVlHAw%253D%253D__ZZXBVh88bz4flxINlQe6CQ%253D%253D": {
+  "code": "2Y01010180",
+  "status": "開業",
+  "name": "東達數位牙體技術所",
+  "address": "臺北市松山區",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-08-01T10:43:31.508Z"
  }
 }

@@ -1,24 +1,22 @@
 {
-  "month": "2026-07",
-  "fetchedAt": "2026-07-18T15:36:24.356Z",
+  "month": "2026-08",
+  "fetchedAt": "2026-08-01T10:43:31.508Z",
   "source": "mohw-bas",
   "totalClinics": 7145,
-  "totalLabs": 1094,
+  "totalLabs": 1097,
   "totalHospitals": 186,
-  "labsStale": true,
+  "labsStale": false,
   "pendingRemaining": 2,
-  "prevTotalClinics": 7147,
+  "prevTotalClinics": 7145,
   "prevTotalLabs": 1094,
   "prevTotalHospitals": 186,
   "totalCustomers": 8156,
   "newCodes": [
-    "3707380197",
-    "3717080640",
-    "3722022043",
-    "3731015538",
-    "3733052084",
-    "A7微曦牙醫診所__桃園市__龜山區",
-    "大觀國際牙醫診所__臺中市__南屯區"
+    "2Y31010661",
+    "2Y32070134",
+    "晶碩牙體技術所__彰化縣__溪湖鎮",
+    "拓盛牙體技術所__基隆市__中正區",
+    "2Y01010180"
   ],
   "codes": {
     "1101010012": {
@@ -66396,15 +66394,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y37130055": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "凱隆牙體技術所",
-      "address": "彰化縣花壇鄉",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y03090195": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -67751,6 +67740,15 @@
       "kind": "牙體技術所",
       "name": "暉揚牙體技術所",
       "address": "新北市五股區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y31010661": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "湘禾牙體技術所",
+      "address": "新北市板橋區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
@@ -69429,15 +69427,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y01010135": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "鈺宬數位牙體技術所",
-      "address": "臺北市松山區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y31140299": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -69803,6 +69792,15 @@
       "kind": "牙體技術所",
       "name": "東星牙體技術所",
       "address": "花蓮縣吉安鄉",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y32070134": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "寬豪牙體技術所",
+      "address": "桃園市龜山區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
@@ -72228,6 +72226,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "晶碩牙體技術所__彰化縣__溪湖鎮": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "晶碩牙體技術所",
+      "address": "彰化縣溪湖鎮",
+      "specialty": "",
+      "termDate": "",
+      "status": ""
+    },
     "2Y01110014": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -73920,6 +73927,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "拓盛牙體技術所__基隆市__中正區": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "拓盛牙體技術所",
+      "address": "基隆市中正區",
+      "specialty": "",
+      "termDate": "",
+      "status": ""
+    },
     "2Y07310045": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -74006,6 +74022,15 @@
       "kind": "牙體技術所",
       "name": "欣創牙體技術所",
       "address": "新北市新店區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y01010180": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "東達數位牙體技術所",
+      "address": "臺北市松山區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
