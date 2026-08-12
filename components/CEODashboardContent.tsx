@@ -269,18 +269,23 @@ function DualLineChart({
 }) {
   if (!data.length) return null
 
-  const W       = 320
-  const labelH  = 14
-  const pad     = 6
-  const H       = height + labelH
-  const drawTop = labelH + pad
-  const drawH   = H - drawTop - pad
+  const W          = 320
+  const labelH     = 14   // 頂部數值標籤保留空間
+  const monthLabelH = 14  // 底部月份標籤保留空間
+  const pad        = 6
+  const H          = height + labelH + monthLabelH
+  const drawTop    = labelH + pad
+  const drawH      = H - drawTop - pad - monthLabelH
+
+  // 月份 x 座標與資料點共用同一套公式,確保刻度對齊(不再用外部 HTML flex 排版,
+  // 兩套不同的間距算法會對不齊——外側月份尤其明顯)。
+  const xAt = (i: number) => pad + (i / Math.max(data.length - 1, 1)) * (W - pad * 2)
 
   const linesCoords = series.map((s) => {
     const values = data.map((d) => d[s.key] as number)
     const max    = Math.max(...values, 1)
     const coords = values.map((v, i) => ({
-      x: pad + (i / Math.max(values.length - 1, 1)) * (W - pad * 2),
+      x: xAt(i),
       y: drawTop + drawH - (v / max) * drawH,
       v,
     }))
@@ -316,6 +321,15 @@ function DualLineChart({
                 )
               })}
             </g>
+          )
+        })}
+        {data.map((d, i) => {
+          const x      = xAt(i)
+          const anchor = i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle'
+          return (
+            <text key={d.month} x={x} y={H - 3} textAnchor={anchor} fontSize="9" fill="#a8a29e">
+              {d.label}
+            </text>
           )
         })}
       </svg>
@@ -817,20 +831,13 @@ export function CEODashboardContent({
           {loading
             ? <Skeleton className="h-24" />
             : s && (
-              <>
-                <DualLineChart
-                  data={s.monthlyTrend}
-                  series={[
-                    { key: 'amount', color: '#2563eb', label: '業績金額', formatValue: fmtAmt },
-                    { key: 'visits', color: '#0f766e', label: '拜訪量' },
-                  ]}
-                />
-                <div className="flex justify-between mt-2">
-                  {s.monthlyTrend.map((m) => (
-                    <span key={m.month} className="text-[10px] text-stone-400 flex-1 text-center">{m.label}</span>
-                  ))}
-                </div>
-              </>
+              <DualLineChart
+                data={s.monthlyTrend}
+                series={[
+                  { key: 'amount', color: '#2563eb', label: '業績金額', formatValue: fmtAmt },
+                  { key: 'visits', color: '#0f766e', label: '拜訪量' },
+                ]}
+              />
             )
           }
         </div>
