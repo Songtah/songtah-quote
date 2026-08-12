@@ -253,97 +253,73 @@ function FollowUpModal({
   )
 }
 
-// ── SVG Line Chart ─────────────────────────────────────────────
+// ── Dual-axis Line Chart(金額 + 拜訪量,各自獨立比例尺,共用月份 x 軸) ──────────
 
-function LineChart({
+function DualLineChart({
   data,
-  valueKey,
-  color,
-  height = 80,
-  formatValue,
+  series,
+  height = 120,
 }: {
-  data:         MonthlyTrend[]
-  valueKey:     'amount' | 'visits' | 'orders' | 'quotes'
-  color:        string
-  height?:      number
-  formatValue?: (v: number) => string
+  data: MonthlyTrend[]
+  series: [
+    { key: 'amount' | 'visits' | 'orders' | 'quotes'; color: string; label: string; formatValue?: (v: number) => string },
+    { key: 'amount' | 'visits' | 'orders' | 'quotes'; color: string; label: string; formatValue?: (v: number) => string },
+  ]
+  height?: number
 }) {
   if (!data.length) return null
 
-  const values  = data.map((d) => d[valueKey] as number)
-  const max     = Math.max(...values, 1)
   const W       = 320
-  const labelH  = 14          // reserved space at top for value labels
+  const labelH  = 14
   const pad     = 6
   const H       = height + labelH
   const drawTop = labelH + pad
   const drawH   = H - drawTop - pad
 
-  const coords = values.map((v, i) => ({
-    x: pad + (i / Math.max(values.length - 1, 1)) * (W - pad * 2),
-    y: drawTop + drawH - (v / max) * drawH,
-  }))
-
-  const pts        = coords.map((c) => `${c.x},${c.y}`).join(' ')
-  const areaBottom = `${W - pad},${H} ${pad},${H}`
-  const area       = `${pts} ${areaBottom}`
+  const linesCoords = series.map((s) => {
+    const values = data.map((d) => d[s.key] as number)
+    const max    = Math.max(...values, 1)
+    const coords = values.map((v, i) => ({
+      x: pad + (i / Math.max(values.length - 1, 1)) * (W - pad * 2),
+      y: drawTop + drawH - (v / max) * drawH,
+      v,
+    }))
+    return { ...s, coords }
+  })
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full"
-      style={{ height: H }}
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <linearGradient id={`grad-${valueKey}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={color} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill={`url(#grad-${valueKey})`} />
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {coords.map(({ x, y }, i) => {
-        const v      = values[i]
-        const isLast = i === values.length - 1
-        const label  = formatValue ? formatValue(v) : String(v)
-        const anchor = i === 0 ? 'start' : i === values.length - 1 ? 'end' : 'middle'
-        return (
-          <g key={i}>
-            {/* 白色背景讓數字在漸層上可讀 */}
-            <text
-              x={x} y={y - 5}
-              textAnchor={anchor}
-              fontSize="9"
-              fill="white"
-              stroke="white"
-              strokeWidth="3"
-              paintOrder="stroke"
-              fontWeight={isLast ? 'bold' : 'normal'}
-            >
-              {label}
-            </text>
-            <text
-              x={x} y={y - 5}
-              textAnchor={anchor}
-              fontSize="9"
-              fill={isLast ? color : '#9ca3af'}
-              fontWeight={isLast ? 'bold' : 'normal'}
-            >
-              {label}
-            </text>
-            <circle cx={x} cy={y} r={isLast ? 4 : 3} fill={color} />
-          </g>
-        )
-      })}
-    </svg>
+    <div>
+      <div className="mb-1.5 flex gap-4">
+        {series.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5 text-[11px] text-stone-500">
+            <span className="inline-block size-2 rounded-full" style={{ background: s.color }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} preserveAspectRatio="xMidYMid meet">
+        {linesCoords.map((line) => {
+          const pts = line.coords.map((c) => `${c.x},${c.y}`).join(' ')
+          return (
+            <g key={line.key}>
+              <polyline points={pts} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              {line.coords.map((c, i) => {
+                const isLast = i === line.coords.length - 1
+                const label  = line.formatValue ? line.formatValue(c.v) : String(c.v)
+                const anchor = i === 0 ? 'start' : isLast ? 'end' : 'middle'
+                return (
+                  <g key={i}>
+                    <text x={c.x} y={c.y - 5} textAnchor={anchor} fontSize="9" fill="white" stroke="white" strokeWidth="3" paintOrder="stroke" fontWeight={isLast ? 'bold' : 'normal'}>{label}</text>
+                    <text x={c.x} y={c.y - 5} textAnchor={anchor} fontSize="9" fill={isLast ? line.color : '#9ca3af'} fontWeight={isLast ? 'bold' : 'normal'}>{label}</text>
+                    <circle cx={c.x} cy={c.y} r={isLast ? 4 : 3} fill={line.color} />
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })}
+      </svg>
+    </div>
   )
 }
 
@@ -829,7 +805,7 @@ export function CEODashboardContent({
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">近 6 月訂單趨勢</p>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-wider">近 6 月業績與拜訪</p>
               <h3 className="font-semibold text-stone-900">月度業績走勢</h3>
             </div>
             {s && (
@@ -842,7 +818,13 @@ export function CEODashboardContent({
             ? <Skeleton className="h-24" />
             : s && (
               <>
-                <LineChart data={s.monthlyTrend} valueKey="amount" color="#2563eb" height={80} formatValue={fmtAmt} />
+                <DualLineChart
+                  data={s.monthlyTrend}
+                  series={[
+                    { key: 'amount', color: '#2563eb', label: '業績金額', formatValue: fmtAmt },
+                    { key: 'visits', color: '#0f766e', label: '拜訪量' },
+                  ]}
+                />
                 <div className="flex justify-between mt-2">
                   {s.monthlyTrend.map((m) => (
                     <span key={m.month} className="text-[10px] text-stone-400 flex-1 text-center">{m.label}</span>
