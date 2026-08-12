@@ -5,7 +5,8 @@
  * 只關聯客戶主檔(相關規則見 CLAUDE.md「業務開發漏斗鐵則」的機構狀態/開發階段分離精神——
  * 這裡是另一種「報備語意不可混進其他領域資料」的應用)。
  *
- * 資料來源：Slack Workflow Builder 表單 → webhook(見 app/api/webhooks/slack-cross-support)。
+ * 資料來源：Slack「業務開發-討論區」頻道文字訊息(固定標籤格式)→ Events API webhook
+ * (見 app/api/webhooks/slack-cross-support、lib/slack-cross-support-parser.ts)。
  * 客戶比對(依姓名/縣市搜尋)屬於「跨領域查詢」，由呼叫端(webhook route)用 customers.ts 的
  * searchSystemCustomers 做完再把已解析的 customerId 傳進來——本檔不直接 import customers.ts，
  * 只用 ./relations 的 resolveCustomerInfo 把 relation id 轉回顯示用的名稱/縣市(讀取方向，允許)。
