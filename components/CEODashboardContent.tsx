@@ -185,6 +185,12 @@ function FollowUpModal({
                           <span className="text-xs text-stone-400">{v.city}</span>
                         )}
                       </div>
+                      {/* 拜訪內容 */}
+                      {v.content && (
+                        <p className="text-sm text-stone-700 mt-1.5 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                          {v.content}
+                        </p>
+                      )}
                       {/* 後續動作 */}
                       {v.followUpAction && (
                         <p className="text-xs text-stone-600 mt-1 leading-relaxed line-clamp-2">

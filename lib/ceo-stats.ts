@@ -11,6 +11,7 @@ import { Client } from '@notionhq/client'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
 import { listOpenTicketsForSla } from '@/lib/notion/tickets'
 import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
+import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -406,6 +407,7 @@ export async function getCEOStats(): Promise<CEOStats> {
     spMap[name].amount += o.totalAmount
   }
   const salespersonStats = Object.values(spMap)
+    .filter((sp) => !INACTIVE_SALESPERSONS.has(sp.name))
     .sort((a, b) => b.amount - a.amount || b.visits - a.visits)
 
   // ── 訂單狀態分佈（本月）──────────────────────────────────────

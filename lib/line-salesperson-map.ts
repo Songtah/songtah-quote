@@ -23,7 +23,7 @@ const MAP: Record<string, string> = {
  * 離職業務名單。
  * 這些人的客情紀錄可匯入歷史資料，但不在 UI 選單中顯示。
  */
-export const INACTIVE_SALESPERSONS = new Set(['Ada', 'Chloe', 'Vivienne', '洪爺'])
+export const INACTIVE_SALESPERSONS = new Set(['Ada', 'Chloe', 'Vivienne', '洪爺', 'James'])
 
 /**
  * 將 LINE 顯示名稱轉換為系統業務姓名。
