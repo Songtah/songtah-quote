@@ -104,6 +104,10 @@ export const DB = {
   territories:
     process.env.NOTION_TERRITORIES_DB ??
     '3a5dcdaa-fb2a-81a2-95b1-c368f569901d',
+  // 跨區支援報備（Slack Workflow → webhook 寫入；不掛勾訂單/業績計算，見 lib/notion/cross-support.ts）
+  crossSupport:
+    process.env.NOTION_CROSS_SUPPORT_DB ??
+    '3badcdaa-fb2a-81ed-ad7b-e28c356dcd5f',
 } as const
 
 export function normalizeDatabaseId(value?: string) {

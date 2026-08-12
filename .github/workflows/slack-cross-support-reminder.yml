@@ -1,0 +1,23 @@
+name: 跨區支援報備 — 每週四提醒業務提交
+
+on:
+  # 每週四 01:00 UTC(台灣時間 09:00)
+  schedule:
+    - cron: '0 1 * * 4'
+  workflow_dispatch:   # 允許手動觸發
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 觸發提醒端點(比對本週已提交名單,點名尚未提交的業務)
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 60 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/slack-cross-support-reminder" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp.json
+          test "$code" = "200"
