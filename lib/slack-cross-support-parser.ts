@@ -35,7 +35,9 @@ function normalizeDate(raw: string): string {
   return new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().slice(0, 10)
 }
 
-export function parseCrossSupportMessage(text: string): CrossSupportMessage | null {
+export function parseCrossSupportMessage(rawText: string): CrossSupportMessage | null {
+  // 有些人會習慣把整段包進程式碼區塊(```...```)貼,先拆掉避免污染最後一個欄位。
+  const text = rawText.replace(/^```|```$/g, '').trim()
   if (!isCrossSupportReport(text)) return null
 
   const salesperson = getField(text, '業務')

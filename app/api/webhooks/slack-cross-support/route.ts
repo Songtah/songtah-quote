@@ -61,11 +61,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
 
-  // 暫時性診斷 log(串接測試期間用,穩定後可移除):看清楚每次 Slack 實際送了什麼。
-  console.log('[Slack cross-support webhook] body.type=', body.type,
-    'event.type=', body.event?.type, 'event.subtype=', body.event?.subtype,
-    'bot_id=', body.event?.bot_id, 'text=', body.event?.text)
-
   // Slack 設定 Event Subscriptions Request URL 時的一次性驗證握手。
   if (body.type === 'url_verification') {
     return NextResponse.json({ challenge: body.challenge })
