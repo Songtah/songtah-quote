@@ -352,6 +352,40 @@ export async function listCustomersByArea(f: {
   return queryAreaCustomers(filter)
 }
 
+const AREA_BREAKDOWN_INACTIVE = new Set(['已歇業', '停業', '撤銷'])
+const AREA_BREAKDOWN_TYPES = ['牙醫診所', '牙體技術所', '醫院'] as const
+type AreaBreakdownType = (typeof AREA_BREAKDOWN_TYPES)[number]
+export interface SalespersonArea {
+  city: string; district: string; marketTotal: number
+  byType: Record<AreaBreakdownType, number>
+}
+
+/**
+ * 沒有正式轄區（或轄區已結束）的業務用：依「負責業務=自己」的實際客戶分布現算分區統計。
+ * 形狀對齊 `lib/territory-areas.ts` 的 TerritoryArea（city/district/marketTotal/byType），
+ * 但語意不同——這裡是「我目前名下客戶」而非「該區總市場規模」，前端需標示清楚來源。
+ */
+export async function getSalespersonAreaBreakdown(salesperson: string): Promise<SalespersonArea[]> {
+  const customers = await listCustomersByArea({ salesperson })
+  const counts = new Map<string, SalespersonArea>()
+  for (const customer of customers) {
+    if (AREA_BREAKDOWN_INACTIVE.has(customer.status)) continue
+    const city = customer.city || '(未填縣市)'
+    const district = customer.district || '(未填行政區)'
+    const key = `${city}|${district}`
+    let current = counts.get(key)
+    if (!current) {
+      current = { city, district, marketTotal: 0, byType: { '牙醫診所': 0, '牙體技術所': 0, '醫院': 0 } }
+      counts.set(key, current)
+    }
+    current.marketTotal++
+    if ((AREA_BREAKDOWN_TYPES as readonly string[]).includes(customer.type as AreaBreakdownType)) {
+      current.byType[customer.type as AreaBreakdownType]++
+    }
+  }
+  return Array.from(counts.values()).sort((a, b) => b.marketTotal - a.marketTotal)
+}
+
 /** 合併查詢多個轄區；每 20 區一批，避免逐區 N+1 與過大的複合 filter。 */
 export async function listCustomersByAreas(areas: { city: string; district: string }[]): Promise<AreaCustomer[]> {
   const uniqueAreas = Array.from(new Map(

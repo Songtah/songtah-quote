@@ -3,6 +3,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listTerritories } from '@/lib/notion/territories'
 import { getTerritoryAreas } from '@/lib/territory-areas'
 import { getSystemUsers } from '@/lib/notion/accounts'
+import { getSalespersonAreaBreakdown } from '@/lib/notion/customers'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,11 +16,29 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _c
     const territories = canViewAll
       ? allTerritories
       : allTerritories.filter((item) => !!item.salespersonId && item.salespersonId === user?.id)
-    const territoryKeys = new Set(territories.map((item) => `${item.city}|${item.district}`))
-    const areas = areaResult.items.filter((area) => territoryKeys.has(`${area.city}|${area.district}`))
+    // 沒有正式轄區(或轄區都已結束)的業務:改用實際客戶分布現算分區統計,取代轄區資料餵給同一套前端。
+    const activeTerritories = territories.filter((item) => item.status !== '結束')
+    let items: typeof territories = territories
+    let areas: { city: string; district: string; marketTotal: number; byType: Record<string, number> }[]
+    let areaSource: 'territories' | 'customers' = 'territories'
+    if (!canViewAll && activeTerritories.length === 0 && currentAccount?.name) {
+      const breakdown = await getSalespersonAreaBreakdown(currentAccount.name)
+      areaSource = 'customers'
+      areas = breakdown
+      items = breakdown.map((area) => ({
+        id: '', name: `${area.city}${area.district}｜${currentAccount.name}`,
+        city: area.city, district: area.district,
+        salesperson: currentAccount.name, salespersonId: currentAccount.id ?? '',
+        status: '', startDate: '', note: '', creator: '', createdAt: '',
+      }))
+    } else {
+      const territoryKeys = new Set(territories.map((item) => `${item.city}|${item.district}`))
+      areas = areaResult.items.filter((area) => territoryKeys.has(`${area.city}|${area.district}`))
+    }
     return NextResponse.json({
-      items: territories,
+      items,
       areas,
+      areaSource,
       updatedAt: areaResult.updatedAt,
       scope: canViewAll ? 'team' : 'mine',
       assignmentMode: currentAccount?.assignmentMode ?? '全面開發',

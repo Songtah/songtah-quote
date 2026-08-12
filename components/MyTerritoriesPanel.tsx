@@ -32,6 +32,7 @@ export default function MyTerritoriesPanel() {
   const [areas, setAreas] = useState<Area[]>([])
   const [scope, setScope] = useState<'mine' | 'team'>('mine')
   const [assignmentMode, setAssignmentMode] = useState('全面開發')
+  const [areaSource, setAreaSource] = useState<'territories' | 'customers'>('territories')
   const [accountId, setAccountId] = useState('')
   const [type, setType] = useState<'' | CustomerType>('')
   const [salesperson, setSalesperson] = useState('')
@@ -62,13 +63,14 @@ export default function MyTerritoriesPanel() {
       setAreas(json.areas ?? [])
       setScope(json.scope === 'team' ? 'team' : 'mine')
       setAssignmentMode(json.assignmentMode ?? '全面開發')
+      setAreaSource(json.areaSource === 'customers' ? 'customers' : 'territories')
       setAccountId(json.accountId ?? '')
     }).catch((caught) => setError(caught.message)).finally(() => setLoading(false))
   }, [])
 
   // 與伺服器端 canAcceptNewBusiness 一致:只有「全面開發」模式的業務能認領新客戶。
   // 這只是前端不顯示按鈕;真正的把關在 /api/territories/[id]/claim。
-  const canClaim = scope === 'mine' && assignmentMode === '全面開發'
+  const canClaim = scope === 'mine' && assignmentMode === '全面開發' && areaSource === 'territories'
   const people = useMemo(() => Array.from(new Set(territories.map((item) => item.salesperson))).sort((a, b) => a.localeCompare(b, 'zh-TW')), [territories])
   const visible = useMemo(() => territories.filter((item) => !salesperson || item.salesperson === salesperson), [salesperson, territories])
   const areaMap = useMemo(() => new Map(areas.map((area) => [`${area.city}|${area.district}`, area])), [areas])
@@ -233,7 +235,9 @@ export default function MyTerritoriesPanel() {
                 {scope === 'team' ? '團隊轄區' : assignmentMode === '既有客戶維護' ? '既有客戶維護' : '我的轄區'}
               </h2>
               <p className="mt-1 text-sm text-stone-500">
-                {scope === 'mine' && assignmentMode === '既有客戶維護' ? '專注服務目前名下客戶，不另外配置陌生開發轄區。' : '選擇客戶類型，立即看目前負責區域的市場規模。'}
+                {scope === 'mine' && areaSource === 'customers'
+                  ? '依你目前名下客戶實際分布統計，非正式轄區指派。'
+                  : scope === 'mine' && assignmentMode === '既有客戶維護' ? '專注服務目前名下客戶，不另外配置陌生開發轄區。' : '選擇客戶類型，立即看目前負責區域的市場規模。'}
               </p>
             </div>
           </div>
@@ -246,11 +250,13 @@ export default function MyTerritoriesPanel() {
 
         {scope === 'mine' && (
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            {territories.length > 0 ? <button onClick={() => openList('territories')} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-4" />查看全部轄區名單</button> : <div className="flex min-h-12 items-center justify-center rounded-full bg-stone-50 px-4 py-2.5 text-sm text-stone-400">目前沒有轄區名單</div>}
+            {areaSource === 'territories' && (territories.length > 0
+              ? <button onClick={() => openList('territories')} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-4" />查看全部轄區名單</button>
+              : <div className="flex min-h-12 items-center justify-center rounded-full bg-stone-50 px-4 py-2.5 text-sm text-stone-400">目前沒有轄區名單</div>)}
             <button onClick={() => openList('customers')} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95"><Users className="size-4" />查看既有客戶名單</button>
             {accountId && (
               <Link
-                href={`/bd/salespersons/${accountId}/report?scope=${territories.length > 0 ? 'territories' : 'customers'}`}
+                href={`/bd/salespersons/${accountId}/report?scope=${areaSource === 'territories' && territories.length > 0 ? 'territories' : 'customers'}`}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 sm:col-span-2"
               >
                 <Download className="size-4" />匯出我的客戶總表（PDF／CSV）
@@ -271,7 +277,7 @@ export default function MyTerritoriesPanel() {
           <>
             <div className="mt-5 flex items-end justify-between"><p className="text-sm text-stone-500">{visible.length} 個行政區</p><p className="text-sm text-stone-500">{type || '全部類型'}市場 <b className="text-xl text-brand-700">{total.toLocaleString()}</b> 家</p></div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {visible.map((territory) => <article key={territory.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || '全部市場'}</p></div></div><button onClick={() => openList('territories', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-3.5" />{scope === 'team' ? `查看 ${territory.salesperson} 客戶` : '查看我的客戶'}</button>{scope === 'mine' && canClaim && <button onClick={() => openList('claimable', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95"><UserPlus className="size-3.5" />認領此區客戶</button>}</article>)}
+              {visible.map((territory) => <article key={territory.id || `${territory.city}|${territory.district}`} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-900/[0.05]"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-stone-800">{territory.city}{territory.district}</h3>{scope === 'team' && <p className="mt-0.5 text-xs text-stone-400">{territory.salesperson}</p>}</div><div className="text-right"><p className="text-xl font-bold text-brand-700">{marketCount(territory).toLocaleString()}</p><p className="text-[11px] text-stone-400">{type || (areaSource === 'customers' ? '我的客戶' : '全部市場')}</p></div></div><button onClick={() => openList(areaSource === 'customers' ? 'customers' : 'territories', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-stone-50 px-3 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"><ListFilter className="size-3.5" />{scope === 'team' ? `查看 ${territory.salesperson} 客戶` : '查看我的客戶'}</button>{scope === 'mine' && canClaim && <button onClick={() => openList('claimable', { id: territory.id, city: territory.city, district: territory.district, salesperson: territory.salesperson })} className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95"><UserPlus className="size-3.5" />認領此區客戶</button>}</article>)}
             </div>
           </>
         )}
