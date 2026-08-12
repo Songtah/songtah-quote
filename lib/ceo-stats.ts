@@ -11,7 +11,7 @@ import { Client } from '@notionhq/client'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
 import { listOpenTicketsForSla } from '@/lib/notion/tickets'
 import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
-import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
+import { INACTIVE_SALESPERSONS, resolveSalesperson } from '@/lib/line-salesperson-map'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -407,7 +407,9 @@ export async function getCEOStats(): Promise<CEOStats> {
     spMap[name].amount += o.totalAmount
   }
   const salespersonStats = Object.values(spMap)
-    .filter((sp) => !INACTIVE_SALESPERSONS.has(sp.name))
+    // Notion 客情/訂單裡的「業務」欄位有些還留著舊的 LINE 顯示名稱(如「Chloe🍒」)而非正規化後的短名,
+    // 先轉換再比對離職名單,否則名字對不上,過濾會漏掉。
+    .filter((sp) => !INACTIVE_SALESPERSONS.has(resolveSalesperson(sp.name)))
     .sort((a, b) => b.amount - a.amount || b.visits - a.visits)
 
   // ── 訂單狀態分佈（本月）──────────────────────────────────────
