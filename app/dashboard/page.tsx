@@ -39,6 +39,12 @@ export default async function DashboardPage() {
   const greeting = hour < 11 ? '早安' : hour < 17 ? '午安' : '晚安'
 
   return (
-    <SalesTodayDashboard userName={userName} greeting={greeting} data={data} visibleModules={visibleModules} />
+    <SalesTodayDashboard
+      userName={userName}
+      greeting={greeting}
+      data={data}
+      visibleModules={visibleModules}
+      showPerformance={hasPersonalSalesQueue && visibleModules.orders}
+    />
   )
 }

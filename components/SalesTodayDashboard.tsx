@@ -25,6 +25,7 @@ import { AnimatedList } from '@/components/ui/animated-list'
 import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import type { TodayDashboardData, TodayWorkItem } from '@/lib/dashboard-today'
 
 type VisibleModules = Partial<Record<'bd' | 'crm' | 'quote' | 'orders' | 'products' | 'rma' | 'marketing' | 'clinicMonitor' | 'admin' | 'accounts' | 'audit', boolean>>
@@ -70,11 +71,13 @@ export function SalesTodayDashboard({
   greeting,
   data,
   visibleModules,
+  showPerformance,
 }: {
   userName: string
   greeting: '早安' | '午安' | '晚安'
   data: TodayDashboardData
   visibleModules: VisibleModules
+  showPerformance?: boolean
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
@@ -226,6 +229,12 @@ export function SalesTodayDashboard({
               </div>
             </div>
           </section>
+
+          {showPerformance && (
+            <section className="mt-8" aria-label="本月業績">
+              <SalesPerformanceCard />
+            </section>
+          )}
 
           <section className="mt-8" aria-labelledby="up-next-title">
             <div className="mb-4 flex items-center justify-between">

@@ -4,6 +4,7 @@ import { listItemsByPromotion } from './promotion-items-notion'
 import { validateOrderPromotions, type PromoRule } from './order-pricing'
 import { getUnavailableSkuCodes } from './products-availability'
 import { listProductPriceOverrides } from './products-notion'
+import { salespersonNameVariants } from './salesperson-name'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -440,6 +441,43 @@ export async function listOrdersByCustomer(customerId: string): Promise<Order[]>
     page_size: 50,
   })
   return (resp.results ?? []).map((page: any) => parseOrderPage(page, []))
+}
+
+/**
+ * 某業務名下的訂單(含品項明細),供業務個人業績細項頁使用。
+ * 只查該業務的訂單(不像 listOrders() 掃全公司),只對過濾後的訂單抓明細,避免全公司規模成長後拖垮個人頁面效能。
+ */
+export async function listOrdersBySalesperson(
+  name: string, range?: { from: string; to: string }
+): Promise<Order[]> {
+  const names = salespersonNameVariants(name)
+  const clauses: any[] = [
+    names.length === 1
+      ? { property: '業務', rich_text: { equals: names[0] } }
+      : { or: names.map((n) => ({ property: '業務', rich_text: { equals: n } })) },
+  ]
+  if (range) {
+    clauses.push({ property: '日期', date: { on_or_after: range.from } })
+    clauses.push({ property: '日期', date: { on_or_before: range.to } })
+  }
+  const orderPages: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDERS_DB,
+      filter: clauses.length === 1 ? clauses[0] : { and: clauses },
+      sorts: [{ property: '日期', direction: 'descending' }],
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    orderPages.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+
+  const itemsByOrder = await Promise.all(
+    orderPages.map((page) => getItemsByOrderId(formatId(page.id)))
+  )
+  return orderPages.map((page, i) => parseOrderPage(page, itemsByOrder[i]))
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {

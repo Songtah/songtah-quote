@@ -21,6 +21,7 @@ import {
   PackageCheck,
   Settings2,
   ShoppingBag,
+  TrendingUp,
   UsersRound,
   X,
   type LucideIcon,
@@ -47,6 +48,8 @@ function getPageTitle(pathname: string): string {
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
     '/admin/clinic-monitor': '客戶資料監控',
+    '/dashboard/ceo':         '業績總覽',
+    '/dashboard/performance': '我的業績明細',
     '/admin/trip-planner':   '行程規劃',
     '/orders':            '訂貨單管理',
     '/orders/new':        '新增訂貨單',
@@ -73,8 +76,11 @@ type NavItem = {
   module: ModuleKey | null
   adminOnly?: boolean
   adminOrStaff?: boolean   // visible to admin OR 行政 accountType
+  ceoOnly?: boolean        // visible to admin OR 行政／中央管理／總經理 accountType
   icon: LucideIcon
 }
+
+const CEO_ACCOUNT_TYPES = new Set(['行政', '中央管理', '總經理'])
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: '今天', group: '工作', module: null, icon: Home },
@@ -86,6 +92,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tickets', label: '技術支援', group: '服務', module: 'rma', icon: Headphones },
   { href: '/marketing', label: '行銷與活動', group: '服務', module: null, icon: BadgeDollarSign },
   { href: '/admin/clinic-monitor', label: '市場監控', group: '服務', module: 'clinic_monitor', icon: Building2 },
+  { href: '/dashboard/ceo', label: '業績總覽', group: '管理', module: null, ceoOnly: true, icon: TrendingUp },
   { href: '/admin', label: '行政管理', group: '管理', module: 'admin', adminOrStaff: true, icon: Settings2 },
   { href: '/settings/accounts', label: '帳號權限', group: '管理', module: 'accounts', icon: CircleUserRound },
   { href: '/settings/audit', label: '操作紀錄', group: '管理', module: null, adminOnly: true, icon: FileText },
@@ -144,6 +151,7 @@ export function AppShell({
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && role !== 'admin') return false
     if (item.adminOrStaff && role !== 'admin' && accountType !== '行政') return false
+    if (item.ceoOnly && role !== 'admin' && !CEO_ACCOUNT_TYPES.has(accountType ?? '')) return false
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
   const visibleGroups = (['工作', '交易', '服務', '管理'] as const)

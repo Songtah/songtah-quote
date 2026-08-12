@@ -299,6 +299,13 @@ export interface MonthlyTrend {
   quotes: number
 }
 
+export interface SalespersonMonthlyTrend {
+  month:  string   // "2026-05"
+  label:  string   // "5月"
+  orders: number
+  amount: number
+}
+
 export interface CEOStats {
   thisMonth: {
     ordersCount:      number
@@ -313,6 +320,7 @@ export interface CEOStats {
   }
   salespersonStats:     SalespersonStat[]
   monthlyTrend:         MonthlyTrend[]
+  salespersonMonthlyTrend: Record<string, SalespersonMonthlyTrend[]>  // 業務姓名 → 近6個月訂單數/金額(供個人業績頁走勢圖)
   ordersByStatus:       Record<string, number>
   quoteConversionRate:  number
   pendingFollowUpItems: VisitStat[]   // 本月待追蹤明細，直接帶入無需額外 API
@@ -323,7 +331,7 @@ export interface CEOStats {
 }
 
 export async function getCEOStats(): Promise<CEOStats> {
-  const cacheKey = 'ceo-stats:v3'   // v3=加 recentHighRiskAudit+待辦聚合
+  const cacheKey = 'ceo-stats:v4'   // v4=加 salespersonMonthlyTrend(個人業績走勢)
   const cached = fromCache<CEOStats>(cacheKey)
   if (cached) return cached
 
@@ -426,6 +434,31 @@ export async function getCEOStats(): Promise<CEOStats> {
     }
   })
 
+  // ── 個人業績走勢(供業務個人業績頁用;同一份已抓好的 allOrders 現算,不加查詢)──
+  const salespersonMonthlyTrend: Record<string, SalespersonMonthlyTrend[]> = {}
+  const allSalespersonNames = Array.from(new Set(
+    (allOrders as OrderStat[])
+      .filter((o) => o.status !== '已取消')
+      .map((o) => o.salesperson || '（未填）')
+  ))
+  for (const name of allSalespersonNames) salespersonMonthlyTrend[name] = []
+  for (const m of months) {
+    const mOrders = (allOrders as OrderStat[]).filter(
+      (o) => o.date >= m.from && o.date <= m.to && o.status !== '已取消'
+    )
+    const bySp: Record<string, { orders: number; amount: number }> = {}
+    for (const o of mOrders) {
+      const name = o.salesperson || '（未填）'
+      if (!bySp[name]) bySp[name] = { orders: 0, amount: 0 }
+      bySp[name].orders++
+      bySp[name].amount += o.totalAmount
+    }
+    for (const name of allSalespersonNames) {
+      const v = bySp[name] ?? { orders: 0, amount: 0 }
+      salespersonMonthlyTrend[name].push({ month: m.month, label: m.label, orders: v.orders, amount: v.amount })
+    }
+  }
+
   // ── 報價轉換率 ────────────────────────────────────────────────
   const sentQuotes = thisMonthQuotes.filter((q) => q.status !== '草稿').length
   const quoteConversionRate = sentQuotes > 0
@@ -471,6 +504,7 @@ export async function getCEOStats(): Promise<CEOStats> {
     },
     salespersonStats,
     monthlyTrend,
+    salespersonMonthlyTrend,
     ordersByStatus,
     quoteConversionRate,
     pendingFollowUpItems,
