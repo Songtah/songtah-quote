@@ -26,7 +26,8 @@ export default async function DashboardPage() {
     audit: role === 'admin',
   }
   const hasPersonalSalesQueue = accountType === '業務'
-  const data = await getTodayDashboard(userName, {
+  const salespersonId = (session.user as any)?.id as string | undefined
+  const data = await getTodayDashboard(userName, salespersonId ?? '', {
     bd: hasPersonalSalesQueue && visibleModules.bd,
     quote: hasPersonalSalesQueue && visibleModules.quote,
     rma: hasPersonalSalesQueue && visibleModules.rma,

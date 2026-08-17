@@ -38,7 +38,7 @@ export default async function BdPage({
             : 'today'
 
   const todayData = tab === 'today'
-    ? await getBdTodayDashboard(session?.user?.name ?? '', canImportForOthers)
+    ? await getBdTodayDashboard(session?.user?.name ?? '', sessionUser?.id ?? '', canImportForOthers)
     : null
 
   const TAB_ITEMS = [

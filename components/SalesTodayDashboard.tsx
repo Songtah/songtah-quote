@@ -100,10 +100,11 @@ export function SalesTodayDashboard({
   const summary = [
     { label: '今日拜訪', value: data.counts.visits, href: '/bd' },
     { label: '待追蹤', value: data.counts.followUps, href: '/bd' },
+    { label: '轄區待認領', value: data.counts.unclaimedTerritoryLeads, href: '/bd?tab=pipeline', danger: data.counts.unclaimedTerritoryLeads > 0 },
     { label: '進行中報價', value: data.counts.quotes, href: '/quotes' },
     { label: '逾期工單', value: data.counts.overdueTickets, href: '/tickets', danger: data.counts.overdueTickets > 0 },
   ].filter((item) => {
-    if (item.href === '/bd') return visibleModules.bd
+    if (item.href === '/bd' || item.href === '/bd?tab=pipeline') return visibleModules.bd
     if (item.href === '/quotes') return visibleModules.quote
     if (item.href === '/tickets') return visibleModules.rma
     return true

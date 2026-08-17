@@ -2,6 +2,8 @@ import { todayTW } from '@/lib/ceo-stats'
 import { listQuotes } from '@/lib/notion'
 import { listOpenFollowUps, listVisits } from '@/lib/notion/visits'
 import { listSystemTickets } from '@/lib/notion/tickets'
+import { listTerritories } from '@/lib/notion/territories'
+import { listPipelineCustomers } from '@/lib/notion/customers'
 
 export type TodayWorkItem = {
   id: string
@@ -20,6 +22,7 @@ export type TodayDashboardData = {
     followUps: number
     quotes: number
     overdueTickets: number
+    unclaimedTerritoryLeads: number
   }
   nextAction: TodayWorkItem | null
   workItems: TodayWorkItem[]
@@ -49,6 +52,31 @@ async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T): Promis
   }
 }
 
+/**
+ * 轄區待認領線索數：只認正式轄區設定（listTerritories 的 salespersonId），
+ * 不用客戶既有分佈反推「勢力範圍」，避免把巧合落在該區的舊客戶誤算進來。
+ * 比對 listPipelineCustomers 裡「開發階段=線索 且 尚未認領（負責業務空白）」
+ * 且縣市/行政區落在本人轄區內的筆數。轄區行政區留空＝整個縣市都算本人轄區。
+ */
+async function countUnclaimedTerritoryLeads(salespersonId: string): Promise<number> {
+  if (!salespersonId) return 0
+  const [territories, pipeline] = await Promise.all([
+    listTerritories(),
+    listPipelineCustomers(),
+  ])
+  const mine = territories.filter((t) => t.salespersonId === salespersonId)
+  if (mine.length === 0) return 0
+
+  const cityOnly = new Set(mine.filter((t) => !t.district).map((t) => t.city))
+  const cityDistrict = new Set(mine.filter((t) => t.district).map((t) => `${t.city}|${t.district}`))
+
+  return pipeline.filter((c) =>
+    c.devStage === '線索' &&
+    !c.salesperson.trim() &&
+    (cityOnly.has(c.city) || cityDistrict.has(`${c.city}|${c.district}`))
+  ).length
+}
+
 async function listOwnerTickets(owner: string) {
   try {
     return await listSystemTickets({ limit: 100, salesOwner: owner })
@@ -68,19 +96,20 @@ async function listOwnerTickets(owner: string) {
 
 export async function getTodayDashboard(
   owner: string,
+  salespersonId: string,
   access: { bd: boolean; quote: boolean; rma: boolean },
 ): Promise<TodayDashboardData> {
   const date = todayTW()
   if (!owner.trim()) {
     return {
       date,
-      counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0 },
+      counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, unclaimedTerritoryLeads: 0 },
       nextAction: null,
       workItems: [],
     }
   }
 
-  const [allVisits, allFollowUps, quoteResult, ticketResult] = await Promise.all([
+  const [allVisits, allFollowUps, quoteResult, ticketResult, unclaimedTerritoryLeads] = await Promise.all([
     access.bd
       ? withDashboardTimeout(
           listVisits({ salesperson: owner, dateFrom: date, dateTo: date, fetchAll: true }).then((result) => result.items),
@@ -100,6 +129,7 @@ export async function getTodayDashboard(
           { items: [], hasMore: false, nextCursor: null },
         )
       : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
+    access.bd ? withDashboardTimeout(countUnclaimedTerritoryLeads(salespersonId), 0) : Promise.resolve(0),
   ])
 
   const visits = allVisits.filter((visit) => sameOwner(visit.salesperson, owner))
@@ -159,6 +189,7 @@ export async function getTodayDashboard(
       followUps: followUps.length,
       quotes: quotes.length,
       overdueTickets: overdueTickets.length,
+      unclaimedTerritoryLeads,
     },
     nextAction: workItems[0] ?? null,
     workItems,
@@ -169,14 +200,14 @@ export async function getTodayDashboard(
  * /bd 專用今日工作：一般業務只看本人；中央管理看全體業務摘要。
  * 不把管理帳號顯示名稱拿去查 Notion 的「業務人員」select，避免無效選項錯誤。
  */
-export async function getBdTodayDashboard(owner: string, viewAll: boolean): Promise<TodayDashboardData> {
-  if (!viewAll) return getTodayDashboard(owner, { bd: true, quote: false, rma: false })
+export async function getBdTodayDashboard(owner: string, salespersonId: string, viewAll: boolean): Promise<TodayDashboardData> {
+  if (!viewAll) return getTodayDashboard(owner, salespersonId, { bd: true, quote: false, rma: false })
 
   // 中央管理帳號沒有對應的「業務人員」select。不可為了首頁摘要即時掃描
   // 全體客情並解析所有 relation，否則會放大成大量 Notion request 並觸發 429。
   return {
     date: todayTW(),
-    counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0 },
+    counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, unclaimedTerritoryLeads: 0 },
     nextAction: null,
     workItems: [],
   }
