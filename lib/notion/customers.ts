@@ -101,7 +101,7 @@ export async function getSystemCustomerById(id: string): Promise<SystemCustomerD
       institutionCode: getText(page, '機構代碼'),
       dentistCount: getNumber(page, '牙醫師數'),
       technicianCount: getNumber(page, '牙體技術師數'),
-      technicianTraineeCount: getNumber(page, '牙體技術生數量'),
+      technicianTraineeCount: getNumber(page, '牙體技術生數'),
       salesperson: getSelect(page, '負責業務'),
       devStage: getSelect(page, '開發階段'),
     }
@@ -829,7 +829,7 @@ export async function createSystemCustomer(data: {
   devSource?:      string  // 開發來源
   dentistCount?:           number  // 牙醫師數（來自 BAS 醫事人員頁）
   technicianCount?:        number  // 牙體技術師數
-  technicianTraineeCount?: number  // 牙體技術生數量
+  technicianTraineeCount?: number  // 牙體技術生數
 }): Promise<{ id: string }> {
   if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
   const page: any = await notionCallWithRetry('createSystemCustomer', () =>
@@ -852,7 +852,7 @@ export async function createSystemCustomer(data: {
         ...(data.devSource    ? { '開發來源':     { select: { name: data.devSource } } } : {}),
         ...(typeof data.dentistCount === 'number'           ? { '牙醫師數':       { number: data.dentistCount } }           : {}),
         ...(typeof data.technicianCount === 'number'        ? { '牙體技術師數':   { number: data.technicianCount } }        : {}),
-        ...(typeof data.technicianTraineeCount === 'number' ? { '牙體技術生數量': { number: data.technicianTraineeCount } } : {}),
+        ...(typeof data.technicianTraineeCount === 'number' ? { '牙體技術生數': { number: data.technicianTraineeCount } } : {}),
       } as any,
     })
   )
