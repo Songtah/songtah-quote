@@ -827,6 +827,9 @@ export async function createSystemCustomer(data: {
   deptUrl?:        string  // 診療科別連結
   devStage?:       string  // 開發階段（業務開發漏斗；醫事監控匯入預設 '線索'）
   devSource?:      string  // 開發來源
+  dentistCount?:           number  // 牙醫師數（來自 BAS 醫事人員頁）
+  technicianCount?:        number  // 牙體技術師數
+  technicianTraineeCount?: number  // 牙體技術生數量
 }): Promise<{ id: string }> {
   if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
   const page: any = await notionCallWithRetry('createSystemCustomer', () =>
@@ -847,6 +850,9 @@ export async function createSystemCustomer(data: {
         ...(data.deptUrl      ? { '診療科別連結': { url: data.deptUrl } }      : {}),
         ...(data.devStage     ? { '開發階段':     { select: { name: data.devStage } } }  : {}),
         ...(data.devSource    ? { '開發來源':     { select: { name: data.devSource } } } : {}),
+        ...(typeof data.dentistCount === 'number'           ? { '牙醫師數':       { number: data.dentistCount } }           : {}),
+        ...(typeof data.technicianCount === 'number'        ? { '牙體技術師數':   { number: data.technicianCount } }        : {}),
+        ...(typeof data.technicianTraineeCount === 'number' ? { '牙體技術生數量': { number: data.technicianTraineeCount } } : {}),
       } as any,
     })
   )
