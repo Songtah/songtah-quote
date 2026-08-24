@@ -4,6 +4,7 @@ import { listOpenFollowUps, listVisits } from '@/lib/notion/visits'
 import { listSystemTickets } from '@/lib/notion/tickets'
 import { listTerritories } from '@/lib/notion/territories'
 import { listPipelineCustomers } from '@/lib/notion/customers'
+import { getSystemUserById, canAcceptNewBusiness } from '@/lib/notion/accounts'
 
 export type TodayWorkItem = {
   id: string
@@ -57,9 +58,18 @@ async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T): Promis
  * 不用客戶既有分佈反推「勢力範圍」，避免把巧合落在該區的舊客戶誤算進來。
  * 比對 listPipelineCustomers 裡「開發階段=線索 且 尚未認領（負責業務空白）」
  * 且縣市/行政區落在本人轄區內的筆數。轄區行政區留空＝整個縣市都算本人轄區。
+ *
+ * 必須與 /api/bd/pipeline 的可見範圍用同一道把關（canAcceptNewBusiness）：
+ * 「既有客戶維護」模式的業務在跟進看板看不到未認領客戶、也無權認領，
+ * 若首頁仍顯示筆數，點進去會是空的死路。帳號讀取失敗時一律回 0（fail-closed），
+ * 寧可少顯示，不要給出點不進去的數字。
  */
 async function countUnclaimedTerritoryLeads(salespersonId: string): Promise<number> {
   if (!salespersonId) return 0
+
+  const account = await getSystemUserById(salespersonId).catch(() => null)
+  if (!account || !canAcceptNewBusiness(account)) return 0
+
   const [territories, pipeline] = await Promise.all([
     listTerritories(),
     listPipelineCustomers(),
