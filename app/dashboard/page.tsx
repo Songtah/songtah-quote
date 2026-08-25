@@ -26,6 +26,10 @@ export default async function DashboardPage() {
     audit: role === 'admin',
   }
   const hasPersonalSalesQueue = accountType === '業務'
+  // 中央管理／總經理／admin 在個人頁也看得到業績區塊，但顯示的是全體＋可切換單人
+  // （API 端同樣以此權限決定；一般業務永遠只看得到自己）
+  const canViewTeamPerformance =
+    role === 'admin' || accountType === '中央管理' || accountType === '總經理'
   const salespersonId = (session.user as any)?.id as string | undefined
   const data = await getTodayDashboard(userName, salespersonId ?? '', {
     bd: hasPersonalSalesQueue && visibleModules.bd,
@@ -46,6 +50,7 @@ export default async function DashboardPage() {
       data={data}
       visibleModules={visibleModules}
       showPerformance={hasPersonalSalesQueue && visibleModules.orders}
+      showTeamPerformance={canViewTeamPerformance && visibleModules.orders}
     />
   )
 }

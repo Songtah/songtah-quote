@@ -7,6 +7,9 @@
  * 週的定義：以「週一」為一週起點（台灣商務慣例），非週日。
  */
 
+/** salesperson 查詢參數傳這個值代表「全部業務」（僅管理帳號可用） */
+export const ALL_SALESPEOPLE = '__all__'
+
 export const PERIODS = ['week', 'month', 'quarter', 'year'] as const
 export type Period = (typeof PERIODS)[number]
 

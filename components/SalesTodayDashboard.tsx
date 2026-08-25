@@ -73,12 +73,15 @@ export function SalesTodayDashboard({
   data,
   visibleModules,
   showPerformance,
+  showTeamPerformance,
 }: {
   userName: string
   greeting: '早安' | '午安' | '晚安'
   data: TodayDashboardData
   visibleModules: VisibleModules
   showPerformance?: boolean
+  /** 管理帳號：顯示全體業績區塊（可切換單一業務） */
+  showTeamPerformance?: boolean
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
@@ -233,14 +236,15 @@ export function SalesTodayDashboard({
           </section>
 
           {showPerformance && (
-            <>
-              <section className="mt-8" aria-label="本月業績">
-                <SalesPerformanceCard />
-              </section>
-              <section className="mt-6" aria-label="週月季年業績統計">
-                <SalesPerformancePeriods />
-              </section>
-            </>
+            <section className="mt-8" aria-label="本月業績">
+              <SalesPerformanceCard />
+            </section>
+          )}
+
+          {(showPerformance || showTeamPerformance) && (
+            <section className="mt-6" aria-label="週月季年業績統計">
+              <SalesPerformancePeriods />
+            </section>
           )}
 
           <section className="mt-8" aria-labelledby="up-next-title">

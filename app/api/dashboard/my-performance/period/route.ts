@@ -12,9 +12,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { listOrdersBySalesperson } from '@/lib/orders-notion'
-import { listVisits } from '@/lib/notion/visits'
-import { parsePeriod, resolvePeriod, PERIOD_LABEL, PREVIOUS_PERIOD_LABEL } from '@/lib/performance-periods'
+import { listOrdersBySalesperson, listOrdersByDateRange } from '@/lib/orders-notion'
+import { listVisitTallies } from '@/lib/notion/visits'
+import { getSystemUsers } from '@/lib/notion/accounts'
+import { INACTIVE_SALESPERSONS, resolveSalesperson } from '@/lib/line-salesperson-map'
+import { parsePeriod, resolvePeriod, PERIOD_LABEL, PREVIOUS_PERIOD_LABEL, ALL_SALESPEOPLE } from '@/lib/performance-periods'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -31,18 +33,21 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
     const user = session.user as any
     const canViewOthers = user?.role === 'admin' || user?.accountType === '中央管理' || user?.accountType === '總經理'
     const requested = req.nextUrl.searchParams.get('salesperson')?.trim() ?? ''
-    const owner = canViewOthers && requested ? requested : (session.user?.name?.trim() ?? '')
-    if (!owner) return NextResponse.json({ error: '無法辨識使用者' }, { status: 400 })
+    // 管理帳號不指定對象時看全體；一般業務永遠只看自己（忽略 salesperson 參數）
+    const teamMode = canViewOthers && (requested === '' || requested === ALL_SALESPEOPLE)
+    const owner = teamMode ? '' : (canViewOthers && requested ? requested : (session.user?.name?.trim() ?? ''))
+    if (!teamMode && !owner) return NextResponse.json({ error: '無法辨識使用者' }, { status: 400 })
 
     const period = parsePeriod(req.nextUrl.searchParams.get('period'))
     const range = resolvePeriod(period)
 
     // 一次撈「對照期起 ~ 本期迄」，本期與對照期在記憶體切分，省一輪查詢
     const [orders, visitResult] = await Promise.all([
-      listOrdersBySalesperson(owner, { from: range.prevFrom, to: range.to })
-        .catch((error) => { console.error('my-performance/period: 訂單讀取失敗', error); return [] }),
-      listVisits({ salesperson: owner, dateFrom: range.prevFrom, dateTo: range.to, fetchAll: true })
-        .then((r) => r.items)
+      (teamMode
+        ? listOrdersByDateRange(range.prevFrom, range.to)
+        : listOrdersBySalesperson(owner, { from: range.prevFrom, to: range.to })
+      ).catch((error) => { console.error('my-performance/period: 訂單讀取失敗', error); return [] }),
+      listVisitTallies(range.prevFrom, range.to, teamMode ? undefined : owner)
         .catch((error) => { console.error('my-performance/period: 拜訪讀取失敗', error); return [] }),
     ])
 
@@ -51,7 +56,7 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
 
     const current = mine.filter((o) => inRange(o.date, range.from, range.to))
     const previous = mine.filter((o) => inRange(o.date, range.prevFrom, range.prevTo))
-    const myVisits = visitResult.filter((v) => sameName(v.salesperson, owner))
+    const myVisits = teamMode ? visitResult : visitResult.filter((v) => sameName(v.salesperson, owner))
     const currentVisits = myVisits.filter((v) => inRange(v.date, range.from, range.to))
     const previousVisits = myVisits.filter((v) => inRange(v.date, range.prevFrom, range.prevTo))
 
@@ -68,8 +73,40 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
       byStatus[order.status] = entry
     }
 
+    // 團隊模式：各業務排行（金額高到低）。離職業務先正規化姓名再排除，
+    // 因為訂單/客情的「業務」欄位可能還留著舊的 LINE 顯示名稱。
+    let bySalesperson: { name: string; amount: number; orders: number; visits: number }[] = []
+    let salespeople: string[] = []
+    if (teamMode) {
+      const agg = new Map<string, { name: string; amount: number; orders: number; visits: number }>()
+      const bump = (rawName: string, patch: Partial<{ amount: number; orders: number; visits: number }>) => {
+        const name = (rawName ?? '').trim() || '（未填）'
+        if (INACTIVE_SALESPERSONS.has(resolveSalesperson(name))) return
+        const entry = agg.get(name) ?? { name, amount: 0, orders: 0, visits: 0 }
+        entry.amount += patch.amount ?? 0
+        entry.orders += patch.orders ?? 0
+        entry.visits += patch.visits ?? 0
+        agg.set(name, entry)
+      }
+      for (const order of current) bump(order.salesperson, { amount: order.totalAmount, orders: 1 })
+      for (const visit of currentVisits) bump(visit.salesperson, { visits: 1 })
+      bySalesperson = Array.from(agg.values()).sort((a, b) => b.amount - a.amount || b.visits - a.visits)
+
+      // 下拉選單用：現職業務帳號 ∪ 本期實際有紀錄者
+      const accounts = await getSystemUsers().catch(() => [])
+      const active = accounts
+        .filter((a) => a.accountType === '業務' && a.status !== '停用')
+        .map((a) => a.name)
+      salespeople = Array.from(new Set([...active, ...bySalesperson.map((s) => s.name)]))
+        .filter((name) => name !== '（未填）' && !INACTIVE_SALESPERSONS.has(resolveSalesperson(name)))
+        .sort((a, b) => a.localeCompare(b, 'zh-TW'))
+    }
+
     return NextResponse.json({
-      salesperson: owner,
+      scope: teamMode ? 'team' : 'self',
+      salesperson: teamMode ? '全部業務' : owner,
+      bySalesperson,
+      salespeople,
       period,
       periodLabel: PERIOD_LABEL[period],
       previousLabel: PREVIOUS_PERIOD_LABEL[period],

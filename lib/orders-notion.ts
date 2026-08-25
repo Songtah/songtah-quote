@@ -480,6 +480,37 @@ export async function listOrdersBySalesperson(
   return orderPages.map((page, i) => parseOrderPage(page, itemsByOrder[i]))
 }
 
+/**
+ * 依日期區間撈全體訂單（不限業務），供管理帳號看團隊業績。
+ * 與 listOrdersBySalesperson 的差別只在少一個業務條件；分開一支是為了
+ * 讓「查全體」的意圖在呼叫端明確可見，避免有人漏傳 name 就變成全撈。
+ */
+export async function listOrdersByDateRange(from: string, to: string): Promise<Order[]> {
+  const orderPages: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDERS_DB,
+      filter: {
+        and: [
+          { property: '日期', date: { on_or_after: from } },
+          { property: '日期', date: { on_or_before: to } },
+        ],
+      },
+      sorts: [{ property: '日期', direction: 'descending' }],
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    orderPages.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+
+  const itemsByOrder = await Promise.all(
+    orderPages.map((page) => getItemsByOrderId(formatId(page.id)))
+  )
+  return orderPages.map((page, i) => parseOrderPage(page, itemsByOrder[i]))
+}
+
 export async function getOrderById(id: string): Promise<Order | null> {
   const formatted = formatId(id)
   try {

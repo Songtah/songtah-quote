@@ -17,7 +17,10 @@ const TABS: { value: Period; label: string }[] = [
 ]
 
 type PeriodData = {
+  scope: 'self' | 'team'
   salesperson: string
+  bySalesperson: { name: string; amount: number; orders: number; visits: number }[]
+  salespeople: string[]
   period: Period
   periodLabel: string
   previousLabel: string
@@ -49,20 +52,29 @@ function DeltaBadge({ value, suffix = '' }: { value: number; suffix?: string }) 
   )
 }
 
+/** 管理帳號用：'' = 全部業務（後端預設），其餘為指定業務姓名 */
+const ALL = ''
+
 export function SalesPerformancePeriods() {
   const [period, setPeriod] = useState<Period>('month')
+  const [who, setWho] = useState<string>(ALL)
   const [data, setData] = useState<PeriodData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  // 切換業務時下拉選單不能跟著清空，所以選項獨立保存
+  const [people, setPeople] = useState<string[]>([])
 
-  const load = useCallback((next: Period, signal: AbortSignal) => {
+  const load = useCallback((nextPeriod: Period, nextWho: string, signal: AbortSignal) => {
     setLoading(true)
     setError('')
-    fetch(`/api/dashboard/my-performance/period?period=${next}`, { signal })
+    const query = new URLSearchParams({ period: nextPeriod })
+    if (nextWho) query.set('salesperson', nextWho)
+    fetch(`/api/dashboard/my-performance/period?${query}`, { signal })
       .then(async (response) => {
         const json = await response.json()
         if (!response.ok) throw new Error(json.error || '讀取業績失敗')
         setData(json)
+        if (json.salespeople?.length) setPeople(json.salespeople)
       })
       .catch((caught: any) => { if (caught?.name !== 'AbortError') setError(caught.message) })
       .finally(() => { if (!signal.aborted) setLoading(false) })
@@ -70,19 +82,43 @@ export function SalesPerformancePeriods() {
 
   useEffect(() => {
     const controller = new AbortController()
-    load(period, controller.signal)
+    load(period, who, controller.signal)
     return () => controller.abort()
-  }, [period, load])
+  }, [period, who, load])
+
+  // 只有管理帳號的第一次回應會帶 salespeople，據此決定要不要顯示選單
+  const canPickPerson = people.length > 0
 
   return (
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">MY PERFORMANCE</p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">業績狀況</h2>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">
+            {data?.scope === 'team' ? 'TEAM PERFORMANCE' : 'MY PERFORMANCE'}
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-stone-800">
+            業績狀況
+            {data && <span className="ml-2 text-sm font-semibold text-brand-700">{data.salesperson}</span>}
+          </h2>
         </div>
         {data && <p className="text-xs text-stone-400">{data.range.label}・{data.range.from} ~ {data.range.to}</p>}
       </div>
+
+      {canPickPerson && (
+        <div className="px-6 pt-4 sm:px-7">
+          <label className="text-xs font-semibold text-stone-500">
+            查看對象
+            <select
+              className="select-soft mt-1.5 block w-full max-w-56"
+              value={who}
+              onChange={(event) => setWho(event.target.value)}
+            >
+              <option value={ALL}>全部業務（合計）</option>
+              {people.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
 
       <div className="flex gap-1 overflow-x-auto px-6 pt-4 sm:px-7">
         {TABS.map((tab) => (
@@ -140,6 +176,44 @@ export function SalesPerformancePeriods() {
                   {status} {value.orders} 筆・{money(value.amount)}
                 </span>
               ))}
+            </div>
+          )}
+
+          {data.scope === 'team' && data.bySalesperson.length > 0 && (
+            <div className="px-6 pt-5 sm:px-7">
+              <h3 className="text-sm font-bold text-stone-700">各業務{data.periodLabel}表現</h3>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead>
+                    <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-stone-400">
+                      <th className="pb-2 pr-3 font-bold">#</th>
+                      <th className="pb-2 pr-3 font-bold">業務</th>
+                      <th className="pb-2 pr-3 text-right font-bold">業績金額</th>
+                      <th className="pb-2 pr-3 text-right font-bold">訂單</th>
+                      <th className="pb-2 text-right font-bold">拜訪</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-900/[0.06]">
+                    {data.bySalesperson.map((row, index) => (
+                      <tr key={row.name}>
+                        <td className="py-2.5 pr-3 tabular-nums text-stone-400">{index + 1}</td>
+                        <td className="py-2.5 pr-3">
+                          <button
+                            onClick={() => setWho(row.name)}
+                            className="font-semibold text-brand-700 transition-colors hover:text-brand-800 hover:underline"
+                          >
+                            {row.name}
+                          </button>
+                        </td>
+                        <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-stone-900">{money(row.amount)}</td>
+                        <td className="py-2.5 pr-3 text-right tabular-nums text-stone-500">{row.orders.toLocaleString()}</td>
+                        <td className="py-2.5 text-right tabular-nums text-stone-500">{row.visits.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-[11px] text-stone-400">點業務姓名可切換為單人檢視。</p>
             </div>
           )}
 

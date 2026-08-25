@@ -561,3 +561,41 @@ export async function scanVisitRecency(): Promise<Record<string, string>> {
   if (total >= 9500) console.warn(`scanVisitRecency: 拜訪庫已達 ${total} 筆,逼近 Notion 10k 截斷上限,須改分區掃描`)
   return map
 }
+
+/**
+ * 輕量拜訪計次：只取「日期＋業務人員」，不解析客戶 relation。
+ *
+ * listVisits({ fetchAll }) 會為每筆解析客戶與產品 relation，做團隊年度統計
+ * （數千筆）時會嚴重拖慢甚至逾時。業績統計只需要按日期與業務分組計次，
+ * 因此另開這支跳過 relation 解析。
+ */
+export async function listVisitTallies(
+  from: string, to: string, salesperson?: string,
+): Promise<{ date: string; salesperson: string }[]> {
+  const filters: any[] = [
+    { property: '日期', date: { on_or_after: from } },
+    { property: '日期', date: { on_or_before: to } },
+  ]
+  if (salesperson) filters.push({ property: '業務人員', select: { equals: salesperson } })
+
+  const out: { date: string; salesperson: string }[] = []
+  let cursor: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('listVisitTallies', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        filter: { and: filters },
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      out.push({
+        date: getDate(page, '日期'),
+        salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
+      })
+    }
+    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  return out
+}
