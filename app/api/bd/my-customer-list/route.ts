@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getSystemUserById, getSystemUsers } from '@/lib/notion/accounts'
-import { listCustomersByArea, listCustomersByAreas } from '@/lib/notion/customers'
+import {
+  listCustomersByArea, listCustomersByAreas,
+  NON_CLAIMABLE_OWNERS, classifyOwnership, type TerritoryOwnership,
+} from '@/lib/notion/customers'
 import { listTerritories } from '@/lib/notion/territories'
 
 export const dynamic = 'force-dynamic'
@@ -24,19 +27,29 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       if (!territory.salesperson || !territory.salespersonId) {
         return NextResponse.json({ error: '此轄區尚未完成負責業務設定' }, { status: 409 })
       }
+      // 團隊檢視同樣回該區「全部」客戶，並以轄區負責業務為基準分類，
+      // 讓主管一眼看到這一區已認領／未認領／他人名下各多少。
       const customers = await listCustomersByArea({
         city: territory.city,
         district: territory.district,
-        salesperson: territory.salesperson,
       })
       const items = customers
         .filter((customer) => !INACTIVE_STATUS.has(customer.status))
-        .map(toListItem)
+        .map((customer) => toListItem(customer, territory.salesperson))
+      const summary = items.reduce(
+        (acc, item) => {
+          acc.total++
+          acc[item.ownership]++
+          return acc
+        },
+        { total: 0, mine: 0, claimable: 0, others: 0 },
+      )
       return NextResponse.json({
         scope: 'territories',
         salesperson: territory.salesperson,
         territoryCount: 1,
         territory: { id: territory.id, city: territory.city, district: territory.district },
+        summary,
         items,
       })
     }
@@ -78,17 +91,29 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       customers = scope === 'claimable'
         // 可認領池:只列尚未有人負責者;真正寫入時 claimTerritoryCustomers 會再逐筆重驗
         ? areaCustomers.filter((customer) => !customer.salesperson)
-        : areaCustomers.filter((customer) => customer.salesperson === account.name)
+        // territories:回傳轄區內「全部」客戶(含他人名下),讓業務掌握該區覆蓋情形。
+        // 地址/電話仍只由 /api/bd/customer-detail 放行名下客戶,此處不含機密欄位。
+        : areaCustomers
     }
 
     const items = customers
       .filter((customer) => !INACTIVE_STATUS.has(customer.status))
-      .map(toListItem)
+      .map((customer) => toListItem(customer, account.name))
+
+    const summary = items.reduce(
+      (acc, item) => {
+        acc.total++
+        acc[item.ownership]++
+        return acc
+      },
+      { total: 0, mine: 0, claimable: 0, others: 0 },
+    )
 
     return NextResponse.json({
       scope,
       salesperson: account.name,
       territoryCount,
+      summary,
       items,
     })
   } catch (error) {
@@ -97,7 +122,15 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
   }
 })
 
-function toListItem(customer: Awaited<ReturnType<typeof listCustomersByArea>>[number]) {
+function toListItem(
+  customer: Awaited<ReturnType<typeof listCustomersByArea>>[number],
+  me = '',
+): {
+  id: string; name: string; city: string; district: string
+  type: string; status: string; devStage: string; salesperson: string
+  ownership: TerritoryOwnership; claimable: boolean; pooled: boolean
+} {
+  const owner = (customer.salesperson ?? '').trim()
   return {
     id: customer.id,
     name: customer.name,
@@ -107,5 +140,10 @@ function toListItem(customer: Awaited<ReturnType<typeof listCustomersByArea>>[nu
     status: customer.status,
     devStage: customer.devStage,
     salesperson: customer.salesperson,
+    ownership: classifyOwnership(owner, me),
+    // 可認領＝負責業務空白。已有人負責者一律不可認領（claimTerritoryCustomers 也會逐筆重驗）
+    claimable: !owner,
+    // 「公司」「盤商」是特殊池不是同事，UI 要跟一般他人名下分開標示
+    pooled: NON_CLAIMABLE_OWNERS.has(owner),
   }
 }

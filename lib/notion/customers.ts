@@ -584,6 +584,23 @@ export async function getRegionStatsRows(forceRefresh = false): Promise<RegionSt
 // 機構狀態＝營業狀態（醫事監控領域專用）；開發階段＝業務關係狀態（業務領域專用）。
 // 兩者嚴格分離，禁止把「潛在客戶」之類的業務語意塞回機構狀態。
 export const DEV_STAGES = ['線索', '已接觸', '試用中', '報價中', '已成交', '流失'] as const
+
+/**
+ * 「負責業務」欄位裡不是真人業務的兩個特殊池，業務不得自助認領：
+ * - 盤商：永不變更歸屬。
+ * - 公司：中央管理持有，只能經專屬逐筆指派流程分派（/api/customers/assign-company）。
+ * 這兩者在轄區清單仍要顯示（業務需要知道該區已被覆蓋），但不出現在可認領池。
+ */
+export const NON_CLAIMABLE_OWNERS = new Set(['公司', '盤商'])
+
+/** 轄區客戶相對於「當前業務」的歸屬分類 */
+export type TerritoryOwnership = 'mine' | 'claimable' | 'others'
+
+export function classifyOwnership(salesperson: string, me: string): TerritoryOwnership {
+  const owner = (salesperson ?? '').trim()
+  if (!owner) return 'claimable'
+  return owner === me ? 'mine' : 'others'
+}
 export type DevStage = (typeof DEV_STAGES)[number]
 
 const DEV_STAGE_RANK: Record<Exclude<DevStage, '流失'>, number> = {

@@ -23,7 +23,7 @@ export type TodayDashboardData = {
     followUps: number
     quotes: number
     overdueTickets: number
-    unclaimedTerritoryLeads: number
+    territoryNewOpenings: number
   }
   nextAction: TodayWorkItem | null
   workItems: TodayWorkItem[]
@@ -54,17 +54,22 @@ async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T): Promis
 }
 
 /**
- * 轄區待認領線索數：只認正式轄區設定（listTerritories 的 salespersonId），
- * 不用客戶既有分佈反推「勢力範圍」，避免把巧合落在該區的舊客戶誤算進來。
- * 比對 listPipelineCustomers 裡「開發階段=線索 且 尚未認領（負責業務空白）」
- * 且縣市/行政區落在本人轄區內的筆數。轄區行政區留空＝整個縣市都算本人轄區。
+ * 轄區「新機構」數：醫事監控從衛福部 BAS 掃到、匯入後尚未有人認領的新開業機構。
+ *
+ * 刻意不算「轄區內所有未認領客戶」——那是 6,000 筆量級的存量池（多數是從未進過
+ * 開發漏斗的既有醫事機構），放在首頁沒有行動意義。首頁要回答的是「今天有什麼
+ * 該趕快聯絡」，也就是剛掃到的新開業機構；存量池在轄區面板逐區處理。
+ *
+ * 條件：開發來源=BAS新開業、負責業務空白、且落在本人正式轄區內。
+ * 轄區行政區留空＝整個縣市都算本人轄區。
  *
  * 必須與 /api/bd/pipeline 的可見範圍用同一道把關（canAcceptNewBusiness）：
  * 「既有客戶維護」模式的業務在跟進看板看不到未認領客戶、也無權認領，
- * 若首頁仍顯示筆數，點進去會是空的死路。帳號讀取失敗時一律回 0（fail-closed），
- * 寧可少顯示，不要給出點不進去的數字。
+ * 若首頁仍顯示筆數，點進去會是空的死路。帳號讀取失敗時一律回 0（fail-closed）。
  */
-async function countUnclaimedTerritoryLeads(salespersonId: string): Promise<number> {
+const BAS_NEW_OPENING_SOURCE = 'BAS新開業'
+
+async function countTerritoryNewOpenings(salespersonId: string): Promise<number> {
   if (!salespersonId) return 0
 
   const account = await getSystemUserById(salespersonId).catch(() => null)
@@ -81,7 +86,7 @@ async function countUnclaimedTerritoryLeads(salespersonId: string): Promise<numb
   const cityDistrict = new Set(mine.filter((t) => t.district).map((t) => `${t.city}|${t.district}`))
 
   return pipeline.filter((c) =>
-    c.devStage === '線索' &&
+    c.devSource === BAS_NEW_OPENING_SOURCE &&
     !c.salesperson.trim() &&
     (cityOnly.has(c.city) || cityDistrict.has(`${c.city}|${c.district}`))
   ).length
@@ -113,13 +118,13 @@ export async function getTodayDashboard(
   if (!owner.trim()) {
     return {
       date,
-      counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, unclaimedTerritoryLeads: 0 },
+      counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, territoryNewOpenings: 0 },
       nextAction: null,
       workItems: [],
     }
   }
 
-  const [allVisits, allFollowUps, quoteResult, ticketResult, unclaimedTerritoryLeads] = await Promise.all([
+  const [allVisits, allFollowUps, quoteResult, ticketResult, territoryNewOpenings] = await Promise.all([
     access.bd
       ? withDashboardTimeout(
           listVisits({ salesperson: owner, dateFrom: date, dateTo: date, fetchAll: true }).then((result) => result.items),
@@ -139,7 +144,7 @@ export async function getTodayDashboard(
           { items: [], hasMore: false, nextCursor: null },
         )
       : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
-    access.bd ? withDashboardTimeout(countUnclaimedTerritoryLeads(salespersonId), 0) : Promise.resolve(0),
+    access.bd ? withDashboardTimeout(countTerritoryNewOpenings(salespersonId), 0) : Promise.resolve(0),
   ])
 
   const visits = allVisits.filter((visit) => sameOwner(visit.salesperson, owner))
@@ -199,7 +204,7 @@ export async function getTodayDashboard(
       followUps: followUps.length,
       quotes: quotes.length,
       overdueTickets: overdueTickets.length,
-      unclaimedTerritoryLeads,
+      territoryNewOpenings,
     },
     nextAction: workItems[0] ?? null,
     workItems,
@@ -217,7 +222,7 @@ export async function getBdTodayDashboard(owner: string, salespersonId: string, 
   // 全體客情並解析所有 relation，否則會放大成大量 Notion request 並觸發 429。
   return {
     date: todayTW(),
-    counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, unclaimedTerritoryLeads: 0 },
+    counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, territoryNewOpenings: 0 },
     nextAction: null,
     workItems: [],
   }
