@@ -87,6 +87,7 @@ function toItem(log: Awaited<ReturnType<typeof listCollabPoints>>[number]) {
     helped: log.helped,
     customerName: log.customerName,
     customerCity: log.customerCity,
+    customerMatched: Boolean(log.customerId),
     item: log.item,
     points: log.points,
     status: log.status,

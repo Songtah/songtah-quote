@@ -12,7 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import {
-  getCollabPoint, updateCollabPointStatus, updateCollabPointItem, listCollabPoints,
+  getCollabPoint, updateCollabPointStatus, updateCollabPointItem,
+  updateCollabPointCustomer, listCollabPoints,
   COLLAB_ITEMS, type CollabStatus, type CollabItem,
 } from '@/lib/notion/collab-points'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
@@ -42,12 +43,36 @@ export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (
     const isManager = user?.role === 'admin' || user?.accountType === '中央管理' || user?.accountType === '總經理'
 
     const body = await req.json()
-    const target = String(body.status ?? '') as CollabStatus
-    const rule = TRANSITIONS[target]
-    if (!rule) return NextResponse.json({ error: '不支援的狀態轉換' }, { status: 400 })
+    const customerId = String(body.customerId ?? '').trim()
 
     const log = await getCollabPoint(ctx.params.id)
     if (!log) return NextResponse.json({ error: '找不到這筆協作積分' }, { status: 404 })
+
+    // 只更正客戶、不轉狀態：Slack 回報比對不到客戶時補上用。
+    // 助攻者本人或受助業務或管理層都能補（三方都知道實際客戶是誰）。
+    if (customerId && !body.status) {
+      if (!/^[0-9a-f]{32}$/i.test(customerId.replace(/-/g, ''))) {
+        return NextResponse.json({ error: '請選擇有效的客戶' }, { status: 400 })
+      }
+      const involved = sameName(log.helper, me) || sameName(log.helped, me)
+      if (!isManager && !involved) {
+        return NextResponse.json({ error: '只有相關業務或管理層可以更正客戶' }, { status: 403 })
+      }
+      await updateCollabPointCustomer(ctx.params.id, customerId)
+      await logAuditEvent({
+        module: 'bd', action: 'update', entityType: 'collab-point',
+        entityId: log.id, entityTitle: log.title,
+        summary: `協作積分指定客戶：${log.customerName || '（未比對到）'} → ${String(body.customerName ?? '').trim() || customerId}`,
+        actor: getAuditActor(session), request: getAuditRequestContext(req),
+        before: { customerName: log.customerName },
+        after: { customerName: String(body.customerName ?? '').trim() },
+      }).catch(() => {})
+      return NextResponse.json({ id: log.id, customerUpdated: true })
+    }
+
+    const target = String(body.status ?? '') as CollabStatus
+    const rule = TRANSITIONS[target]
+    if (!rule) return NextResponse.json({ error: '不支援的狀態轉換' }, { status: 400 })
 
     // 更正項目：Slack 自動判定只是建議，確認/認列時判錯要能改。
     // 積分由項目表重算，呼叫端不能指定分數。

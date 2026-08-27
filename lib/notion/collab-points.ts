@@ -269,3 +269,25 @@ export async function updateCollabPointItem(id: string, item: CollabItem): Promi
     })
   )
 }
+
+/**
+ * 指定／更正協作積分的客戶。
+ * 同 cross-support：Slack 回報比對不到客戶時 relation 留空，這支讓人工補上。
+ * customerId 由呼叫端搜尋後取得，本檔不直接查客戶（葉領域不互依）。
+ */
+export async function updateCollabPointCustomer(id: string, customerId: string): Promise<void> {
+  if (!DB.collabPoints) throw new Error('NOTION_COLLAB_POINTS_DB 未設定')
+  const page: any = await notionCallWithRetry('updateCollabPointCustomer:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  )
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const ownDb = normalizeDatabaseId(DB.collabPoints).replace(/-/g, '')
+  if (!targetDb || targetDb !== ownDb) throw new Error('id 不屬於協作積分庫，拒絕寫入')
+
+  await notionCallWithRetry('updateCollabPointCustomer', () =>
+    notion.pages.update({
+      page_id: id,
+      properties: { '客戶': { relation: [{ id: customerId }] } } as any,
+    })
+  )
+}

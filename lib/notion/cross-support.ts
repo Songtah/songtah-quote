@@ -115,3 +115,39 @@ export async function listCrossSupportLogs(range?: { from: string; to: string })
     customerCity: customerInfo[p.customerId]?.city ?? '',
   }))
 }
+
+/**
+ * 指定／更正報備的客戶。
+ *
+ * 存在的理由：Slack 回報的客戶名稱比對不到時，建檔會留空 relation 並標「待確認」
+ * （絕不亂猜）。這支讓人工把正確客戶補上，補上後狀態轉為「已比對」。
+ * 也允許改綁到別的客戶，用於修正比對錯誤的情況。
+ *
+ * customerId 由呼叫端從客戶主檔搜尋後取得，本檔不直接查客戶（葉領域不互依）；
+ * 標題一併更新，避免列表仍顯示「（客戶待確認）」。
+ */
+export async function updateCrossSupportCustomer(
+  id: string,
+  customer: { id: string; name: string },
+): Promise<void> {
+  if (!DB.crossSupport) throw new Error('NOTION_CROSS_SUPPORT_DB 環境變數未設定')
+  const page: any = await notionCallWithRetry('updateCrossSupportCustomer:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  )
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const ownDb = normalizeDatabaseId(DB.crossSupport).replace(/-/g, '')
+  if (!targetDb || targetDb !== ownDb) throw new Error('id 不屬於跨區支援報備庫，拒絕寫入')
+
+  const reporting = getSelect(page, '報備業務')
+  const supportDate = getDate(page, '支援日期')
+  await notionCallWithRetry('updateCrossSupportCustomer', () =>
+    notion.pages.update({
+      page_id: id,
+      properties: {
+        客戶: { relation: [{ id: customer.id }] },
+        狀態: { select: { name: '已比對' } },
+        標題: { title: toRichText(`${reporting} 支援 ${customer.name} — ${supportDate}`) },
+      } as any,
+    })
+  )
+}

@@ -6,7 +6,8 @@
  * 設備業績仍歸支援業務，過期則回歸當區業務，所以剩幾天要讓業務一眼看到。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Handshake, AlertTriangle } from 'lucide-react'
+import { Handshake, AlertTriangle, Link2 } from 'lucide-react'
+import { CustomerPickerInline } from '@/components/CustomerPickerInline'
 
 type Period = 'week' | 'month' | 'quarter' | 'year'
 
@@ -28,6 +29,8 @@ type Item = {
   status: string
   trackingDaysLeft: number | null
   trackingActive: boolean
+  customerMatched: boolean
+  rawCustomerName: string
 }
 
 type Data = {
@@ -46,8 +49,11 @@ export function CrossSupportMyPanel() {
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [picking, setPicking] = useState('')   // 正在指定客戶的紀錄 id
+  const [busy, setBusy] = useState('')
+  const [notice, setNotice] = useState('')
 
-  const load = useCallback((next: Period, signal: AbortSignal) => {
+  const load = useCallback((next: Period, signal?: AbortSignal) => {
     setLoading(true)
     setError('')
     fetch(`/api/dashboard/my-cross-support?period=${next}`, { signal })
@@ -57,7 +63,7 @@ export function CrossSupportMyPanel() {
         setData(json)
       })
       .catch((caught: any) => { if (caught?.name !== 'AbortError') setError(caught.message) })
-      .finally(() => { if (!signal.aborted) setLoading(false) })
+      .finally(() => { if (!signal?.aborted) setLoading(false) })
   }, [])
 
   useEffect(() => {
@@ -65,6 +71,24 @@ export function CrossSupportMyPanel() {
     load(period, controller.signal)
     return () => controller.abort()
   }, [period, load])
+
+  async function assignCustomer(id: string, customer: { id: string; name: string }) {
+    setBusy(id); setNotice('')
+    try {
+      const response = await fetch(`/api/dashboard/my-cross-support/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: customer.id, customerName: customer.name }),
+      })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '指定客戶失敗')
+      setNotice(`已指定客戶：${json.customerName}`)
+      setPicking('')
+      load(period)
+    } catch (caught: any) {
+      setNotice(caught.message)
+    } finally { setBusy('') }
+  }
 
   return (
     <section className="card-soft overflow-hidden">
@@ -93,6 +117,7 @@ export function CrossSupportMyPanel() {
         ))}
       </div>
 
+      {notice && <p className="mx-6 mt-4 rounded-2xl bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 sm:mx-7">{notice}</p>}
       {loading && <p className="px-6 py-10 text-center text-sm text-stone-400 sm:px-7">讀取跨區支援名單…</p>}
       {error && <p className="mx-6 my-5 rounded-2xl bg-red-50 p-4 text-sm text-red-600 sm:mx-7">{error}</p>}
 
@@ -140,10 +165,26 @@ export function CrossSupportMyPanel() {
                     )}
                   </div>
                   {item.reason && <p className="mt-2 text-sm leading-relaxed text-stone-600">{item.reason}</p>}
-                  <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-stone-500">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-stone-500">
                     <span className="rounded-full bg-white px-2.5 py-1">{item.status || '狀態未標示'}</span>
                     {item.originalSalesperson && <span className="rounded-full bg-white px-2.5 py-1">原負責：{item.originalSalesperson}</span>}
+                    {!item.customerMatched && picking !== item.id && (
+                      <button
+                        onClick={() => { setPicking(item.id); setNotice('') }}
+                        className="flex min-h-8 items-center gap-1 rounded-full bg-brand-500 px-3 text-[11px] font-semibold text-white transition-all hover:bg-brand-600 active:scale-95"
+                      >
+                        <Link2 className="size-3" />指定客戶
+                      </button>
+                    )}
                   </div>
+                  {picking === item.id && (
+                    <CustomerPickerInline
+                      defaultQuery={item.rawCustomerName}
+                      busy={busy === item.id}
+                      onPick={(customer) => assignCustomer(item.id, customer)}
+                      onCancel={() => setPicking('')}
+                    />
+                  )}
                 </article>
               ))}
             </div>

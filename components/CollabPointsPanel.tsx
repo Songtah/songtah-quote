@@ -6,7 +6,8 @@
  * 認列流程：助攻者申報 → 受助業務確認 → 總經理認列，三步都在這個面板完成。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Trophy, Plus, Check, X } from 'lucide-react'
+import { Trophy, Plus, Check, X, Link2 } from 'lucide-react'
+import { CustomerPickerInline } from '@/components/CustomerPickerInline'
 
 type Period = 'week' | 'month' | 'quarter' | 'year'
 
@@ -23,6 +24,7 @@ type Item = {
   item: string; points: number; status: string
   countedDate: string; note: string
   autoClassified: boolean
+  customerMatched: boolean
 }
 
 type Data = {
@@ -55,6 +57,7 @@ export function CollabPointsPanel() {
   const [formOpen, setFormOpen] = useState(false)
   // 待確認項目的人工更正（key = 紀錄 id）
   const [correction, setCorrection] = useState<Record<string, string>>({})
+  const [picking, setPicking] = useState('')
   const [form, setForm] = useState({ helped: '', item: '', customerName: '', caseKey: '', note: '' })
 
   const load = useCallback((next: Period, signal?: AbortSignal) => {
@@ -116,6 +119,24 @@ export function CollabPointsPanel() {
         throw new Error(json.error || '更新失敗')
       }
       setNotice(`已更新為「${status}」`)
+      load(period)
+    } catch (caught: any) {
+      setNotice(caught.message)
+    } finally { setBusy('') }
+  }
+
+  async function assignCustomer(id: string, customer: { id: string; name: string }) {
+    setBusy(id); setNotice('')
+    try {
+      const response = await fetch(`/api/dashboard/collab-points/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: customer.id, customerName: customer.name }),
+      })
+      const json = await response.json()
+      if (!response.ok) throw new Error(json.error || '指定客戶失敗')
+      setNotice(`已指定客戶：${customer.name}`)
+      setPicking('')
       load(period)
     } catch (caught: any) {
       setNotice(caught.message)
@@ -243,7 +264,17 @@ export function CollabPointsPanel() {
                         {' '}<span className="text-brand-700">+{data.itemOptions.find((o) => o.name === (correction[item.id] || item.item))?.points ?? item.points}</span>
                         {item.autoClassified && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">系統判定・請複核</span>}
                       </p>
-                      <p className="mt-0.5 text-xs text-stone-400">{item.customerName || '未指定客戶'}{item.note ? `・${item.note}` : ''}</p>
+                      <p className="mt-0.5 text-xs text-stone-400">
+                        {item.customerName || '未指定客戶'}{item.note ? `・${item.note}` : ''}
+                        {!item.customerMatched && picking !== item.id && (
+                          <button onClick={() => { setPicking(item.id); setNotice('') }} className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white active:scale-95">
+                            <Link2 className="size-2.5" />指定客戶
+                          </button>
+                        )}
+                      </p>
+                      {picking === item.id && (
+                        <CustomerPickerInline busy={busy === item.id} onPick={(c) => assignCustomer(item.id, c)} onCancel={() => setPicking('')} />
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已確認')} className="flex min-h-9 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50"><Check className="size-3.5" />確認</button>

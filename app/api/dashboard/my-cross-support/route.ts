@@ -18,6 +18,12 @@ export const dynamic = 'force-dynamic'
 /** 辦法第四章：活動結束日起 14 日內成交，設備業績仍歸支援業務 */
 const TRACKING_DAYS = 14
 
+/** 從 Slack 原始訊息取回當初填的客戶名稱，供指定客戶時當搜尋預設字 */
+function extractCustomerName(raw: string): string {
+  const m = (raw ?? '').match(/客戶[：:]\s*(.+)/)
+  return m ? m[1].trim() : ''
+}
+
 function sameName(a: string, b: string) {
   return a.trim().toLocaleLowerCase('zh-TW') === b.trim().toLocaleLowerCase('zh-TW')
 }
@@ -54,6 +60,10 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
         reportingSalesperson: log.reportingSalesperson,
         customerName: log.customerName || '（客戶未比對到）',
         customerCity: log.customerCity,
+        // relation 是否已綁上客戶；未綁者 UI 顯示「指定客戶」讓人工補
+        customerMatched: Boolean(log.customerId),
+        // Slack 原文填的客戶名稱，當作搜尋預設字，省得重打
+        rawCustomerName: extractCustomerName(log.rawMessage),
         supportDate: log.supportDate,
         reason: log.reason,
         originalSalesperson: log.originalSalesperson,
