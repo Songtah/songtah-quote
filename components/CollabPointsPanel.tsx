@@ -22,6 +22,7 @@ type Item = {
   customerName: string; customerCity: string
   item: string; points: number; status: string
   countedDate: string; note: string
+  autoClassified: boolean
 }
 
 type Data = {
@@ -52,6 +53,8 @@ export function CollabPointsPanel() {
   const [busy, setBusy] = useState('')
   const [notice, setNotice] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  // 待確認項目的人工更正（key = 紀錄 id）
+  const [correction, setCorrection] = useState<Record<string, string>>({})
   const [form, setForm] = useState({ helped: '', item: '', customerName: '', caseKey: '', note: '' })
 
   const load = useCallback((next: Period, signal?: AbortSignal) => {
@@ -102,7 +105,8 @@ export function CollabPointsPanel() {
       const response = await fetch(`/api/dashboard/collab-points/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, overrideDuplicate }),
+        // 確認前若在下拉改過項目，一併送出更正（積分由後端依項目重算）
+        body: JSON.stringify({ status, overrideDuplicate, item: correction[id] ?? '' }),
       })
       const json = await response.json()
       if (!response.ok) {
@@ -231,15 +235,31 @@ export function CollabPointsPanel() {
               <p className="text-sm font-bold text-amber-800">待你確認（{data.pendingForMe.length}）</p>
               <div className="mt-2 space-y-2">
                 {data.pendingForMe.map((item) => (
-                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white p-3">
+                  <div key={item.id} className="rounded-xl bg-white p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-stone-800">{item.helper}｜{item.item} <span className="text-brand-700">+{item.points}</span></p>
+                      <p className="text-sm font-semibold text-stone-800">
+                        {item.helper}｜{correction[item.id] || item.item}
+                        {' '}<span className="text-brand-700">+{data.itemOptions.find((o) => o.name === (correction[item.id] || item.item))?.points ?? item.points}</span>
+                        {item.autoClassified && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">系統判定・請複核</span>}
+                      </p>
                       <p className="mt-0.5 text-xs text-stone-400">{item.customerName || '未指定客戶'}{item.note ? `・${item.note}` : ''}</p>
                     </div>
                     <div className="flex gap-2">
                       <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已確認')} className="flex min-h-9 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50"><Check className="size-3.5" />確認</button>
                       <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '駁回')} className="flex min-h-9 items-center gap-1 rounded-full bg-stone-100 px-3 text-xs font-semibold text-stone-600 active:scale-95 disabled:opacity-50"><X className="size-3.5" />駁回</button>
                     </div>
+                    </div>
+                    <label className="mt-2 block text-[11px] font-semibold text-stone-500">
+                      項目判定{item.autoClassified ? '（系統依回報內容判定，可更正）' : ''}
+                      <select
+                        className="select-soft mt-1 block w-full text-xs"
+                        value={correction[item.id] ?? item.item}
+                        onChange={(e) => setCorrection({ ...correction, [item.id]: e.target.value })}
+                      >
+                        {data.itemOptions.map((o) => <option key={o.name} value={o.name}>{o.name}（+{o.points}）</option>)}
+                      </select>
+                    </label>
                   </div>
                 ))}
               </div>

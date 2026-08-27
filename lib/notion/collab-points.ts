@@ -59,6 +59,9 @@ export interface CollabPointLog {
   status: string
   countedDate: string     // 認列日期
   note: string
+  /** 系統判定 = Slack 自動分類的建議項目，確認/認列時可改 */
+  autoClassified: boolean
+  rawMessage: string
   createdTime: string
 }
 
@@ -75,6 +78,8 @@ function parsePage(page: any): Omit<CollabPointLog, 'customerName' | 'customerCi
     status: getSelect(page, '狀態'),
     countedDate: getDate(page, '認列日期'),
     note: getText(page, '說明'),
+    autoClassified: getSelect(page, '判定方式') === '系統判定',
+    rawMessage: getText(page, '原始訊息'),
     createdTime: page.created_time ?? '',
   }
 }
@@ -136,6 +141,9 @@ export async function createCollabPoint(data: {
   customerId?: string
   caseKey?: string
   note?: string
+  /** Slack 自動判定的建議項目；true 時 UI 會標示「系統判定」提醒人工複核 */
+  autoClassified?: boolean
+  rawMessage?: string
 }): Promise<{ id: string }> {
   if (!DB.collabPoints) throw new Error('NOTION_COLLAB_POINTS_DB 未設定')
   const points = COLLAB_ITEMS[data.item]
@@ -155,6 +163,8 @@ export async function createCollabPoint(data: {
         ...(data.customerId ? { '客戶': { relation: [{ id: data.customerId }] } } : {}),
         ...(data.caseKey ? { '案件識別': { rich_text: richText(data.caseKey) } } : {}),
         ...(data.note ? { '說明': { rich_text: richText(data.note) } } : {}),
+        '判定方式': { select: { name: data.autoClassified ? '系統判定' : '人工填寫' } },
+        ...(data.rawMessage ? { '原始訊息': { rich_text: richText(data.rawMessage.slice(0, 1900)) } } : {}),
       } as any,
     })
   )
@@ -224,4 +234,38 @@ export function summarizePoints(totalPoints: number) {
     pointsToNextTier: nextTier ? nextTier.points - cyclePoints : 0,
     reachedTiers: REWARD_TIERS.filter((tier) => cyclePoints >= tier.points),
   }
+}
+
+/**
+ * 更正助攻項目（連帶更新積分與標題）。
+ *
+ * 存在的理由：Slack 自動判定只是「建議項目」，受助業務確認或總經理認列時
+ * 若判錯要能改。積分一律由項目表重算，不接受呼叫端指定分數。
+ */
+export async function updateCollabPointItem(id: string, item: CollabItem): Promise<void> {
+  if (!DB.collabPoints) throw new Error('NOTION_COLLAB_POINTS_DB 未設定')
+  const points = COLLAB_ITEMS[item]
+  if (points == null) throw new Error(`未知的助攻項目：${item}`)
+
+  const page: any = await notionCallWithRetry('updateCollabPointItem:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  )
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const ownDb = normalizeDatabaseId(DB.collabPoints).replace(/-/g, '')
+  if (!targetDb || targetDb !== ownDb) throw new Error('id 不屬於協作積分庫，拒絕寫入')
+
+  const helper = getSelect(page, '助攻業務')
+  const helped = getSelect(page, '受助業務')
+  await notionCallWithRetry('updateCollabPointItem', () =>
+    notion.pages.update({
+      page_id: id,
+      properties: {
+        '助攻項目': { select: { name: item } },
+        '積分': { number: points },
+        '標題': { title: richText(`${helper} 助攻 ${helped}｜${item}`) },
+        // 一經人工更正就不再是系統判定，避免 UI 持續掛著「待複核」標記
+        '判定方式': { select: { name: '人工填寫' } },
+      } as any,
+    })
+  )
 }

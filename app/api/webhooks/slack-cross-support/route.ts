@@ -17,6 +17,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { waitUntil } from '@vercel/functions'
 import { isCrossSupportReport, parseCrossSupportMessage } from '@/lib/slack-cross-support-parser'
+import { isCollabReport, parseCollabMessage } from '@/lib/slack-collab-points-parser'
+import { createCollabPoint, COLLAB_ITEMS } from '@/lib/notion/collab-points'
 import { KNOWN_SALESPERSON_LIST } from '@/lib/line-salesperson-map'
 import { canonicalSalespersonName } from '@/lib/salesperson-name'
 import { searchSystemCustomers } from '@/lib/notion/customers'
@@ -82,6 +84,11 @@ export async function POST(req: NextRequest) {
 }
 
 async function processMessage(text: string) {
+  // 助攻回報與跨區支援報備共用同一個頻道與端點，靠開頭標記分流。
+  // 先判助攻——「跨區支援擺攤或課程」本身就是助攻項目之一，
+  // 訊息可能同時含兩個詞，以「助攻」優先才不會被誤收成跨區支援報備。
+  if (isCollabReport(text)) return processCollabReport(text)
+
   try {
     if (!isCrossSupportReport(text)) return
 
@@ -113,5 +120,56 @@ async function processMessage(text: string) {
     console.log(`[Slack cross-support webhook] ✅ ${reportingSalesperson} / ${parsed.customerName} / ${parsed.supportDate}`)
   } catch (err) {
     console.error('[Slack cross-support webhook] processMessage error:', err)
+  }
+}
+
+/** 助攻回報：自動判定項目後以「待確認」建檔，仍須經確認與認列（辦法第八章） */
+async function processCollabReport(text: string) {
+  try {
+    const parsed = parseCollabMessage(text)
+    if (!parsed) {
+      console.log('[Slack collab webhook] skip: 格式不完整(缺業務或受助)')
+      return
+    }
+
+    const helper = canonicalSalespersonName(parsed.helper)
+    const helped = canonicalSalespersonName(parsed.helped)
+    if (!KNOWN_SALESPERSON_LIST.includes(helper)) {
+      console.log(`[Slack collab webhook] skip: 非業務名單「${parsed.helper}」`)
+      return
+    }
+    if (!KNOWN_SALESPERSON_LIST.includes(helped)) {
+      console.log(`[Slack collab webhook] skip: 受助非業務名單「${parsed.helped}」`)
+      return
+    }
+    // 辦法是「協助團隊人員」，自己助攻自己不成立
+    if (helper === helped) {
+      console.log('[Slack collab webhook] skip: 受助業務與助攻業務相同')
+      return
+    }
+
+    // 客戶比對不到就留空 relation，絕不亂猜（比照跨區支援的做法）
+    let customerId = ''
+    if (parsed.customerName) {
+      const matches = await searchSystemCustomers(parsed.customerName).catch(() => [])
+      const best = matches.find((m) => m.name === parsed.customerName) ?? matches[0]
+      customerId = best?.id ?? ''
+    }
+
+    await createCollabPoint({
+      helper, helped, item: parsed.item,
+      customerId: customerId || undefined,
+      caseKey: parsed.caseKey || undefined,
+      note: parsed.note || undefined,
+      autoClassified: parsed.autoClassified,
+      rawMessage: text,
+    })
+
+    console.log(
+      `[Slack collab webhook] ✅ ${helper} 助攻 ${helped}｜${parsed.item}`
+      + `（${COLLAB_ITEMS[parsed.item]} 點，${parsed.autoClassified ? '系統判定' : '訊息指定'}）`
+    )
+  } catch (err) {
+    console.error('[Slack collab webhook] processCollabReport error:', err)
   }
 }

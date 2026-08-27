@@ -12,8 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import {
-  getCollabPoint, updateCollabPointStatus, listCollabPoints,
-  type CollabStatus,
+  getCollabPoint, updateCollabPointStatus, updateCollabPointItem, listCollabPoints,
+  COLLAB_ITEMS, type CollabStatus, type CollabItem,
 } from '@/lib/notion/collab-points'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
@@ -49,6 +49,11 @@ export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (
     const log = await getCollabPoint(ctx.params.id)
     if (!log) return NextResponse.json({ error: '找不到這筆協作積分' }, { status: 404 })
 
+    // 更正項目：Slack 自動判定只是建議，確認/認列時判錯要能改。
+    // 積分由項目表重算，呼叫端不能指定分數。
+    const correctedItem = String(body.item ?? '').trim() as CollabItem
+    const hasCorrection = Boolean(correctedItem) && correctedItem !== log.item
+
     if (!rule.from.includes(log.status as CollabStatus)) {
       return NextResponse.json(
         { error: `「${log.status}」不能直接轉為「${target}」` }, { status: 409 },
@@ -76,6 +81,12 @@ export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (
       }
     }
 
+    if (hasCorrection) {
+      if (!(correctedItem in COLLAB_ITEMS)) {
+        return NextResponse.json({ error: `未知的助攻項目：${correctedItem}` }, { status: 400 })
+      }
+      await updateCollabPointItem(ctx.params.id, correctedItem)
+    }
     await updateCollabPointStatus(ctx.params.id, target)
 
     await logAuditEvent({
@@ -84,15 +95,20 @@ export const PATCH = withApiAuth({ module: 'bd', action: 'edit' }, async (
       entityType: 'collab-point',
       entityId: log.id,
       entityTitle: log.title,
-      summary: `協作積分 ${log.status} → ${target}（${log.helper} 助攻 ${log.helped}，${log.points} 點）`
+      summary: `協作積分 ${log.status} → ${target}（${log.helper} 助攻 ${log.helped}，${hasCorrection ? COLLAB_ITEMS[correctedItem] : log.points} 點）`
+        + (hasCorrection ? `；項目更正「${log.item}」→「${correctedItem}」` : '')
         + (target === '已認列' && body.overrideDuplicate ? '；經認定為獨立貢獻，覆寫同案件重複檢查' : ''),
       actor: getAuditActor(session),
       request: getAuditRequestContext(req),
-      before: { status: log.status },
-      after: { status: target },
+      before: { status: log.status, item: log.item, points: log.points },
+      after: { status: target, item: hasCorrection ? correctedItem : log.item },
     }).catch(() => {})
 
-    return NextResponse.json({ id: log.id, status: target })
+    return NextResponse.json({
+      id: log.id, status: target,
+      item: hasCorrection ? correctedItem : log.item,
+      points: hasCorrection ? COLLAB_ITEMS[correctedItem] : log.points,
+    })
   } catch (error: any) {
     console.error('collab-points PATCH error:', error)
     return NextResponse.json({ error: error?.message ?? '狀態更新失敗' }, { status: 500 })
