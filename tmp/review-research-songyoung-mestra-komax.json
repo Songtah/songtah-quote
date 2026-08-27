@@ -1,0 +1,335 @@
+{
+  "summary": {
+    "targetCount": 155,
+    "brands": { "Song Young": 111, "MESTRA": 22, "KO-MAX": 22 },
+    "method": "商品名稱與料號逐組比對品牌官方網站、官方產品頁或製造商官方產品部落格；僅 high/medium 列入建議，證據不足者保留 unresolved。",
+    "officialSourcesOnly": true,
+    "groupedCount": 124,
+    "unresolvedCount": 31,
+    "duplicateCount": 0,
+    "missingCount": 0
+  },
+  "groups": [
+    {
+      "brand": "Song Young",
+      "pattern/series": "SY-02100-* Labo Mate 500 咬合器零配件",
+      "sourceUrl": "https://songyoung.com.tw/product_detail.php?productID=142",
+      "evidence": "官方產品頁將 Item No. 02100 明確列為 Labo Mate 500 Semi-Adjustable Articulator；這批 02100 子料號名稱均為螺絲、咬叉、底板、排牙板、尺規、面弓等咬合器配件。",
+      "classification": { "businessCategory": "clinical-tools", "functionCategory": "articulator-accessory", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["SY-02100-06N", "SY-02100-17-C", "SY-02100-21", "SY-02100-22", "SY-02100-29", "SY-02100-31", "SY-02100-31C", "SY-02100-44-C000R", "SY-02100-44-C100R", "SY-02100-44-C125R", "SY-02100-44-C140R", "SY-02100-44-C160R", "SY-02100-45", "SY-02100-45A", "SY-02100-52", "SY-02100-53", "SY-02100-58", "SY-02100-60B-SET"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "SY-030*/031* Dowel Pins 與橡皮套／墊",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php?CID=3&PID=11",
+      "evidence": "官方 DOWEL PINS 類別列出 Bi-Pin、Bi-V-Pin、Wing Pin、Brass Dowel Pins 與 Rubber Sheet；官方 Pindex Pin 頁亦顯示 0316x 料號規則。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "die-model-accessory", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-03020", "SY-03022", "SY-03028", "SY-03030", "SY-03040", "SY-03060B", "SY-03070B", "SY-03080B", "SY-03120", "SY-03130", "SY-03140", "SY-03141", "SY-03165A"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "數位融蠟／浸蠟／電磁加熱設備",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=1",
+      "evidence": "官方 MACHINE 頁將 New Han-D-III Waxer、Accu-Waxer、Digital 3-Well Pot、Digital Accu-Dip III 列為設備，與這批中文品名和 01440/015xx 料號用途一致。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "wax-equipment", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-01520-110V", "SY-01550", "SY-01440", "SY-01540", "SY-01530"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "精密平行器／Surveyor",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=1",
+      "evidence": "官方 MACHINE 頁列有 Surveyor / Milling Machine、Surveyor Type II 與 Type III；本批中文品名均為精密平行器。現有 taxonomy 無 surveyor 專用 function，採 generic-equipment。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "generic-equipment", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-01300", "SY-01310", "SY-01310-NB"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "毛刷、棉輪、布輪等拋光耗材",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=3",
+      "evidence": "官方 MATERIAL 頁明列 Polishing Brushes、Grinding Wheels、Abrasive Disks/Polishers；本批名稱均為毛刷、棉輪或布輪。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "polishing-consumable", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-04111-S", "SY-04123-12", "SY-04124-12", "SY-06120-3", "SY-06150-5", "SY-06150-8", "SY-06180-4", "SY-06180-5", "SY-06180-6"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "離心坩堝",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方產品架構把相關器械置於 CASTING INSTRUMENTS；兩筆名稱均明確為 K-CRUCIBLE 離心坩堝。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "casting-pressing-equipment", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["SY-04160", "SY-04163"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "瓷盤、燒付支柱與燒付台",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方產品架構設有 PORCELAIN PRODUCTS；本批名稱為 Wet/Stain 瓷盤、瓷盤蓋、瓷牙燒付支柱與燒付台。",
+      "classification": { "businessCategory": "color-characterization", "functionCategory": "equipment-accessory", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["SY-04188-H", "SY-04188-M", "SY-04189-19", "SY-04190", "SY-04190-1", "SY-04192", "SY-04199"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "瓦斯噴槍／酒精噴燈",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php?CID=2&pageNum_product=14",
+      "evidence": "官方器械頁列出 Micro Burner 與 Alcohol Torch，與兩筆商品名稱直接相符。",
+      "classification": { "businessCategory": "clinical-tools", "functionCategory": "general-tool", "productKind": "durable_tool", "confidence": "high" },
+      "skuCodes": ["SY-04020", "SY-04037N"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "車心／Mandrel",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=3",
+      "evidence": "官方 MATERIAL 類別涵蓋 abrasive disks/polishers；本批車心用於承載砂紙、磨片或拋光件，屬研磨工具配件。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "grinding-tool", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["SY-04080", "SY-04082", "SY-04083", "SY-04084", "SY-04085-305"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "車石與 BIG POINT 樹脂研磨頭",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=3",
+      "evidence": "官方 MATERIAL 頁列有 Grinding Wheels 與 polishers；商品名稱明確為車石及樹脂用研磨 point。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "grinding-tool", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-05076", "SY-06030-1", "SY-06030-2", "SY-06030-3", "SY-06030-4"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "瓷牙切片",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=3",
+      "evidence": "官方 MATERIAL 頁列有 Standard Cutting Disks、Ultra Fine Disk；品名含明確尺寸 22mm×0.35mm 與 100 片包裝。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "cutting-disc", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-05030"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "量尺、止血鉗、刀柄與蠟刀",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php?CID=2&pageNum_product=14",
+      "evidence": "官方 INSTRUMENT 架構含 CALIPER/GAUGE、Holding Clamps & Tweezers、OTHER INSTRUMENTS；本批商品名稱為手持量測或操作器械。",
+      "classification": { "businessCategory": "clinical-tools", "functionCategory": "dental-instrument", "productKind": "durable_tool", "confidence": "medium" },
+      "skuCodes": ["SY-04070", "SY-04248", "SY-04249", "SY-04270-1", "SY-04270-5"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "Shell/OCL Pattern Formers",
+      "sourceUrl": "https://www.songyoung.com.tw/product_detail.php?productID=239",
+      "evidence": "官方 Anterior-Shell Formers 頁列 Item No. 07230-L/07230-M；官方 OCL Pattern Former 頁亦顯示 07240 系列，均為可重複使用的 silicone flex mold。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "wax-pressing-material", "productKind": "durable_tool", "confidence": "medium" },
+      "skuCodes": ["SY-07230-L", "SY-07240-M5"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "TTL 防護面罩替換片",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 MATERIAL 架構含 DISPOSABLE, PROTECTIVE；商品名稱為 TTL 輕量型防護面罩 5 片裝。",
+      "classification": { "businessCategory": "clinical-tools", "functionCategory": "dental-instrument", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-07046ULT"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "義齒盒、口模與教學模型",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 OTHERS 架構明列 DENTURE BOX、MOUTH MOULDS、MODEL；商品名稱與這三類逐一吻合。",
+      "classification": { "businessCategory": "removable-prosthetics", "functionCategory": "model-accessory", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["SY-04222", "SY-04223", "SY-04237", "SY-09100", "SY-09110"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "Sonic Cleaner／Denture Spa 清潔設備",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 MACHINE 架構明列 CLEANERS, CLEAN BOX；兩筆名稱均為假牙清洗／潔牙設備。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "cleaning-dust-control", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-04215", "SY-04230"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "02820 吸塵器與吸塵袋",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 MACHINE 架構明列 DUST EXTRACTION BOX；02820 主機名稱為吸塵器，02820-1 為同系列吸塵袋。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "cleaning-dust-control", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-02820-110V"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "02820 吸塵袋",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 DUST EXTRACTION BOX 類別與同系列 02820 吸塵器可支持其為吸塵過濾耗材。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "filter-consumable", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["SY-02820-1"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "High Speed 噴水氣動機",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 MACHINE 架構有 HIGH SPEED 專類；商品名稱明列 High Speed 噴水氣動機整組。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "generic-equipment", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-02880"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "大型振盪器",
+      "sourceUrl": "https://www.songyoung.com.tw/products.php",
+      "evidence": "官方 MACHINE 架構有 VIBRATORS 專類；商品名稱明列 Vibrator 大型振盪器。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "generic-equipment", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-04095-110V"]
+    },
+    {
+      "brand": "Song Young",
+      "pattern/series": "石膏研磨機",
+      "sourceUrl": "https://songyoung.com.tw/products.php?CID=1",
+      "evidence": "官方 MACHINE 類別提供技工研磨相關設備；商品名稱明列石膏研磨機並附鑽石磨片。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "grinding-tool", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["SY-02860N"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "Flasking 煮模盒與固定架",
+      "sourceUrl": "https://mestra.es/en/product-categorie/laboratory/flasking/",
+      "evidence": "MESTRA 官方網站將 flasks、flask clamps 與 presses 集中於 Flasking 類別；兩筆商品分別為圓型煮模盒與三個裝固定架。",
+      "classification": { "businessCategory": "lab-production", "functionCategory": "flasking-pressing-tool", "productKind": "durable_tool", "confidence": "medium" },
+      "skuCodes": ["MT-020080", "MT-030410"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "030350/030370 壓模機",
+      "sourceUrl": "https://mestra.es/en/product-categorie/laboratory/flasking/presses/",
+      "evidence": "官方 Presses 類別直接列出 hydraulic press ref. 030350 及 press ref. 030370；本地商品名稱分別為油壓機、手動式壓模機。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "flasking-pressing-tool", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-030350", "MT-030370"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "030420 Polymerizing pneumatic pot",
+      "sourceUrl": "https://mestra.es/wp-content/uploads/2025/11/Cat.-Laboratorio-2026_EN.pdf",
+      "evidence": "MESTRA 官方 2026 Laboratory Catalogue 將 ref. 030420 列為 polymerizing pneumatic pot；本地名稱為壓力鍋。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "flasking-pressing-tool", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-030420"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "030420 壓力鍋零件",
+      "sourceUrl": "https://mestra.es/wp-content/uploads/2025/11/Cat.-Laboratorio-2026_EN.pdf",
+      "evidence": "兩筆均沿用官方 030420 主機料號並明列注氣嘴、O-ring，判定為該聚合壓力鍋 spare parts。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "equipment-accessory", "productKind": "spare_part", "confidence": "medium" },
+      "skuCodes": ["MT-030420-04", "MT-030420-05"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "050050 gas lamp",
+      "sourceUrl": "https://mestra.es/wp-content/uploads/2025/11/Cat.-Laboratorio-2026_EN.pdf",
+      "evidence": "官方 Laboratory Catalogue 收錄技工用 burners/lamps；本地名稱與料號明列瓦斯燈。",
+      "classification": { "businessCategory": "clinical-tools", "functionCategory": "general-tool", "productKind": "durable_tool", "confidence": "medium" },
+      "skuCodes": ["MT-050050"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "Sandblaster 主機與噴筆／噴嘴／風槍配件",
+      "sourceUrl": "https://mestra.es/en/producto/constellation-practic/",
+      "evidence": "官方 ref. 080259 Constellation Practic 頁明列 Sand Blaster、two mobile pencils with nozzles 與 air blowing gun；官方 Constellation 頁另列 080262-64 系列。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "generic-equipment", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["MT-080259B"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "Sandblaster 噴筆／噴嘴／風槍／固定夾具",
+      "sourceUrl": "https://mestra.es/en/producto/constellation-practic/",
+      "evidence": "官方 sandblaster 頁明列 mobile pencils、nozzles、air blowing gun；料號與本地名稱均指向噴砂機零配件。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "equipment-accessory", "productKind": "accessory", "confidence": "medium" },
+      "skuCodes": ["MT-050221", "MT-050345", "MT-080240-12", "MT-080240-13", "MT-080262-40", "MT-080262-41"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "080068 casting ring cleaner/wax-remover",
+      "sourceUrl": "https://mestra.es/en/producto/desencerador-de-cilindros/",
+      "evidence": "官方產品頁直接標示 SKU 080068，並描述以蒸汽從 casting rings 去除並回收蠟。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "wax-equipment", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-080068"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "M9/M18 flask polymerizers",
+      "sourceUrl": "https://mestra.es/en/product-categorie/laboratory/polymerization/",
+      "evidence": "官方 Polymerization 類別及產品頁分別列出 SKU 080400 M9 與 SKU 080402 M18，均為 flask polymerizer。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "flasking-pressing-tool", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-080400", "MT-080402"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "080515 Alginate mixer",
+      "sourceUrl": "https://mestra.es/en/producto/mezcladora-de-alginato/",
+      "evidence": "官方頁直接標示 SKU 080515 Alginate Mixer，技術規格含 60W 馬達與可拆攪拌杯。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "generic-equipment", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-080515"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "080532 Eolo Plus aspiration unit",
+      "sourceUrl": "https://mestra.es/en/producto/mini-box-de-pulido-gorbea/",
+      "evidence": "官方 Gorbea 頁直接稱 ref. 080532 Eolo Plus 為 powerful suction unit。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "cleaning-dust-control", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-080532"]
+    },
+    {
+      "brand": "MESTRA",
+      "pattern/series": "080602 spray application box",
+      "sourceUrl": "https://mestra.es/wp-content/uploads/2025/11/Cat.-Laboratorio-2026_EN.pdf",
+      "evidence": "官方 2026 Catalogue 直接列 ref. 080602 Box spray application，描述需外接吸塵以控制噴霧與金屬粉塵。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "cleaning-dust-control", "productKind": "equipment", "confidence": "high" },
+      "skuCodes": ["MT-080602"]
+    },
+    {
+      "brand": "KO-MAX",
+      "pattern/series": "Silence A/C/H/K 系列吸塵設備",
+      "sourceUrl": "https://ko-maxkorea.com/main",
+      "evidence": "KO-MAX 官方站為 Silence 系列製造商入口；商品名稱一致標示 A100/A200、C-100、H100/H200、K3N/K4N 吸塵／集塵設備。官方站目前對研究工具回應 403，因此降為 medium。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "cleaning-dust-control", "productKind": "equipment", "confidence": "medium" },
+      "skuCodes": ["KM-A100", "KM-A200", "KM-C-100-2F", "KM-C-100-G", "KM-C-100-H", "KM-H100", "KM-H200", "KM-K3-N", "KM-K4-N"]
+    },
+    {
+      "brand": "KO-MAX",
+      "pattern/series": "Pocket Filter",
+      "sourceUrl": "https://ko-max.blogspot.com/",
+      "evidence": "製造商官方產品部落格的 Silence 系列規格列 Pocket filter 為 filter／optional accessory；KM-008 名稱直接為 Pocket Filter 吸塵袋。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "filter-consumable", "productKind": "consumable", "confidence": "medium" },
+      "skuCodes": ["KM-008"]
+    },
+    {
+      "brand": "KO-MAX",
+      "pattern/series": "Silence 吸塵器通用外接與維修零件",
+      "sourceUrl": "https://ko-max.blogspot.com/",
+      "evidence": "製造商官方產品部落格的 Silence 規格明列 caster、vacuum motor、hose 等組成；本批名稱直接對應腳輪、吸力馬達與連接管。",
+      "classification": { "businessCategory": "lab-equipment", "functionCategory": "equipment-accessory", "productKind": "spare_part", "confidence": "medium" },
+      "skuCodes": ["KM-015", "KM-017", "KM-025"]
+    }
+  ],
+  "unresolved": [
+    { "skuCode": "SY-01100", "reason": "官方網站未找到排水淨化器對應料號或足以判斷用途層級的產品頁。" },
+    { "skuCode": "SY-01130A-17", "reason": "名稱像技工桌吸塵袋，但官方站未找到 01130 工作桌系列或可核對的 filter 規格。" },
+    { "skuCode": "SY-01130A-6", "reason": "官方站未找到 01130 工作桌系列零件表，無法確認是 accessory 或 spare_part。" },
+    { "skuCode": "SY-01130A-61", "reason": "官方站未找到 01130 工作桌系列零件表，無法確認料號關聯。" },
+    { "skuCode": "SY-01130A-66", "reason": "官方站未找到 01130 工作桌系列零件表，無法確認技工盒功能。" },
+    { "skuCode": "SY-01130C-1", "reason": "官方站未找到 JT-53／01130C 工作桌產品或零件表。" },
+    { "skuCode": "SY-01131-1.8", "reason": "官方站分類頁未列工作桌產品，無官方證據支撐 workbench taxonomy。" },
+    { "skuCode": "SY-01131A", "reason": "官方站分類頁未列工作桌產品，無官方證據支撐 workbench taxonomy。" },
+    { "skuCode": "SY-01131B", "reason": "官方站分類頁未列工作桌產品，無官方證據支撐 workbench taxonomy。" },
+    { "skuCode": "SY-01206", "reason": "名稱為兩用煮模盒，但官方站未找到 New Flask 料號頁。" },
+    { "skuCode": "SY-02772", "reason": "Resin Jig Spring／壓榨器語意不足，官方站未找到相符產品。" },
+    { "skuCode": "SY-02803", "reason": "只知為加強網架上件，未找到官方產品頁確認其所屬主機。" },
+    { "skuCode": "SY-02804", "reason": "只知為加強網架下件，未找到官方產品頁確認其所屬主機。" },
+    { "skuCode": "SY-02805", "reason": "只知為金色加強網架，未找到官方產品頁確認其所屬主機。" },
+    { "skuCode": "SY-04038", "reason": "HANAU Loopheatcd 配件名稱疑有拼字／舊型號，官方站無對應頁。" },
+    { "skuCode": "SY-04040", "reason": "ST CASE 盒子用途不明，官方站無對應料號。" },
+    { "skuCode": "SY-04040-1", "reason": "ST CASE 盒子夾板用途不明，官方站無對應料號。" },
+    { "skuCode": "SY-04210", "reason": "中文品名為超音波潔牙機，可能是臨床 scaler 而非清潔箱；官方站未找到料號。" },
+    { "skuCode": "SY-08100", "reason": "比色燈可屬 optical-equipment 或 shade workflow，但官方站未找到 08100 頁。" },
+    { "skuCode": "SY-02750", "reason": "寒天材翻模盒品名清楚但官方站未找到 Puplocating Flask 或 02750 料號。" },
+    { "skuCode": "SY-02840", "reason": "磁揚真空成形機未找到官方對應頁，且現有 function taxonomy 無真空成形專類。" },
+    { "skuCode": "MT-080591B", "reason": "官方現行頁可查到後繼 080592 Boomerang Precision II，但未找到 080591B 的官方頁，不能直接沿用後繼型號分類。" },
+    { "skuCode": "KM-013", "reason": "Device operation PCB 需確認適用 Silence 型號；官方站 403 且官方部落格無零件料號。" },
+    { "skuCode": "KM-014", "reason": "Touch PCB 需確認適用 Silence 型號；官方站 403 且官方部落格無零件料號。" },
+    { "skuCode": "KM-016", "reason": "Touchpanel 未找到官方零件料號或適用機種。" },
+    { "skuCode": "KM-020", "reason": "Spigot 語意不足，無法從官方資料確認是設備配件或其他零件。" },
+    { "skuCode": "KM-021", "reason": "集塵箱鉸鏈未找到官方零件表與適用機種。" },
+    { "skuCode": "KM-022", "reason": "集塵塑膠網未找到官方零件表，無法判定 filter consumable 或 spare part。" },
+    { "skuCode": "KM-024", "reason": "5X 放大鏡未找到官方頁確認是否為吸塵器附件或獨立光學工具。" },
+    { "skuCode": "KM-026", "reason": "Mesh cover 名稱疑有拼字，官方資料無對應零件。" },
+    { "skuCode": "KM-027-1", "reason": "K3 集塵箱玻璃未找到官方零件料號表。" }
+  ]
+}

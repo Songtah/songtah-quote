@@ -1,0 +1,1081 @@
+{
+  "generatedAt": "2026-07-15T06:13:12.832Z",
+  "mode": "dry-run",
+  "catalogFields": [
+    "brand",
+    "category",
+    "categoryId",
+    "code",
+    "discontinued",
+    "mainCategory",
+    "mainCategoryId",
+    "name",
+    "needsReview",
+    "price",
+    "productType",
+    "seriesName",
+    "status"
+  ],
+  "familyFields": [
+    "brand",
+    "category",
+    "collectionName",
+    "coveredSkuCodes",
+    "id",
+    "namePattern",
+    "productType",
+    "seriesCode",
+    "seriesName",
+    "skuMap",
+    "skuPattern",
+    "specs",
+    "uiVariant"
+  ],
+  "targetSkuCount": 261,
+  "touchedFamilyCount": 36,
+  "removedFamilyCount": 36,
+  "newFamilyCount": 38,
+  "notionAssignmentsLoaded": false,
+  "manualAssignmentCount": 0,
+  "unassignedCount": 0,
+  "duplicateSpecKeyCount": 0,
+  "finalConflictCount": 0,
+  "newFamilies": [
+    {
+      "id": "DSD-MATCHMAKER-BASE-KIT",
+      "seriesName": "Matchmaker 套裝組",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "套裝",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-LIQUID",
+      "seriesName": "Matchmaker 專用液",
+      "skuCount": 3,
+      "specs": [
+        {
+          "label": "用途",
+          "optionCount": 3
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-DENTINE",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "skuCount": 22,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 17
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 3
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-EFFECT",
+      "seriesName": "Matchmaker Effect 效果瓷粉",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-GINGIVAL",
+      "seriesName": "Matchmaker Gingival 牙齦瓷粉",
+      "skuCount": 3,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 3
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-GLAZE",
+      "seriesName": "Matchmaker Glaze 釉材",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "品項",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-KIT",
+      "seriesName": "Matchmaker MC 套裝組",
+      "skuCount": 1,
+      "specs": [
+        {
+          "label": "套裝",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-TRANSLUCENT",
+      "seriesName": "Matchmaker MC Coloured Translucent 透明瓷粉",
+      "skuCount": 5,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 5
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-ENAMEL",
+      "seriesName": "Matchmaker MC Enamel 琺瑯質瓷粉",
+      "skuCount": 14,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 8
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 3
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-ENHANCER",
+      "seriesName": "Matchmaker MC Enhancer 增強瓷粉",
+      "skuCount": 19,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 16
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-MODIFIER",
+      "seriesName": "Matchmaker MC Modifier 修飾瓷粉",
+      "skuCount": 9,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 9
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-OCCLUSAL",
+      "seriesName": "Matchmaker MC Occlusal 咬合面瓷粉",
+      "skuCount": 1,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 1
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-OPACIOUS-DENTINE",
+      "seriesName": "Matchmaker MC Opacious Dentine 高遮色牙本質瓷粉",
+      "skuCount": 7,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 7
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-OPAL",
+      "seriesName": "Matchmaker MC Opal 乳光瓷粉",
+      "skuCount": 7,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 7
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-PONTIC-FILL",
+      "seriesName": "Matchmaker MC Pontic Fill",
+      "skuCount": 1,
+      "specs": [
+        {
+          "label": "品項",
+          "optionCount": 1
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-PROPAQUE",
+      "seriesName": "Matchmaker MC Propaque Paste Opaque 遮色膏",
+      "skuCount": 17,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 17
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-OPAQUE",
+      "seriesName": "Matchmaker Opaque 遮色瓷粉",
+      "skuCount": 17,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 16
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-PRESS-ZR-PRESS-INGOT",
+      "seriesName": "Matchmaker Press Zr 瓷錠",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-SHOULDER",
+      "seriesName": "Matchmaker Shoulder 肩台瓷粉",
+      "skuCount": 7,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 7
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-STAIN-0086",
+      "seriesName": "Matchmaker Stain 0086 色組",
+      "skuCount": 15,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 15
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-STAIN-16",
+      "seriesName": "Matchmaker Stain 16 色組",
+      "skuCount": 16,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 16
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-KIT",
+      "seriesName": "Matchmaker Zr 套裝組",
+      "skuCount": 7,
+      "specs": [
+        {
+          "label": "套裝",
+          "optionCount": 7
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-LIQUID",
+      "seriesName": "Matchmaker Zr 專用液",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "用途",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-TRANSLUCENT",
+      "seriesName": "Matchmaker Zr Coloured Translucent 透明瓷粉",
+      "skuCount": 6,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 6
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-DENTINE",
+      "seriesName": "Matchmaker Zr Dentine / Body 牙本質瓷粉",
+      "skuCount": 22,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 19
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-ENAMEL",
+      "seriesName": "Matchmaker Zr Enamel 琺瑯質瓷粉",
+      "skuCount": 13,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 8
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 2
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-FLUORESCENT",
+      "seriesName": "Matchmaker Zr Fluorescent 螢光瓷粉",
+      "skuCount": 1,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 1
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-GINGIVAL",
+      "seriesName": "Matchmaker Zr Gingival 牙齦瓷粉",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-GLAZE",
+      "seriesName": "Matchmaker Zr Glaze 釉材",
+      "skuCount": 1,
+      "specs": [
+        {
+          "label": "品項",
+          "optionCount": 1
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-LINER",
+      "seriesName": "Matchmaker Zr Liner 襯底瓷粉",
+      "skuCount": 3,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 3
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-MAMELON",
+      "seriesName": "Matchmaker Zr Mamelon 牙本質效果瓷粉",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-MODIFIER",
+      "seriesName": "Matchmaker Zr Modifier 修飾瓷粉",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-NECK-DENTINE",
+      "seriesName": "Matchmaker Zr Neck Dentine 頸部瓷粉",
+      "skuCount": 3,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 3
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OCCLUSAL",
+      "seriesName": "Matchmaker Zr Occlusal 咬合面瓷粉",
+      "skuCount": 2,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 2
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OPAL",
+      "seriesName": "Matchmaker Zr Opal 乳光瓷粉",
+      "skuCount": 7,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 7
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OPAQUE",
+      "seriesName": "Matchmaker Zr Opaque 遮色瓷粉",
+      "skuCount": 5,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 5
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-SHOULDER",
+      "seriesName": "Matchmaker Zr Shoulder 肩台瓷粉",
+      "skuCount": 3,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 3
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-STAIN",
+      "seriesName": "Matchmaker Zr Stain 上色材",
+      "skuCount": 8,
+      "specs": [
+        {
+          "label": "色號",
+          "optionCount": 8
+        },
+        {
+          "label": "重量 / 容量",
+          "optionCount": 1
+        }
+      ]
+    }
+  ],
+  "first20": [
+    {
+      "code": "DSD-01",
+      "name": "Matchmaker Body 專用液/200ml",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker 專用液",
+      "option": "Body",
+      "package": "200ml"
+    },
+    {
+      "code": "DSD-01-1",
+      "name": "Matchmaker Body Plus 專用液/200ml",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "price": 1000,
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker 專用液",
+      "option": "Body Plus",
+      "package": "200ml"
+    },
+    {
+      "code": "DSD-02",
+      "name": "Matchmaker Opaque專用液/200ml",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "price": 1000,
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker 專用液",
+      "option": "Opaque",
+      "package": "200ml"
+    },
+    {
+      "code": "DSD-04",
+      "name": "Matchmaker Glaze Powder 釉粉/10g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "釉材／表面塗層",
+      "mainCategory": "比色、染色與表面處理",
+      "price": 700,
+      "mainCategoryId": "color-characterization",
+      "categoryId": "glaze-material",
+      "seriesName": "Matchmaker Glaze 釉材",
+      "option": "Powder 釉粉",
+      "package": "10g"
+    },
+    {
+      "code": "DSD-0438",
+      "name": "Matchmaker MC Pontic Fill(15g)",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker MC Pontic Fill",
+      "option": "Pontic Fill",
+      "package": "15g"
+    },
+    {
+      "code": "DSD-05",
+      "name": "Matchmaker Glaze Liquid 釉水/15ml",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "釉材／表面塗層",
+      "mainCategory": "比色、染色與表面處理",
+      "price": 350,
+      "mainCategoryId": "color-characterization",
+      "categoryId": "glaze-material",
+      "seriesName": "Matchmaker Glaze 釉材",
+      "option": "Liquid 釉水",
+      "package": "15ml"
+    },
+    {
+      "code": "DSD-19",
+      "name": "Matchmaker MC A3 Kit",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker MC 套裝組",
+      "option": "A3",
+      "package": ""
+    },
+    {
+      "code": "DSD-BA1-50",
+      "name": "Matchmaker BODY A1/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A1",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BA2-250",
+      "name": "Matchmaker Dentine A2/250g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A2",
+      "package": "250g"
+    },
+    {
+      "code": "DSD-BA2-50",
+      "name": "Matchmaker BODY A2/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A2",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BA3-250",
+      "name": "Matchmaker Dentine A3/250g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A3",
+      "package": "250g"
+    },
+    {
+      "code": "DSD-BA3-50",
+      "name": "Matchmaker BODY A3/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A3",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BA3.5-15",
+      "name": "Matchmaker BODY A3.5/15g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A3.5",
+      "package": "15g"
+    },
+    {
+      "code": "DSD-BA3.5-250",
+      "name": "Matchmaker Dentine A3.5/250g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A3.5",
+      "package": "250g"
+    },
+    {
+      "code": "DSD-BA3.5-50",
+      "name": "Matchmaker BODY A3.5/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A3.5",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BA4-50",
+      "name": "Matchmaker BODY A4/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "A4",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BB1-50",
+      "name": "Matchmaker BODY B1/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "B1",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BB2-50",
+      "name": "Matchmaker BODY B2/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "B2",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BB3-50",
+      "name": "Matchmaker BODY B3/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "B3",
+      "package": "50g"
+    },
+    {
+      "code": "DSD-BB4-50",
+      "name": "Matchmaker BODY B4/50g",
+      "brand": "Davis Schottlander",
+      "productType": "材料",
+      "category": "瓷粉／陶瓷材料",
+      "mainCategory": "固定式修復材料",
+      "mainCategoryId": "fixed-restorative",
+      "categoryId": "ceramic-material",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "option": "B4",
+      "package": "50g"
+    }
+  ],
+  "removedFamilies": [
+    {
+      "id": "NAME-6A0E9A5CE163",
+      "seriesName": "Propaque Paste 系列",
+      "targetSkuCount": 17,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-OPAL",
+      "seriesName": "OPAL 瓷粉/陶瓷材料",
+      "targetSkuCount": 5,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-KIT",
+      "seriesName": "Matchmaker 套裝組",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-LIQUID",
+      "seriesName": "Matchmaker 專用液",
+      "targetSkuCount": 3,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-DENTINE",
+      "seriesName": "Matchmaker Dentine / Body 牙本質瓷粉",
+      "targetSkuCount": 22,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-EFFECT",
+      "seriesName": "Matchmaker Effect 效果瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-GINGIVAL",
+      "seriesName": "Matchmaker Gingival 牙齦瓷粉",
+      "targetSkuCount": 3,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-GLAZE",
+      "seriesName": "Matchmaker Glaze 釉材",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-KIT",
+      "seriesName": "Matchmaker MC 套裝組",
+      "targetSkuCount": 1,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-ENAMEL",
+      "seriesName": "Matchmaker MC Enamel 琺瑯質瓷粉",
+      "targetSkuCount": 14,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-ENHANCER",
+      "seriesName": "Matchmaker MC Enhancer 增強瓷粉",
+      "targetSkuCount": 19,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-OPAL",
+      "seriesName": "Matchmaker MC Opal 乳光瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-MC-PONTIC-FILL",
+      "seriesName": "Matchmaker MC Pontic Fill",
+      "targetSkuCount": 1,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-OCCLUSAL",
+      "seriesName": "Matchmaker Occlusal 咬合面瓷粉",
+      "targetSkuCount": 1,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-OPAQUE",
+      "seriesName": "Matchmaker Opaque 遮色瓷粉",
+      "targetSkuCount": 17,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-PRESS-ZR-PRESS-INGOT",
+      "seriesName": "Matchmaker Press Zr 瓷錠",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-SHOULDER",
+      "seriesName": "Matchmaker Shoulder 肩台瓷粉",
+      "targetSkuCount": 7,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-STAIN-0086",
+      "seriesName": "Matchmaker Stain 0086 色組",
+      "targetSkuCount": 15,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-BASE-STAIN-16",
+      "seriesName": "Matchmaker Stain 16 色組",
+      "targetSkuCount": 16,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-KIT",
+      "seriesName": "Matchmaker Zr 套裝組",
+      "targetSkuCount": 7,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-LIQUID",
+      "seriesName": "Matchmaker Zr 專用液",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-TRANSLUCENT",
+      "seriesName": "Matchmaker Zr Coloured Translucent 透明瓷粉",
+      "targetSkuCount": 6,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-DENTINE",
+      "seriesName": "Matchmaker Zr Dentine / Body 牙本質瓷粉",
+      "targetSkuCount": 22,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-ENAMEL",
+      "seriesName": "Matchmaker Zr Enamel 琺瑯質瓷粉",
+      "targetSkuCount": 13,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-FLUORESCENT",
+      "seriesName": "Matchmaker Zr Fluorescent 螢光瓷粉",
+      "targetSkuCount": 1,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-GINGIVAL",
+      "seriesName": "Matchmaker Zr Gingival 牙齦瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-GLAZE",
+      "seriesName": "Matchmaker Zr Glaze 釉材",
+      "targetSkuCount": 1,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-LINER",
+      "seriesName": "Matchmaker Zr Liner 襯底瓷粉",
+      "targetSkuCount": 3,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-MAMELON",
+      "seriesName": "Matchmaker Zr Mamelon 牙本質效果瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-MODIFIER",
+      "seriesName": "Matchmaker Zr Modifier 修飾瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-NECK-DENTINE",
+      "seriesName": "Matchmaker Zr Neck Dentine 頸部瓷粉",
+      "targetSkuCount": 3,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OCCLUSAL",
+      "seriesName": "Matchmaker Zr Occlusal 咬合面瓷粉",
+      "targetSkuCount": 2,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OPAL",
+      "seriesName": "Matchmaker Zr Opal 乳光瓷粉",
+      "targetSkuCount": 7,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-OPAQUE",
+      "seriesName": "Matchmaker Zr Opaque 遮色瓷粉",
+      "targetSkuCount": 5,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-SHOULDER",
+      "seriesName": "Matchmaker Zr Shoulder 肩台瓷粉",
+      "targetSkuCount": 3,
+      "nonTargetMemberCodes": []
+    },
+    {
+      "id": "DSD-MATCHMAKER-ZR-STAIN",
+      "seriesName": "Matchmaker Zr Stain 上色材",
+      "targetSkuCount": 8,
+      "nonTargetMemberCodes": []
+    }
+  ],
+  "unassigned": [],
+  "finalConflicts": []
+}

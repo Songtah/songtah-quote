@@ -1,0 +1,196 @@
+{
+  "generatedAt": "2026-07-15T10:49:56.931Z",
+  "mode": "execute",
+  "manifest": "data/product_image_manifest_detax_batch1.json",
+  "totals": {
+    "selected": 14,
+    "verified": 0,
+    "written": 0,
+    "skipped": 14,
+    "failed": 0
+  },
+  "items": [
+    {
+      "code": "DT-02040",
+      "name": "Freeprint Denture Pink-trasp (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-denture",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_denture/dx_Mockup_denture.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-815a-abc2-e2796b6422a2",
+        "code": "DT-02040",
+        "name": "Freeprint Denture Pink-trasp (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/11486fe9b6050b983768f286c3bbc076644a552cb5726cd3b1e60ebe4c7f99e3.webp"
+      }
+    },
+    {
+      "code": "DT-02076",
+      "name": "Freeprint Splint 2.0 (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-splint-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_splint_2.0/dx_splint2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-8170-9bce-f5445ad833f9",
+        "code": "DT-02076",
+        "name": "Freeprint Splint 2.0 (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/df0c00ace5d30f069ef2cb36c341689952c3422f484be0bd1abc08498b04e1b0.webp"
+      }
+    },
+    {
+      "code": "DT-02099",
+      "name": "Freeprint Model 2.0 Light Grey (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-model-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_model2.0/dx_model_2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-815d-bbc8-e398da450af9",
+        "code": "DT-02099",
+        "name": "Freeprint Model 2.0 Light Grey (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/b1e915457e209113c9e0701254a4dca11fe37fb93f9f224e748b8c776cec82f1.webp"
+      }
+    },
+    {
+      "code": "DT-02128",
+      "name": "Freeprint Model 2.0 Sand (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-model-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_model2.0/dx_model_2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-812c-b7ef-f422dcdb7a25",
+        "code": "DT-02128",
+        "name": "Freeprint Model 2.0 Sand (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/b1e915457e209113c9e0701254a4dca11fe37fb93f9f224e748b8c776cec82f1.webp"
+      }
+    },
+    {
+      "code": "DT-02177",
+      "name": "Freeprint Model 2.0 Grey (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-model-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_model2.0/dx_model_2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-81a6-8bc1-e38360e59407",
+        "code": "DT-02177",
+        "name": "Freeprint Model 2.0 Grey (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/b1e915457e209113c9e0701254a4dca11fe37fb93f9f224e748b8c776cec82f1.webp"
+      }
+    },
+    {
+      "code": "DT-02850",
+      "name": "Freep Model 2.0 Caramel (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-model-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_model2.0/dx_model_2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-8134-a9fb-d78a97906fe2",
+        "code": "DT-02850",
+        "name": "Freep Model 2.0 Caramel (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/b1e915457e209113c9e0701254a4dca11fe37fb93f9f224e748b8c776cec82f1.webp"
+      }
+    },
+    {
+      "code": "DT-02378",
+      "name": "Freeprint Crown A2 (500g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-81c8-a880-d7feaaf7bc66",
+        "code": "DT-02378",
+        "name": "Freeprint Crown A2 (500g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02415",
+      "name": "Freeprint Crown A2 (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-818c-83da-f2dd1890ed14",
+        "code": "DT-02415",
+        "name": "Freeprint Crown A2 (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02417",
+      "name": "Freeprint Crown A3 (500g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-81e8-894e-f3a0cb080148",
+        "code": "DT-02417",
+        "name": "Freeprint Crown A3 (500g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02446",
+      "name": "Freeprint Crown A3 (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-81fe-ac02-c1357deff15d",
+        "code": "DT-02446",
+        "name": "Freeprint Crown A3 (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02845",
+      "name": "Freeprint Crown BL (500g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-818a-94c2-e414683c4c90",
+        "code": "DT-02845",
+        "name": "Freeprint Crown BL (500g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02884",
+      "name": "Freeprint Crown BL (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-crown",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_crown/dx_crown_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-812c-9e33-c5c48732ec47",
+        "code": "DT-02884",
+        "name": "Freeprint Crown BL (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/a12f13cfe5658ce95369d8f3a0632b6165bd09ebb47e16b8cd79ee12c6112ed3.webp"
+      }
+    },
+    {
+      "code": "DT-02505",
+      "name": "Freeprint Tray 2.0 (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-tray-20",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_tray/dx_tray2_0_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-8195-b547-e975e0bf82e4",
+        "code": "DT-02505",
+        "name": "Freeprint Tray 2.0 (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/fb891cdb6fb4d543a5d60c242c46531285c783626dde3869c953300283794a60.webp"
+      }
+    },
+    {
+      "code": "DT-02843",
+      "name": "Freeprint Gingiva (1000g)",
+      "sourcePageUrl": "https://www.detax.com/dental/product/dx-gingiva",
+      "sourceImageUrl": "https://www.detax.com/fileadmin/Content/Dental/Pictures/Freeprint_gingiva/dx_gingiva_preview.png",
+      "status": "skipped-existing",
+      "before": {
+        "id": "39edcdaa-fb2a-81a8-9384-f5b6e63f5b41",
+        "code": "DT-02843",
+        "name": "Freeprint Gingiva (1000g)",
+        "imageUrl": "https://irui8ert6hs4ddec.public.blob.vercel-storage.com/products/catalog/7473bf9009f58599dd4ab49d5b0eb21ab7d2906175580468f468b16b142af391.webp"
+      }
+    }
+  ]
+}

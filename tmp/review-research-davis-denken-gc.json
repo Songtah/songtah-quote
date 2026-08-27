@@ -1,0 +1,413 @@
+{
+  "summary": {
+    "generatedAt": "2026-07-14",
+    "scope": {
+      "brands": {
+        "Davis Schottlander": 68,
+        "DENKEN": 36,
+        "GC / 台灣而至": 35
+      },
+      "targetCount": 139
+    },
+    "classifiedCount": 116,
+    "unresolvedCount": 23,
+    "coverageCount": 139,
+    "duplicates": [],
+    "missing": [],
+    "method": "Only current taxonomy IDs and first-party manufacturer sources were used. Low-confidence or taxonomy-gap items remain unresolved."
+  },
+  "groups": [
+    {
+      "brand": "Davis Schottlander",
+      "pattern": "Matchmaker MC Opal / Opal Lustre powders",
+      "sourceUrl": "https://www.schottlander.com/docs/default-source/dfu-pdf%27s/matchmaker-mc_manual.pdf?Status=Master&sfvrsn=bec8d4ac_4",
+      "evidence": "Official Matchmaker MC manual identifies Opal Colours and Opal Lustre Enamels as ceramic powders used in ceramic build-up and firing.",
+      "classification": {
+        "businessCategory": "fixed-restorative",
+        "functionCategory": "ceramic-material",
+        "productKind": "material",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DSD-OPAL-Neutral",
+        "DSD-OPAL-OL10",
+        "DSD-OPAL-OL7",
+        "DSD-OPAL-OL8",
+        "DSD-OPAL-OL9"
+      ]
+    },
+    {
+      "brand": "Davis Schottlander",
+      "pattern": "Matchmaker Zr stain kit and stain powders",
+      "sourceUrl": "https://www.schottlander.com/docs/default-source/productdocs/matchmaker-brochure.pdf?sfvrsn=ffe9d4ac_0",
+      "evidence": "Official Matchmaker brochure describes Matchmaker CTE Stains for the ALX/Zr ceramic systems and states they may be applied internally or externally; ceramic-material is used because the current dictionary has no neutral stain category.",
+      "classification": {
+        "businessCategory": "fixed-restorative",
+        "functionCategory": "ceramic-material",
+        "productKind": "material",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DSD-ZR-06",
+        "DSD-ZR-STAIN-1",
+        "DSD-ZR-STAIN-2",
+        "DSD-ZR-STAIN-4",
+        "DSD-ZR-STAIN-7",
+        "DSD-ZR-STAIN-A",
+        "DSD-ZR-STAIN-B",
+        "DSD-ZR-STAIN-C",
+        "DSD-ZR-STAIN-D"
+      ]
+    },
+    {
+      "brand": "Davis Schottlander",
+      "pattern": "Matchmaker Zr veneering ceramic components and shade kits",
+      "sourceUrl": "https://www.schottlander.com/docs/default-source/default-document-library/matchmaker-zr-user-manual.pdf?sfvrsn=0",
+      "evidence": "Official Matchmaker Zr manual documents dentine, enamel, colour translucent, opal translucent, opacious dentine, liners, gingival, mamelon, fluorescent and related powders as components of a zirconia veneering ceramic system.",
+      "classification": {
+        "businessCategory": "fixed-restorative",
+        "functionCategory": "ceramic-material",
+        "productKind": "material",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DSD-ZR-07",
+        "DSD-ZR-A1",
+        "DSD-ZR-A2",
+        "DSD-ZR-A2-50",
+        "DSD-ZR-A3",
+        "DSD-ZR-A3-50",
+        "DSD-ZR-A3.5",
+        "DSD-ZR-A3.5-50",
+        "DSD-ZR-A4",
+        "DSD-ZR-B1",
+        "DSD-ZR-B2",
+        "DSD-ZR-B3",
+        "DSD-ZR-B4",
+        "DSD-ZR-CT1",
+        "DSD-ZR-CT2",
+        "DSD-ZR-CT3",
+        "DSD-ZR-CT4",
+        "DSD-ZR-CT5",
+        "DSD-ZR-CT7",
+        "DSD-ZR-E10",
+        "DSD-ZR-E6",
+        "DSD-ZR-E7",
+        "DSD-ZR-E8",
+        "DSD-ZR-E8-50",
+        "DSD-ZR-E9",
+        "DSD-ZR-E9-50",
+        "DSD-ZR-FL1",
+        "DSD-ZR-FL2",
+        "DSD-ZR-FL3",
+        "DSD-ZR-FN",
+        "DSD-ZR-G1",
+        "DSD-ZR-G2",
+        "DSD-ZR-M2",
+        "DSD-ZR-M4",
+        "DSD-ZR-ND2",
+        "DSD-ZR-OP-B",
+        "DSD-ZR-OP-O",
+        "DSD-ZR-OP-OL10",
+        "DSD-ZR-OP-OL7",
+        "DSD-ZR-OP-OL8",
+        "DSD-ZR-OP-OL9",
+        "DSD-ZR-OP-W",
+        "DSD-ZR-SD1",
+        "DSD-ZR-SD2",
+        "DSD-ZR-SD3",
+        "DSD-ZR-SD4",
+        "DSD-ZR-SD5",
+        "DSD-ZR-TC01",
+        "DSD-ZR-TC01-50",
+        "DSD-ZR-TC02",
+        "DSD-ZR-TC02-50",
+        "DSD-ZR-TC03",
+        "DSD-ZR-TC03-50"
+      ]
+    },
+    {
+      "brand": "Davis Schottlander",
+      "pattern": "Matchmaker Zr stain liquid",
+      "sourceUrl": "https://www.schottlander.com/docs/default-source/default-document-library/matchmaker-zr-user-manual.pdf?sfvrsn=0",
+      "evidence": "The official Zr system manual separates firing powders from their working liquids; the SKU name explicitly identifies Stain Liquid. process-liquid is the closest current non-material consumable ID.",
+      "classification": {
+        "businessCategory": "lab-production",
+        "functionCategory": "process-liquid",
+        "productKind": "consumable",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "DSD-ZR-02"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "Cascom casting-machine crucibles, rings, formers, stands, tongs and service components",
+      "sourceUrl": "https://denken-highdental.co.jp/technical-products/casting-machine-related-parts/",
+      "evidence": "DENKEN official casting-machine parts page identifies carbon/ceramic crucibles, crucible rings and related items as casting-machine-related implements; machine switch, fan and viewing glass remain in this accessory family at medium confidence.",
+      "classification": {
+        "businessCategory": "lab-equipment",
+        "functionCategory": "equipment-accessory",
+        "productKind": "accessory",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "DK-04-01",
+        "DK-04-01-1",
+        "DK-04-02",
+        "DK-04-F1",
+        "DK-04-F2",
+        "DK-04-F3",
+        "DK-04-F4",
+        "DK-04-R1",
+        "DK-04-R2",
+        "DK-04-R3",
+        "DK-04-R4",
+        "DK-13-SF76",
+        "DK-13-SF90",
+        "DK-16-19",
+        "DK-24-1",
+        "DK-24-2",
+        "DK-24-3",
+        "DK-24-4",
+        "DK-24-5",
+        "DK-24-5-1",
+        "DK-25",
+        "DK-29",
+        "DK-ZRCM-020902",
+        "DK-ZRCM-021102"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "DH Print Provisional CB / Cast / Model resins",
+      "sourceUrl": "https://denken-highdental.co.jp/news/dh-print-provisonal/",
+      "evidence": "DENKEN official release lists all three as 3D-printer materials; individual official pages identify Provisional CB as crown resin, Cast as pattern resin and Model as resin model material.",
+      "classification": {
+        "businessCategory": "additive-manufacturing",
+        "functionCategory": "print-resin",
+        "productKind": "material",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DK-DH-1",
+        "DK-DH-2",
+        "DK-DH-3"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "DDP-40 dry vacuum pump",
+      "sourceUrl": "https://denken-highdental.co.jp/technical-products/masterplus/",
+      "evidence": "DENKEN official Master Plus page gives DDP-40 electrical, dimensions and pumping specifications and explicitly calls it a dry vacuum pump.",
+      "classification": {
+        "businessCategory": "lab-equipment",
+        "functionCategory": "other-equipment",
+        "productKind": "equipment",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DK-28",
+        "DP-03-01"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "Wax Master II electric waxing instrument",
+      "sourceUrl": "https://denken-highdental.co.jp/en/dental-equipments_en/wax-master-2/",
+      "evidence": "DENKEN official page identifies Wax Master II model DP-2000 as an electric wax-up instrument with controller and heated pens.",
+      "classification": {
+        "businessCategory": "lab-equipment",
+        "functionCategory": "wax-equipment",
+        "productKind": "equipment",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "DK-33"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "Blaster sandblasting equipment",
+      "sourceUrl": "https://denken-highdental.co.jp/technical-products/a-bulaster/",
+      "evidence": "DENKEN official Blaster page describes a powered automatic sandblasting unit for removing investment and oxide film; the internal generic name does not expose the exact factory model, so confidence is medium.",
+      "classification": {
+        "businessCategory": "lab-equipment",
+        "functionCategory": "other-equipment",
+        "productKind": "equipment",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "DK-34"
+      ]
+    },
+    {
+      "brand": "DENKEN",
+      "pattern": "Zircom HS zirconia furnace",
+      "sourceUrl": "https://denken-highdental.co.jp/en/download/",
+      "evidence": "DENKEN official download center classifies the Zircom product family under Zirconia Sintering Furnace. The exact historical HS suffix is not exposed on the current page, so confidence is medium.",
+      "classification": {
+        "businessCategory": "digital-manufacturing",
+        "functionCategory": "sintering-furnace",
+        "productKind": "equipment",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "DK-35"
+      ]
+    },
+    {
+      "brand": "GC / 台灣而至",
+      "pattern": "American Eagle Gracey / Double Gracey XP periodontal instruments",
+      "sourceUrl": "https://www.am-eagle.de/wp-content/uploads/AE_Instrumentenkunde_2024_EN.pdf",
+      "evidence": "Official American Eagle instrument guide maps AEGA and AEDG codes to Gracey and Double Gracey curettes; these are reusable periodontal hand instruments. Exact code evidence also exists on the current Young Innovations product pages.",
+      "classification": {
+        "businessCategory": "clinical-tools",
+        "functionCategory": "dental-instrument",
+        "productKind": "durable_tool",
+        "confidence": "high"
+      },
+      "skuCodes": [
+        "GC-740030",
+        "GC-740031",
+        "GC-740032",
+        "GC-740033",
+        "GC-740034",
+        "GC-740035",
+        "GC-740047",
+        "GC-740048",
+        "GC-749901",
+        "GC-749902",
+        "GC-749927",
+        "GC-749928",
+        "GC-749945"
+      ]
+    },
+    {
+      "brand": "GC / 台灣而至",
+      "pattern": "GC Paste Pak Dispenser item 001573",
+      "sourceUrl": "https://www.gc.dental/america/products/operatory/PastePak_Dispenser/",
+      "evidence": "GC official product page identifies item 001573 as a reusable material dispenser for GC Paste Pak cartridges.",
+      "classification": {
+        "businessCategory": "clinical-tools",
+        "functionCategory": "dental-instrument",
+        "productKind": "durable_tool",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "GC-001573"
+      ]
+    },
+    {
+      "brand": "GC / 台灣而至",
+      "pattern": "GC Fujirock EP Type 4 dental stone",
+      "sourceUrl": "https://www.gc.dental/europe/en-GB/products/fujirock",
+      "evidence": "GC official page identifies Fujirock EP as Type 4 dental stone for accurate laboratory models and dies. investment-gypsum is the closest existing gypsum/material taxonomy ID, although its ID name is broader than model stone.",
+      "classification": {
+        "businessCategory": "lab-production",
+        "functionCategory": "investment-gypsum",
+        "productKind": "material",
+        "confidence": "medium"
+      },
+      "skuCodes": [
+        "GC-890222",
+        "GC-890366"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "skuCode": "DK-02-1",
+      "reason": "Official sources confirm the ES7 cleaner family but did not identify this exact deodorizing sheet or whether it is a filter versus another consumable."
+    },
+    {
+      "skuCode": "DK-18",
+      "reason": "The item is named flux, but the current taxonomy has no verified casting-flux category and process-liquid would incorrectly assert a liquid form."
+    },
+    {
+      "skuCode": "DK-26",
+      "reason": "The name indicates coolant fluid, but no official page was found for this exact internal SKU or its intended equipment/application."
+    },
+    {
+      "skuCode": "DK-30",
+      "reason": "No official DENKEN product page or exact model match was found for this generic workbench SKU."
+    },
+    {
+      "skuCode": "GC-000957",
+      "reason": "Gutta-percha is an endodontic material, but no endodontic-material taxonomy ID exists."
+    },
+    {
+      "skuCode": "GC-000981",
+      "reason": "The name indicates a syringe nozzle, but no exact official item match or suitable disposable clinical-accessory ID was found."
+    },
+    {
+      "skuCode": "GC-001",
+      "reason": "The name indicates a 12-well ceramic palette, but no exact official SKU page was found and the current IDs do not distinguish palette from general tools."
+    },
+    {
+      "skuCode": "GC-001142",
+      "reason": "Official/product-name semantics indicate articulating paper, but no occlusion/marking-paper consumable taxonomy ID exists."
+    },
+    {
+      "skuCode": "GC-001143",
+      "reason": "Official/product-name semantics indicate articulating paper, but no occlusion/marking-paper consumable taxonomy ID exists."
+    },
+    {
+      "skuCode": "GC-003108",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-003128",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-003134",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-003195",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-003202",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-004253",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-005075",
+      "reason": "Official evidence confirms glass-ionomer restorative/cement, but the current taxonomy has no clinical cement/restorative function ID."
+    },
+    {
+      "skuCode": "GC-011994",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749897",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749898",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749949",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749950",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749951",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    },
+    {
+      "skuCode": "GC-749952",
+      "reason": "Official evidence confirms a clinical restorative product, but no semantically correct existing clinical restorative taxonomy ID is available."
+    }
+  ]
+}

@@ -1,30 +1,21 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import {
   ArrowRight,
-  BriefcaseBusiness,
-  CircleUserRound,
   ClipboardPlus,
   FileText,
   Headphones,
-  Home,
-  Menu,
   PackageCheck,
   Search,
-  Settings2,
-  ShoppingBag,
-  UsersRound,
-  X,
 } from 'lucide-react'
 import { AnimatedList } from '@/components/ui/animated-list'
 import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { AppSidebar, AppMobileNav, AppBottomNav } from '@/components/AppNav'
 import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
 import { CrossSupportMyPanel } from '@/components/CrossSupportMyPanel'
@@ -32,21 +23,6 @@ import { CollabPointsPanel } from '@/components/CollabPointsPanel'
 import type { TodayDashboardData, TodayWorkItem } from '@/lib/dashboard-today'
 
 type VisibleModules = Partial<Record<'bd' | 'crm' | 'quote' | 'orders' | 'products' | 'rma' | 'marketing' | 'clinicMonitor' | 'admin' | 'accounts' | 'audit', boolean>>
-
-const navItems = [
-  { href: '/dashboard', label: '今天', icon: Home, module: null },
-  { href: '/customers', label: '客戶', icon: UsersRound, module: 'crm' as const },
-  { href: '/bd', label: '業務開發', icon: BriefcaseBusiness, module: 'bd' as const },
-  { href: '/quotes', label: '報價', icon: FileText, module: 'quote' as const },
-  { href: '/orders', label: '訂貨', icon: PackageCheck, module: 'orders' as const },
-  { href: '/products/catalog', label: '產品與價格', icon: ShoppingBag, module: 'products' as const },
-  { href: '/tickets', label: '技術支援', icon: Headphones, module: 'rma' as const },
-  { href: '/marketing', label: '行銷與活動', icon: BriefcaseBusiness, module: 'marketing' as const },
-  { href: '/admin/clinic-monitor', label: '市場監控', icon: Search, module: 'clinicMonitor' as const },
-  { href: '/admin', label: '行政管理', icon: Settings2, module: 'admin' as const },
-  { href: '/settings/accounts', label: '帳號權限', icon: CircleUserRound, module: 'accounts' as const },
-  { href: '/settings/audit', label: '操作紀錄', icon: FileText, module: 'audit' as const },
-]
 
 const quickActions = [
   { href: '/bd', label: '新增拜訪', icon: ClipboardPlus, module: 'bd' as const },
@@ -87,7 +63,6 @@ export function SalesTodayDashboard({
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const logged = useRef(false)
 
   useEffect(() => {
@@ -100,7 +75,6 @@ export function SalesTodayDashboard({
     }).catch(() => {})
   }, [])
 
-  const visibleNav = navItems.filter((item) => !item.module || visibleModules[item.module])
   const visibleActions = quickActions.filter((item) => visibleModules[item.module])
   const next = data.nextAction
   const summary = [
@@ -124,55 +98,12 @@ export function SalesTodayDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-stone-50/70 text-stone-800">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-stone-900/[0.06] bg-white px-5 py-6 lg:flex">
-        <Link href="/dashboard" className="mb-10 block px-2" aria-label="崧達首頁">
-          <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-36" priority />
-        </Link>
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1" aria-label="主要導覽">
-          {visibleNav.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={href === '/dashboard' ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold transition-all active:scale-95 ${
-                href === '/dashboard'
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                  : 'text-stone-500 hover:bg-stone-50 hover:text-brand-700'
-              }`}
-            >
-              <Icon className="size-4.5" />
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-3 space-y-2">
-          <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm text-stone-400 hover:bg-stone-50 hover:text-stone-700">
-            <CircleUserRound className="size-4" /> {userName || '我的帳號'}・登出
-          </button>
-        </div>
-      </aside>
-
-      <header className="sticky top-0 z-30 border-b border-stone-900/[0.06] bg-white/90 backdrop-blur-xl lg:hidden">
-        <div className="flex h-16 items-center justify-between px-4">
-          <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-28" priority />
-          <button onClick={() => setMobileMenuOpen((open) => !open)} className="rounded-full bg-stone-100 p-3 text-stone-600 active:scale-95" aria-label={mobileMenuOpen ? '關閉選單' : '開啟選單'}>
-            {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
-        </div>
-        {mobileMenuOpen && (
-          <nav className="grid grid-cols-2 gap-2 border-t border-stone-900/[0.06] bg-white p-4" aria-label="手機主要導覽">
-            {visibleNav.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-2xl bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-600 active:scale-95">
-                <Icon className="size-4" /> {label}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </header>
+    <div className="min-h-screen overflow-x-hidden bg-white text-stone-800">
+      <AppSidebar />
+      <AppMobileNav />
 
       <main className="pb-24 lg:ml-60 lg:pb-10">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-7 sm:py-9 lg:px-10">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-7 sm:py-9 lg:px-10">
           <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-stone-400">{displayDate(data.date)}</p>
@@ -301,13 +232,7 @@ export function SalesTodayDashboard({
         </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-900/[0.07] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden" aria-label="手機快速導覽">
-        {visibleNav.slice(0, 4).map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className={`flex flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-semibold active:scale-95 ${href === '/dashboard' ? 'text-brand-600' : 'text-stone-400'}`}>
-            <Icon className="size-5" /> {label}
-          </Link>
-        ))}
-      </nav>
+      <AppBottomNav />
     </div>
   )
 }

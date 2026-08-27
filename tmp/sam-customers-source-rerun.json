@@ -1,0 +1,1946 @@
+[
+  {
+    "row": 7,
+    "source_code": "100049",
+    "source_name": "華慶牙醫診所",
+    "source_address": "台北市中正區中華路二段339號1樓(下午3點後)",
+    "source_phone": "02-2301-8190.0910-150341",
+    "contact": "吳醫師"
+  },
+  {
+    "row": 8,
+    "source_code": "100053",
+    "source_name": "華恩牙醫診所",
+    "source_address": "台北市和平西路1段154號",
+    "source_phone": "2305-8283 0987-488945",
+    "contact": "邱耀進醫師"
+  },
+  {
+    "row": 9,
+    "source_code": "100060",
+    "source_name": "廖泓儀先生",
+    "source_address": "台北市中正區羅斯福路一段107號7樓",
+    "source_phone": "0980-343902",
+    "contact": ""
+  },
+  {
+    "row": 10,
+    "source_code": "100061",
+    "source_name": "志明牙醫診所",
+    "source_address": "台北市中正區寧波西街80號",
+    "source_phone": "02-2396-8925",
+    "contact": ""
+  },
+  {
+    "row": 11,
+    "source_code": "103028",
+    "source_name": "村松牙體技術所",
+    "source_address": "台北市大同區大龍街259巷14號2樓",
+    "source_phone": "02-25996457 / 02-25940410 / 0933-718948",
+    "contact": "呂漢棠先生"
+  },
+  {
+    "row": 12,
+    "source_code": "103045",
+    "source_name": "微笑牙體技術所",
+    "source_address": "台北市大同區延平北路二段43巷15-1號1樓",
+    "source_phone": "(02)2556-0806",
+    "contact": "微笑牙體技術所"
+  },
+  {
+    "row": 13,
+    "source_code": "103051",
+    "source_name": "游沛儒",
+    "source_address": "台北市大同區敦煌路24巷6號4樓之5",
+    "source_phone": "0919458504",
+    "contact": "游沛儒"
+  },
+  {
+    "row": 14,
+    "source_code": "104003",
+    "source_name": "鼎將技工所(詹先生)",
+    "source_address": "台北市中山區吉林路254-2號3樓",
+    "source_phone": "2560-3372 / 0939-122485",
+    "contact": "詹詠富先生"
+  },
+  {
+    "row": 15,
+    "source_code": "104026",
+    "source_name": "喬登技工所",
+    "source_address": "台北市中山區龍江路342巷40號",
+    "source_phone": "02-25175720",
+    "contact": "曾世民先生"
+  },
+  {
+    "row": 16,
+    "source_code": "104073",
+    "source_name": "鑫瓷齒研牙體技術所",
+    "source_address": "台北市林森北路627號3F",
+    "source_phone": "2585-2516 0913-670520",
+    "contact": "陳逸坤先生"
+  },
+  {
+    "row": 17,
+    "source_code": "104077",
+    "source_name": "印象牙醫診所",
+    "source_address": "台北市中山區民權東路2段108號",
+    "source_phone": "2543-4000 0920-486382",
+    "contact": "翁肇嘉先生"
+  },
+  {
+    "row": 18,
+    "source_code": "104090",
+    "source_name": "肯奈技工所",
+    "source_address": "台北市中山區民生東路2段92號3F",
+    "source_phone": "2542-1008 0933-019099",
+    "contact": "粘先生"
+  },
+  {
+    "row": 19,
+    "source_code": "105074",
+    "source_name": "康和牙醫診所",
+    "source_address": "台北市八德路3段241號",
+    "source_phone": "2578-3338",
+    "contact": "賴德欽醫師"
+  },
+  {
+    "row": 20,
+    "source_code": "105084",
+    "source_name": "靜巷美學牙醫",
+    "source_address": "台北市松山區民權東路三段106巷36號",
+    "source_phone": "(02)2545-4999",
+    "contact": "靜巷美學牙醫"
+  },
+  {
+    "row": 21,
+    "source_code": "106108",
+    "source_name": "上恩牙體技術所(李先生)",
+    "source_address": "台北市大安區仁愛路4段112巷9弄7號2樓",
+    "source_phone": "2325-0377",
+    "contact": "李佶得先生"
+  },
+  {
+    "row": 22,
+    "source_code": "106121",
+    "source_name": "長青牙醫診所",
+    "source_address": "台北市大安區敦化南路2段88號",
+    "source_phone": "(02)2709-3088",
+    "contact": ""
+  },
+  {
+    "row": 23,
+    "source_code": "106139",
+    "source_name": "巫宜真醫師",
+    "source_address": "台北市大安區敦化南路2段88號",
+    "source_phone": "(02)2709-3088",
+    "contact": ""
+  },
+  {
+    "row": 24,
+    "source_code": "106145",
+    "source_name": "茉莉牙醫診所",
+    "source_address": "台北市大安區忠孝東路3段253號3樓",
+    "source_phone": "(02)2771-1227",
+    "contact": "茉莉牙醫診所"
+  },
+  {
+    "row": 25,
+    "source_code": "108034",
+    "source_name": "威登牙體技術所",
+    "source_address": "新北市三重區光復路一段83巷4號5樓",
+    "source_phone": "2314-9716",
+    "contact": ""
+  },
+  {
+    "row": 26,
+    "source_code": "108035",
+    "source_name": "黃嘉信",
+    "source_address": "台北市萬華區康定路82號2樓之1",
+    "source_phone": "2314-9716",
+    "contact": ""
+  },
+  {
+    "row": 27,
+    "source_code": "108037",
+    "source_name": "奇技牙體技術所",
+    "source_address": "台北市萬華區長泰街19巷1號5樓",
+    "source_phone": "(02)2303-9572",
+    "contact": "江愷任"
+  },
+  {
+    "row": 28,
+    "source_code": "110074",
+    "source_name": "成品牙醫診所",
+    "source_address": "台北市信義區莊敬路322號3樓",
+    "source_phone": "(02)2345-8181 /0937-542-787",
+    "contact": "許醫師"
+  },
+  {
+    "row": 29,
+    "source_code": "111068",
+    "source_name": "林沅萱",
+    "source_address": "台北市士林區中山北路六段277巷18弄9號3樓",
+    "source_phone": "0963-505-456",
+    "contact": "林沅萱"
+  },
+  {
+    "row": 30,
+    "source_code": "111073",
+    "source_name": "和玉牙醫診所",
+    "source_address": "台北市士林區中山北路六段405巷55號1樓",
+    "source_phone": "(02)2876-2020",
+    "contact": "許郁彬"
+  },
+  {
+    "row": 31,
+    "source_code": "112029",
+    "source_name": "亞齊訢牙體技術所",
+    "source_address": "台北市北投區大業路624號",
+    "source_phone": "2898-2260",
+    "contact": "陳盈彰先生"
+  },
+  {
+    "row": 32,
+    "source_code": "112035",
+    "source_name": "東欣牙醫診所",
+    "source_address": "台北市北投區北投路二段17號",
+    "source_phone": "(02)2898-5757",
+    "contact": "東欣牙醫診所"
+  },
+  {
+    "row": 33,
+    "source_code": "114031",
+    "source_name": "立唯牙體技術所(永承)",
+    "source_address": "新北市三重區三和路四段181巷61號2樓",
+    "source_phone": "8982-0007 / 0936-063957",
+    "contact": "羅世華先生"
+  },
+  {
+    "row": 34,
+    "source_code": "114061",
+    "source_name": "惟君美學牙醫診所",
+    "source_address": "台北市內湖區民權東路六段168號",
+    "source_phone": "(02)8792-0898",
+    "contact": "鄭仁昌醫師"
+  },
+  {
+    "row": 35,
+    "source_code": "115030",
+    "source_name": "莊智傑",
+    "source_address": "台北市南港區忠孝東路七段545號",
+    "source_phone": "0911-500-389",
+    "contact": ""
+  },
+  {
+    "row": 36,
+    "source_code": "116030",
+    "source_name": "億昇牙體技術所(張世祥先生)",
+    "source_address": "台北市文山區興隆路4段165巷4號3樓",
+    "source_phone": "2234-9719  0937-142370",
+    "contact": "張世祥先生"
+  },
+  {
+    "row": 37,
+    "source_code": "220010",
+    "source_name": "仁傑技工所(李文傑)",
+    "source_address": "新北市土城區延和路88巷6號1樓",
+    "source_phone": "0912-369466",
+    "contact": "李文傑"
+  },
+  {
+    "row": 38,
+    "source_code": "220027",
+    "source_name": "南雅牙醫診所",
+    "source_address": "新北市板橋區南雅南路1段95號",
+    "source_phone": "2966-7240",
+    "contact": ""
+  },
+  {
+    "row": 39,
+    "source_code": "220032",
+    "source_name": "良信技工所",
+    "source_address": "新北市板橋區文化路1段188巷34之2號3樓",
+    "source_phone": "02-22567364 0937-953805",
+    "contact": "賴維誠"
+  },
+  {
+    "row": 40,
+    "source_code": "220036",
+    "source_name": "尚好技工所-歇業",
+    "source_address": "新北市板橋區文聖街76號3樓",
+    "source_phone": "",
+    "contact": "蘇義堂先生"
+  },
+  {
+    "row": 41,
+    "source_code": "220044",
+    "source_name": "精品技工所 (林先生)",
+    "source_address": "新北市板橋區懷德街191巷29號1樓",
+    "source_phone": "02-22500446",
+    "contact": "林先生"
+  },
+  {
+    "row": 42,
+    "source_code": "220051",
+    "source_name": "張哲源先生",
+    "source_address": "新北市板橋區民治街31號",
+    "source_phone": "02-22512616",
+    "contact": "張哲源先生"
+  },
+  {
+    "row": 43,
+    "source_code": "220052",
+    "source_name": "玉采技工所",
+    "source_address": "新北市板橋區漢生西路163號1樓",
+    "source_phone": "8251-0255",
+    "contact": "張佳鈺小姐"
+  },
+  {
+    "row": 44,
+    "source_code": "220084",
+    "source_name": "良德技工所",
+    "source_address": "新北市板橋區中山路2段318巷20弄5號",
+    "source_phone": "0989-397789",
+    "contact": "蘇英彥先生"
+  },
+  {
+    "row": 45,
+    "source_code": "220087",
+    "source_name": "光立牙科齒模技研所(曾首舜先生)",
+    "source_address": "新北市板橋區僑中二街104巷2號6樓",
+    "source_phone": "2967-8928  0921-928552",
+    "contact": "曾首舜先生"
+  },
+  {
+    "row": 46,
+    "source_code": "220093",
+    "source_name": "琢御技工所(張先生)",
+    "source_address": "新北市板橋區僑中二街108巷6號5F",
+    "source_phone": "0970-868668",
+    "contact": "張先生"
+  },
+  {
+    "row": 47,
+    "source_code": "220103",
+    "source_name": "育全技工所(鄧先生)",
+    "source_address": "新北市板橋區僑中二街48巷3號1F",
+    "source_phone": "2965-6841",
+    "contact": "鄧先生"
+  },
+  {
+    "row": 48,
+    "source_code": "220125",
+    "source_name": "鑫鎂牙體技術所(陳先生)",
+    "source_address": "新北市板橋區中山路2段374號2樓",
+    "source_phone": "2959-6951",
+    "contact": "陳先生"
+  },
+  {
+    "row": 49,
+    "source_code": "220129",
+    "source_name": "登緹牙體技術所",
+    "source_address": "新北市板橋區四川路一段178號3樓",
+    "source_phone": "2966-5559 0928-073998",
+    "contact": "李承儒先生"
+  },
+  {
+    "row": 50,
+    "source_code": "220147",
+    "source_name": "寰宇牙醫診所",
+    "source_address": "新北市板橋區南雅西路2段2號2樓",
+    "source_phone": "(02)2960-5778",
+    "contact": ""
+  },
+  {
+    "row": 51,
+    "source_code": "221017",
+    "source_name": "奕家牙體技術所(林先生)",
+    "source_address": "新北市汐止區伯爵街39巷32號1樓",
+    "source_phone": "02-8691-5568 0978-217528",
+    "contact": "林圳杰先生"
+  },
+  {
+    "row": 52,
+    "source_code": "234008",
+    "source_name": "順合技工所",
+    "source_address": "新北市永和區民生路47巷2號3樓",
+    "source_phone": "02-29418018",
+    "contact": "莊先生"
+  },
+  {
+    "row": 53,
+    "source_code": "234032",
+    "source_name": "技佳牙體技術所",
+    "source_address": "新北市中和區橋和路90號5樓",
+    "source_phone": "(02)2244-8999",
+    "contact": "方立陞"
+  },
+  {
+    "row": 54,
+    "source_code": "234052",
+    "source_name": "澄恩牙體技術所(吳先生)",
+    "source_address": "新北市永和區保平路203巷9號1F",
+    "source_phone": "8660-6855 0955-824702",
+    "contact": "吳健誠先生"
+  },
+  {
+    "row": 55,
+    "source_code": "234062",
+    "source_name": "久源牙體技術所",
+    "source_address": "新北市永和區中山路1段339號2F",
+    "source_phone": "8660-8367",
+    "contact": "劉先生"
+  },
+  {
+    "row": 56,
+    "source_code": "234064",
+    "source_name": "詠順技工所",
+    "source_address": "新北市永和區福和路309巷14弄7號5樓",
+    "source_phone": "2922-7107",
+    "contact": "丁永春先生"
+  },
+  {
+    "row": 57,
+    "source_code": "234072",
+    "source_name": "博士牙體技術所",
+    "source_address": "新北市永和區得和路123號2樓",
+    "source_phone": "0935-909-817",
+    "contact": ""
+  },
+  {
+    "row": 58,
+    "source_code": "234085",
+    "source_name": "貝爾登科技有限公司",
+    "source_address": "新北市中和區橋和路90號5樓",
+    "source_phone": "(02)2244-8999",
+    "contact": ""
+  },
+  {
+    "row": 59,
+    "source_code": "235003",
+    "source_name": "永光牙體技術所",
+    "source_address": "桃園市龜山區楓樹路95號",
+    "source_phone": "0933-801797",
+    "contact": "吳世雍先生"
+  },
+  {
+    "row": 60,
+    "source_code": "235024",
+    "source_name": "晶達牙體技術所",
+    "source_address": "新北市中和區國光街102巷42號1F",
+    "source_phone": "02-29588465 / 0972-083869",
+    "contact": "康先生"
+  },
+  {
+    "row": 61,
+    "source_code": "235066",
+    "source_name": "白金牙體技術所(楊先生)",
+    "source_address": "新北市中和區大仁街20巷28號3F",
+    "source_phone": "2941-4078 0935-646664",
+    "contact": "楊先生"
+  },
+  {
+    "row": 62,
+    "source_code": "235072",
+    "source_name": "巧匠牙體技術所",
+    "source_address": "新北市中和區中安街40巷10號11F",
+    "source_phone": "2922-2470",
+    "contact": ""
+  },
+  {
+    "row": 63,
+    "source_code": "235083",
+    "source_name": "吳東峰",
+    "source_address": "新北市中和區自立路58巷8號1樓",
+    "source_phone": "0953-263-645",
+    "contact": "吳東峰"
+  },
+  {
+    "row": 64,
+    "source_code": "235088",
+    "source_name": "永正牙醫診所",
+    "source_address": "新北市中和區明仁街14號1樓",
+    "source_phone": "(02)2940-3144",
+    "contact": "永正牙醫診所"
+  },
+  {
+    "row": 65,
+    "source_code": "236001",
+    "source_name": "永合美精密齒工作室 (陳頡豪先生)",
+    "source_address": "新北市三重區重陽路1段68號",
+    "source_phone": "8985-7118 /0920-101198",
+    "contact": "陳頡豪先生"
+  },
+  {
+    "row": 66,
+    "source_code": "236006",
+    "source_name": "國新技工所",
+    "source_address": "新北市土城區學府路1段229巷7號",
+    "source_phone": "02-22663800",
+    "contact": "葉先生"
+  },
+  {
+    "row": 67,
+    "source_code": "236009",
+    "source_name": "六順技工所",
+    "source_address": "新北市土城區青雲路457號2樓",
+    "source_phone": "2266-8931 / 0952-450379",
+    "contact": "呂建富先生"
+  },
+  {
+    "row": 68,
+    "source_code": "236034",
+    "source_name": "杏林牙醫診所",
+    "source_address": "新北市土城區中央路1段298號",
+    "source_phone": "8262-0496",
+    "contact": "張醫師"
+  },
+  {
+    "row": 69,
+    "source_code": "236041",
+    "source_name": "東松牙醫診所",
+    "source_address": "新北市土城區裕民路237號",
+    "source_phone": "82733280",
+    "contact": "潘雅萍"
+  },
+  {
+    "row": 70,
+    "source_code": "236046",
+    "source_name": "家家牙體技術所",
+    "source_address": "新北市土城區仁愛路8號5樓",
+    "source_phone": "2274-0530",
+    "contact": "家家牙體技術所"
+  },
+  {
+    "row": 71,
+    "source_code": "238024",
+    "source_name": "日月辰心牙醫診所",
+    "source_address": "新北市樹林區鎮前街13號",
+    "source_phone": "0986-885119",
+    "contact": "日月辰心牙醫診所"
+  },
+  {
+    "row": 72,
+    "source_code": "239002",
+    "source_name": "富鴻牙體技術所(林沿洲先生)",
+    "source_address": "新北市鶯歌區大湖路142巷13號",
+    "source_phone": "2677-5949 0917-567777",
+    "contact": "林沿洲先生"
+  },
+  {
+    "row": 73,
+    "source_code": "239003",
+    "source_name": "大慶牙醫診所(嚴醫師)",
+    "source_address": "新北市鶯歌區中正一路114號",
+    "source_phone": "02-2679-0588",
+    "contact": "嚴美秀醫師"
+  },
+  {
+    "row": 74,
+    "source_code": "239008",
+    "source_name": "誠冠牙體技術所",
+    "source_address": "新北市鶯歌區中山路329巷6弄20號1樓",
+    "source_phone": "0970-008730",
+    "contact": "施稟宏"
+  },
+  {
+    "row": 75,
+    "source_code": "241002",
+    "source_name": "碧新造齒研中心",
+    "source_address": "新北市三重區溪尾街27巷40號",
+    "source_phone": "8981-2808  0933-229888",
+    "contact": "李英信先生"
+  },
+  {
+    "row": 76,
+    "source_code": "241010",
+    "source_name": "立紳牙科(展芯)",
+    "source_address": "新北市三重區光復路1段68巷23號2F",
+    "source_phone": "02-85121341",
+    "contact": "黃俊諭先生"
+  },
+  {
+    "row": 77,
+    "source_code": "241011",
+    "source_name": "齒匠技工所(林世能先生)",
+    "source_address": "新北市新莊區建安街87巷1號1樓",
+    "source_phone": "2279-5554 0938-482172",
+    "contact": "林世能先生"
+  },
+  {
+    "row": 78,
+    "source_code": "241017",
+    "source_name": "永明技工所",
+    "source_address": "新北市三重區自強路3段87巷14號",
+    "source_phone": "02-22865055.0912-091220",
+    "contact": "周聰壽先生"
+  },
+  {
+    "row": 79,
+    "source_code": "241042",
+    "source_name": "華盛技工所",
+    "source_address": "新北市三重區仁愛街435號4樓",
+    "source_phone": "02-29808219 0935-888804",
+    "contact": "詹錫麟先生"
+  },
+  {
+    "row": 80,
+    "source_code": "241045",
+    "source_name": "佑辰齒模",
+    "source_address": "新北市三重區文化南路10巷25號4樓",
+    "source_phone": "02-29740562 0932-536815",
+    "contact": "林誌龍先生"
+  },
+  {
+    "row": 81,
+    "source_code": "241046",
+    "source_name": "精品技研所(統合)",
+    "source_address": "新北市三重區聯華街109號1樓",
+    "source_phone": "2280-5607 0932-083446",
+    "contact": "石守鈞先生"
+  },
+  {
+    "row": 82,
+    "source_code": "241054",
+    "source_name": "雅盛牙體技術所",
+    "source_address": "台北市民權東路2段108號4樓(印象牙科樓上)",
+    "source_phone": "0983-765588",
+    "contact": "蔡鎮隆先生"
+  },
+  {
+    "row": 83,
+    "source_code": "241059",
+    "source_name": "首雅牙技所",
+    "source_address": "台北市大安區安和路1段70號3F",
+    "source_phone": "2702-8383 0977-271768",
+    "contact": "吳健誠先生"
+  },
+  {
+    "row": 84,
+    "source_code": "241060",
+    "source_name": "信新齒研技工所(吳先生)",
+    "source_address": "新北市三重區正義北路28巷44號",
+    "source_phone": "2983-3851 8982-6425",
+    "contact": "吳玉柱先生"
+  },
+  {
+    "row": 85,
+    "source_code": "241064",
+    "source_name": "品嘉技工所(羅文全先生)",
+    "source_address": "新北市汐止區秀山路54號",
+    "source_phone": "0961-314-168",
+    "contact": "羅文全先生"
+  },
+  {
+    "row": 86,
+    "source_code": "241070",
+    "source_name": "健翔齒研工作坊(陳先生)",
+    "source_address": "新北市三重區仁政街188巷18號1樓",
+    "source_phone": "2983-6662 0953-701025",
+    "contact": "陳俊傑先生"
+  },
+  {
+    "row": 87,
+    "source_code": "241077",
+    "source_name": "品安牙體技術所(林先生)",
+    "source_address": "新北市三重區三和路3段107巷31號1樓",
+    "source_phone": "8972-0178. 0982-985615",
+    "contact": "林品安先生"
+  },
+  {
+    "row": 88,
+    "source_code": "241079",
+    "source_name": "遠傳牙醫診所",
+    "source_address": "新北市三重區中正南路139號",
+    "source_phone": "8973-5525 0988-541126",
+    "contact": "朱子健醫師"
+  },
+  {
+    "row": 89,
+    "source_code": "241080",
+    "source_name": "技匠牙體技術所",
+    "source_address": "新北市三重區雙園街118號",
+    "source_phone": "2984-8180",
+    "contact": "李泓達先生  劉佳泓先生"
+  },
+  {
+    "row": 90,
+    "source_code": "241086",
+    "source_name": "統合數位股份有限公司",
+    "source_address": "新北市三重區重陽路1段113巷1弄37號3F",
+    "source_phone": "0937-822453",
+    "contact": ""
+  },
+  {
+    "row": 91,
+    "source_code": "241088",
+    "source_name": "雲啟牙體技術所",
+    "source_address": "新北市三重區六張街126巷2弄25號1樓",
+    "source_phone": "2981-8689",
+    "contact": "楊啟男"
+  },
+  {
+    "row": 92,
+    "source_code": "241089",
+    "source_name": "原聖牙體技術所",
+    "source_address": "新北市三重區忠孝街3段15巷16弄10號5樓",
+    "source_phone": "8985-6273 0939-643809",
+    "contact": "黃茂榮先生"
+  },
+  {
+    "row": 93,
+    "source_code": "241090",
+    "source_name": "盛景牙體技術所(鈺程)",
+    "source_address": "新北市三重區自強路二段40巷2之1號1樓",
+    "source_phone": "8287-0021. 0905-031970",
+    "contact": "梁哲維先生"
+  },
+  {
+    "row": 94,
+    "source_code": "241092",
+    "source_name": "暷溢牙體技術所(邱先生)",
+    "source_address": "新北市三峽區復興路101巷1弄53號",
+    "source_phone": "8988-2659",
+    "contact": "邱先生"
+  },
+  {
+    "row": 95,
+    "source_code": "241094",
+    "source_name": "晶創牙體技術所(李偉新先生)",
+    "source_address": "新北市三重區仁義街241巷2號1樓",
+    "source_phone": "02-8982-5994",
+    "contact": "李偉新先生"
+  },
+  {
+    "row": 96,
+    "source_code": "241100",
+    "source_name": "曉燁牙體技術所",
+    "source_address": "新北市三重區力行路二段136巷37號1樓",
+    "source_phone": "0930-397027",
+    "contact": ""
+  },
+  {
+    "row": 97,
+    "source_code": "241103",
+    "source_name": "富甫牙體技術所",
+    "source_address": "新北市三重區重陽路四段50號2樓",
+    "source_phone": "0962-077-188",
+    "contact": "戴豪甫"
+  },
+  {
+    "row": 98,
+    "source_code": "242001A",
+    "source_name": "新錡技工所(曲先生)",
+    "source_address": "新北市新莊區中原東路58號",
+    "source_phone": "02-8521-2992. 0937-130088",
+    "contact": ""
+  },
+  {
+    "row": 99,
+    "source_code": "242010",
+    "source_name": "永新技工所(李建毅先生)",
+    "source_address": "新北市新莊區思源路205號3F",
+    "source_phone": "0925-900028",
+    "contact": "李建毅先生"
+  },
+  {
+    "row": 100,
+    "source_code": "242037",
+    "source_name": "水晶寶技研所(翁文成先生)",
+    "source_address": "新北市中和區中正路17巷18號10樓",
+    "source_phone": "0958-010720",
+    "contact": "翁文成先生"
+  },
+  {
+    "row": 101,
+    "source_code": "242046",
+    "source_name": "益德技工所(翁宗德先生)",
+    "source_address": "新北市五股區成泰路3段68號2F",
+    "source_phone": "8992-7111 /0933-870549",
+    "contact": "翁宗德先生"
+  },
+  {
+    "row": 102,
+    "source_code": "242058",
+    "source_name": "宏明牙醫診所(許醫師)",
+    "source_address": "新北市新莊區西盛街315號1樓",
+    "source_phone": "2205-6735 0937-043778",
+    "contact": "許宏遠醫師"
+  },
+  {
+    "row": 103,
+    "source_code": "242063",
+    "source_name": "箐群牙體技術所",
+    "source_address": "新北市新莊區化成路764巷17號",
+    "source_phone": "(02)8521-2958",
+    "contact": "箐群牙體技術所"
+  },
+  {
+    "row": 104,
+    "source_code": "242067",
+    "source_name": "榮和牙醫診所",
+    "source_address": "新北市新莊區中華路一段84號1樓",
+    "source_phone": "(02)8993-8700",
+    "contact": "黃純偉 院長"
+  },
+  {
+    "row": 105,
+    "source_code": "242072",
+    "source_name": "蔡金來先生",
+    "source_address": "新北市泰山區和平街9號",
+    "source_phone": "0932-247035",
+    "contact": ""
+  },
+  {
+    "row": 106,
+    "source_code": "243004",
+    "source_name": "黃永順",
+    "source_address": "新北市泰山區大科一路301巷2弄95號",
+    "source_phone": "0937-028-595",
+    "contact": ""
+  },
+  {
+    "row": 107,
+    "source_code": "244005",
+    "source_name": "森齒研牙體技術所",
+    "source_address": "新北市林口區中山路532號3樓之10",
+    "source_phone": "0985977539",
+    "contact": "森齒研牙體技術所"
+  },
+  {
+    "row": 108,
+    "source_code": "244008",
+    "source_name": "東佑牙醫診所",
+    "source_address": "新北市林口區忠孝路484號",
+    "source_phone": "02-2600-8215",
+    "contact": ""
+  },
+  {
+    "row": 109,
+    "source_code": "247001",
+    "source_name": "逢誠技工所",
+    "source_address": "新北市三重區三民路272巷13號",
+    "source_phone": "02-22818359 / 0916-338833",
+    "contact": "賴秉原先生"
+  },
+  {
+    "row": 110,
+    "source_code": "247014",
+    "source_name": "聯大牙體技術所(蘆洲)",
+    "source_address": "新北市蘆洲區明義街68巷5號1樓",
+    "source_phone": "02)2847-3232",
+    "contact": "陳夢雍先生"
+  },
+  {
+    "row": 111,
+    "source_code": "247017",
+    "source_name": "許新發",
+    "source_address": "新北市蘆洲區民生街50號4樓",
+    "source_phone": "2848-3007 / 0939-940874",
+    "contact": "許新發先生"
+  },
+  {
+    "row": 112,
+    "source_code": "247018",
+    "source_name": "上揚技工所",
+    "source_address": "台北市重慶北路3段278-2號3樓",
+    "source_phone": "2599-3029.0922-071261",
+    "contact": "吳坤銘先生"
+  },
+  {
+    "row": 113,
+    "source_code": "247019",
+    "source_name": "弘安齒模技工所",
+    "source_address": "新北市蘆洲區民族路148巷5號1樓",
+    "source_phone": "02-22884275 / 02-22884276",
+    "contact": "林錦祥先生"
+  },
+  {
+    "row": 114,
+    "source_code": "247027",
+    "source_name": "品劼齒科技工所",
+    "source_address": "新北市蘆洲區中山一路282號7F",
+    "source_phone": "2984-0584  0917-654558",
+    "contact": "劉金彰先生"
+  },
+  {
+    "row": 115,
+    "source_code": "247029",
+    "source_name": "豫品牙體技術有限公司",
+    "source_address": "新北市蘆洲區永安南路2段30巷6號",
+    "source_phone": "2281-5762 0930-211136",
+    "contact": "吳孟學"
+  },
+  {
+    "row": 116,
+    "source_code": "247034",
+    "source_name": "心業牙體技術所",
+    "source_address": "新北市蘆洲區長安街285巷3號7F",
+    "source_phone": "2847-5251 0953-097700",
+    "contact": ""
+  },
+  {
+    "row": 117,
+    "source_code": "247038",
+    "source_name": "新達牙體技術所",
+    "source_address": "新北市蘆洲區永安南路2段94號",
+    "source_phone": "(02)2282-5882  0952-899-053",
+    "contact": "李泓達先生"
+  },
+  {
+    "row": 118,
+    "source_code": "247040",
+    "source_name": "興鴻牙體技術所",
+    "source_address": "新北市蘆洲區環堤大道176號1樓",
+    "source_phone": "(02)8285-9292 /0932-942-612",
+    "contact": "連贊夫"
+  },
+  {
+    "row": 119,
+    "source_code": "251010",
+    "source_name": "榮興牙體技術所(李家文先生)",
+    "source_address": "新北市淡水區北新路72號2樓",
+    "source_phone": "8631-1220  0970-255351",
+    "contact": "李家文先生"
+  },
+  {
+    "row": 120,
+    "source_code": "260001",
+    "source_name": "德藝牙體技術所",
+    "source_address": "宜蘭市中山路2段179巷30號",
+    "source_phone": "(039)366-555 0953-687588",
+    "contact": "高福志先生"
+  },
+  {
+    "row": 121,
+    "source_code": "260029",
+    "source_name": "揚明齒技工所",
+    "source_address": "宜蘭縣宜蘭市自強新路2號",
+    "source_phone": "0916-995-938",
+    "contact": "林政廷"
+  },
+  {
+    "row": 122,
+    "source_code": "260030",
+    "source_name": "林小茂",
+    "source_address": "宜蘭縣宜蘭市舊城南路4巷28號",
+    "source_phone": "0922-396-818",
+    "contact": "林小茂"
+  },
+  {
+    "row": 123,
+    "source_code": "261001",
+    "source_name": "億祥技工所",
+    "source_address": "宜蘭縣頭城鎮青雲路2段321號",
+    "source_phone": "03-9775869",
+    "contact": "林銘洲先生"
+  },
+  {
+    "row": 124,
+    "source_code": "262003",
+    "source_name": "永固牙體技術所",
+    "source_address": "宜蘭縣礁溪鄉龍泉路250號",
+    "source_phone": "03-9285032",
+    "contact": "陳偉達先生"
+  },
+  {
+    "row": 125,
+    "source_code": "264004",
+    "source_name": "宏祥技工所",
+    "source_address": "宜蘭縣員山鄉惠深一路41號",
+    "source_phone": "03-9230706 0937-160066",
+    "contact": ""
+  },
+  {
+    "row": 126,
+    "source_code": "264006",
+    "source_name": "牙藝陶齒研製工作室",
+    "source_address": "宜蘭縣員山鄉頭份村6鄰44號之6",
+    "source_phone": "039-227672 / 0937-095661",
+    "contact": "楊嘉祥先生"
+  },
+  {
+    "row": 127,
+    "source_code": "264010",
+    "source_name": "陳文在先生",
+    "source_address": "宜蘭縣員山鄉永和村中和路22號",
+    "source_phone": "0922-069636",
+    "contact": "陳文在先生"
+  },
+  {
+    "row": 128,
+    "source_code": "268003",
+    "source_name": "鴻文牙體技術所",
+    "source_address": "宜蘭縣五結鄉國民南路6-2號",
+    "source_phone": "03-950-3844",
+    "contact": "陳秋文先生"
+  },
+  {
+    "row": 129,
+    "source_code": "300002",
+    "source_name": "永旭牙體技術所(飛皇)",
+    "source_address": "新竹市北區竹光路78巷11弄2號",
+    "source_phone": "03-5347732 / 0937-347732",
+    "contact": "胡慶龍先生"
+  },
+  {
+    "row": 130,
+    "source_code": "300005",
+    "source_name": "喬恩牙體技術所",
+    "source_address": "新竹市光復路1段531巷76之1號",
+    "source_phone": "03-5798576 / (H)03-5325936",
+    "contact": "魏秀春"
+  },
+  {
+    "row": 131,
+    "source_code": "300025",
+    "source_name": "非凡技工所",
+    "source_address": "新竹市東大路2段198號3樓",
+    "source_phone": "03-5408327.0911-604547",
+    "contact": "曾右誠先生"
+  },
+  {
+    "row": 132,
+    "source_code": "300033",
+    "source_name": "宏月技工所",
+    "source_address": "新竹市東南街143巷52號",
+    "source_phone": "03-5622568 / 0933-266113",
+    "contact": "許宏仁先生"
+  },
+  {
+    "row": 133,
+    "source_code": "300054",
+    "source_name": "慶昇牙體技術所",
+    "source_address": "新竹市明湖路213巷23弄8之1號",
+    "source_phone": "(03)562-0083",
+    "contact": "陳先生"
+  },
+  {
+    "row": 134,
+    "source_code": "300059",
+    "source_name": "協和牙體技術所",
+    "source_address": "新竹市延平路1段23巷7號",
+    "source_phone": "0978-757-782",
+    "contact": ""
+  },
+  {
+    "row": 135,
+    "source_code": "300060",
+    "source_name": "陳先生(桃園)",
+    "source_address": "桃園市長春路35號6樓之6",
+    "source_phone": "0975-253546",
+    "contact": "陳先生"
+  },
+  {
+    "row": 136,
+    "source_code": "300067",
+    "source_name": "立新牙體技術所",
+    "source_address": "新竹市延平路1段317巷83弄11號",
+    "source_phone": "0937-150380",
+    "contact": ""
+  },
+  {
+    "row": 137,
+    "source_code": "302017",
+    "source_name": "雅德思牙醫診所",
+    "source_address": "新竹縣竹北市莊敬南路162號",
+    "source_phone": "03-6586236",
+    "contact": "吳醫師"
+  },
+  {
+    "row": 138,
+    "source_code": "303007",
+    "source_name": "永成技工所(張永堂先生)",
+    "source_address": "新竹縣湖口鄉中正路1段263巷6弄11號",
+    "source_phone": "03-5904802(O)/03-4638293(H 0933-999467",
+    "contact": "張永堂先生"
+  },
+  {
+    "row": 139,
+    "source_code": "303008",
+    "source_name": "金順牙體技術所(張先生)",
+    "source_address": "新竹縣湖口鄉八德路1段366巷26號",
+    "source_phone": "(03)569-1277 0963-912077",
+    "contact": "張金順先生"
+  },
+  {
+    "row": 140,
+    "source_code": "303010",
+    "source_name": "豪成科技股份有限公司",
+    "source_address": "新竹縣湖口鄉新竹工業區工業五路1號",
+    "source_phone": "(03)5979661",
+    "contact": ""
+  },
+  {
+    "row": 141,
+    "source_code": "304003",
+    "source_name": "施皓瀚",
+    "source_address": "新竹縣新豐鄉民安街62號6樓",
+    "source_phone": "0979-525-825",
+    "contact": "施皓瀚"
+  },
+  {
+    "row": 142,
+    "source_code": "305005",
+    "source_name": "牙德齒模技工所",
+    "source_address": "新竹縣新埔鎮田新里9鄰信義二街29巷5號",
+    "source_phone": "03-5882777 / 03-5889777 / 0910-141403",
+    "contact": "陳輝州先生"
+  },
+  {
+    "row": 143,
+    "source_code": "308001",
+    "source_name": "吳培任先生",
+    "source_address": "新竹市寶山鄉大崎村愛迪生路23巷7號",
+    "source_phone": "0900-263023 0980-279909 張先生",
+    "contact": "吳培任先生"
+  },
+  {
+    "row": 144,
+    "source_code": "310003",
+    "source_name": "合春技工所",
+    "source_address": "新竹縣竹東鎮金福街3巷1號",
+    "source_phone": "03-5822333.0933-118765",
+    "contact": "蔡韋忠先生"
+  },
+  {
+    "row": 145,
+    "source_code": "320002",
+    "source_name": "正典技工所",
+    "source_address": "桃園市平鎮區建明路1段269巷2弄2號",
+    "source_phone": "03-4601534",
+    "contact": "王文正先生"
+  },
+  {
+    "row": 146,
+    "source_code": "320005",
+    "source_name": "信安牙體技術所(中壢)",
+    "source_address": "桃園市中壢區松平路228巷8號",
+    "source_phone": "03-4207566  0932-371156",
+    "contact": "張秋炎先生"
+  },
+  {
+    "row": 147,
+    "source_code": "320008",
+    "source_name": "廖永楷牙醫診所",
+    "source_address": "桃園市中壢區廣明路119號",
+    "source_phone": "03-4913416",
+    "contact": "廖永楷先生"
+  },
+  {
+    "row": 148,
+    "source_code": "320012",
+    "source_name": "啟鈺技工所",
+    "source_address": "桃園市中壢區新生路三段381號\r\n桃園市中壢區新生路三段381號\r\n桃園市中壢區新生路三段381號\r\n桃園市中壢區新生路三段381號",
+    "source_phone": "0933-776114 (03)453-4550",
+    "contact": "張恩豪先生"
+  },
+  {
+    "row": 149,
+    "source_code": "320015",
+    "source_name": "上品杏林牙醫診所",
+    "source_address": "桃園縣中壢市民族路41號(星期二.四下午送貨)",
+    "source_phone": "(03)493-7999. 491-7160",
+    "contact": ""
+  },
+  {
+    "row": 150,
+    "source_code": "320019",
+    "source_name": "格拉斯牙體技術所",
+    "source_address": "桃園市桃園區復興路180號6樓E室",
+    "source_phone": "(03)4341698",
+    "contact": ""
+  },
+  {
+    "row": 151,
+    "source_code": "320020",
+    "source_name": "麗雅牙體技術所",
+    "source_address": "桃園市中壢區龍昌路216巷1號",
+    "source_phone": "0981-865730",
+    "contact": "劉盈妤小姐"
+  },
+  {
+    "row": 152,
+    "source_code": "320021",
+    "source_name": "永毅牙體技術所(蔡先生)",
+    "source_address": "桃園市中壢區中華路2段288之2號3F",
+    "source_phone": "0915-339511",
+    "contact": "蔡昌達先生"
+  },
+  {
+    "row": 153,
+    "source_code": "320023",
+    "source_name": "宋雲徵醫師",
+    "source_address": "桃園市中壢區元化路64號",
+    "source_phone": "(03)422-5605",
+    "contact": ""
+  },
+  {
+    "row": 154,
+    "source_code": "320024",
+    "source_name": "維思登牙醫診所",
+    "source_address": "桃園市中壢區高鐵站前西路1段206號",
+    "source_phone": "(03)453-3551分機220 張先生",
+    "contact": "張先生"
+  },
+  {
+    "row": 155,
+    "source_code": "320027",
+    "source_name": "天成醫院",
+    "source_address": "桃園市中壢區民權路175號",
+    "source_phone": "",
+    "contact": ""
+  },
+  {
+    "row": 156,
+    "source_code": "320028",
+    "source_name": "新當代牙醫診所",
+    "source_address": "桃園市中壢區民權路175號",
+    "source_phone": "03-4013176",
+    "contact": ""
+  },
+  {
+    "row": 157,
+    "source_code": "320029",
+    "source_name": "翔隆齒研牙體技術所",
+    "source_address": "桃園市中壢區榮民南路578巷98弄8號",
+    "source_phone": "0911-315-841",
+    "contact": "李嘉中"
+  },
+  {
+    "row": 158,
+    "source_code": "320032",
+    "source_name": "精英牙醫診所",
+    "source_address": "桃園市中壢區元化路64號",
+    "source_phone": "03-4225605",
+    "contact": ""
+  },
+  {
+    "row": 159,
+    "source_code": "320033",
+    "source_name": "澄品牙醫診所",
+    "source_address": "桃園市中壢區慈惠三街119號",
+    "source_phone": "03-4261336",
+    "contact": "0926-47005 江醫師"
+  },
+  {
+    "row": 160,
+    "source_code": "320034",
+    "source_name": "澄心牙醫診所",
+    "source_address": "桃園市中壢區環中東路29號",
+    "source_phone": "(03)4331332",
+    "contact": "洪碩志"
+  },
+  {
+    "row": 161,
+    "source_code": "320037",
+    "source_name": "曜澄技工所",
+    "source_address": "桃園市中壢區龍岡路三段243巷73弄1號",
+    "source_phone": "0917-831-226",
+    "contact": "曜澄技工所"
+  },
+  {
+    "row": 162,
+    "source_code": "320040",
+    "source_name": "格林牙醫診所",
+    "source_address": "桃園市中壢區慈惠三街130號",
+    "source_phone": "03-4225967",
+    "contact": "張毓靜醫師"
+  },
+  {
+    "row": 163,
+    "source_code": "324003",
+    "source_name": "富川技工所",
+    "source_address": "桃園市平鎮區龍安路6巷6號",
+    "source_phone": "03-4502519 0935-232981",
+    "contact": "鄒連春先生"
+  },
+  {
+    "row": 164,
+    "source_code": "324006",
+    "source_name": "新光牙體技術所(陳先生)",
+    "source_address": "桃園市中壢區大圳路2段193巷68號",
+    "source_phone": "03-425-7333",
+    "contact": "陳先生"
+  },
+  {
+    "row": 165,
+    "source_code": "324007",
+    "source_name": "中壢技工所",
+    "source_address": "桃園市平鎮區金陵路2段81巷22號",
+    "source_phone": "03-4285477",
+    "contact": "邱燮鑫先生"
+  },
+  {
+    "row": 166,
+    "source_code": "324009",
+    "source_name": "名揚技工所(陳貴宗先生)",
+    "source_address": "桃園縣平鎮市福林里5鄰39號",
+    "source_phone": "03-4501982 / 0932-522325",
+    "contact": "陳貴宗先生"
+  },
+  {
+    "row": 167,
+    "source_code": "324011",
+    "source_name": "巨昌精密陶齒製作中心",
+    "source_address": "桃園市平鎮區德育路2段366號",
+    "source_phone": "03-4581688 / 03-4581688 / 0937-538321",
+    "contact": "沈裕淵先生"
+  },
+  {
+    "row": 168,
+    "source_code": "324012",
+    "source_name": "金星技工所",
+    "source_address": "桃園市平鎮區南安路65號",
+    "source_phone": "03-4393952 / 0927-388589",
+    "contact": "郭文銑先生"
+  },
+  {
+    "row": 169,
+    "source_code": "324014",
+    "source_name": "佳美精密陶齒工作室",
+    "source_address": "桃園市平鎮市文化街236巷7弄11號",
+    "source_phone": "03-4923310 / 0932-358708",
+    "contact": "沈俊結先生"
+  },
+  {
+    "row": 170,
+    "source_code": "324015",
+    "source_name": "信成技工所",
+    "source_address": "桃園市平鎮區湧光路292巷3號",
+    "source_phone": "(03)469-6540 / (03)746-9800 0935-932906",
+    "contact": "魏金明"
+  },
+  {
+    "row": 171,
+    "source_code": "324016",
+    "source_name": "正一牙科齒模工作室(盧永森先生)",
+    "source_address": "桃園市平鎮區天津街150巷28弄7號",
+    "source_phone": "(03)439-6629 / 0955-295588",
+    "contact": "盧永森先生"
+  },
+  {
+    "row": 172,
+    "source_code": "324018",
+    "source_name": "捷安技工所(傅穗舟先生)",
+    "source_address": "桃園縣平鎮市東豐路528巷1弄12號",
+    "source_phone": "03)4602-036",
+    "contact": "傅橞舟先生"
+  },
+  {
+    "row": 173,
+    "source_code": "324019",
+    "source_name": "科藝數位牙體美學中心(劉先生)",
+    "source_address": "桃園市平鎮區廣達街87巷15弄1號",
+    "source_phone": "(03)492-5639  0988-263030",
+    "contact": "劉康全先生"
+  },
+  {
+    "row": 174,
+    "source_code": "324020",
+    "source_name": "裕鑫牙體技術所",
+    "source_address": "桃園市平鎮區復興街25號",
+    "source_phone": "0981-758711",
+    "contact": "許展民"
+  },
+  {
+    "row": 175,
+    "source_code": "324022",
+    "source_name": "睿騏牙體技術所",
+    "source_address": "桃園市中壢區大圳路2段193巷68號",
+    "source_phone": "03-4689333.0932-055781",
+    "contact": "陳為騰先生"
+  },
+  {
+    "row": 176,
+    "source_code": "324024",
+    "source_name": "潔明牙醫診所",
+    "source_address": "桃園市平鎮區和平路33號",
+    "source_phone": "(03)457-8856 0932-933077",
+    "contact": "吳啟明院長"
+  },
+  {
+    "row": 177,
+    "source_code": "324025",
+    "source_name": "嚼品牙體技術所(吳先生)",
+    "source_address": "桃園市平鎮區振興西路40號1樓",
+    "source_phone": "0955-199793",
+    "contact": "吳聲遠先生"
+  },
+  {
+    "row": 178,
+    "source_code": "324027",
+    "source_name": "辰新數位齒研中心",
+    "source_address": "桃園市平鎮區育達路2段98號",
+    "source_phone": "0987-512-567",
+    "contact": "劉康瑞"
+  },
+  {
+    "row": 179,
+    "source_code": "325007",
+    "source_name": "若思威牙體技術所",
+    "source_address": "桃園市龍潭區中興路63巷14弄1街4號",
+    "source_phone": "0966-336962",
+    "contact": "范又心"
+  },
+  {
+    "row": 180,
+    "source_code": "326002",
+    "source_name": "翰齡技工所(葉先生)",
+    "source_address": "桃園市楊梅區梅獅路2段151號2樓",
+    "source_phone": "03-4316128 / 0921-087186",
+    "contact": "葉明燿先生"
+  },
+  {
+    "row": 181,
+    "source_code": "326004",
+    "source_name": "兆亨牙體技術所",
+    "source_address": "桃園市中壢區中山東路二段556號",
+    "source_phone": "0968-078278",
+    "contact": "劉盈妤"
+  },
+  {
+    "row": 182,
+    "source_code": "326007",
+    "source_name": "台豐技工所",
+    "source_address": "桃園市楊梅區裕成路158巷13號",
+    "source_phone": "0955-345548.89213823",
+    "contact": "林耀燦先生"
+  },
+  {
+    "row": 183,
+    "source_code": "326014",
+    "source_name": "百亨牙體技術所",
+    "source_address": "桃園市楊梅區青山五街10巷11號",
+    "source_phone": "0968-078278",
+    "contact": "粘博閔先生"
+  },
+  {
+    "row": 184,
+    "source_code": "328002",
+    "source_name": "仁和牙科技工所",
+    "source_address": "桃園縣觀音鄉崙坪村忠愛路3段230號",
+    "source_phone": "03-4080210 / 0910-277339(高先生)",
+    "contact": "高弘柏先生"
+  },
+  {
+    "row": 185,
+    "source_code": "328004",
+    "source_name": "鴻興牙體技術所",
+    "source_address": "桃園市觀音區中正路293巷2號",
+    "source_phone": "0935-310-325",
+    "contact": ""
+  },
+  {
+    "row": 186,
+    "source_code": "330001",
+    "source_name": "新生牙體技術所",
+    "source_address": "桃園市八德區豐成街58號",
+    "source_phone": "03-3683636",
+    "contact": "陳茂盛先生"
+  },
+  {
+    "row": 187,
+    "source_code": "330002",
+    "source_name": "康瓷美牙體技術所",
+    "source_address": "桃園市南平路468號2樓",
+    "source_phone": "03-3563237 0928-296762",
+    "contact": "林元加"
+  },
+  {
+    "row": 188,
+    "source_code": "330004",
+    "source_name": "軒笠技工所",
+    "source_address": "桃園市三和街53巷3之3號(按5樓電鈴)",
+    "source_phone": "03-3623032",
+    "contact": "李秀駿先生"
+  },
+  {
+    "row": 189,
+    "source_code": "330005",
+    "source_name": "永新技工所(桃園)",
+    "source_address": "桃園市樹林四街97巷2之1號1樓",
+    "source_phone": "03-3756529 / 03-4905050.0915-438252",
+    "contact": "陳耀輝先生"
+  },
+  {
+    "row": 190,
+    "source_code": "330006",
+    "source_name": "大安技工所",
+    "source_address": "桃園市泰山街47巷24號",
+    "source_phone": "03-3358432   0933-107352",
+    "contact": "林垂杰先生"
+  },
+  {
+    "row": 191,
+    "source_code": "330007",
+    "source_name": "源昇技工所",
+    "source_address": "桃園市昆明路138巷30號",
+    "source_phone": "03-3636645",
+    "contact": "廖本森先生"
+  },
+  {
+    "row": 192,
+    "source_code": "330008",
+    "source_name": "精美技工所",
+    "source_address": "桃園市永安北路445巷1號",
+    "source_phone": "03-2150936 0928133690",
+    "contact": "吳錦皓先生"
+  },
+  {
+    "row": 193,
+    "source_code": "330010",
+    "source_name": "佳仁技工所",
+    "source_address": "桃園市民生路153之1號2樓",
+    "source_phone": "03-3385627",
+    "contact": "陳寶灣先生"
+  },
+  {
+    "row": 194,
+    "source_code": "330012",
+    "source_name": "名流陶齒技術中心",
+    "source_address": "桃園市介壽路310號7樓之2",
+    "source_phone": "03-3645738",
+    "contact": "劉瑞文先生"
+  },
+  {
+    "row": 195,
+    "source_code": "330013",
+    "source_name": "祥展牙體技術所(建泰)",
+    "source_address": "桃園市春日路302號",
+    "source_phone": "03-3350163 0906-113-526",
+    "contact": "簡嘉宏先生"
+  },
+  {
+    "row": 196,
+    "source_code": "330014",
+    "source_name": "藝品技工所",
+    "source_address": "桃園市昆明路138巷28號",
+    "source_phone": "03-3666112 0918-753789",
+    "contact": "楊明仁先生"
+  },
+  {
+    "row": 197,
+    "source_code": "330015",
+    "source_name": "昶勝牙體技術所(金典)",
+    "source_address": "桃園市大明街55號",
+    "source_phone": "03-3758087 / 0932-096345",
+    "contact": "李志鴻先生"
+  },
+  {
+    "row": 198,
+    "source_code": "330016",
+    "source_name": "源聚技工所",
+    "source_address": "桃園市大溪區中華路394號",
+    "source_phone": "03-3798492 / 0933-954824",
+    "contact": "李先生"
+  },
+  {
+    "row": 199,
+    "source_code": "330020",
+    "source_name": "晟生技工所",
+    "source_address": "桃園市龜山區明興街114巷13弄2號1樓",
+    "source_phone": "03-3704209 / 0937-801110",
+    "contact": "蔡珮甄"
+  },
+  {
+    "row": 200,
+    "source_code": "330022",
+    "source_name": "正鈺技工所",
+    "source_address": "桃園市國強二街221號10樓",
+    "source_phone": "03-3705793 / 0921-465699",
+    "contact": "何智明.何嘉明先生"
+  },
+  {
+    "row": 201,
+    "source_code": "330025",
+    "source_name": "廣益牙體技術所",
+    "source_address": "桃園市龍泉一街91號2F",
+    "source_phone": "03-3705536 / 0933-247711",
+    "contact": "張元政先生"
+  },
+  {
+    "row": 202,
+    "source_code": "330027",
+    "source_name": "周絜萍小姐",
+    "source_address": "桃園市永安路423巷13號3樓",
+    "source_phone": "03-3363583 0920-158853",
+    "contact": "周絜萍小姐.周治平先生"
+  },
+  {
+    "row": 203,
+    "source_code": "330028",
+    "source_name": "民富技工所",
+    "source_address": "桃園市民富二街68號7樓",
+    "source_phone": "03-3336166 / 0935-195000",
+    "contact": "羅振榮先生"
+  },
+  {
+    "row": 204,
+    "source_code": "330033",
+    "source_name": "精工牙體技術所(劉先生)",
+    "source_address": "桃園市興一街53號",
+    "source_phone": "03-3257855",
+    "contact": "劉先生"
+  },
+  {
+    "row": 205,
+    "source_code": "330035",
+    "source_name": "鴻冠科技股份有限公司",
+    "source_address": "桃園市玉山街214號",
+    "source_phone": "03-3617111 / 0952-001606",
+    "contact": ""
+  },
+  {
+    "row": 206,
+    "source_code": "330045",
+    "source_name": "眾心生物科技股份有限公司",
+    "source_address": "桃園市慈文路59號1樓",
+    "source_phone": "(03)326-2087 0928-869804",
+    "contact": "眾心生物科技股份有限公司"
+  },
+  {
+    "row": 207,
+    "source_code": "330047",
+    "source_name": "保時潔技工所",
+    "source_address": "桃園市德壽二街3號",
+    "source_phone": "(03)2184-265  0916136991",
+    "contact": ""
+  },
+  {
+    "row": 208,
+    "source_code": "330050",
+    "source_name": "惠民牙體技術所",
+    "source_address": "桃園市上海路42號",
+    "source_phone": "(03)369-2449 0935-037888",
+    "contact": "葉先生"
+  },
+  {
+    "row": 209,
+    "source_code": "330051",
+    "source_name": "劉名翔先生",
+    "source_address": "桃園市秀山路118號1樓",
+    "source_phone": "0963-207630.0938-152488",
+    "contact": ""
+  },
+  {
+    "row": 210,
+    "source_code": "330052",
+    "source_name": "禾康技工所",
+    "source_address": "桃園市同安街406號7F",
+    "source_phone": "(03)358-6667",
+    "contact": "呂先生"
+  },
+  {
+    "row": 211,
+    "source_code": "330053",
+    "source_name": "美瓷牙體技術所(璩先生)",
+    "source_address": "桃園市莊敬路1段371號14F之2",
+    "source_phone": "(03)316-1135 0955-334206",
+    "contact": "璩浬全先生"
+  },
+  {
+    "row": 212,
+    "source_code": "330054",
+    "source_name": "林仲豪先生",
+    "source_address": "桃園市大業路2段252號",
+    "source_phone": "0925-810830",
+    "contact": ""
+  },
+  {
+    "row": 213,
+    "source_code": "330055",
+    "source_name": "浩新牙體技術所(蕭先生)",
+    "source_address": "桃園市青田街161號1樓",
+    "source_phone": "0930-200611",
+    "contact": "蕭志成先生"
+  },
+  {
+    "row": 214,
+    "source_code": "330056",
+    "source_name": "風采矯正牙醫診所",
+    "source_address": "桃園市中山路888號",
+    "source_phone": "(03)346-6620",
+    "contact": "洪弘祐醫師"
+  },
+  {
+    "row": 215,
+    "source_code": "330057",
+    "source_name": "蔡比比先生",
+    "source_address": "桃園市桃園區三民路1段57-2號9樓",
+    "source_phone": "",
+    "contact": ""
+  },
+  {
+    "row": 216,
+    "source_code": "330058",
+    "source_name": "吉登牙體技術所",
+    "source_address": "桃園市鎮一街20號1樓",
+    "source_phone": "(03)3327356",
+    "contact": ""
+  },
+  {
+    "row": 217,
+    "source_code": "330060",
+    "source_name": "長谷吉登牙體技術所",
+    "source_address": "桃園市大溪區仁和路2段517巷115弄2號",
+    "source_phone": "(03)3327356",
+    "contact": ""
+  },
+  {
+    "row": 218,
+    "source_code": "330063",
+    "source_name": "優耐特牙體技術所",
+    "source_address": "桃園市桃園區中山路1000號3樓之2",
+    "source_phone": "0911-500389",
+    "contact": "莊智傑先生"
+  },
+  {
+    "row": 219,
+    "source_code": "330065",
+    "source_name": "詮鈦牙醫診所",
+    "source_address": "桃園市桃園區春日路860號",
+    "source_phone": "(03)3466-468",
+    "contact": "顧傑 院長"
+  },
+  {
+    "row": 220,
+    "source_code": "330067",
+    "source_name": "上上精密義齒研究中心",
+    "source_address": "桃園市桃園區富國路646巷6弄52號",
+    "source_phone": "(03)215-1503/0936-150-599",
+    "contact": "徐郁強先生"
+  },
+  {
+    "row": 221,
+    "source_code": "330068",
+    "source_name": "良鑫牙體技術所",
+    "source_address": "桃園市桃園區建國路123巷8號\r\n桃園市桃園區建國路123巷8號",
+    "source_phone": "(03)366-3104  0981-669-803",
+    "contact": "陳彥良"
+  },
+  {
+    "row": 222,
+    "source_code": "330069",
+    "source_name": "京鼎牙醫診所(瑞安)",
+    "source_address": "桃園市桃園區新埔六街87號",
+    "source_phone": "0903-594-312",
+    "contact": "江思姿 醫師"
+  },
+  {
+    "row": 223,
+    "source_code": "330077",
+    "source_name": "樂亞牙體技術所",
+    "source_address": "桃園市桃園區正光路423號12F之3",
+    "source_phone": "(03)379-7178",
+    "contact": "楊小姐"
+  },
+  {
+    "row": 224,
+    "source_code": "330078",
+    "source_name": "周道牙醫診所",
+    "source_address": "桃園市桃園區中正路428號",
+    "source_phone": "03-3336755",
+    "contact": ""
+  },
+  {
+    "row": 225,
+    "source_code": "330080",
+    "source_name": "銓鈦牙醫診所",
+    "source_address": "桃園市桃園區春日路860號1樓",
+    "source_phone": "03-3466-468",
+    "contact": ""
+  },
+  {
+    "row": 226,
+    "source_code": "330084",
+    "source_name": "鷺野牙體技術所",
+    "source_address": "桃園市南平路181巷19號5樓",
+    "source_phone": "0982-686-810",
+    "contact": "張桓滄"
+  },
+  {
+    "row": 227,
+    "source_code": "330087",
+    "source_name": "凱弘牙體技術所",
+    "source_address": "桃園市平鎮區正義路81巷2弄10號",
+    "source_phone": "(03)457-2757  0937-173195",
+    "contact": "吳少峰先生"
+  },
+  {
+    "row": 228,
+    "source_code": "330088",
+    "source_name": "藝圻牙體技術所",
+    "source_address": "",
+    "source_phone": "",
+    "contact": ""
+  },
+  {
+    "row": 229,
+    "source_code": "330089",
+    "source_name": "熱河牙體技術所",
+    "source_address": "桃園市桃園區大興西路二段112巷13號1樓",
+    "source_phone": "0960-619-149",
+    "contact": ""
+  },
+  {
+    "row": 230,
+    "source_code": "333002",
+    "source_name": "鴻元技工所",
+    "source_address": "桃園市大業路2段252號",
+    "source_phone": "0932-095606",
+    "contact": "張鴻文先生"
+  },
+  {
+    "row": 231,
+    "source_code": "333009",
+    "source_name": "富禾牙體技術所",
+    "source_address": "桃園市龜山區興一街48巷6號",
+    "source_phone": "(03)3204180 0932-311920",
+    "contact": "陳依君"
+  },
+  {
+    "row": 232,
+    "source_code": "333019",
+    "source_name": "高登牙體技術所",
+    "source_address": "桃園市龜山區文化二路28-1號7樓",
+    "source_phone": "(03)318-6636  / 0918-013-133",
+    "contact": "高登牙體技術所"
+  },
+  {
+    "row": 233,
+    "source_code": "333020",
+    "source_name": "奇琳技工所",
+    "source_address": "桃園市龜山區文桃路489號4樓之5",
+    "source_phone": "0961-109873",
+    "contact": "林上詠"
+  },
+  {
+    "row": 234,
+    "source_code": "333023",
+    "source_name": "江國清先生",
+    "source_address": "桃園市龜山區大同路305號",
+    "source_phone": "0933939642",
+    "contact": "江國清"
+  },
+  {
+    "row": 235,
+    "source_code": "334001",
+    "source_name": "冠品技工所",
+    "source_address": "桃園市八德區長興路779號",
+    "source_phone": "03-3653308 0952-423437",
+    "contact": "徐瑞芳先生"
+  },
+  {
+    "row": 236,
+    "source_code": "334002",
+    "source_name": "永泰技工所",
+    "source_address": "八德市永安街13巷14號",
+    "source_phone": "03-3710017 / 0939-927139",
+    "contact": "瞿榮昌先生"
+  },
+  {
+    "row": 237,
+    "source_code": "334003",
+    "source_name": "精湛技工所",
+    "source_address": "八德市中興街36-1號2F",
+    "source_phone": "03-3655168 / 0939-033691",
+    "contact": "李慈龍先生"
+  },
+  {
+    "row": 238,
+    "source_code": "334004",
+    "source_name": "舒潔牙體技術所(李先生)",
+    "source_address": "八德市忠勇街377巷8號5F",
+    "source_phone": "0925-797880",
+    "contact": "李建中先生"
+  },
+  {
+    "row": 239,
+    "source_code": "334006",
+    "source_name": "信美陶齒企業社(八德)",
+    "source_address": "桃園市八德區新興路45號1F",
+    "source_phone": "03-3752575 03-3663647(H) 0936-206816羅小",
+    "contact": ""
+  },
+  {
+    "row": 240,
+    "source_code": "334009",
+    "source_name": "浩鑫牙體技術所(張先生)",
+    "source_address": "桃園市八德區永豐路74號",
+    "source_phone": "0930-200611",
+    "contact": "張志成先生"
+  },
+  {
+    "row": 241,
+    "source_code": "334010",
+    "source_name": "永昔牙體技術所(陳先生)",
+    "source_address": "桃園市八德區廣隆街138巷19號6樓",
+    "source_phone": "0936-157293",
+    "contact": "陳永昔先生"
+  },
+  {
+    "row": 242,
+    "source_code": "334011",
+    "source_name": "良璦牙醫診所",
+    "source_address": "桃園市八德區介壽路1段910號",
+    "source_phone": "03-3633831 0928-870968",
+    "contact": "鄭醫師"
+  },
+  {
+    "row": 243,
+    "source_code": "334012",
+    "source_name": "胥義順先生",
+    "source_address": "桃園市八德區永固街28巷16號",
+    "source_phone": "0926-982660",
+    "contact": "胥義順先生"
+  },
+  {
+    "row": 244,
+    "source_code": "334016",
+    "source_name": "錦新牙體技術所",
+    "source_address": "桃園市八德區天祥街24巷11號",
+    "source_phone": "0938-215-205",
+    "contact": "洪錦堂"
+  },
+  {
+    "row": 245,
+    "source_code": "335003",
+    "source_name": "鴻海技工所(陳介智先生)",
+    "source_address": "桃園縣大溪鎮文化路129巷21號",
+    "source_phone": "03-3884566 0926-084199",
+    "contact": "陳介智先生"
+  },
+  {
+    "row": 246,
+    "source_code": "337009",
+    "source_name": "凱基牙體技術所",
+    "source_address": "桃園市大園區高鐵北路二段178號4樓",
+    "source_phone": "(03)381-0181",
+    "contact": ""
+  },
+  {
+    "row": 247,
+    "source_code": "338001",
+    "source_name": "宏霖技工所(宏昇)",
+    "source_address": "桃園縣蘆竹鄉新興街344巷63弄10號",
+    "source_phone": "03-3441245",
+    "contact": "陳文雄先生"
+  },
+  {
+    "row": 248,
+    "source_code": "338010",
+    "source_name": "李彥平",
+    "source_address": "桃園市蘆竹區中正路122號",
+    "source_phone": "03-2125880",
+    "contact": ""
+  },
+  {
+    "row": 249,
+    "source_code": "338012",
+    "source_name": "潔明牙體技術所",
+    "source_address": "桃園市寶山街229號4樓",
+    "source_phone": "",
+    "contact": ""
+  }
+]

@@ -1,0 +1,195 @@
+{
+  "generatedAt": "2026-07-15",
+  "mode": "dry-run",
+  "writeCount": 0,
+  "normalization": {
+    "canvas": "1200x1200",
+    "fit": "contain",
+    "background": "white",
+    "minimumSourceEdge": 600,
+    "format": "webp",
+    "rejectWatermark": true
+  },
+  "items": [
+    {
+      "code": "AG-00194",
+      "name": "Asiga Flash 光固化機",
+      "sourcePageUrl": "https://support.asiga.com/post-curing-parts/",
+      "match": ["brand", "exact product name", "product function"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁可核對產品，但圖片重製授權尚未確認"
+    },
+    {
+      "code": "AG-00194-1",
+      "name": "光固化機-燈管",
+      "sourcePageUrl": "https://support.asiga.com/post-curing-parts/",
+      "match": ["parent product only"],
+      "confidence": "low",
+      "imageDecision": "skip",
+      "reason": "找不到精確燈管料號，不放圖片"
+    },
+    {
+      "code": "AG-0044",
+      "name": "Bundled 1L MAX Build Tary",
+      "sourcePageUrl": "https://support.asiga.com/build-tray-types/",
+      "match": ["MAX", "1L", "Build Tray"],
+      "confidence": "medium",
+      "imageDecision": "hold",
+      "reason": "官方頁可核對容量與類型，但未列 ERP 料號"
+    },
+    {
+      "code": "AG-0077",
+      "name": "MAX 2 Crown kit",
+      "sourcePageUrl": "https://www.asiga.com/max-2/",
+      "match": ["parent printer only"],
+      "confidence": "low",
+      "imageDecision": "skip",
+      "reason": "找不到官方 Crown kit 精確品項，不放圖片"
+    },
+    {
+      "code": "AG-00928",
+      "name": "PlasGRAY V2 1kg",
+      "sourcePageUrl": "https://www.asiga.com/materials-industrial/",
+      "match": ["brand", "exact material family", "colour"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方材料頁可核對系列；待確認 V2 包裝及圖片授權"
+    },
+    {
+      "code": "AG-00929",
+      "name": "PlasPINK V2 1kg",
+      "sourcePageUrl": "https://www.asiga.com/materials-industrial/",
+      "match": ["brand", "exact material family", "colour", "1kg delivery unit"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方材料頁與 IFU 可核對；待確認 V2 包裝及圖片授權"
+    },
+    {
+      "code": "AG-00930",
+      "name": "PlasCLEAR V2 1kg Bottle",
+      "sourcePageUrl": "https://www.asiga.com/materials-industrial/",
+      "match": ["brand", "exact material family", "colour"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方材料頁可核對系列；待確認 V2 包裝及圖片授權"
+    },
+    {
+      "code": "AG-00931",
+      "name": "PlasWHITE V2 1kg Bottle",
+      "sourcePageUrl": "https://www.asiga.com/materials-industrial/",
+      "match": ["brand", "exact material family", "colour"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方材料頁可核對系列；待確認 V2 包裝及圖片授權"
+    },
+    {
+      "code": "AG-01329",
+      "name": "FusionGRAY V2 1kg Bottle",
+      "sourcePageUrl": "https://myaccount.asiga.com/media/public/Materials/Asiga-FusionGRAY-IFU-en.pdf",
+      "match": ["brand", "exact material", "official part number 01329", "1kg"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "ERP 尾碼與官方 PN 01329 相符；仍待圖片授權"
+    },
+    {
+      "code": "AG-01407",
+      "name": "MAX Touchscreen",
+      "sourcePageUrl": "https://support.asiga.com/product-breakdown-max/",
+      "match": ["MAX", "touchscreen component"],
+      "confidence": "medium",
+      "imageDecision": "skip",
+      "reason": "官方頁只核對元件名稱，未列精確料號"
+    },
+    {
+      "code": "AG-02391",
+      "name": "MAX UV 3D Printer",
+      "sourcePageUrl": "https://www.asiga.com/downloads/printers/Asiga-MAX-usen-web.pdf",
+      "match": ["brand", "MAX model", "UV specification", "printer"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方型錄可核對精確機型；待圖片授權"
+    },
+    {
+      "code": "AG-02479",
+      "name": "MAX Build Platform 成型台",
+      "sourcePageUrl": "https://support.asiga.com/product-breakdown-max/",
+      "match": ["MAX", "exact component name"],
+      "confidence": "medium",
+      "imageDecision": "hold",
+      "reason": "官方支援頁可核對元件，但未列 ERP 料號"
+    },
+    {
+      "code": "AG-02499",
+      "name": "MAX Build Tray 1L 料槽",
+      "sourcePageUrl": "https://support.asiga.com/build-tray-life-max/",
+      "match": ["MAX", "Build Tray", "1L"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁精確列出 MAX 1L 容量；待圖片授權"
+    },
+    {
+      "code": "AG-02500",
+      "name": "MAX Build Tray 2L 料槽",
+      "sourcePageUrl": "https://support.asiga.com/build-tray-life-max/",
+      "match": ["MAX", "Build Tray", "2L"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁精確列出 MAX 2L 容量；待圖片授權"
+    },
+    {
+      "code": "AG-02501",
+      "name": "MAX Build Tray 5L 料槽",
+      "sourcePageUrl": "https://support.asiga.com/build-tray-life-max/",
+      "match": ["MAX", "Build Tray", "5L"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁精確列出 MAX 5L 容量；待圖片授權"
+    },
+    {
+      "code": "AG-02502",
+      "name": "MAX Build Tray 10L 料槽",
+      "sourcePageUrl": "https://support.asiga.com/build-tray-life-max/",
+      "match": ["MAX", "Build Tray", "10L"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁精確列出 MAX 10L 容量；待圖片授權"
+    },
+    {
+      "code": "AG-02551",
+      "name": "Posltion Encoder Projector USB Cable",
+      "sourcePageUrl": "https://support.asiga.com/product-breakdown-max/",
+      "match": ["position encoder parent component only"],
+      "confidence": "low",
+      "imageDecision": "skip",
+      "reason": "找不到 Projector USB Cable 精確料號，不放圖片"
+    },
+    {
+      "code": "AG-03000",
+      "name": "DentaModel",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/",
+      "match": ["brand", "exact material family"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方材料頁可核對系列；待圖片授權"
+    },
+    {
+      "code": "AG-03569",
+      "name": "Denta BASE N1 1kg Bottle",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/",
+      "match": ["brand", "DentaBASE", "N1", "1kg"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁可核對 N1 規格；待圖片授權"
+    },
+    {
+      "code": "AG-03624",
+      "name": "Denta TOOTH A1 1kg Bottle",
+      "sourcePageUrl": "https://www.asiga.com/materials-dental/",
+      "match": ["brand", "DentaTOOTH", "A1"],
+      "confidence": "high",
+      "imageDecision": "hold",
+      "reason": "官方頁可核對 A1 色號；待圖片授權"
+    }
+  ]
+}
