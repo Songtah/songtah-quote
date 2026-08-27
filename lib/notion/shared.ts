@@ -108,6 +108,10 @@ export const DB = {
   crossSupport:
     process.env.NOTION_CROSS_SUPPORT_DB ??
     '3badcdaa-fb2a-81ed-ad7b-e28c356dcd5f',
+  // 業務協作積分（2026-08 建立，依《業務客戶分區管理辦法》第八章團隊協作機制）
+  collabPoints:
+    process.env.NOTION_COLLAB_POINTS_DB ??
+    '87f02321-e2cd-4dc8-a51e-d628d8c02deb',
 } as const
 
 export function normalizeDatabaseId(value?: string) {

@@ -28,6 +28,7 @@ import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
 import { CrossSupportMyPanel } from '@/components/CrossSupportMyPanel'
+import { CollabPointsPanel } from '@/components/CollabPointsPanel'
 import type { TodayDashboardData, TodayWorkItem } from '@/lib/dashboard-today'
 
 type VisibleModules = Partial<Record<'bd' | 'crm' | 'quote' | 'orders' | 'products' | 'rma' | 'marketing' | 'clinicMonitor' | 'admin' | 'accounts' | 'audit', boolean>>
@@ -251,6 +252,12 @@ export function SalesTodayDashboard({
           {visibleModules.bd && (
             <section className="mt-6" aria-label="跨區支援名單">
               <CrossSupportMyPanel />
+            </section>
+          )}
+
+          {visibleModules.bd && (
+            <section className="mt-6" aria-label="協作積分">
+              <CollabPointsPanel />
             </section>
           )}
 
