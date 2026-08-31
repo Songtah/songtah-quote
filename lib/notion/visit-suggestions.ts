@@ -18,6 +18,7 @@ import { scanVisitRecency, listOpenFollowUps } from './visits'
 import { scanEquipmentCustomerCounts } from './equipment'
 import { listCampaigns, listMembers } from './campaigns'
 import { scanOrderActivity } from '@/lib/orders-notion'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 // ── 快取層 ─────────────────────────────────────────────────────
 
@@ -76,7 +77,6 @@ export type VisitSuggestionResult = {
   mapsBuiltAt: string
 }
 
-const EXCLUDED_STATUS = new Set(['停業', '已歇業', '撤銷'])
 const EXCLUDED_OWNER = new Set(['公司', '盤商'])
 const ACTIVE_MEMBER_STATUS = new Set(['未聯絡', '已聯絡', '有興趣'])
 
@@ -140,7 +140,7 @@ export async function buildVisitSuggestions(params: {
   const C: (VisitSuggestion & { _sort: number })[] = []
 
   for (const c of customers) {
-    if (EXCLUDED_STATUS.has(c.status)) continue
+    if (isInactiveCustomer(c.status)) continue
     if (EXCLUDED_OWNER.has(c.salesperson)) continue
     if (params.existingOnly && c.salesperson !== me) continue
     const isOthers = !!c.salesperson && c.salesperson !== me  // 同事的客戶,一律不推

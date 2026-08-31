@@ -13,6 +13,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listCustomersByArea, assignSalesperson } from '@/lib/notion/customers'
 import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -42,7 +43,7 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
       type: b.type && b.type !== '其他' ? b.type : undefined,
       status: b.status || undefined,
     })
-    if (b.excludeClosed) pool = pool.filter((c) => c.status !== '已歇業')
+    if (b.excludeClosed) pool = pool.filter((c) => !isInactiveCustomer(c.status))
     if (b.excludePersonal) pool = pool.filter((c) => c.type !== '個人')
     if (b.type === '其他') pool = pool.filter((c) => !MAIN_TYPES.includes(c.type))
 

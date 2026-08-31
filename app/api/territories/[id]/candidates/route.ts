@@ -4,6 +4,7 @@ import { listCustomersByArea } from '@/lib/notion/customers'
 import { getTerritory } from '@/lib/notion/territories'
 import { TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
 import { canAcceptNewBusiness, getSystemUserById } from '@/lib/notion/accounts'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 type Ctx = { params: { id: string } }
 
@@ -32,7 +33,7 @@ export const GET = withApiAuth<Ctx>({ module: 'clinic_monitor', action: 'view' }
       city: territory.city, district: territory.district, unassignedOnly: true, type,
     })
     const items = customers
-      .filter((customer) => !['已歇業', '停業', '撤銷'].includes(customer.status))
+      .filter((customer) => !isInactiveCustomer(customer.status))
       .map((customer) => ({
         id: customer.id, name: customer.name, type: customer.type,
         status: customer.status, devStage: customer.devStage,

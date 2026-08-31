@@ -8,11 +8,11 @@ import {
   getTerritoryAreas, TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType,
 } from '@/lib/territory-areas'
 import { isReportSort } from '@/lib/report-sort'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 
 export default async function TerritoryReportPage({
   params,
@@ -41,7 +41,7 @@ export default async function TerritoryReportPage({
     getTerritoryAreas(),
     getSystemUsers(),
   ])
-  const activeCustomers = allCustomers.filter((customer) => !INACTIVE_STATUS.has(customer.status))
+  const activeCustomers = allCustomers.filter((customer) => !isInactiveCustomer(customer.status))
   const matchingOwners = users.filter((account) =>
     account.status !== '停用' && account.accountType === '業務' && account.name === territory.salesperson
   )

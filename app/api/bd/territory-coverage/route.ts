@@ -12,11 +12,11 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listTerritories } from '@/lib/notion/territories'
 import { listCustomersByAreas } from '@/lib/notion/customers'
 import { getCachedValue, setCachedValue } from '@/lib/notion/shared'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 
 type Coverage = {
   city: string
@@ -53,7 +53,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (_req, _c
       })
     }
     for (const customer of customers) {
-      if (INACTIVE_STATUS.has(customer.status)) continue
+      if (isInactiveCustomer(customer.status)) continue
       const entry = map.get(`${customer.city}|${customer.district}`)
       if (!entry) continue
       entry.total++

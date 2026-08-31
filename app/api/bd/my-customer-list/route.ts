@@ -6,11 +6,11 @@ import {
   NON_CLAIMABLE_OWNERS, classifyOwnership, type TerritoryOwnership,
 } from '@/lib/notion/customers'
 import { listTerritories } from '@/lib/notion/territories'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 
 export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
@@ -34,7 +34,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
         district: territory.district,
       })
       const items = customers
-        .filter((customer) => !INACTIVE_STATUS.has(customer.status))
+        .filter((customer) => !isInactiveCustomer(customer.status))
         .map((customer) => toListItem(customer, territory.salesperson))
       const summary = items.reduce(
         (acc, item) => {
@@ -97,7 +97,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
     }
 
     const items = customers
-      .filter((customer) => !INACTIVE_STATUS.has(customer.status))
+      .filter((customer) => !isInactiveCustomer(customer.status))
       .map((customer) => toListItem(customer, account.name))
 
     const summary = items.reduce(

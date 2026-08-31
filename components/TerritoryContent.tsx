@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TAIWAN_CITY_ORDER } from '@/lib/taiwan-geography'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 type Row = {
   city: string; district: string; type: string; status: string
@@ -23,7 +24,6 @@ const CUSTOMER_TYPES: { value: '' | CustomerType; label: string }[] = [
   { value: '醫院', label: '醫院' },
 ]
 
-const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 const EXCLUDED_OWNERS = new Set(['公司', '盤商'])
 const cityRank = (city: string) => {
   const index = TAIWAN_CITY_ORDER.indexOf(city as (typeof TAIWAN_CITY_ORDER)[number])
@@ -144,7 +144,7 @@ export default function TerritoryContent({
    */
   const statsFor = useCallback((territory: Territory) => {
     const areaRows = rows.filter((row) =>
-      row.city === territory.city && row.district === territory.district && !INACTIVE_STATUS.has(row.status) &&
+      row.city === territory.city && row.district === territory.district && !isInactiveCustomer(row.status) &&
       (!typeFilter || row.type === typeFilter)
     )
     return {

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { TAIWAN_CITY_ORDER } from './taiwan-geography'
+import { isInactiveCustomer } from './customer-status'
 
 export const TERRITORY_CUSTOMER_TYPES = ['牙醫診所', '牙體技術所', '醫院'] as const
 export type TerritoryCustomerType = (typeof TERRITORY_CUSTOMER_TYPES)[number]
@@ -12,8 +13,6 @@ export type TerritoryArea = {
   byType: Record<TerritoryCustomerType, number>
 }
 
-const INACTIVE = new Set(['已歇業', '停業', '撤銷'])
-
 export async function getTerritoryAreas(): Promise<{ items: TerritoryArea[]; updatedAt: string }> {
   const raw = await readFile(path.join(process.cwd(), 'data', 'clinic-snapshot.json'), 'utf8')
   const snapshot = JSON.parse(raw) as {
@@ -22,7 +21,7 @@ export async function getTerritoryAreas(): Promise<{ items: TerritoryArea[]; upd
   }
   const counts = new Map<string, TerritoryArea>()
   for (const item of Object.values(snapshot.codes ?? {})) {
-    if (INACTIVE.has(item.status ?? '')) continue
+    if (isInactiveCustomer(item.status)) continue
     const address = item.address ?? ''
     const city = TAIWAN_CITY_ORDER.find((name) => address.startsWith(name))
     if (!city) continue

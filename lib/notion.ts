@@ -2,6 +2,7 @@ import { Client } from '@notionhq/client'
 import type { Product, Customer, Quote, QuoteItem } from '@/types'
 import { getCatalogProduct } from '@/lib/products-catalog'
 import { listProductPriceOverrides } from '@/lib/products-notion'
+import { notionActiveCustomerClauses } from './customer-status'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -191,7 +192,8 @@ export async function searchCustomers(query: string): Promise<Customer[]> {
     filter: {
       and: [
         { property: '客戶名稱', title: { contains: query.trim() } },
-        { property: '機構狀態', select: { does_not_equal: '已歇業' } },
+        // 報價/訂貨不該選到無效機構;口徑與轄區、監控一致(原本只排除已歇業)
+        ...notionActiveCustomerClauses(),
       ],
     },
     sorts: [{ property: '客戶名稱', direction: 'ascending' }],

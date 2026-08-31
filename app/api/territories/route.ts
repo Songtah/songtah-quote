@@ -7,6 +7,7 @@ import {
   type TerritoryStatus,
 } from '@/lib/notion/territories'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -62,7 +63,7 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
     if (conflict) {
       return NextResponse.json({ error: `${city}${district} 已由 ${conflict.salesperson} 負責` }, { status: 409 })
     }
-    const activeCustomers = areaCustomers.filter((customer) => !['已歇業', '停業', '撤銷'].includes(customer.status))
+    const activeCustomers = areaCustomers.filter((customer) => !isInactiveCustomer(customer.status))
     const marketTotal = activeCustomers.length
     const unassigned = activeCustomers.filter((customer) => !customer.salesperson).length
     if (dryRun) {

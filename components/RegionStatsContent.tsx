@@ -9,6 +9,7 @@
  * 類型/機構狀態/負責業務皆為下拉。「既有客戶」=負責業務非空(改定義只動 isExisting)。
  */
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { INACTIVE_STATUS_LABEL, isInactiveCustomer } from '@/lib/customer-status'
 
 type Row = {
   city: string; district: string; type: string; status: string
@@ -85,7 +86,7 @@ export default function RegionStatsContent({
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [spFilter, setSpFilter] = useState('')
-  const [excludeClosed, setExcludeClosed] = useState(false) // 排除已歇業
+  const [excludeClosed, setExcludeClosed] = useState(false) // 排除無效名單(已歇業/停業/撤銷)
   const [excludePersonal, setExcludePersonal] = useState(false) // 排除個人客戶
   const [assignSummaryView, setAssignSummaryView] = useState<'numbers' | 'bars'>('numbers')
   const [expanded, setExpanded] = useState('')
@@ -143,7 +144,7 @@ export default function RegionStatsContent({
       if (cities.size > 0 && !cities.has(r.city)) continue
       if (typeFilter && (typeFilter === '其他' ? MAIN_TYPES.includes(r.type as any) : r.type !== typeFilter)) continue
       if (statusFilter && r.status !== statusFilter) continue
-      if (excludeClosed && r.status === '已歇業') continue
+      if (excludeClosed && !statusFilter && isInactiveCustomer(r.status)) continue
       if (excludePersonal && r.type === '個人') continue
       const k = r.city + '|' + r.district
       m.set(k, (m.get(k) ?? 0) + r.count)
@@ -160,14 +161,16 @@ export default function RegionStatsContent({
     (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district))
   ), [rows, cities, effDistrictSel])
 
-  // 基礎篩選結果:套用地區/行政區/類型/狀態/排除已歇業/排除個人。
+  // 基礎篩選結果:套用地區/行政區/類型/狀態/排除無效名單/排除個人。
   // 分派模式必須使用這份資料,避免被「負責業務轄區視角」縮小分派池。
   const baseFiltered = useMemo(() => rows.filter((r) =>
     (cities.size === 0 || cities.has(r.city)) &&
     (!effDistrictSel || effDistrictSel.has(r.city + '|' + r.district)) &&
     (!typeFilter || (typeFilter === '其他' ? !MAIN_TYPES.includes(r.type as any) : r.type === typeFilter)) &&
     (!statusFilter || r.status === statusFilter) &&
-    (!excludeClosed || r.status !== '已歇業') &&
+    // 明確選了某個機構狀態時,排除無效名單要讓路——否則選「已歇業」會永遠是空的,
+    // 使用者就沒有任何入口可以維護這些紀錄
+    (!excludeClosed || !!statusFilter || !isInactiveCustomer(r.status)) &&
     (!excludePersonal || r.type !== '個人')
   ), [rows, cities, effDistrictSel, typeFilter, statusFilter, excludeClosed, excludePersonal])
 
@@ -352,8 +355,9 @@ export default function RegionStatsContent({
             return <button key={q.key} className={pillBtn(active)} onClick={() => setRegion(q.cities)}>{q.label}</button>
           })}
           <span className="w-px self-stretch bg-stone-900/[0.06] mx-1" />
-          <button className={pillBtn(excludeClosed)} onClick={() => setExcludeClosed((v) => !v)}>
-            {excludeClosed ? '✓ ' : ''}排除已歇業
+          <button className={pillBtn(excludeClosed)} onClick={() => setExcludeClosed((v) => !v)}
+            title={`排除 ${INACTIVE_STATUS_LABEL};與轄區管理、醫事監控同一口徑。明確選擇某個機構狀態時此排除自動讓路。`}>
+            {excludeClosed ? '✓ ' : ''}排除無效名單
           </button>
           <button className={pillBtn(excludePersonal)} onClick={() => setExcludePersonal((v) => !v)}>
             {excludePersonal ? '✓ ' : ''}排除個人
@@ -640,7 +644,7 @@ export default function RegionStatsContent({
         <CustomerModal
           {...modal}
           // 彈窗必須套用外面同一組篩選,否則筆數會跟外面的統計對不上
-          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed, excludePersonal }}
+          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed: excludeClosed && !statusFilter, excludePersonal }}
           onClose={() => setModal(null)}
         />
       )}
@@ -648,7 +652,7 @@ export default function RegionStatsContent({
         <AssignModal
           {...assignTarget}
           salespersons={assignmentTargets}
-          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed, excludePersonal }}
+          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed: excludeClosed && !statusFilter, excludePersonal }}
           onClose={(assigned) => { setAssignTarget(null); if (assigned) fetchData(true) }}
         />
       )}
@@ -743,7 +747,7 @@ function AssignModal({ city, district, salespersons, filters, onClose }: {
     } catch (e: any) { setError(e.message); setBusy(false) }
   }
 
-  const filterNote = [filters.type, filters.status, filters.excludeClosed ? '排除已歇業' : '', filters.excludePersonal ? '排除個人' : ''].filter(Boolean).join('・') || '全部類型與狀態'
+  const filterNote = [filters.type, filters.status, !filters.status && filters.excludeClosed ? '排除無效名單' : '', filters.excludePersonal ? '排除個人' : ''].filter(Boolean).join('・') || '全部類型與狀態'
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto">
@@ -958,7 +962,7 @@ function CustomerModal({ city, district, salesperson, filters, onClose }: {
   const [error, setError] = useState('')
   const { type, status, excludeClosed, excludePersonal } = filters
   // 讓使用者一眼看出這份清單套了哪些條件,數字才不會又被誤會成不一致
-  const activeFilterLabel = [type, status, excludeClosed && '排除已歇業', excludePersonal && '排除個人']
+  const activeFilterLabel = [type, status, !status && excludeClosed && '排除無效名單', excludePersonal && '排除個人']
     .filter(Boolean).join('・')
 
   useEffect(() => {

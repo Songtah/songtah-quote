@@ -6,11 +6,11 @@ import { canAppearInSalesReports, getSystemUsers } from '@/lib/notion/accounts'
 import { listTerritories } from '@/lib/notion/territories'
 import { getTerritoryAreas, TERRITORY_CUSTOMER_TYPES, type TerritoryCustomerType } from '@/lib/territory-areas'
 import { isReportSort } from '@/lib/report-sort'
+import { isInactiveCustomer } from '@/lib/customer-status'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const INACTIVE_STATUS = new Set(['已歇業', '停業', '撤銷'])
 
 export default async function SalespersonReportPage({
   params,
@@ -54,7 +54,7 @@ export default async function SalespersonReportPage({
     rawCustomers = await listCustomersByAreas(territories)
   }
   const uniqueCustomers = Array.from(new Map(rawCustomers.map((customer) => [customer.id, customer])).values())
-    .filter((customer) => !INACTIVE_STATUS.has(customer.status))
+    .filter((customer) => !isInactiveCustomer(customer.status))
   const visibleCustomers = scope === 'customers' || canViewAll
     ? uniqueCustomers
     : uniqueCustomers.filter((customer) => !customer.salesperson || customer.salesperson === salesperson.ownerName)
