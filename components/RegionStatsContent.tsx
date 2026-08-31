@@ -636,7 +636,14 @@ export default function RegionStatsContent({
         </div>
       </div>
 
-      {modal && <CustomerModal {...modal} onClose={() => setModal(null)} />}
+      {modal && (
+        <CustomerModal
+          {...modal}
+          // 彈窗必須套用外面同一組篩選,否則筆數會跟外面的統計對不上
+          filters={{ type: typeFilter || undefined, status: statusFilter || undefined, excludeClosed, excludePersonal }}
+          onClose={() => setModal(null)}
+        />
+      )}
       {assignTarget && (
         <AssignModal
           {...assignTarget}
@@ -942,17 +949,29 @@ function exportCsv(rows: AreaCustomer[], filename: string) {
   URL.revokeObjectURL(url)
 }
 
-function CustomerModal({ city, district, salesperson, onClose }: { city: string; district: string; salesperson: string; onClose: () => void }) {
+type AreaFilters = { type?: string; status?: string; excludeClosed?: boolean; excludePersonal?: boolean }
+
+function CustomerModal({ city, district, salesperson, filters, onClose }: {
+  city: string; district: string; salesperson: string; filters: AreaFilters; onClose: () => void
+}) {
   const [items, setItems] = useState<AreaCustomer[] | null>(null)
   const [error, setError] = useState('')
+  const { type, status, excludeClosed, excludePersonal } = filters
+  // 讓使用者一眼看出這份清單套了哪些條件,數字才不會又被誤會成不一致
+  const activeFilterLabel = [type, status, excludeClosed && '排除已歇業', excludePersonal && '排除個人']
+    .filter(Boolean).join('・')
 
   useEffect(() => {
-    const qs = new URLSearchParams({ city, district, salesperson }).toString()
-    fetch('/api/customers/by-area?' + qs)
+    const qs = new URLSearchParams({ city, district, salesperson })
+    if (type) qs.set('type', type)
+    if (status) qs.set('status', status)
+    if (excludeClosed) qs.set('excludeClosed', '1')
+    if (excludePersonal) qs.set('excludePersonal', '1')
+    fetch('/api/customers/by-area?' + qs.toString())
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('讀取失敗')))
       .then((d) => setItems(d.items ?? []))
       .catch((e) => setError(e.message))
-  }, [city, district, salesperson])
+  }, [city, district, salesperson, type, status, excludeClosed, excludePersonal])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -966,7 +985,10 @@ function CustomerModal({ city, district, salesperson, onClose }: { city: string;
       <div className="relative w-full max-w-2xl bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] overflow-hidden">
         <div className="px-6 py-4 flex items-center justify-between border-b border-stone-900/[0.06]">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">{city}{district}</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">
+              {city}{district}
+              {activeFilterLabel && <span className="ml-2 normal-case tracking-normal font-medium text-stone-400">篩選：{activeFilterLabel}</span>}
+            </p>
             <h3 className="text-lg font-bold text-stone-800 mt-0.5">
               {salesperson} 的客戶
               {items && <span className="ml-2 text-sm font-medium text-stone-400">{items.length} 家</span>}

@@ -329,10 +329,22 @@ async function queryAreaCustomers(filter?: any): Promise<AreaCustomer[]> {
   return out
 }
 
+/**
+ * 區域儀表板的篩選語意,必須與前端 RegionStatsContent 逐條對齊——
+ * 外面的統計數字是用已套篩選的列算的,彈窗少套一個條件,數字就對不上
+ * (實測:臺北市中山區「公司」勾了排除已歇業,外面 31、彈窗 36)。
+ * 三個 Notion filter 表達不了的條件在查詢後於此處補算:
+ *   type='其他'(非三大類型)、excludeClosed(排除已歇業)、excludePersonal(排除個人)。
+ */
+export const AREA_MAIN_TYPES = ['牙醫診所', '牙體技術所', '醫院'] as const
+const AREA_STATUS_EMPTY = '(空白)'
+
 export async function listCustomersByArea(f: {
   city?: string; district?: string; salesperson?: string
   type?: string; status?: string; devStage?: string
   unassignedOnly?: boolean   // true = 只撈「負責業務空白」的未分派池(忽略 salesperson)
+  excludeClosed?: boolean    // 排除已歇業
+  excludePersonal?: boolean  // 排除客戶類型=個人
 }): Promise<AreaCustomer[]> {
   if (!DB.customers) return []
   const clauses: any[] = []
@@ -345,11 +357,20 @@ export async function listCustomersByArea(f: {
       ? { property: '負責業務', select: { equals: names[0] } }
       : { or: names.map((name) => ({ property: '負責業務', select: { equals: name } })) })
   }
-  if (f.type)   clauses.push({ property: '客戶類型', select: { equals: f.type } })
-  if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
+  // '其他' 是「非三大類型」,Notion 的 select equals 表達不了,改在查詢後過濾
+  const otherTypes = f.type === '其他'
+  if (f.type && !otherTypes) clauses.push({ property: '客戶類型', select: { equals: f.type } })
+  if (f.status === AREA_STATUS_EMPTY) clauses.push({ property: '機構狀態', select: { is_empty: true } })
+  else if (f.status) clauses.push({ property: '機構狀態', select: { equals: f.status } })
   if (f.devStage) clauses.push({ property: '開發階段', select: { equals: f.devStage } })
   const filter = clauses.length === 0 ? undefined : clauses.length === 1 ? clauses[0] : { and: clauses }
-  return queryAreaCustomers(filter)
+
+  const rows = await queryAreaCustomers(filter)
+  return rows.filter((c) =>
+    (!otherTypes || !(AREA_MAIN_TYPES as readonly string[]).includes(c.type)) &&
+    (!f.excludeClosed || c.status !== '已歇業') &&
+    (!f.excludePersonal || c.type !== '個人')
+  )
 }
 
 const AREA_BREAKDOWN_INACTIVE = new Set(['已歇業', '停業', '撤銷'])

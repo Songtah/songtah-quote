@@ -296,27 +296,27 @@ export default function TerritoryContent({
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibleTerritories.map((territory) => {
           const stats = statsFor(territory)
           const mayClaim = canClaim && (canAssign || (!!territory.salespersonId && territory.salespersonId === currentUserId))
           const mayReport = canAssign || (!!territory.salespersonId && territory.salespersonId === currentUserId)
           return (
-            <article key={territory.id} className="card-soft card-soft-hover p-5 sm:p-6">
+            <article key={territory.id} className="card-soft card-soft-hover p-4">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-bold text-stone-800">{territory.city}{territory.district}</h3>
+                    <h3 className="text-base font-bold text-stone-800">{territory.city}{territory.district}</h3>
                     <StatusChip status={territory.status} />
                   </div>
-                  <p className="mt-1 text-sm text-stone-500">負責開發：<span className="font-semibold text-stone-700">{territory.salesperson}</span></p>
+                  <p className="mt-0.5 text-xs text-stone-500">負責開發：<span className="font-semibold text-stone-700">{territory.salesperson}</span></p>
                 </div>
                 {canAssign && (
-                  <button onClick={() => setEditTarget(territory)} className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">管理</button>
+                  <button onClick={() => setEditTarget(territory)} className="shrink-0 px-3 py-1 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">管理</button>
                 )}
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-4 gap-1.5">
                 <SmallMetric label="市場" value={stats.total} />
                 <SmallMetric label="未認領" value={stats.unassigned} accent />
                 <SmallMetric label="開發中" value={stats.developing} />
@@ -324,24 +324,24 @@ export default function TerritoryContent({
               </div>
 
               {(territory.startDate || territory.note || (stats.otherOwned ?? 0) > 0) && (
-                <div className="mt-4 space-y-1 text-xs text-stone-400">
+                <div className="mt-2.5 space-y-0.5 text-[11px] text-stone-400">
                   {territory.startDate && <p>生效日：{territory.startDate}</p>}
-                  {territory.note && <p className="line-clamp-2">備註：{territory.note}</p>}
+                  {territory.note && <p className="line-clamp-1">備註：{territory.note}</p>}
                   {(stats.otherOwned ?? 0) > 0 && <p>此區另有 {stats.otherOwned ?? 0} 家由其他業務／公司負責，保持原歸屬。</p>}
                 </div>
               )}
 
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <div className="mt-3 flex gap-2">
                 {mayClaim && territory.status !== '暫停' ? (
-                  <button onClick={() => setClaimTarget(territory)} className="flex-1 px-5 py-2.5 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
-                    查看未開發名單 {(stats.unassigned ?? 0) > 0 ? `(${stats.unassigned})` : ''}
+                  <button onClick={() => setClaimTarget(territory)} className="flex-1 px-3 py-2 rounded-full text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
+                    未開發名單 {(stats.unassigned ?? 0) > 0 ? `(${stats.unassigned})` : ''}
                   </button>
                 ) : (
-                  <div className="flex-1 rounded-2xl bg-stone-50 px-4 py-2.5 text-center text-xs text-stone-400">
-                    {territory.status === '暫停' ? '轄區已暫停認領' : '只有負責業務可認領此區客戶'}
+                  <div className="flex-1 rounded-full bg-stone-50 px-3 py-2 text-center text-[11px] text-stone-400">
+                    {territory.status === '暫停' ? '已暫停認領' : '僅負責業務可認領'}
                   </div>
                 )}
-                {mayReport && <Link href={`/bd/territories/${territory.id}/report${typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : ''}`} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 rounded-full text-center text-sm font-semibold border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">匯出報表</Link>}
+                {mayReport && <Link href={`/bd/territories/${territory.id}/report${typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : ''}`} target="_blank" rel="noopener noreferrer" className="shrink-0 px-3 py-2 rounded-full text-center text-xs font-semibold border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">報表</Link>}
               </div>
             </article>
           )
@@ -392,7 +392,7 @@ function Metric({ label, value, accent = false }: { label: string; value: number
 }
 
 function SmallMetric({ label, value, accent = false }: { label: string; value: number | null; accent?: boolean }) {
-  return <div className="rounded-2xl bg-stone-50/80 px-3 py-3"><p className={`text-lg font-bold ${accent ? 'text-brand-600' : 'text-stone-700'}`}>{value === null ? '—' : value.toLocaleString()}</p><p className="text-[11px] text-stone-400">{label}</p></div>
+  return <div className="rounded-xl bg-stone-50/80 px-2 py-1.5 text-center"><p className={`text-base font-bold leading-tight ${accent ? 'text-brand-600' : 'text-stone-700'}`}>{value === null ? '—' : value.toLocaleString()}</p><p className="text-[10px] text-stone-400">{label}</p></div>
 }
 
 function StatusChip({ status }: { status: string }) {
