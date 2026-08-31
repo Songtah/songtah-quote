@@ -131,13 +131,25 @@ export default function TerritoryContent({
     ...rows.map((row) => row.salesperson).filter((name) => name && !EXCLUDED_OWNERS.has(name)),
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-TW')), [accountNames, rows, territories])
 
+  /**
+   * 轄區四格指標一律取自客戶主檔(rows),四個數字同源、可相加:
+   *   建檔 = 未認領 + 本人持有(含開發中/已成交) + 他人或公司持有
+   *
+   * 為什麼不再用 BAS 快照當「市場」:BAS 只登錄領照機構,客戶主檔另有大量
+   * BAS 不會出現的對象(無機構代碼的牙體技術所、個人、同業)。兩者混在同一排
+   * 數字裡會自相矛盾——實測 182 個轄區有 53 個出現「未認領 > 市場」
+   * (例:屏東縣潮州鎮 BAS 15 家、客戶主檔 19 家,未認領就有 19)。
+   * BAS 數字本身仍有價值(這區有幾家領照機構),改列為卡片下方的獨立參考值,
+   * 不參與加減。
+   */
   const statsFor = useCallback((territory: Territory) => {
     const areaRows = rows.filter((row) =>
       row.city === territory.city && row.district === territory.district && !INACTIVE_STATUS.has(row.status) &&
       (!typeFilter || row.type === typeFilter)
     )
     return {
-      total: marketTotals.get(`${territory.city}|${territory.district}`) ?? areaRows.reduce((sum, row) => sum + row.count, 0),
+      total: statsReady ? areaRows.reduce((sum, row) => sum + row.count, 0) : null,
+      basMarket: marketTotals.get(`${territory.city}|${territory.district}`) ?? null,
       unassigned: statsReady ? areaRows.filter((row) => !row.salesperson).reduce((sum, row) => sum + row.count, 0) : null,
       developing: statsReady ? areaRows.filter((row) =>
         row.salesperson === territory.salesperson && row.devStage && !['已成交', '流失'].includes(row.devStage)
@@ -157,12 +169,13 @@ export default function TerritoryContent({
 
   const summary = useMemo(() => visibleTerritories.reduce((result, territory) => {
     const stats = statsFor(territory)
-    result.total += stats.total
+    result.total += stats.total ?? 0
+    result.basMarket += stats.basMarket ?? 0
     result.unassigned += stats.unassigned ?? 0
     result.developing += stats.developing ?? 0
     result.converted += stats.converted ?? 0
     return result
-  }, { total: 0, unassigned: 0, developing: 0, converted: 0 }), [statsFor, visibleTerritories])
+  }, { total: 0, basMarket: 0, unassigned: 0, developing: 0, converted: 0 }), [statsFor, visibleTerritories])
 
   const maintenanceCounts = useMemo(() => new Map(maintenanceAccounts.map((account) => [
     account.id,
@@ -206,6 +219,8 @@ export default function TerritoryContent({
               <h2 className="mt-2 text-xl sm:text-2xl font-bold text-stone-800">先劃分市場，再由業務逐筆認領</h2>
               <p className="mt-2 text-sm leading-6 text-stone-500">
                 新增轄區只指定誰負責開發這個地區，不會替任何客戶掛名，也不會改變客戶與轉化統計。
+                下方數字一律以客戶主檔為準：<b className="text-stone-600">已建檔 = 未認領 ＋ 本人持有 ＋ 他人或公司持有</b>；
+                衛福部 BAS 的領照機構數另列在各卡片下方作為參考，兩者對象範圍不同，不可相減。
               </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row lg:ml-auto lg:w-auto">
@@ -228,7 +243,7 @@ export default function TerritoryContent({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-px bg-stone-900/[0.05] sm:grid-cols-4">
-          <Metric label="市場客戶" value={summary.total} />
+          <Metric label="已建檔客戶" value={statsReady ? summary.total : null} />
           <Metric label="尚未認領" value={statsReady ? summary.unassigned : null} accent />
           <Metric label="開發中" value={statsReady ? summary.developing : null} />
           <Metric label="已成交階段" value={statsReady ? summary.converted : null} />
@@ -261,7 +276,7 @@ export default function TerritoryContent({
         </div>
         <p className="text-sm text-stone-500 sm:pb-2">
           顯示 {visibleTerritories.length} 個有效轄區
-          {updatedAt && <span className="ml-2 text-xs text-stone-400">市場資料 {updatedAt.slice(0, 10)}</span>}
+          {updatedAt && <span className="ml-2 text-xs text-stone-400">客戶資料 {updatedAt.slice(0, 10)}</span>}
         </p>
         <div className="flex w-full gap-1 overflow-x-auto sm:ml-auto sm:w-auto sm:pb-1">
           {CUSTOMER_TYPES.map((option) => (
@@ -317,14 +332,15 @@ export default function TerritoryContent({
               </div>
 
               <div className="mt-3 grid grid-cols-4 gap-1.5">
-                <SmallMetric label="市場" value={stats.total} />
+                <SmallMetric label="已建檔" value={stats.total} />
                 <SmallMetric label="未認領" value={stats.unassigned} accent />
                 <SmallMetric label="開發中" value={stats.developing} />
                 <SmallMetric label="已成交" value={stats.converted} />
               </div>
 
-              {(territory.startDate || territory.note || (stats.otherOwned ?? 0) > 0) && (
+              {(territory.startDate || territory.note || (stats.otherOwned ?? 0) > 0 || stats.basMarket !== null) && (
                 <div className="mt-2.5 space-y-0.5 text-[11px] text-stone-400">
+                  {stats.basMarket !== null && <p>BAS 領照機構 {stats.basMarket.toLocaleString()} 家（參考值，不含個人／同業／未登記技術所）</p>}
                   {territory.startDate && <p>生效日：{territory.startDate}</p>}
                   {territory.note && <p className="line-clamp-1">備註：{territory.note}</p>}
                   {(stats.otherOwned ?? 0) > 0 && <p>此區另有 {stats.otherOwned ?? 0} 家由其他業務／公司負責，保持原歸屬。</p>}
