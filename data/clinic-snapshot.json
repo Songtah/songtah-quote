@@ -1,29 +1,19 @@
 {
   "month": "2026-09",
-  "fetchedAt": "2026-09-01T04:17:59.798Z",
+  "fetchedAt": "2026-09-01T14:02:35.195Z",
   "source": "mohw-bas",
   "totalClinics": 7151,
   "totalLabs": 1103,
   "totalHospitals": 187,
   "labsStale": false,
-  "pendingRemaining": 2,
-  "prevTotalClinics": 7150,
-  "prevTotalLabs": 1102,
+  "pendingRemaining": 0,
+  "prevTotalClinics": 7151,
+  "prevTotalLabs": 1103,
   "prevTotalHospitals": 187,
   "totalCustomers": 8204,
   "newCodes": [
-    "3701174097",
-    "3703070074",
-    "3703150111",
-    "3703290629",
-    "3732014713",
-    "3732023838",
-    "3732081956",
-    "2Y03290131",
-    "心築牙體技術所__新竹縣__竹北市",
-    "2Y39060029",
-    "2Y03150089",
-    "2Y31030289"
+    "2Y31170064",
+    "2Y33050092"
   ],
   "codes": {
     "1101010012": {
@@ -20918,7 +20908,7 @@
     "3705280069": {
       "source": "mohw",
       "kind": "牙醫診所",
-      "name": "國泰微笑牙醫診所",
+      "name": "遠東聯勝牙醫診所",
       "address": "臺南市歸仁區",
       "specialty": "",
       "termDate": "",
@@ -68201,14 +68191,14 @@
       "termDate": "",
       "status": "開業"
     },
-    "高登牙體技術所__新北市__林口區": {
+    "2Y31170064": {
       "source": "mohw",
       "kind": "牙體技術所",
       "name": "高登牙體技術所",
       "address": "新北市林口區",
       "specialty": "",
       "termDate": "",
-      "status": ""
+      "status": "開業"
     },
     "2Y03290408": {
       "source": "mohw",
@@ -71711,14 +71701,14 @@
       "termDate": "",
       "status": "開業"
     },
-    "心築牙體技術所__新竹縣__竹北市": {
+    "2Y33050092": {
       "source": "mohw",
       "kind": "牙體技術所",
       "name": "心築牙體技術所",
       "address": "新竹縣竹北市",
       "specialty": "",
       "termDate": "",
-      "status": ""
+      "status": "開業"
     },
     "2Y03090177": {
       "source": "mohw",

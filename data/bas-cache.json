@@ -68134,5 +68134,21 @@
   "address": "新北市永和區",
   "kind": "牙體技術所",
   "fetchedAt": "2026-09-01T04:17:59.798Z"
+ },
+ "8CltcxJ8YrNBdISStdabTw%253D%253D__asq39kEMLqqxBss2pM1RmQ%253D%253D": {
+  "code": "2Y31170064",
+  "status": "開業",
+  "name": "高登牙體技術所",
+  "address": "新北市林口區",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-09-01T14:02:35.195Z"
+ },
+ "6SF64FZmWDdusr0MkS6Plw%253D%253D__HdgB37CB2CdLMtJZywnPbA%253D%253D": {
+  "code": "2Y33050092",
+  "status": "開業",
+  "name": "心築牙體技術所",
+  "address": "新竹縣竹北市",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-09-01T14:02:35.195Z"
  }
 }
