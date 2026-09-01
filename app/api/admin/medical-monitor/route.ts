@@ -5,11 +5,17 @@
  *
  * 狀態 1 — normalOperating   ：客戶有代碼，快照查到，資料一致，正常營業
  * 狀態 2 — newOpenings       ：快照有機構代碼，但公司客戶 DB 無此代碼 → 新開業候選
- * 狀態 3 — suspectedClosures ：客戶有代碼，但最新醫事資料查無該代碼且快照也無同名同區資料 → 歇業候選
+ * 狀態 3 — suspectedClosures ：客戶有可比對的代碼，但最新醫事資料查無該代碼且快照也無同名同區資料 → 歇業候選
  *                              （不再用 NHI 特約終止判定；開業/歇業以衛福部開業狀態為準，
  *                                由前端「查衛福部」即時確認後人工更新）
  * 狀態 5 — selfManagedCustomers：客戶無機構代碼 → 未納入醫事監控
  * 狀態 6 — inconsistentData  ：代碼相符，但名稱/縣市有差異 → 提供人工確認
+ * 狀態 7 — academicInstitutions：學術機構（校名命中名錄／客戶類型=學術機構／4 碼學術代碼）
+ *                              → 不在 BAS 體系，永遠不做歇業判定
+ * 狀態 8 — invalidCodes      ：機構代碼不是代碼（如「未立案」）→ 代碼待補正，不是歇業
+ *
+ * 判定順序（先中先出局）：學術機構 → 代碼待補正 → 代碼命中快照 → 同名同區 fallback
+ *                        → 換照新碼 → 已人工結案 → 醫院待確認 → 歇業候選
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,6 +24,7 @@ import { getCustomersWithCodes, getCachedMonitorResult, setCachedMonitorResult, 
 import { readFileSync, existsSync } from 'fs'
 import path from 'path'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { classifyInstitutionCode } from '@/lib/institution-code'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -172,6 +179,29 @@ export interface MonitorStats {
   inconsistentData:    number
   codeChanged:         number
   hospitalUnverified:  number
+  academicInstitutions: number
+  invalidCodes:        number
+}
+
+/** 學術機構：不在 BAS 體系，列出供確認歸類是否正確，不做歇業判定 */
+export interface AcademicInstitution {
+  customerId: string; customerName: string
+  customerCity: string; customerDistrict: string
+  customerType: string; customerStatus: string
+  institutionCode: string
+  matchedBy: 'schoolDirectory' | 'customerType' | 'academicCode'
+}
+
+/** 代碼待補正：機構代碼欄填的不是代碼，無法比對 */
+export interface InvalidCode {
+  customerId: string; customerName: string
+  customerCity: string; customerDistrict: string
+  customerType: string; customerStatus: string
+  institutionCode: string
+  /** BAS 同名同區查到的代碼，可直接補上（沒查到就是空字串） */
+  suggestedCode: string
+  suggestedName: string
+  suggestedAddress: string
 }
 
 export interface MonitorResult {
@@ -188,6 +218,8 @@ export interface MonitorResult {
   inconsistentData:      InconsistentData[]
   codeChanged:           CodeChanged[]
   hospitalUnverified:    HospitalUnverified[]
+  academicInstitutions:  AcademicInstitution[]
+  invalidCodes:          InvalidCode[]
   snapshotMonth:   string
   snapshotFetched: string
   computedAt:      string   // 本結果計算時間（ISO）；供「上次比對」顯示，伺服器端共用
@@ -331,7 +363,7 @@ async function computeMonitor(): Promise<MonitorResult> {
       hasSnapshot: false,
       stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      suspectedClosures: [], codeNotFound: [],
+      suspectedClosures: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
     }
@@ -420,22 +452,50 @@ async function computeMonitor(): Promise<MonitorResult> {
   const inconsistentData:  InconsistentData[]  = []
   const codeChanged:       CodeChanged[]       = []
   const hospitalUnverified: HospitalUnverified[] = []
-  const isHospital = (c: { type: string; name: string }) => c.type === '醫院' || /醫院/.test(c.name)
+  const academicInstitutions: AcademicInstitution[] = []
+  const invalidCodes:      InvalidCode[]       = []
+  // 醫院豁免以「客戶類型」為準；名稱只在類型空白時當備援。
+  // 原本無條件 /醫院/.test(name) 會讓任何名字帶「醫院」的客戶都跳過歇業判定
+  // （目前資料剛好 0 筆，但這是等著發生的誤放）。
+  const isHospital = (c: { type: string; name: string }) =>
+    c.type === '醫院' || (!c.type && /醫院/.test(c.name))
 
   for (const c of customersWithCode) {
     const code  = c.institutionCode.trim()
+    const codeKind = classifyInstitutionCode(code)
 
-    // 學校客戶：以「校名」比對教育部名錄（崧達學校代碼與名錄代碼非同系統，故以名稱為準）
-    // 校名比中 → 視為正常營業（學校），不因代碼對不到而誤判歇業
+    // ① 學術機構：不在 BAS 體系，永遠不做歇業判定。
+    //    三種認定任一成立即可——校名命中教育部名錄／客戶類型=學術機構／4 碼學術代碼。
+    //    原本只靠名錄比對，「國防醫學大學－牙醫學系」不在名錄就被誤判成歇業。
     const namedSchool = schoolByName.get(schoolNameKey(c.name))
-    if (namedSchool) {
-      normalOperating.push({
+    const academicBy: AcademicInstitution['matchedBy'] | null =
+      namedSchool ? 'schoolDirectory'
+      : c.type === '學術機構' ? 'customerType'
+      : codeKind === 'academic' ? 'academicCode'
+      : null
+    if (academicBy) {
+      academicInstitutions.push({
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        institutionCode: code, matchedBy: academicBy,
+      })
+      continue
+    }
+
+    // ② 代碼待補正：欄位填的不是代碼（如「未立案」），比對不可能成立，不是歇業。
+    //    順便用同名同區找出 BAS 的正確代碼給人工補（這筆資訊原本掛在「更換代碼」，
+    //    語意不對但確實有用，搬過來時不能弄丟）。
+    if (codeKind === 'invalid') {
+      const guess = findReplacement(c.name, c.city, c.district, code)
+      invalidCodes.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
         institutionCode: code,
-        snapshotName: namedSchool.name, snapshotKind: '學校',
-        snapshotAddress: namedSchool.address, snapshotTermDate: '',
+        suggestedCode: guess?.code ?? '',
+        suggestedName: guess?.entry.name ?? '',
+        suggestedAddress: guess?.entry.address ?? '',
       })
       continue
     }
@@ -605,6 +665,8 @@ async function computeMonitor(): Promise<MonitorResult> {
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
     newOpeningExcludedExisting: excludedExisting,
     suspectedClosures:   suspectedClosures.length,
+    academicInstitutions: academicInstitutions.length,
+    invalidCodes:        invalidCodes.length,
     codeNotFound:        0,
     inconsistentData:    inconsistentData.length,
     codeChanged:         codeChanged.length,
@@ -620,6 +682,8 @@ async function computeMonitor(): Promise<MonitorResult> {
       hospitals: newHospital.slice(0, 100),
     },
     suspectedClosures,
+    academicInstitutions,
+    invalidCodes,
     codeNotFound:         [],
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
     inconsistentData,

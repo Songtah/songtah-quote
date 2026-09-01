@@ -5,6 +5,7 @@ import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
+  AcademicInstitution, InvalidCode,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -197,10 +198,11 @@ function StatusEditor({ customerId, current, onResolved }: {
 }
 
 // ── 類別彈窗（摘要卡點擊 → 卡片視窗顯示該類清單）──────────────────────────────────
-type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged'
+type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode'
 const CATEGORY_TITLE: Record<CategoryKey, string> = {
   closure: '⛔ 疑似歇業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
   inconsistent: '🔄 資料不一致', selfmanaged: '👤 公司自建',
+  academic: '🎓 學術機構', invalidcode: '⚠️ 代碼待補正',
 }
 
 function CategoryModal({ category, closureItems, hospitalItems, result, onClose, onResolved }: {
@@ -225,6 +227,8 @@ function CategoryModal({ category, closureItems, hospitalItems, result, onClose,
           {category === 'codechange'   && <CodeChangedTab items={result.codeChanged ?? []} />}
           {category === 'inconsistent' && <InconsistentDataTab items={result.inconsistentData} />}
           {category === 'selfmanaged'  && <SelfManagedTab items={result.selfManagedCustomers} />}
+          {category === 'academic'     && <AcademicTab items={result.academicInstitutions ?? []} />}
+          {category === 'invalidcode'  && <InvalidCodeTab items={result.invalidCodes ?? []} onResolved={onResolved} />}
         </div>
       </div>
     </div>
@@ -440,6 +444,92 @@ function SuspectedClosuresTab({ items, onResolved }: {
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── 狀態 7：學術機構 Tab ──────────────────────────────────────────────────────
+
+const ACADEMIC_MATCH_LABEL: Record<AcademicInstitution['matchedBy'], string> = {
+  schoolDirectory: '校名命中教育部名錄',
+  customerType: '客戶類型＝學術機構',
+  academicCode: '4 碼學術代碼',
+}
+
+function AcademicTab({ items }: { items: AcademicInstitution[] }) {
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">🎓</div><p>目前沒有學術機構客戶</p></div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
+        🎓 大學牙醫系、專校牙體技術科等學術機構<span className="text-stone-400">不在衛福部 BAS 院所體系，永遠不做歇業判定。</span>
+        若某筆其實是診所或技工所被誤歸此類，請到客戶頁修正客戶類型與機構代碼。
+      </div>
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
+        {items.map(item => (
+          <div key={item.customerId} className="px-4 py-3 flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                <span className="text-[10px] font-mono text-stone-400">{item.institutionCode || '無代碼'}</span>
+              </div>
+              <div className="text-xs text-stone-400 mt-0.5">
+                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                {` · 認定依據：${ACADEMIC_MATCH_LABEL[item.matchedBy]}`}
+              </div>
+            </div>
+            <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── 狀態 8：代碼待補正 Tab ────────────────────────────────────────────────────
+
+function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolved?: (id: string, status: string) => void }) {
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">✅</div><p>所有機構代碼格式都正確</p></div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+        ⚠️ 這些客戶的「機構代碼」欄填的不是代碼（例如「未立案」），無法與衛福部比對。
+        <span className="text-amber-600">在補上正確代碼之前，這些機構不會被納入歇業判定——請到客戶頁補正，或確認其為未立案機構後改用「公司自建」（清空代碼）。</span>
+      </div>
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
+        {items.map(item => (
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">{item.institutionCode}</span>
+                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
+                </div>
+                <div className="text-xs text-stone-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  {item.customerStatus && ` · 目前：${item.customerStatus}`}
+                </div>
+              </div>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+            </div>
+            {item.suggestedCode && (
+              <div className="mt-2 text-xs bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-emerald-800">
+                衛福部同名同區查到代碼 <b className="font-mono">{item.suggestedCode}</b>
+                <span className="text-emerald-600"> · {item.suggestedName}{item.suggestedAddress && `（${item.suggestedAddress}）`}</span>
+                <span className="block text-emerald-600 mt-0.5">確認是同一家後，可到客戶頁把機構代碼改成這組。</span>
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <MohwLookupButton name={item.customerName} code={item.suggestedCode} customerStatus={item.customerStatus} />
+              <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
             </div>
           </div>
         ))}
@@ -786,6 +876,8 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     inconsistentData: readNumber(value.inconsistentData),
     codeChanged: readNumber(value.codeChanged),
     hospitalUnverified: readNumber(value.hospitalUnverified),
+    academicInstitutions: readNumber(value.academicInstitutions),
+    invalidCodes: readNumber(value.invalidCodes),
   }
 }
 
@@ -805,6 +897,9 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     return null
   }
   const hospitalUnverified = isArray(value.hospitalUnverified) ? (value.hospitalUnverified as HospitalUnverified[]) : []
+  // 這兩桶是後加的;舊的伺服器快取沒有,以空陣列降級而不是整份 parse 失敗
+  const academicInstitutions = isArray(value.academicInstitutions) ? (value.academicInstitutions as AcademicInstitution[]) : []
+  const invalidCodes = isArray(value.invalidCodes) ? (value.invalidCodes as InvalidCode[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -823,6 +918,8 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     inconsistentData: value.inconsistentData as InconsistentData[],
     codeChanged: value.codeChanged as CodeChanged[],
     hospitalUnverified,
+    academicInstitutions,
+    invalidCodes,
     snapshotMonth: readString(value.snapshotMonth),
     snapshotFetched: readString(value.snapshotFetched),
     computedAt: readString(value.computedAt),
@@ -1123,10 +1220,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
               <StatCard label="🏥 醫院待確認"  value={hospitalItems.length} sub="醫院在營業、牙科未登記" accent="text-orange-600" onClick={() => setActiveCategory('hospital')} />
               <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" onClick={() => setActiveCategory('inconsistent')} />
+              <StatCard label="🎓 學術機構"    value={stats.academicInstitutions} sub="不在 BAS 體系，不判歇業" onClick={() => setActiveCategory('academic')} />
+              <StatCard label="⚠️ 代碼待補正"  value={stats.invalidCodes} sub="代碼欄不是代碼，無法比對" accent="text-amber-600" onClick={() => setActiveCategory('invalidcode')} />
               <StatCard label="👤 公司自建"    value={stats.customerNoCode} sub="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
             </div>
             <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
-              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，另列「醫院待確認」。
+              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。
+              判定依序排除：<b>學術機構</b>（大學牙醫系等，本來就不在 BAS）、<b>代碼待補正</b>（欄位填「未立案」之類無法比對）、代碼命中、同名同區、換照新碼、已人工結案、醫院待確認，全都不中才列為疑似歇業。
+              醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，故另列「醫院待確認」。
             </p>
           </div>
         </>
