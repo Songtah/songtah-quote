@@ -20,6 +20,7 @@ import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
 import { CrossSupportMyPanel } from '@/components/CrossSupportMyPanel'
 import { CollabPointsPanel } from '@/components/CollabPointsPanel'
+import { ClaimSuggestionsPanel } from '@/components/ClaimSuggestionsPanel'
 import type { TodayDashboardData, TodayWorkItem } from '@/lib/dashboard-today'
 
 type VisibleModules = Partial<Record<'bd' | 'crm' | 'quote' | 'orders' | 'products' | 'rma' | 'marketing' | 'clinicMonitor' | 'admin' | 'accounts' | 'audit', boolean>>
@@ -177,6 +178,12 @@ export function SalesTodayDashboard({
           {(showPerformance || showTeamPerformance) && (
             <section className="mt-6" aria-label="週月季年業績統計">
               <SalesPerformancePeriods />
+            </section>
+          )}
+
+          {visibleModules.bd && (
+            <section className="mt-6" aria-label="待認領建議">
+              <ClaimSuggestionsPanel />
             </section>
           )}
 

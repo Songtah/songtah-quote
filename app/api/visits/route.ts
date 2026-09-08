@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listVisits, createVisit } from '@/lib/system-notion'
+import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
 import { bumpContactedByCustomer } from '@/lib/notion/campaigns'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { advanceCustomerDevStage } from '@/lib/notion/customers'
@@ -63,6 +64,15 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
       nextFollowUpDate: nextFollowUpDate ?? '',
     })
 
+    // 第一層自動認領:轄區內且無人負責才寫,其餘留給「待認領建議」由人確認。
+    // 這裡的客戶是使用者從選單挑的,比對確定,故 unambiguous=true。
+    let autoClaim: { claimed: boolean; reason: string } = { claimed: false, reason: 'no-customer' }
+    if (customerId && scopedSalesperson) {
+      autoClaim = await applyAutoClaimForVisit({
+        salesperson: scopedSalesperson, customerId, unambiguous: true,
+      })
+    }
+
     // 追蹤名單連動:此客戶在進行中名單裡的「未聯絡」→「已聯絡」(fire-and-forget,不影響建檔)
     if (customerId) {
       bumpContactedByCustomer(customerId).catch((e) => console.warn('campaign bump error:', e))
@@ -84,10 +94,10 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
       summary: `新增客情紀錄：${visit.customerName}`,
       actor: getAuditActor(session),
       request: getAuditRequestContext(req),
-      after: visit,
+      after: { ...visit, autoClaimed: autoClaim.claimed, autoClaimReason: autoClaim.reason },
     }).catch((error) => console.error('audit createVisit error:', error))
 
-    return NextResponse.json(visit, { status: 201 })
+    return NextResponse.json({ ...visit, autoClaim }, { status: 201 })
   } catch (error) {
     console.error('createVisit error:', error)
     return NextResponse.json({ error: '建立客情紀錄失敗' }, { status: 500 })

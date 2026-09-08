@@ -563,6 +563,45 @@ export async function scanVisitRecency(): Promise<Record<string, string>> {
 }
 
 /**
+ * 全掃拜訪庫，回傳 customerId(去連字號) → 各業務對這家的回報次數與最後回報日。
+ *
+ * 供組合層 visit-claim 判定「這是支援還是在開發」——次數是兩者的分界線
+ * （實測轄區外未認領的 239 組裡，192 組只回報過 1 次），
+ * 而「有幾位不同業務拜訪過」是歸屬爭議的訊號。
+ * 與 scanVisitRecency 一樣是全掃，走快取層每晚重算，不要在請求路徑直接呼叫。
+ */
+export type VisitClaimSignal = { visitors: Record<string, number>; lastDate: string }
+
+export async function scanVisitClaimSignals(): Promise<Record<string, VisitClaimSignal>> {
+  const map: Record<string, VisitClaimSignal> = {}
+  let total = 0
+  let cur: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('scanVisitClaimSignals', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      total++
+      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+      if (!relId) continue
+      const who = getSelect(page, '業務人員') || getText(page, '業務人員')
+      if (!who) continue
+      const date = getDate(page, '日期')
+      const hit = map[relId] ?? (map[relId] = { visitors: {}, lastDate: '' })
+      hit.visitors[who] = (hit.visitors[who] ?? 0) + 1
+      if (date > hit.lastDate) hit.lastDate = date
+    }
+    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cur)
+  if (total >= 9500) console.warn(`scanVisitClaimSignals: 拜訪庫已達 ${total} 筆,逼近 Notion 10k 截斷上限,須改分區掃描`)
+  return map
+}
+
+/**
  * 輕量拜訪計次：只取「日期＋業務人員」，不解析客戶 relation。
  *
  * listVisits({ fetchAll }) 會為每筆解析客戶與產品 relation，做團隊年度統計

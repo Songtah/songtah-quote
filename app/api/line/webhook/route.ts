@@ -17,6 +17,7 @@ import { waitUntil } from '@vercel/functions'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
+import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
 export const dynamic = 'force-dynamic'
@@ -136,6 +137,8 @@ async function processEvents(events: any[]) {
           let customerId: string | undefined
           const matches = await searchSystemCustomers(visit.customerName)
           if (matches.length > 0) customerId = matches[0].id
+          // 只有唯一命中才算比對確定；多筆同名時不觸發自動認領（見 visit-claim 第一層）
+          const unambiguousMatch = matches.length === 1
 
           // 確認 customerReaction 在系統選項內，否則清空
           const validReaction = formOptions.customerReactions.includes(visit.customerReaction)
@@ -169,8 +172,14 @@ async function processEvents(events: any[]) {
             interestedProductIds: [],
           })
 
+          // 第一層：轄區內且無人負責 → 直接認領；其餘情況留給每晚重算的「待認領建議」
+          const claim = customerId
+            ? await applyAutoClaimForVisit({ salesperson, customerId, unambiguous: unambiguousMatch })
+            : { claimed: false, reason: 'customer-unmatched' }
+
           console.log(
-            `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}`
+            `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}` +
+            (claim.claimed ? ` · 已自動認領（${claim.reason}）` : ` · 未認領（${claim.reason}）`)
           )
         } catch (err) {
           console.error(`[LINE Webhook] createVisit error (${visit.customerName}):`, err)
