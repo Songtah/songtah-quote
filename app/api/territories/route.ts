@@ -8,6 +8,7 @@ import {
 } from '@/lib/notion/territories'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { invalidateClaimContext, invalidateClaimSuggestions } from '@/lib/notion/visit-claim'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -75,6 +76,9 @@ export const POST = withApiAuth({ roles: ['中央管理', '總經理'] }, async 
       startDate: startDate || undefined, note: note || undefined,
       creator: session.user?.name ?? '',
     })
+    // 轄區是認領判定的依據，改完必須讓 claim 快取失效，否則新轄區最多 10 分鐘後才生效
+    invalidateClaimContext()
+    await invalidateClaimSuggestions()
     await logAuditEvent({
       module: 'clinic_monitor', action: 'create', entityType: 'territory',
       entityId: item.id, entityTitle: item.name,

@@ -47,16 +47,57 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
 
     const body = await req.json()
     const action = String(body.action ?? '')
+    const dryRun = body.dryRun === true
     const customerId = String(body.customerId ?? '').trim()
     const salesperson = String(body.salesperson ?? '').trim() || me
     const note = String(body.note ?? '').trim()
-    if (!customerId) return NextResponse.json({ error: '缺少客戶' }, { status: 400 })
-    if (action !== 'claim' && action !== 'support') {
-      return NextResponse.json({ error: '動作必須是 claim 或 support' }, { status: 400 })
+    if (!customerId && action !== 'claim-all-in-territory') {
+      return NextResponse.json({ error: '缺少客戶' }, { status: 400 })
+    }
+    if (action !== 'claim' && action !== 'support' && action !== 'claim-all-in-territory') {
+      return NextResponse.json({ error: '動作必須是 claim、support 或 claim-all-in-territory' }, { status: 400 })
     }
     // 業務只能處理自己的建議
     if (salesperson !== me && !isManager(session)) {
       return NextResponse.json({ error: '只能處理自己的待認領建議' }, { status: 403 })
+    }
+
+    // ── 批次認領「轄區內待辦」──────────────────────────────────────────────
+    // 只處理 in-territory-backlog：轄區比對是確定的，不涉及判斷。
+    // 有爭議者（他人也拜訪過）一律排除，仍需逐筆由主管處理。
+    // 比照 /api/territories/[id]/claim：先 dryRun 預覽再寫入，單次上限 100 家。
+    if (action === 'claim-all-in-territory') {
+      const pool = (await listClaimSuggestions(salesperson))
+        .filter((s) => s.tier === 'in-territory-backlog' && !s.contested)
+      if (pool.length === 0) {
+        return NextResponse.json({ error: '沒有可批次認領的轄區內待辦' }, { status: 409 })
+      }
+      const batch = pool.slice(0, 100)
+      if (dryRun) {
+        return NextResponse.json({
+          dryRun: true, total: pool.length, willClaim: batch.length,
+          excludedContested: (await listClaimSuggestions(salesperson))
+            .filter((s) => s.tier === 'in-territory-backlog' && s.contested).length,
+          sample: batch.slice(0, 20).map((s) => ({
+            name: s.customerName, area: `${s.customerCity}${s.customerDistrict}`, visitCount: s.visitCount,
+          })),
+        })
+      }
+      // assignSalesperson 逐筆重讀、只寫負責業務空白者，不需要在這裡再擋一次
+      const ids = batch.map((s) => s.customerId)
+      const result = await assignSalesperson(ids, salesperson)
+      await invalidateClaimSuggestions()
+      await logAuditEvent({
+        module: 'bd', action: 'update', entityType: 'claim-suggestion',
+        entityId: `bulk:${salesperson}`, entityTitle: `${salesperson} 批次認領轄區內待辦`,
+        summary: `${salesperson} 批次認領轄區內待辦 ${result.assigned} 家（送出 ${ids.length} 家）`,
+        actor: getAuditActor(session), request: getAuditRequestContext(req),
+        after: { assigned: result.assigned, skipped: result.skipped.length, remaining: pool.length - batch.length },
+      }).catch(() => {})
+      return NextResponse.json({
+        ok: true, action, assigned: result.assigned,
+        skipped: result.skipped.length, remaining: Math.max(0, pool.length - batch.length),
+      })
     }
 
     const suggestion = (await listClaimSuggestions(salesperson))

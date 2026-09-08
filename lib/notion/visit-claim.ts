@@ -28,6 +28,14 @@
  *
  * 注意：目前只有 4/8 位業務設了轄區（Gus 105 區、Hank 40、Eason 24、Duncan 13），
  * 其餘業務一律走第二層。補齊轄區設定後第一層才會對全體生效。
+ *
+ * ── 之後才設轄區怎麼辦（不回溯）─────────────────────────────────────────────
+ * 新增轄區**不會**回頭把過去回報過的客戶自動認領——比照協作積分的「不回溯」政策，
+ * 也避免「設個轄區」這種設定動作意外觸發客戶主檔的批次寫入。
+ * 但這些筆也不能就這樣消失：實測若幫 Amy 補上她回報過的 50 個行政區，
+ * 會有 81 筆建議（77 家客戶）從清單上不見、客戶卻仍然無人負責。
+ * 因此改成第四種情況 `in-territory-backlog`——留在建議清單上，標明「這區現在是你的了」，
+ * 一鍵認領即可。只有**設轄區之後的新回報**才走第一層自動認領。
  */
 import { getCachedValue, setCachedValue, deleteRedisValue, getRedisValue, setRedisValue } from './shared'
 import {
@@ -53,7 +61,7 @@ export type ClaimDecision =
   | { action: 'auto-claim'; territoryKey: string }
   | {
       action: 'suggest'
-      tier: 'outside-territory' | 'no-territory'
+      tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog'
       /** 該業務對該客戶累積回報次數 */
       visitCount: number
       /** 依 DEVELOPING_VISIT_THRESHOLD 判定像是在開發，而非單純支援 */
@@ -122,8 +130,14 @@ export function decideClaim(input: {
   visitCount: number
   /** 曾拜訪過該客戶的其他業務 */
   otherVisitors: string[]
+  /**
+   * true = 回放既有資料（每晚重算建議）。轄區內的舊回報不自動認領，
+   * 改列為 in-territory-backlog 待人一鍵確認——不回溯政策，見檔頭說明。
+   * false/省略 = 即時路徑（建檔當下），轄區內直接認領。
+   */
+  retroactive?: boolean
 }): ClaimDecision {
-  const { salesperson, customer, context, visitCount, otherVisitors } = input
+  const { salesperson, customer, context, visitCount, otherVisitors, retroactive } = input
 
   if (!customer) return { action: 'skip', reason: 'customer-unmatched' }
   const owner = (customer.salesperson ?? '').trim()
@@ -142,14 +156,18 @@ export function decideClaim(input: {
   const territories = context.territoriesBy.get(salesperson)
   const key = `${customer.city}|${customer.district}`
 
-  // 第一層：自己轄區內且無人負責 → 判定確定，直接認領
-  if (territories?.has(key)) return { action: 'auto-claim', territoryKey: key }
-
-  // 第二層＋第三層：轄區外或沒設轄區 → 只建議，並附上加權訊號
   const contested = otherVisitors.filter((n) => n && n !== salesperson)
+  const inTerritory = territories?.has(key) ?? false
+
+  // 第一層：自己轄區內且無人負責 → 判定確定，直接認領。
+  // 但回放既有資料時不回溯，改列待辦（否則「補設轄區」會變成批次改客戶主檔）。
+  if (inTerritory && !retroactive) return { action: 'auto-claim', territoryKey: key }
+
+  // 第二層＋第三層：轄區外／沒設轄區／轄區內的舊回報 → 只建議，並附上加權訊號
   return {
     action: 'suggest',
-    tier: territories && territories.size > 0 ? 'outside-territory' : 'no-territory',
+    tier: inTerritory ? 'in-territory-backlog'
+      : territories && territories.size > 0 ? 'outside-territory' : 'no-territory',
     visitCount,
     looksDeveloping: visitCount >= DEVELOPING_VISIT_THRESHOLD,
     contested: contested.length > 0,
@@ -163,7 +181,8 @@ export function describeDecision(d: ClaimDecision, customerName: string): string
     case 'auto-claim':
       return `${customerName} 在你的轄區內且尚無人負責，已自動認領給你。`
     case 'suggest': {
-      const where = d.tier === 'no-territory' ? '你目前沒有設定轄區' : '這家不在你的轄區內'
+      const where = d.tier === 'in-territory-backlog' ? '這區現在是你的轄區了'
+        : d.tier === 'no-territory' ? '你目前沒有設定轄區' : '這家不在你的轄區內'
       const nth = d.looksDeveloping ? `你已經回報過這家 ${d.visitCount} 次，看起來是你在開發。` : ''
       const war = d.contested ? `另有 ${d.otherVisitors.join('、')} 也拜訪過這家，認領需主管核可。` : ''
       return `${customerName}：${where}，所以沒有自動認領。${nth}${war}`.trim()
@@ -194,7 +213,7 @@ export type ClaimSuggestion = {
   customerDistrict: string
   customerType: string
   salesperson: string
-  tier: 'outside-territory' | 'no-territory'
+  tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog'
   visitCount: number
   looksDeveloping: boolean
   contested: boolean
@@ -234,6 +253,7 @@ export async function computeClaimSuggestions(): Promise<ClaimSuggestion[]> {
         salesperson, customer, context,
         visitCount: signal.visitors[salesperson] ?? 0,
         otherVisitors: visitors,
+        retroactive: true,   // 回放既有資料：轄區內的舊回報列待辦，不自動認領
       })
       if (decision.action !== 'suggest') continue
       out.push({
@@ -253,7 +273,9 @@ export async function computeClaimSuggestions(): Promise<ClaimSuggestion[]> {
     }
   }
   // 像在開發的排前面，其次回報次數多的，最後才是單次支援
+  // 轄區內待辦排最前（歸屬最明確、最該一鍵清掉），其次像在開發的，最後才是單次支援
   out.sort((a, b) =>
+    Number(b.tier === 'in-territory-backlog') - Number(a.tier === 'in-territory-backlog') ||
     Number(b.looksDeveloping) - Number(a.looksDeveloping) ||
     b.visitCount - a.visitCount ||
     b.lastVisitDate.localeCompare(a.lastVisitDate))

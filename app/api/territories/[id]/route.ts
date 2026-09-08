@@ -5,6 +5,7 @@ import {
   getTerritory, updateTerritory, TERRITORY_STATUSES, type TerritoryStatus,
 } from '@/lib/notion/territories'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { invalidateClaimContext, invalidateClaimSuggestions } from '@/lib/notion/visit-claim'
 
 type Ctx = { params: { id: string } }
 
@@ -41,6 +42,9 @@ export const PATCH = withApiAuth<Ctx>({ roles: ['中央管理', '總經理'] }, 
     const item = await updateTerritory(params.id, {
       salesperson, salespersonId, status: status as TerritoryStatus | undefined, startDate, note,
     })
+    // 轄區是認領判定的依據，改完必須讓 claim 快取失效，否則新轄區最多 10 分鐘後才生效
+    invalidateClaimContext()
+    await invalidateClaimSuggestions()
     await logAuditEvent({
       module: 'clinic_monitor', action: 'update', entityType: 'territory',
       entityId: item.id, entityTitle: item.name,
@@ -58,6 +62,9 @@ export const DELETE = withApiAuth<Ctx>({ roles: ['中央管理', '總經理'] },
   try {
     const before = await getTerritory(params.id)
     const item = await updateTerritory(params.id, { status: '結束' })
+    // 轄區是認領判定的依據，改完必須讓 claim 快取失效，否則新轄區最多 10 分鐘後才生效
+    invalidateClaimContext()
+    await invalidateClaimSuggestions()
     await logAuditEvent({
       module: 'clinic_monitor', action: 'delete', entityType: 'territory',
       entityId: item.id, entityTitle: item.name,
