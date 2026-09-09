@@ -10,6 +10,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { parseLineTxt } from '@/lib/line-txt-parser'
 import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
+import { isInReportWindowTime, businessDayOf, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
   let fileContent: string
   let dateFrom = ''           // 只匯入此日期(含)以後的日報，留空 = 全部
   let salespersonFilter = ''  // 只匯入此業務的日報，留空 = 全部名單業務
+  let ignoreWindow = false    // true = 不套回報窗（救援用；預設與 webhook 同標準）
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
@@ -37,6 +39,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     fileContent = await file.text()
     dateFrom = (formData.get('dateFrom') as string | null)?.trim() ?? ''
     salespersonFilter = (formData.get('salesperson') as string | null)?.trim() ?? ''
+    ignoreWindow = (formData.get('ignoreWindow') as string | null) === '1'
   } catch {
     return NextResponse.json({ error: '無法讀取檔案' }, { status: 400 })
   }
@@ -58,6 +61,9 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
 
   const visits: ParsedVisitItem[] = []
 
+  // 回報窗與業務日：與 webhook 用同一套判定（lib/line-report-window）。
+  // 匯入路徑原本完全沒做這道過濾，白天的訊息只要長得像日報就會被匯入。
+  let skippedByWindow = 0
   for (const msg of reportMessages) {
     // 只匯入業務名單上的業務（非名單成員的訊息一律跳過）
     if (!isKnownSalesperson(msg.sender)) continue
@@ -65,7 +71,11 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     if (!canImportForOthers && salesperson !== actorName) continue
     // 業務篩選：只匯入指定業務的日報
     if (salespersonFilter && salesperson !== salespersonFilter) continue
-    const report = parseDailyReport(msg.text)
+    // 回報窗 17:00～隔日 03:00；救援匯入可用 ignoreWindow 放行
+    if (!ignoreWindow && !isInReportWindowTime(msg.time)) { skippedByWindow++; continue }
+    // 業務日 03:00 換日：凌晨發的日報屬前一天。日報若沒寫「日期：」就用這個值，
+    // 不可退回「今天」——否則匯入歷史檔案會把全部紀錄標成匯入當日。
+    const report = parseDailyReport(msg.text, businessDayOf(msg.date, msg.time))
     if (!report || report.visits.length === 0) continue
     // 起始日期篩選：只補抓指定日期之後的報表
     if (dateFrom && report.date < dateFrom) continue
@@ -86,6 +96,8 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     totalMessages: messages.length,
     dailyReports: reportMessages.length,
     total: visits.length,
+    skippedByWindow,
+    reportWindow: REPORT_WINDOW_LABEL,
     visits,
   })
 })

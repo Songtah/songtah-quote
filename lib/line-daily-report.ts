@@ -37,7 +37,7 @@ export function isDailyReport(text: string): boolean {
 
 // ── 解析報表 ──────────────────────────────────────────────────────────────────
 
-export function parseDailyReport(text: string): DailyReport | null {
+export function parseDailyReport(text: string, fallbackDate?: string): DailyReport | null {
   if (!isDailyReport(text)) return null
 
   const lines = text.split('\n')
@@ -46,7 +46,11 @@ export function parseDailyReport(text: string): DailyReport | null {
   // 日期： 2025 / 01 / 08（三）  日期：2026/06/05（五）  日期: 2025/01/08
   // 預設日期 = 台灣「業務日」：回報窗 17:00～隔日 03:00，
   // 凌晨 03:00 前發的訊息歸前一天（UTC+8 再減 3 小時取日期）。
-  let date = new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().split('T')[0]
+  // fallbackDate 由呼叫端給（.txt 匯入時＝該訊息所屬業務日）。
+  // 沒給才退回「現在的業務日」——匯入歷史檔案時若少了這個參數，
+  // 所有沒寫「日期：」的日報都會被標成今天。
+  let date = fallbackDate
+    || new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().split('T')[0]
   const dateLine = lines.find((l) => /日期[：:]/.test(l))
   if (dateLine) {
     const m = dateLine.match(/(\d{4})\s*\/\s*(\d{1,2})\s*\/\s*(\d{1,2})/)

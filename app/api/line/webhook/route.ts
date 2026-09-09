@@ -18,6 +18,7 @@ import { isDailyReport, parseDailyReport, devStageForReaction } from '@/lib/line
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
+import { isInReportWindow, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
 import { advanceCustomerDevStage } from '@/lib/notion/customers'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
@@ -103,9 +104,8 @@ async function processEvents(events: any[]) {
       // 03:00～17:00 之間發送的訊息一律忽略（避免誤抓日間非回報時段的資料）。
       const ts = typeof event.timestamp === 'number' ? event.timestamp : Date.now()
       const twHour = new Date(ts + 8 * 3600_000).getUTCHours()
-      const inReportWindow = twHour >= 17 || twHour < 3
-      if (!inReportWindow) {
-        console.log(`[LINE Webhook] skip (非回報窗：台北 ${String(twHour).padStart(2, '0')}:xx，只收 17:00–03:00)`)
+      if (!isInReportWindow(ts)) {
+        console.log(`[LINE Webhook] skip (非回報窗：台北 ${String(twHour).padStart(2, '0')}:xx，只收 ${REPORT_WINDOW_LABEL})`)
         continue
       }
 

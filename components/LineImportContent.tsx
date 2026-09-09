@@ -28,6 +28,9 @@ export function LineImportContent({
   const [progress, setProgress] = useState<Progress | null>(null)
   const [dateFrom, setDateFrom] = useState('')
   const [salesperson, setSalesperson] = useState(canImportForOthers ? '' : currentUser)
+  // 預設套用回報窗（與 LINE webhook 同標準）；救援補檔時可放行全部
+  const [ignoreWindow, setIgnoreWindow] = useState(false)
+  const [windowNote, setWindowNote] = useState('')
   const abortRef = useRef(false)
 
   async function handleUpload(file: File) {
@@ -42,6 +45,7 @@ export function LineImportContent({
     formData.append('file', file)
     if (dateFrom) formData.append('dateFrom', dateFrom)
     if (salesperson) formData.append('salesperson', salesperson)
+    if (ignoreWindow) formData.append('ignoreWindow', '1')
 
     let visits: ParsedVisitItem[]
     try {
@@ -49,7 +53,19 @@ export function LineImportContent({
       const data = await res.json()
       if (!res.ok) { setErrorMsg(data.error ?? '解析失敗'); setStage('error'); return }
       visits = data.visits ?? []
-      if (visits.length === 0) { setErrorMsg('未找到符合條件的每日報表'); setStage('error'); return }
+      setWindowNote(
+        data.skippedByWindow > 0
+          ? `已略過 ${data.skippedByWindow} 則在回報窗（${data.reportWindow}）之外發送的訊息。`
+          : ''
+      )
+      if (visits.length === 0) {
+        setErrorMsg(
+          data.skippedByWindow > 0
+            ? `未找到符合條件的每日報表；有 ${data.skippedByWindow} 則訊息因不在回報窗（${data.reportWindow}）內被略過，如需一併匯入請勾選「不限回報時段」。`
+            : '未找到符合條件的每日報表'
+        )
+        setStage('error'); return
+      }
     } catch {
       setErrorMsg('網路錯誤，請稍後再試')
       setStage('error')
@@ -143,6 +159,23 @@ export function LineImportContent({
           )}
         </div>
 
+        <div className="flex items-start gap-3">
+          <label className="flex cursor-pointer items-start gap-2 text-sm text-stone-600">
+            <input
+              type="checkbox"
+              checked={!ignoreWindow}
+              onChange={(e) => setIgnoreWindow(!e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#9a7041]"
+            />
+            <span>
+              只匯入回報時段的訊息（17:00～隔日 03:00）
+              <span className="mt-0.5 block text-xs text-stone-400">
+                與 LINE 自動建檔同一套標準。取消勾選會連白天的訊息一起匯入，補檔時才需要。
+              </span>
+            </span>
+          </label>
+        </div>
+
         <div className="flex items-center gap-3">
           <label className="text-sm text-stone-600 shrink-0">篩選業務（只匯入此業務）</label>
           <select
@@ -222,7 +255,10 @@ export function LineImportContent({
           </>
         )}
 
-        {stage === 'error' && (
+        {windowNote && stage !== 'error' && (
+        <p className="rounded-2xl bg-stone-50 px-4 py-2.5 text-xs text-stone-500">{windowNote}</p>
+      )}
+      {stage === 'error' && (
           <>
             <div className="text-3xl mb-3">❌</div>
             <p className="font-medium text-red-600">{errorMsg}</p>
