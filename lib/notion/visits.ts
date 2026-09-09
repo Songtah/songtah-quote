@@ -427,6 +427,9 @@ export async function createVisit(data: {
  * 跨月列出所有「未結案」的待追蹤拜訪（是否需追蹤=true 且 追蹤已結案=false）。
  * 修復舊版只算本月、月初整批消失的缺陷。有追蹤日者在前（升冪），無日期者在後。
  */
+/** 狀態欄的 Complete 群組：落在這裡就不是待辦 */
+const FOLLOW_UP_COMPLETE_STATUS = new Set(['結案', '沒興趣'])
+
 export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> {
   const allResults: any[] = []
   let cur: string | undefined
@@ -437,8 +440,16 @@ export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> 
         page_size: 100,
         filter: {
           and: [
-            { property: '是否需追蹤', checkbox: { equals: true } },
             { property: '追蹤已結案', checkbox: { equals: false } },
+            // 兩套表達合一：checkbox 與 status 欄各自獨立演進，
+            // 導致 388 筆狀態「追蹤中」的紀錄從來沒出現在待追蹤清單裡（實測兩者完全不重疊）。
+            // 這裡一次收兩種來源，Complete 群組（結案／沒興趣）由下方過濾掉。
+            {
+              or: [
+                { property: '是否需追蹤', checkbox: { equals: true } },
+                { property: '狀態', status: { equals: '追蹤中' } },
+              ],
+            },
             ...(salesperson
               ? [{ property: '業務人員', select: { equals: salesperson } }]
               : []),
@@ -452,12 +463,125 @@ export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> 
     cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
   } while (cur)
 
-  const items = await buildVisitItems(allResults.map(mapVisitPageRaw))
-  return items.sort((a, b) => {
+  // 狀態欄已落在 Complete 群組者不算待辦（結案／沒興趣）
+  const active = allResults.filter((page: any) =>
+    !FOLLOW_UP_COMPLETE_STATUS.has(page.properties?.['狀態']?.status?.name ?? ''))
+
+  const items = await buildVisitItems(active.map(mapVisitPageRaw))
+
+  // 待辦掛在「客戶」上而非「單筆拜訪」上：同一客戶只留最新一筆。
+  // 掛事件會重複——實測 700 筆去重後只有 422 家客戶，其中 126 家被標了多筆
+  // （永信牙醫 11 筆、瑪騰牙體技術所 8 筆），業務看到的是同一件事被列很多次。
+  const byCustomer = new Map<string, Visit>()
+  for (const item of items) {
+    const key = `${item.salesperson}|${item.customerId || item.customerName}`
+    const kept = byCustomer.get(key)
+    if (!kept || (item.date ?? '') > (kept.date ?? '')) byCustomer.set(key, item)
+  }
+
+  // 有到期日的排前面（升冪，最急的在最上），沒有到期日的按拜訪日由新到舊墊底
+  return Array.from(byCustomer.values()).sort((a, b) => {
     if (a.nextFollowUpDate && !b.nextFollowUpDate) return -1
     if (!a.nextFollowUpDate && b.nextFollowUpDate) return 1
-    return (a.nextFollowUpDate ?? '').localeCompare(b.nextFollowUpDate ?? '')
+    if (a.nextFollowUpDate && b.nextFollowUpDate) {
+      return a.nextFollowUpDate.localeCompare(b.nextFollowUpDate)
+    }
+    return (b.date ?? '').localeCompare(a.date ?? '')
   })
+}
+
+/**
+ * 自動結案陳舊的待追蹤（每晚排程呼叫）。
+ *
+ * 為什麼要有這支：唯一的結案方式是人回頭勾「追蹤已結案」，而實測結案率 **0.0%**
+ * （700 筆標記、0 筆結案）。同時 700 筆裡有 413 筆的客戶其實早已再次拜訪——
+ * 事情做完了，只是沒人回來勾。依 CLAUDE.md 自動化鐵則：狀態必須能自己關閉。
+ *
+ * 兩條結案條件（都是「已經有後續事件發生」的客觀證據，不是猜）：
+ *   A. 同一客戶有日期更新的拜訪紀錄 → 這筆的後續已被新的互動取代
+ *   B. 該筆的「狀態」欄已是 結案／沒興趣 → 兩套表達合一（狀態欄的 Complete 群組）
+ *
+ * 可逆：只勾 checkbox，取消勾選即復原，無資料遺失。
+ */
+export type FollowUpAutoCloseResult = {
+  scanned: number
+  open: number
+  closed: number
+  byReason: { newerVisit: number; statusComplete: number }
+  samples: { customerName: string; salesperson: string; date: string; reason: string }[]
+}
+
+export async function autoCloseStaleFollowUps(
+  options: { dryRun?: boolean } = {}
+): Promise<FollowUpAutoCloseResult> {
+  const dryRun = options.dryRun !== false   // 預設 dry-run，要明確傳 false 才會寫入
+
+  type Row = { id: string; name: string; sp: string; date: string; need: boolean; done: boolean; status: string }
+  const rows: Row[] = []
+  let cur: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('autoCloseStaleFollowUps:scan', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      rows.push({
+        id: page.id,
+        name: getTitle(page, '單位名稱'),
+        sp: getSelect(page, '業務人員') || getText(page, '業務人員'),
+        date: getDate(page, '日期'),
+        need: page.properties?.['是否需追蹤']?.checkbox ?? false,
+        done: page.properties?.['追蹤已結案']?.checkbox ?? false,
+        status: page.properties?.['狀態']?.status?.name ?? '',
+      })
+    }
+    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cur)
+
+  // 每個客戶的最新拜訪日
+  const latestByCustomer = new Map<string, string>()
+  for (const r of rows) {
+    if (!r.name || !r.date) continue
+    if ((latestByCustomer.get(r.name) ?? '') < r.date) latestByCustomer.set(r.name, r.date)
+  }
+
+  // 待辦的定義與 listOpenFollowUps 一致：checkbox 或 狀態=追蹤中，且尚未結案
+  const open = rows.filter((r) => !r.done && (r.need || r.status === '追蹤中'))
+  const toClose: { row: Row; reason: 'newerVisit' | 'statusComplete' }[] = []
+  for (const r of open) {
+    if (FOLLOW_UP_COMPLETE_STATUS.has(r.status)) { toClose.push({ row: r, reason: 'statusComplete' }); continue }
+    const latest = latestByCustomer.get(r.name) ?? ''
+    if (r.date && latest > r.date) toClose.push({ row: r, reason: 'newerVisit' })
+  }
+
+  if (!dryRun) {
+    for (const item of toClose) {
+      // 兩套表達一起收斂：只勾 checkbox 會讓「狀態」停在追蹤中，等於又留下兩種說法。
+      // 狀態原本是 追蹤中 的，一併移到 Complete 群組。
+      const properties: any = { '追蹤已結案': { checkbox: true } }
+      if (item.row.status === '追蹤中') properties['狀態'] = { status: { name: '結案' } }
+      await notionCallWithRetry('autoCloseStaleFollowUps:close', () =>
+        notion.pages.update({ page_id: item.row.id, properties })
+      )
+    }
+  }
+
+  return {
+    scanned: rows.length,
+    open: open.length,
+    closed: toClose.length,
+    byReason: {
+      newerVisit: toClose.filter((t) => t.reason === 'newerVisit').length,
+      statusComplete: toClose.filter((t) => t.reason === 'statusComplete').length,
+    },
+    samples: toClose.slice(0, 10).map((t) => ({
+      customerName: t.row.name, salesperson: t.row.sp, date: t.row.date,
+      reason: t.reason === 'newerVisit' ? `該客戶最新拜訪 ${latestByCustomer.get(t.row.name)}` : `狀態已是「${t.row.status}」`,
+    })),
+  }
 }
 
 /** 結案一筆追蹤（可逆：Notion 勾選框取消即可復原，無資料遺失） */

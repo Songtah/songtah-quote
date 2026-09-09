@@ -162,7 +162,9 @@ async function processEvents(events: any[]) {
             customerReaction: validReaction,
             followUpAction: '',
             needsFollowUp: visit.needsFollowUp,
-            nextFollowUpDate: '',
+            // 由解析器依內容推斷（講「下週回」就 +7 天，沒講就 +14 天）。
+            // 沒有到期日就沒有逾期可言——實測手動填答率 2/5,891。
+            nextFollowUpDate: visit.nextFollowUpDate,
             status: '',
             address: '',
             city: '',

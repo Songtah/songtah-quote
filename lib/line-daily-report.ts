@@ -17,6 +17,8 @@ export type DailyReportVisit = {
   content: string
   customerReaction: string
   needsFollowUp: boolean
+  /** 依內容推斷的下次追蹤日（YYYY-MM-DD）；需追蹤但沒講時間就用預設間隔 */
+  nextFollowUpDate: string
 }
 
 export type DailyReport = {
@@ -84,7 +86,8 @@ export function parseDailyReport(text: string): DailyReport | null {
       notes: currentNotes,
       content: currentNotes.join('\n'),
       customerReaction: inferReaction(currentNotes),
-      needsFollowUp: inferFollowUp(currentNotes),
+      needsFollowUp: inferFollowUp(currentNotes, date),
+      nextFollowUpDate: inferNextFollowUpDate(currentNotes, date),
     })
   }
 
@@ -186,9 +189,91 @@ function inferReaction(notes: string[]): string {
   return ''
 }
 
-// ── 推斷是否需追蹤 ────────────────────────────────────────────────────────────
+// ── 推斷是否需追蹤與下次追蹤日 ────────────────────────────────────────────────
+//
+// 兩件事綁在一起判斷:**講了時間就是有後續**。原本 inferFollowUp 只認關鍵字,
+// 會漏掉「明天再帶樣品過去」「三個月後再拜訪」「下個月預算下來再談」這類明確承諾。
+//
+// 為什麼要自動推斷日期:沒有到期日就沒有「逾期」可言。實測 5,891 筆客情紀錄裡
+// 「下次追蹤日」只有 2 筆有填(0.03%)——從來沒有人手動填,解析器也不曾寫入。
+// 依 CLAUDE.md 自動化鐵則,填答率趨近 0 的欄位要改成自動填,不是要求業務加強填寫。
 
-function inferFollowUp(notes: string[]): boolean {
+/** 需追蹤但內容沒提到任何時間時的預設間隔（天） */
+export const DEFAULT_FOLLOW_UP_DAYS = 14
+
+const FOLLOW_UP_KEYWORDS = /後續|跟進|追蹤|回覆|確認|再聯絡|回報|待定|協助|聯繫/
+
+/** 相對時間說法 → 天數。由近到遠排列，先命中者優先（講「下週」不會被「一個月」蓋過）。 */
+const RELATIVE_RULES: { pattern: RegExp; days: number }[] = [
+  { pattern: /明天|隔天|明日/,                        days: 1 },
+  { pattern: /後天/,                                 days: 2 },
+  { pattern: /這週|本週|這周|本周|週末|周末|這禮拜/,    days: 3 },
+  { pattern: /下週|下周|下禮拜|下星期|一週後|一周後/,   days: 7 },
+  { pattern: /兩週|兩周|２週|2週|2周|下下週|下下周/,    days: 14 },
+  { pattern: /月底|這個月底|本月底/,                   days: 21 },
+  // 多月份的寫法要排在「下個月」之前，否則「三個月後」會被 /個月/ 先吃掉
+  { pattern: /半年|六個月|6個月/,                     days: 180 },
+  { pattern: /三個月|3個月|一季|下一季|下季/,           days: 90 },
+  { pattern: /兩個月|2個月/,                          days: 60 },
+  { pattern: /下個月|下月|一個月|1個月/,               days: 30 },
+]
+
+/** 「10月初/月中/月底」這種沒有明確日號的寫法，取該旬的代表日 */
+const MONTH_PART: { pattern: RegExp; day: number }[] = [
+  { pattern: /初/, day: 5 }, { pattern: /中/, day: 15 }, { pattern: /底|末/, day: 25 },
+]
+
+function addDays(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  if (!y || !m || !d) return ''
+  const base = new Date(Date.UTC(y, m - 1, d))
+  base.setUTCDate(base.getUTCDate() + days)
+  return base.toISOString().slice(0, 10)
+}
+
+/** 講的月日若已早於拜訪日，視為明年（跨年報表常見） */
+function pinToFuture(visitDate: string, month: number, day: number): string {
+  const year = Number(visitDate.slice(0, 4))
+  const mk = (y: number) => `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return mk(year) >= visitDate ? mk(year) : mk(year + 1)
+}
+
+/**
+ * 承諾詞。單純提到日期不算後續——實測「分享 10/18 課程資訊」這種內容裡的日期
+ * 會被誤當成追蹤日，把需追蹤筆數從 700 灌到 1,928。
+ * 要「時間 ＋ 承諾」同時出現才算，例如「明天**再**帶樣品」「下個月預算下來**再**談」。
+ */
+const COMMITMENT = /再|會|預計|等|要|後續|約|排/
+
+/** 從內容抓出時間承諾；抓不到回 null。 */
+function detectTimeHint(text: string, visitDate: string): string | null {
+  // 明確月日：10/18、10月18日
+  const explicit = text.match(/(\d{1,2})\s*[\/月]\s*(\d{1,2})/)
+  if (explicit) {
+    const month = Number(explicit[1]), day = Number(explicit[2])
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) return pinToFuture(visitDate, month, day)
+  }
+  // 月初/月中/月底：10月初
+  const part = text.match(/(\d{1,2})\s*月\s*([初中底末])/)
+  if (part) {
+    const month = Number(part[1])
+    const hit = MONTH_PART.find((r) => r.pattern.test(part[2]))
+    if (month >= 1 && month <= 12 && hit) return pinToFuture(visitDate, month, hit.day)
+  }
+  for (const rule of RELATIVE_RULES) {
+    if (rule.pattern.test(text)) return addDays(visitDate, rule.days)
+  }
+  return null
+}
+
+function inferFollowUp(notes: string[], visitDate: string): boolean {
   const text = notes.join(' ')
-  return /後續|跟進|追蹤|回覆|確認|再聯絡|回報|待定|協助|聯繫/.test(text)
+  if (FOLLOW_UP_KEYWORDS.test(text)) return true
+  // 時間必須搭配承諾詞，單純提到日期（課程日、交機日）不算要追蹤
+  return detectTimeHint(text, visitDate) !== null && COMMITMENT.test(text)
+}
+
+export function inferNextFollowUpDate(notes: string[], visitDate: string): string {
+  if (!visitDate || !inferFollowUp(notes, visitDate)) return ''
+  return detectTimeHint(notes.join(' '), visitDate) || addDays(visitDate, DEFAULT_FOLLOW_UP_DAYS)
 }

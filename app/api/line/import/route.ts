@@ -20,6 +20,7 @@ export type ParsedVisitItem = {
   content: string
   customerReaction: string
   needsFollowUp: boolean
+  nextFollowUpDate: string
 }
 
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
@@ -76,6 +77,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
         content: v.content,
         customerReaction: v.customerReaction,
         needsFollowUp: v.needsFollowUp,
+        nextFollowUpDate: v.nextFollowUpDate,
       })
     }
   }

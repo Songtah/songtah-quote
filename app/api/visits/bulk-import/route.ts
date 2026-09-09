@@ -8,6 +8,8 @@
  *     content: string
  *     date: string        // YYYY-MM-DD
  *     salesperson: string
+ *     needsFollowUp?: boolean      // 由 line-daily-report 解析器推斷
+ *     nextFollowUpDate?: string    // 同上；沒有到期日的追蹤等於沒有追蹤
  *   }>
  * }
  */
@@ -20,7 +22,7 @@ import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audi
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
-    const visits: Array<{ customerName: string; content: string; date: string; salesperson: string; customerId?: string; customerReaction?: string; city?: string; district?: string }> =
+    const visits: Array<{ customerName: string; content: string; date: string; salesperson: string; customerId?: string; customerReaction?: string; city?: string; district?: string; needsFollowUp?: boolean; nextFollowUpDate?: string }> =
       Array.isArray(body.visits) ? body.visits : []
 
     if (visits.length === 0) {
@@ -55,8 +57,9 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
           interactionType:      '',
           interactionPurpose:   '',
           followUpAction:       '',
-          needsFollowUp:       false,
-          nextFollowUpDate:    '',
+          // 匯入沿用解析器帶來的推斷值；未帶則不標追蹤（不猜）
+          needsFollowUp:       v.needsFollowUp === true,
+          nextFollowUpDate:    v.needsFollowUp === true ? (v.nextFollowUpDate ?? '') : '',
         })
         results.push({ ok: true, id: visit.id, customerName: v.customerName })
 
