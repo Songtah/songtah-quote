@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { AppShell } from '@/components/AppShell'
 import VisitsContent from '@/components/VisitsContent'
 import DailyReportPanel from '@/components/DailyReportPanel'
-import PipelineContent from '@/components/PipelineContent'
 import CampaignsContent from '@/components/CampaignsContent'
 import VisitSuggestionsContent from './VisitSuggestionsContent'
 import BdTodayContent from '@/components/BdTodayContent'
@@ -25,11 +24,11 @@ export default async function BdPage({
   const sessionUser = session?.user as any
   const canImportForOthers = sessionUser?.role === 'admin' || sessionUser?.accountType === '中央管理'
 
+  // 'pipeline'（客戶跟進／開發漏斗）已於 2026-09-09 移除，待重新規劃。
+  // 舊書籤與外部連結會落回「今日工作」，不另做導向。
   const tab = searchParams.tab === 'report'
     ? 'report'
-    : searchParams.tab === 'pipeline'
-      ? 'pipeline'
-      : searchParams.tab === 'campaigns'
+    : searchParams.tab === 'campaigns'
         ? 'campaigns'
         : searchParams.tab === 'suggest'
           ? 'suggest'
@@ -45,20 +44,17 @@ export default async function BdPage({
     { id: 'today',    href: '/bd',              label: '今日工作', hint: '先處理最重要的客戶' },
     { id: 'visits',   href: '/bd?tab=visits',   label: '客情紀錄', hint: '查看與新增互動' },
     { id: 'report',   href: '/bd?tab=report',   label: '紀錄匯入', hint: 'LINE 與日報轉紀錄' },
-    { id: 'pipeline', href: '/bd?tab=pipeline', label: '客戶跟進', hint: '看下一步與期限' },
   ] as const
 
   const isLegacyTool = tab === 'campaigns' || tab === 'suggest'
 
   return (
     <AppShell
-      title={tab === 'report' ? '紀錄匯入' : tab === 'pipeline' ? '客戶跟進' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : '業務開發'}
+      title={tab === 'report' ? '紀錄匯入' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : '業務開發'}
       description={
         tab === 'report'
           ? '將業務日報文字或 LINE 聊天記錄批次匯入客情紀錄。'
-          : tab === 'pipeline'
-            ? '先看每位客戶的下一步與處理期限；新增客情、試用或報價後，狀態會自動前進。'
-            : tab === 'campaigns'
+          : tab === 'campaigns'
               ? '商品潛在購買清單派工追蹤：匯入名單、業務逐一聯絡、訂單自動判定成交。'
               : tab === 'suggest'
                 ? '出門前的彈藥清單：選區域,系統依商品興趣、例行維繫、陌生開發整理值得跑的客戶與理由。'
@@ -104,8 +100,6 @@ export default async function BdPage({
           initialCustomerName={searchParams.customer}
           canManageAll={canImportForOthers}
         />
-      ) : tab === 'pipeline' ? (
-        <PipelineContent currentUser={session?.user?.name ?? undefined} />
       ) : tab === 'campaigns' ? (
         <CampaignsContent canManageAll={canImportForOthers} />
       ) : tab === 'suggest' ? (

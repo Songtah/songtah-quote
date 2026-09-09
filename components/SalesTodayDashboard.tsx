@@ -85,7 +85,7 @@ export function SalesTodayDashboard({
     { label: '進行中報價', value: data.counts.quotes, href: '/quotes' },
     { label: '逾期工單', value: data.counts.overdueTickets, href: '/tickets', danger: data.counts.overdueTickets > 0 },
   ].filter((item) => {
-    if (item.href === '/bd' || item.href === '/bd?tab=pipeline') return visibleModules.bd
+    if (item.href === '/bd') return visibleModules.bd
     if (item.href === '/quotes') return visibleModules.quote
     if (item.href === '/tickets') return visibleModules.rma
     return true

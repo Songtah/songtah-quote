@@ -90,11 +90,6 @@ export default function BdTodayContent({ data }: { data: TodayDashboardData }) {
               <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-stone-700">匯入紀錄</span><span className="block text-xs text-stone-400">LINE 或業務日報</span></span>
               <ArrowRight className="size-4 text-stone-300" />
             </Link>
-            <Link href="/bd?tab=pipeline" className="flex min-h-14 items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-brand-50/50 active:scale-[0.99]">
-              <span className="flex size-10 items-center justify-center rounded-full bg-cream-100 text-brand-700"><Target className="size-4" /></span>
-              <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-stone-700">查看客戶跟進</span><span className="block text-xs text-stone-400">先處理逾期與待聯絡客戶</span></span>
-              <ArrowRight className="size-4 text-stone-300" />
-            </Link>
           </div>
         </aside>
       </section>
