@@ -72,7 +72,11 @@
 
 1. **回報窗 17:00～隔日 03:00（台北）**：客情紀錄由 `app/api/line/webhook` 解析 LINE 每日報表建檔。**只在回報窗內擷取**——依 `event.timestamp` 換算台北時 `hour>=17 || hour<3` 才建檔，03:00–17:00 的訊息一律略過（避免誤抓日間非回報資料）。
 2. **業務日 03:00 換日**：`businessDayTW()`（`lib/ceo-stats.ts`）= now−3h 取日期；報表日期解析（`lib/line-daily-report.ts`）同樣 03:00 前算前一天。拜訪 `日期` 為 date-only（無時間），時間資訊只在 `created_time`（且多為批次匯入時間，不代表實際拜訪時刻）。
-3. **待追蹤＝跨月未結案，禁止改回只看本月**：待追蹤定義為「是否需追蹤=true 且 追蹤已結案=false」，不限月份（`listOpenFollowUps`、ceo-stats `fetchOpenFollowUps`）。結案唯一路徑＝勾 `追蹤已結案` checkbox（`closeFollowUp`／PATCH `/api/visits/follow-ups`，可逆）。舊版只算本月導致月初整批消失（曾累積 397 筆黑數），不可回退。
+3. **待追蹤自動結案三條件（禁止改回只靠人工打勾）**：`autoCloseStaleFollowUps` 每晚跑——
+   (A) 同客戶有更新拜訪 (B) 狀態已是 結案／沒興趣 (C) 距拜訪日超過 `STALE_FOLLOW_UP_DAYS`（90 天）。
+   人工結案率實測 0.0%，故結案不可依賴業務打勾。待追蹤清單以**客戶**為單位去重（同業務同客戶只留最新一筆），
+   且同時收 checkbox 與 `狀態=追蹤中` 兩種來源。可逆（取消勾選即復原）。
+4. **待追蹤＝跨月未結案，禁止改回只看本月**：待追蹤定義為「是否需追蹤=true 且 追蹤已結案=false」，不限月份（`listOpenFollowUps`、ceo-stats `fetchOpenFollowUps`）。結案唯一路徑＝勾 `追蹤已結案` checkbox（`closeFollowUp`／PATCH `/api/visits/follow-ups`，可逆）。舊版只算本月導致月初整批消失（曾累積 397 筆黑數），不可回退。
 
 ## 業務開發漏斗鐵則
 

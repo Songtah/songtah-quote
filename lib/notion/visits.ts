@@ -497,17 +497,27 @@ export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> 
  * （700 筆標記、0 筆結案）。同時 700 筆裡有 413 筆的客戶其實早已再次拜訪——
  * 事情做完了，只是沒人回來勾。依 CLAUDE.md 自動化鐵則：狀態必須能自己關閉。
  *
- * 兩條結案條件（都是「已經有後續事件發生」的客觀證據，不是猜）：
+ * 三條結案條件（前兩條是「已經有後續事件發生」的客觀證據；第三條是時效）：
  *   A. 同一客戶有日期更新的拜訪紀錄 → 這筆的後續已被新的互動取代
  *   B. 該筆的「狀態」欄已是 結案／沒興趣 → 兩套表達合一（狀態欄的 Complete 群組）
+ *   C. 距拜訪日超過 STALE_FOLLOW_UP_DAYS 天 → 逾期歸檔
+ *
+ * 為什麼 C 用「拜訪日」當基準：命中 A 的都已經先被關掉了，所以還留著的這批，
+ * 拜訪日就是該客戶最後一次有動靜的時間。超過 90 天沒有任何互動的跟進，
+ * 實務上已經沒有意義，留著只會稀釋掉真正該打電話的那批
+ * （實測 369 筆裡有 115 筆超過半年、1 筆 609 天且業務已離職）。
  *
  * 可逆：只勾 checkbox，取消勾選即復原，無資料遺失。
  */
+
+/** 逾期歸檔門檻（天）。2026-09-09 使用者採 90 天：91–180 天區間本已冷卻，
+ *  而 120 天只比 90 天多留 10 筆，不值得為此拉長標準。 */
+export const STALE_FOLLOW_UP_DAYS = 90
 export type FollowUpAutoCloseResult = {
   scanned: number
   open: number
   closed: number
-  byReason: { newerVisit: number; statusComplete: number }
+  byReason: { newerVisit: number; statusComplete: number; staleAge: number }
   samples: { customerName: string; salesperson: string; date: string; reason: string }[]
 }
 
@@ -550,11 +560,13 @@ export async function autoCloseStaleFollowUps(
 
   // 待辦的定義與 listOpenFollowUps 一致：checkbox 或 狀態=追蹤中，且尚未結案
   const open = rows.filter((r) => !r.done && (r.need || r.status === '追蹤中'))
-  const toClose: { row: Row; reason: 'newerVisit' | 'statusComplete' }[] = []
+  const staleBefore = new Date(Date.now() - STALE_FOLLOW_UP_DAYS * 864e5).toISOString().slice(0, 10)
+  const toClose: { row: Row; reason: 'newerVisit' | 'statusComplete' | 'staleAge' }[] = []
   for (const r of open) {
     if (FOLLOW_UP_COMPLETE_STATUS.has(r.status)) { toClose.push({ row: r, reason: 'statusComplete' }); continue }
     const latest = latestByCustomer.get(r.name) ?? ''
-    if (r.date && latest > r.date) toClose.push({ row: r, reason: 'newerVisit' })
+    if (r.date && latest > r.date) { toClose.push({ row: r, reason: 'newerVisit' }); continue }
+    if (r.date && r.date < staleBefore) toClose.push({ row: r, reason: 'staleAge' })
   }
 
   if (!dryRun) {
@@ -576,10 +588,13 @@ export async function autoCloseStaleFollowUps(
     byReason: {
       newerVisit: toClose.filter((t) => t.reason === 'newerVisit').length,
       statusComplete: toClose.filter((t) => t.reason === 'statusComplete').length,
+      staleAge: toClose.filter((t) => t.reason === 'staleAge').length,
     },
     samples: toClose.slice(0, 10).map((t) => ({
       customerName: t.row.name, salesperson: t.row.sp, date: t.row.date,
-      reason: t.reason === 'newerVisit' ? `該客戶最新拜訪 ${latestByCustomer.get(t.row.name)}` : `狀態已是「${t.row.status}」`,
+      reason: t.reason === 'newerVisit' ? `該客戶最新拜訪 ${latestByCustomer.get(t.row.name)}`
+        : t.reason === 'staleAge' ? `距今超過 ${STALE_FOLLOW_UP_DAYS} 天無互動`
+        : `狀態已是「${t.row.status}」`,
     })),
   }
 }
