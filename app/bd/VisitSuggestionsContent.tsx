@@ -1,286 +1,265 @@
 'use client'
 
 /**
- * 拜訪建議 — 選業務+鄉鎮市區,產出三組建議(A 商品興趣追蹤/B 例行拜訪/C 陌生開發)。
- * 定位:出門前的彈藥清單。理由+撥號+導航+複製拜訪單;不做拜訪量 KPI,配比為軟性建議。
+ * 拜訪建議 —— 出門前的彈藥清單。
+ *
+ * 2026-09-09 改版：舊版必須先選縣市＋行政區才會出東西，而且分 A/B/C 三組，
+ * 其中 B 例行拜訪實測五個業務全部 0。新版改為：
+ *   預設「今天該跑誰」——不必選任何東西，開頁就是排好序的名單；
+ *   需要規劃路線時再切「指定區域」。
+ * 每筆都列出完整理由（可能同時命中多個訊號），排序依評分。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CalendarClock, Flame, MapPin, Phone, Sparkles, Clock3, Copy, Check } from 'lucide-react'
 
+type Kind = 'overdue' | 'hot' | 'stale' | 'newOpening'
 type Suggestion = {
-  id: string; name: string; type: string; status: string
-  address: string; phone: string; salesperson: string; devStage: string
-  group: 'A' | 'B' | 'C'; reason: string; lastVisit: string | null
+  id: string; name: string; type: string; city: string; district: string
+  address: string; phone: string; salesperson: string
+  kind: Kind; reasons: string[]; score: number; lastVisit: string | null; isMine: boolean
 }
-type SuggestionResult = {
-  groups: { A: Suggestion[]; B: Suggestion[]; C: Suggestion[] }
-  more: { B: number; C: number }
-  mapsBuiltAt: string
+type Result = {
+  mode: 'today' | 'area'
+  items: Suggestion[]
+  total: number
+  byKind: Record<Kind, number>
+  scope: string
+  builtAt: string
   existingOnly?: boolean
+  salespeople?: string[]
+  needsSalesperson?: boolean
 }
 type RegionRow = { city: string; district: string; salesperson: string; count: number }
-type AdoptionStats = {
-  totalCopies: number; totalSuggested: number; totalVisited: number; rate: number
-  byGroup: Record<'A' | 'B' | 'C', { suggested: number; visited: number }>
-}
+type Adoption = { totalCopies: number; totalSuggested: number; totalVisited: number; rate: number }
 
-const GROUP_META = {
-  A: { title: '商品興趣追蹤', icon: '🔥', hint: '有明確事由,優先跑' },
-  B: { title: '例行拜訪', icon: '🤝', hint: '活躍客戶,別冷掉' },
-  C: { title: '陌生開發', icon: '🌱', hint: '填空檔,跑完可認領' },
-} as const
+const KIND_META: Record<Kind, { label: string; icon: typeof Flame; cls: string }> = {
+  overdue:    { label: '追蹤逾期', icon: CalendarClock, cls: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  hot:        { label: '客戶正熱', icon: Flame,         cls: 'bg-brand-50 text-brand-700 ring-brand-200' },
+  newOpening: { label: '新開業',   icon: Sparkles,      cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  stale:      { label: '太久沒跑', icon: Clock3,        cls: 'bg-stone-100 text-stone-600 ring-stone-200' },
+}
+const KIND_ORDER: Kind[] = ['overdue', 'hot', 'newOpening', 'stale']
 
-function telHref(phone: string): string {
-  return 'tel:' + phone.replace(/[^\d+]/g, '')
-}
-function mapHref(name: string, address: string): string {
-  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address || name)
-}
+const telHref = (p: string) => 'tel:' + p.replace(/[^\d+]/g, '')
+const mapHref = (name: string, addr: string) =>
+  'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr || name)
 
 export default function VisitSuggestionsContent({ currentUser }: { currentUser?: string }) {
-  const [rows, setRows] = useState<RegionRow[]>([])
-  const [sp, setSp] = useState('')
+  const [mode, setMode] = useState<'today' | 'area'>('today')
+  const [who, setWho] = useState('')          // 主管檢視用：要看哪位業務的名單
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
-  const [data, setData] = useState<SuggestionResult | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [rows, setRows] = useState<RegionRow[]>([])
+  const [data, setData] = useState<Result | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [kindFilter, setKindFilter] = useState<Kind | ''>('')
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
-  const [adoption, setAdoption] = useState<AdoptionStats | null>(null)
+  const [adoption, setAdoption] = useState<Adoption | null>(null)
 
-  const loadAdoption = () => {
-    fetch('/api/bd/visit-suggestions/adoption?mine=1&days=30')
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setAdoption(d) })
-      .catch(() => {})
-  }
-  useEffect(() => { loadAdoption() }, [])
-
-  // 區域/業務選項:吃區域統計快取(即時)
   useEffect(() => {
-    fetch('/api/customers/region-stats')
-      .then((r) => r.json())
-      .then((d) => setRows(d.rows ?? []))
-      .catch(() => setError('讀取區域清單失敗'))
+    fetch('/api/bd/visit-suggestions/adoption?mine=1&days=30')
+      .then((r) => r.json()).then((d) => { if (!d.error) setAdoption(d) }).catch(() => {})
   }, [])
 
-  const salespersons = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.salesperson).filter((s) => s && s !== '公司' && s !== '盤商'))).sort(),
-    [rows])
-
-  // 預設業務 = 登入者(若在名單中)
+  // 區域選項只在切到「指定區域」時才需要
   useEffect(() => {
-    if (sp || !salespersons.length) return
-    setSp(currentUser && salespersons.includes(currentUser) ? currentUser : salespersons[0])
-  }, [salespersons, currentUser, sp])
+    if (mode !== 'area' || rows.length) return
+    fetch('/api/customers/region-stats').then((r) => r.json())
+      .then((d) => setRows(d.rows ?? [])).catch(() => {})
+  }, [mode, rows.length])
 
-  // 該業務轄區(有客戶的區)排前面,其餘區照筆數排
-  const districtOptions = useMemo(() => {
-    const mine = new Map<string, number>()   // 'city|district' → 該業務客戶數
-    const all = new Map<string, number>()
-    for (const r of rows) {
-      if (r.city.startsWith('(') || r.district.startsWith('(')) continue
-      const k = r.city + '|' + r.district
-      all.set(k, (all.get(k) ?? 0) + r.count)
-      if (r.salesperson === sp) mine.set(k, (mine.get(k) ?? 0) + r.count)
-    }
-    const opts = Array.from(all.keys()).map((k) => {
-      const [c, d] = k.split('|')
-      return { city: c, district: d, mineCount: mine.get(k) ?? 0, total: all.get(k) ?? 0 }
-    })
-    opts.sort((a, b) => b.mineCount - a.mineCount || b.total - a.total)
-    return opts
-  }, [rows, sp])
+  const load = useCallback(async () => {
+    setLoading(true); setError(''); setChecked(new Set())
+    try {
+      const qs = new URLSearchParams({ mode, limit: '30' })
+      if (who) qs.set('salesperson', who)
+      if (mode === 'area') { qs.set('city', city); qs.set('district', district) }
+      const res = await fetch('/api/bd/visit-suggestions?' + qs.toString())
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? '讀取失敗')
+      setData(json)
+    } catch (e: any) {
+      setError(e?.message ?? '產生拜訪建議失敗'); setData(null)
+    } finally { setLoading(false) }
+  }, [mode, city, district, who])
 
-  // 預設區 = 該業務客戶最多的區
-  // 必須等業務確定(sp 有值)才設,否則會被「業務未定前的全域最大區」搶先鎖住 city,
-  // 之後 districtOptions 換成該業務轄區也因 city 已有值而不再修正(race)。
+  // today 模式開頁直接載入；area 模式要選完才載
   useEffect(() => {
-    if (city || !sp || !districtOptions.length) return
-    const top = districtOptions[0]
-    setCity(top.city); setDistrict(top.district)
-  }, [districtOptions, city, sp])
+    if (mode === 'today') load()
+    else if (city && district) load()
+    else { setData(null); setLoading(false) }
+  }, [mode, city, district, who, load])
 
-  useEffect(() => {
-    if (!sp || !city || !district) return
-    setLoading(true); setError(''); setData(null); setChecked(new Set())
-    const q = new URLSearchParams({ city, district, salesperson: sp })
-    fetch('/api/bd/visit-suggestions?' + q)
-      .then(async (r) => {
-        const d = await r.json()
-        if (!r.ok) throw new Error(d.error || '讀取失敗')
-        setData(d)
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [sp, city, district])
+  const cities = useMemo(() => Array.from(new Set(rows.map((r) => r.city).filter(Boolean))).sort(), [rows])
+  const districts = useMemo(
+    () => Array.from(new Set(rows.filter((r) => r.city === city).map((r) => r.district).filter(Boolean))).sort(),
+    [rows, city])
 
-  const allItems = useMemo(
-    () => data ? [...data.groups.A, ...data.groups.B, ...data.groups.C] : [],
-    [data])
+  const items = useMemo(
+    () => (data?.items ?? []).filter((i) => !kindFilter || i.kind === kindFilter),
+    [data, kindFilter])
 
-  const toggle = (id: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
-  }
+  const toggle = (id: string) =>
+    setChecked((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
-  const copyPlan = async () => {
-    const picked = allItems.filter((x) => checked.size === 0 || checked.has(x.id))
-    const today = new Date().toISOString().slice(0, 10)
-    const lines = [
-      `📋 拜訪單 ${city}${district}｜${sp}｜${today}`,
-      ...picked.map((x, i) =>
-        `${i + 1}. ${GROUP_META[x.group].icon} ${x.name}\n   ${x.reason}${x.phone ? `\n   ☎ ${x.phone}` : ''}${x.address ? `\n   📍 ${x.address}` : ''}`),
-    ]
-    const text = lines.join('\n')
-    // 記錄這批建議被複製(可追溯用):失敗不擋複製動作,純背景記錄。
-    fetch('/api/bd/visit-suggestions/adoption', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ city, district, items: picked.map((x) => ({ id: x.id, group: x.group })) }),
-    }).then(loadAdoption).catch(() => {})
-    // clipboard API 在手機 webview / 非 HTTPS / 權限受限時會拋錯,需 fallback,
-    // 否則使用者點了沒反應、按鈕也不變「已複製」,會誤以為壞掉。
-    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const copyList = async () => {
+    const picked = items.filter((i) => checked.has(i.id))
+    const list = picked.length ? picked : items
+    const text = list.map((i, n) =>
+      `${n + 1}. ${i.name}（${i.city}${i.district}）${i.phone ? ' ' + i.phone : ''}\n   ${i.reasons.join('；')}`
+    ).join('\n')
     try {
       await navigator.clipboard.writeText(text)
-      done()
-    } catch {
-      try {
-        const ta = document.createElement('textarea')
-        ta.value = text
-        ta.style.position = 'fixed'; ta.style.opacity = '0'
-        document.body.appendChild(ta); ta.focus(); ta.select()
-        document.execCommand('copy')
-        document.body.removeChild(ta)
-        done()
-      } catch {
-        setError('複製失敗,請手動長按選取拜訪單文字')
-      }
-    }
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+      fetch('/api/bd/visit-suggestions/adoption', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: data?.scope ?? '', items: list.map((i) => ({ id: i.id, kind: i.kind })) }),
+      }).catch(() => {})
+    } catch { setError('無法複製到剪貼簿') }
   }
 
-  const total = allItems.length
-  const pickedCount = checked.size
-
   return (
-    <div className="space-y-6">
-      {/* 條件列 */}
-      <div className="card-soft p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[auto_auto_1fr] items-end gap-4">
-        <div className="min-w-0">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">業務</label>
-          <select className="select-soft mt-1 block w-full" value={sp} onChange={(e) => { setSp(e.target.value); setCity(''); setDistrict('') }}>
-            {salespersons.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+    <div className="space-y-4">
+      {/* 模式切換 */}
+      <div className="card-soft p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {([['today', '今天該跑誰'], ['area', '指定區域']] as const).map(([m, label]) => (
+            <button key={m} onClick={() => setMode(m)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
+                mode === m ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' : 'bg-stone-50 text-stone-500 hover:bg-brand-50 hover:text-brand-700'
+              }`}>{label}</button>
+          ))}
+          {(data?.salespeople?.length ?? 0) > 0 && (
+            <select value={who} onChange={(e) => setWho(e.target.value)} className="select-soft text-sm"
+              aria-label="查看哪位業務的名單">
+              <option value="">{data?.needsSalesperson ? '請選擇業務' : '我自己'}</option>
+              {data!.salespeople!.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          )}
+          {mode === 'area' && (
+            <>
+              <select value={city} onChange={(e) => { setCity(e.target.value); setDistrict('') }} className="select-soft text-sm">
+                <option value="">選縣市</option>
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={district} onChange={(e) => setDistrict(e.target.value)} disabled={!city} className="select-soft text-sm">
+                <option value="">選行政區</option>
+                {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </>
+          )}
         </div>
-        <div className="min-w-0">
-          <label className="text-[11px] font-bold uppercase tracking-widest text-stone-400">鄉鎮市區(轄區優先)</label>
-          <select
-            className="select-soft mt-1 block w-full sm:min-w-[220px]"
-            value={city && district ? city + '|' + district : ''}
-            onChange={(e) => { const [c, d] = e.target.value.split('|'); setCity(c); setDistrict(d) }}
-          >
-            {districtOptions.map((o) => (
-              <option key={o.city + '|' + o.district} value={o.city + '|' + o.district}>
-                {o.city}{o.district}{o.mineCount ? `(持有 ${o.mineCount})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p className="text-xs text-stone-400 sm:col-span-2 xl:col-span-1 xl:ml-auto xl:self-center">
-          建議一日 8 家上下,依現場彈性調整;資料每晚更新{data ? `(${data.mapsBuiltAt.slice(0, 10)})` : ''}
+        <p className="mt-2 text-xs leading-5 text-stone-400">
+          {mode === 'today'
+            ? '不用選任何東西。系統依「追蹤逾期 → 客戶正熱 → 新開業 → 太久沒跑」排序，每筆都寫明為什麼推。'
+            : '出差或跑固定路線時用。會列出該區所有值得跑的客戶，含尚未認領的。'}
+          {data?.scope && <span className="ml-1 text-stone-500">範圍：{data.scope}。</span>}
         </p>
+        {adoption && adoption.totalSuggested > 0 && (
+          <p className="mt-1.5 text-xs text-stone-400">
+            近 30 天你複製了 {adoption.totalCopies} 次名單，建議的 {adoption.totalSuggested} 家中有 {adoption.totalVisited} 家事後真的跑了（採納率 {(adoption.rate * 100).toFixed(0)}%）。
+          </p>
+        )}
       </div>
 
-      {/* 建議採納率(近30天,可追溯:複製建議後這些客戶事後有沒有真的被拜訪) */}
-      {adoption && adoption.totalSuggested > 0 && (
-        <p className="text-xs text-stone-400 -mt-2">
-          📊 近 30 天你複製了 {adoption.totalCopies} 次拜訪單,建議的 {adoption.totalSuggested} 家中有 {adoption.totalVisited} 家事後真的拜訪了(採納率 {(adoption.rate * 100).toFixed(0)}%)
-        </p>
-      )}
-
-      {data?.existingOnly && (
-        <div className="card-soft p-4 text-sm leading-6 text-stone-500">
-          <b className="text-stone-700">目前只顯示既有客戶。</b> 系統不會提供未認領名單或陌生開發建議。
-        </div>
-      )}
-
-      {error && <div className="card-soft p-4 text-sm text-red-600">{error}</div>}
-      {loading && (
-        <div className="card-soft p-8 text-center text-sm text-stone-400">
-          正在整理 {city}{district} 的拜訪機會…(首次載入需建快取,約 1 分鐘)
-        </div>
-      )}
-
-      {data && !loading && (
-        <>
-          {(['A', 'B', 'C'] as const).map((g) => {
-            const items = data.groups[g]
-            const meta = GROUP_META[g]
-            const more = g === 'B' ? data.more.B : g === 'C' ? data.more.C : 0
-            if (!items.length && !more) return null
+      {/* 分類統計＋篩選 */}
+      {data && data.total > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setKindFilter('')}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ring-1 transition-all active:scale-95 ${
+              kindFilter === '' ? 'bg-stone-800 text-white ring-stone-800' : 'bg-white text-stone-500 ring-stone-200 hover:bg-stone-50'}`}>
+            全部 {data.total}
+          </button>
+          {KIND_ORDER.filter((k) => data.byKind[k] > 0).map((k) => {
+            const M = KIND_META[k]; const Icon = M.icon
             return (
-              <section key={g} className="card-soft overflow-hidden">
-                <header className="px-5 py-3.5 flex items-baseline gap-3 border-b border-stone-900/[0.06] bg-brand-50/40">
-                  <h3 className="font-bold text-stone-800">{meta.icon} {meta.title}</h3>
-                  <span className="text-xs text-stone-400">{meta.hint}</span>
-                  <span className="ml-auto text-xs text-stone-400">{items.length} 家{more > 0 ? `,另有 ${more} 家未列` : ''}</span>
-                </header>
-                <ul className="divide-y divide-stone-900/[0.04]">
-                  {items.map((x) => (
-                    <li key={x.id} className="px-4 sm:px-5 py-4 flex items-start gap-3 hover:bg-brand-50/50 transition-colors">
-                      <input
-                        type="checkbox"
-                        className="mt-1.5 accent-[#b8956a] cursor-pointer"
-                        checked={checked.has(x.id)}
-                        onChange={() => toggle(x.id)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-stone-800">{x.name}</span>
-                          {x.type && <span className="chip text-[11px]">{x.type}</span>}
-                          {x.devStage && <span className="chip text-[11px]">{x.devStage}</span>}
-                          {x.lastVisit && <span className="text-[11px] text-stone-400">上次拜訪 {x.lastVisit}</span>}
-                        </div>
-                        <p className="mt-1 text-sm text-stone-600 leading-relaxed">{x.reason}</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row shrink-0 gap-2 self-center">
-                        {x.phone && (
-                          <a href={telHref(x.phone)}
-                             className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
-                            撥號
-                          </a>
-                        )}
-                        <a href={mapHref(x.name, x.address)} target="_blank" rel="noreferrer"
-                           className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all">
-                          導航
-                        </a>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <button key={k} onClick={() => setKindFilter(kindFilter === k ? '' : k)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ring-1 transition-all active:scale-95 ${
+                  kindFilter === k ? 'bg-stone-800 text-white ring-stone-800' : `${M.cls} hover:brightness-95`}`}>
+                <Icon className="size-3.5" />{M.label} {data.byKind[k]}
+              </button>
             )
           })}
+          <button onClick={copyList} disabled={items.length === 0}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">
+            {copied ? <><Check className="size-3.5" />已複製</> : <><Copy className="size-3.5" />複製{checked.size ? ` ${checked.size} 家` : '這份名單'}</>}
+          </button>
+        </div>
+      )}
 
-          {total === 0 ? (
-            <div className="card-soft p-8 text-center text-sm text-stone-400">
-              {city}{district} 目前沒有可建議的拜訪對象(已排除歇業、公司戶、盤商與其他業務的客戶)
-            </div>
-          ) : (
-            <div className="glass-bar sticky bottom-20 md:bottom-4 rounded-3xl md:rounded-full px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 shadow-lg">
-              <span className="text-sm text-stone-600">
-                共 {total} 家建議{pickedCount > 0 ? `,已勾選 ${pickedCount} 家` : '(未勾選=全部帶走)'}
-              </span>
-              <button onClick={copyPlan}
-                      className="w-full sm:w-auto sm:ml-auto min-h-11 px-5 py-2 rounded-full text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all">
-                {copied ? '✓ 已複製' : '複製拜訪單'}
-              </button>
-            </div>
+      {loading && <div className="card-soft p-10 text-center text-sm text-stone-400">整理中…</div>}
+      {error && <div className="card-soft p-4 text-sm text-red-600">{error}</div>}
+
+      {!loading && !error && data && data.total === 0 && (
+        <div className="card-soft p-10 text-center">
+          <p className="font-semibold text-stone-700">目前沒有需要優先跑的客戶</p>
+          <p className="mt-1 text-sm text-stone-400">
+            {mode === 'today'
+              ? '沒有逾期追蹤、也沒有太久沒跑的名下客戶。可以切「指定區域」看看某一區還有誰值得拜訪。'
+              : '這一區的客戶都在正常節奏內。'}
+          </p>
+        </div>
+      )}
+
+      {!loading && mode === 'area' && !data && (
+        <div className="card-soft p-10 text-center text-sm text-stone-400">選擇縣市與行政區後產生名單。</div>
+      )}
+
+      {/* 名單 */}
+      {items.length > 0 && (
+        <div className="space-y-2.5">
+          {items.map((s, idx) => {
+            const M = KIND_META[s.kind]; const Icon = M.icon
+            return (
+              <div key={s.id} className="card-soft p-4">
+                <div className="flex items-start gap-3">
+                  <label className="flex cursor-pointer items-center pt-0.5">
+                    <input type="checkbox" checked={checked.has(s.id)} onChange={() => toggle(s.id)}
+                      className="h-4 w-4 accent-[#9a7041]" aria-label={`選取 ${s.name}`} />
+                  </label>
+                  <span className="w-5 shrink-0 pt-0.5 text-xs font-bold tabular-nums text-stone-300">{idx + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a href={`/customers/${s.id}`} target="_blank" rel="noopener noreferrer"
+                        className="font-semibold text-stone-800 hover:text-brand-700">{s.name}</a>
+                      <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${M.cls}`}>
+                        <Icon className="size-3" />{M.label}
+                      </span>
+                      {s.type && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{s.type}</span>}
+                      {!s.isMine && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">尚未認領</span>}
+                    </div>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {s.reasons.map((r, i) => (
+                        <li key={i} className="text-sm leading-6 text-stone-600">・{r}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-xs text-stone-400">
+                      {s.city}{s.district}
+                      {s.address && ` · ${s.address}`}
+                      {s.lastVisit ? ` · 最後拜訪 ${s.lastVisit}` : ' · 尚無拜訪紀錄'}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1.5">
+                    {s.phone && (
+                      <a href={telHref(s.phone)} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition-all active:scale-95">
+                        <Phone className="size-3" />撥號
+                      </a>
+                    )}
+                    <a href={mapHref(s.name, s.address)} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-600 transition-all active:scale-95">
+                      <MapPin className="size-3" />導航
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {data && data.total > items.length && kindFilter === '' && (
+            <p className="px-1 text-xs text-stone-400">共 {data.total} 家符合條件，這裡顯示分數最高的 {items.length} 家。</p>
           )}
-        </>
+        </div>
       )}
     </div>
   )

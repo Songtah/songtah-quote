@@ -44,9 +44,10 @@ export default async function BdPage({
     { id: 'today',    href: '/bd',              label: '今日工作', hint: '先處理最重要的客戶' },
     { id: 'visits',   href: '/bd?tab=visits',   label: '客情紀錄', hint: '查看與新增互動' },
     { id: 'report',   href: '/bd?tab=report',   label: '紀錄匯入', hint: 'LINE 與日報轉紀錄' },
+    { id: 'suggest',  href: '/bd?tab=suggest',  label: '拜訪建議', hint: '今天該跑誰' },
   ] as const
 
-  const isLegacyTool = tab === 'campaigns' || tab === 'suggest'
+  const isLegacyTool = tab === 'campaigns'
 
   return (
     <AppShell
@@ -57,7 +58,7 @@ export default async function BdPage({
           : tab === 'campaigns'
               ? '商品潛在購買清單派工追蹤：匯入名單、業務逐一聯絡、訂單自動判定成交。'
               : tab === 'suggest'
-                ? '出門前的彈藥清單：選區域,系統依商品興趣、例行維繫、陌生開發整理值得跑的客戶與理由。'
+                ? '出門前的彈藥清單。系統依追蹤逾期、客戶反應、拜訪間隔與新開業排出今天該跑誰，每筆都寫明理由。'
               : tab === 'visits'
                 ? '記錄每次客戶互動，留下明確的下一步。'
                 : '先看今天該處理誰，再記錄結果或安排下一步。'

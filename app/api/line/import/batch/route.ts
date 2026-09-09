@@ -79,7 +79,10 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
         customerReaction: validReaction,
         followUpAction: '',
         needsFollowUp: item.needsFollowUp,
-        nextFollowUpDate: '',
+        // 解析器已依內容推斷到期日（講「下週回」就 +7 天，沒講就 +14 天），
+        // 這裡原本硬寫空字串把它丟掉——實測 9/1 之後 185 筆有 50 筆標了需追蹤、
+        // 到期日卻 0 筆，導致「逾期追蹤」這個最優先的訊號完全無法運作。
+        nextFollowUpDate: item.nextFollowUpDate ?? '',
         status: '',
         address: '', city: '', district: '',
         tags: [], competitorEquipment: [], interestedProductIds: [],

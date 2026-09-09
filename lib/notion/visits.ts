@@ -710,6 +710,71 @@ export async function scanVisitRecency(): Promise<Record<string, string>> {
 }
 
 /**
+ * 全掃拜訪庫，彙整「這家客戶現在的狀態」——拜訪建議需要的四個訊號一次取齊。
+ *
+ * 為什麼不沿用 scanVisitRecency：那支只回最後拜訪日，而新版拜訪建議還要
+ * 客戶反應強度與逾期追蹤，分三支各掃一次全庫太浪費（6,000+ 筆）。
+ *
+ * 訂單與客戶等級都不能用：訂單近一年只涵蓋 2 家客戶、客戶等級全庫 10,000 筆皆空。
+ * 拜訪紀錄本身（1,857 家有資料）才是目前唯一夠密的訊號來源。
+ */
+export type CustomerVisitSignal = {
+  lastVisit: string           // 最後拜訪日
+  visitCount: number
+  lastReaction: string        // 最後一次有填的客戶反應
+  lastReactionDate: string
+  /** 未結案且需追蹤的最急一筆（有到期日者優先，再取最舊） */
+  openFollowUp: { date: string; nextDate: string; action: string } | null
+}
+
+export async function scanCustomerVisitSignals(): Promise<Record<string, CustomerVisitSignal>> {
+  const map: Record<string, CustomerVisitSignal> = {}
+  let cur: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('scanCustomerVisitSignals', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        ...(cur ? { start_cursor: cur } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+      if (!relId) continue
+      const date = getDate(page, '日期')
+      const reaction = getSelect(page, '客戶反應')
+      const done = page.properties?.['追蹤已結案']?.checkbox ?? false
+      const need = page.properties?.['是否需追蹤']?.checkbox ?? false
+      const status = page.properties?.['狀態']?.status?.name ?? ''
+      const nextDate = getDate(page, '下次追蹤日')
+
+      const hit = map[relId] ?? (map[relId] = {
+        lastVisit: '', visitCount: 0, lastReaction: '', lastReactionDate: '', openFollowUp: null,
+      })
+      hit.visitCount++
+      if (date > hit.lastVisit) hit.lastVisit = date
+      if (reaction && date >= hit.lastReactionDate) {
+        hit.lastReaction = reaction
+        hit.lastReactionDate = date
+      }
+      // 待追蹤的定義與 listOpenFollowUps 一致：checkbox 或 狀態=追蹤中，且未結案
+      const isOpen = !done && (need || status === '追蹤中') && !FOLLOW_UP_COMPLETE_STATUS.has(status)
+      if (isOpen) {
+        const cand = { date, nextDate, action: getText(page, '後續動作') }
+        const kept = hit.openFollowUp
+        // 有到期日者優先；同樣有（或同樣沒有）就取比較舊的那筆（拖最久）
+        const better = !kept
+          || (!!cand.nextDate && !kept.nextDate)
+          || (!!cand.nextDate === !!kept.nextDate && (cand.nextDate || cand.date) < (kept.nextDate || kept.date))
+        if (better) hit.openFollowUp = cand
+      }
+    }
+    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cur)
+  return map
+}
+
+/**
  * 全掃拜訪庫，回傳 customerId(去連字號) → 各業務對這家的回報次數與最後回報日。
  *
  * 供組合層 visit-claim 判定「這是支援還是在開發」——次數是兩者的分界線

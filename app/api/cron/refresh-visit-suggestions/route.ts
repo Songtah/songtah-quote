@@ -30,9 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       builtAt: maps.builtAt,
-      visitCustomers: Object.keys(maps.visitRecency).length,
-      equipmentCustomers: Object.keys(maps.equipmentCounts).length,
-      orderCustomers: Object.keys(maps.orderActivity).length,
+      customersWithSignals: Object.keys(maps.signals).length,
     })
   } catch (error) {
     console.error('refresh-visit-suggestions error:', error)

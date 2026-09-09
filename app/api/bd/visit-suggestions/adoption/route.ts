@@ -18,19 +18,19 @@ function canViewAll(session: any) {
 export const POST = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json()
-    const { city, district, items } = body ?? {}
+    const { scope, items } = body ?? {}
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: '缺少建議清單' }, { status: 400 })
     }
     const salesperson = (session?.user?.name as string) ?? ''
     const customerIds: string[] = []
-    const groups: Record<string, 'A' | 'B' | 'C'> = {}
+    const kinds: Record<string, string> = {}
     for (const it of items) {
-      if (!it?.id || !it?.group) continue
+      if (!it?.id || !it?.kind) continue
       customerIds.push(it.id)
-      groups[it.id] = it.group
+      kinds[it.id] = it.kind
     }
-    await logSuggestionCopy({ salesperson, city: city ?? '', district: district ?? '', customerIds, groups })
+    await logSuggestionCopy({ salesperson, scope: scope ?? '', customerIds, kinds })
     return NextResponse.json({ ok: true, logged: customerIds.length })
   } catch (error) {
     console.error('visit-suggestions/adoption POST error:', error)
