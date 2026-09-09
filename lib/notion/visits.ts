@@ -375,8 +375,11 @@ export async function createVisit(data: {
         ...(data.salesperson ? { 業務人員: { select: { name: data.salesperson } } } : {}),
         拜訪內容: { rich_text: richText(data.content) },
         地址: { rich_text: richText(data.address) },
-        縣市: { rich_text: richText(data.city) },
-        鄉鎮市區: { rich_text: richText(data.district) },
+        // ⚠️ 不要寫「縣市」「鄉鎮市區」——客情資料庫沒有這兩個屬性（ensureVisitDbFields 已依
+        // 「GET 禁止改 schema」鐵則清空，欄位在 Notion 端被移除後就不再存在）。
+        // 寫了會讓整個 pages.create 回 400「縣市 is not a property that exists.」，
+        // 而 LINE webhook 的 try/catch 會靜默吞掉——實際造成 2026-09-01～09-09 共 8 天
+        // 完全沒有任何客情紀錄進入系統。縣市/行政區一律由客戶 relation 解析（見 buildVisitItems）。
         ...(data.tags?.length
           ? { 客戶標籤: { multi_select: data.tags.map((name) => ({ name })) } }
           : {}),
@@ -639,8 +642,13 @@ export async function updateVisit(id: string, data: {
   }
   if (data.content !== undefined) properties['拜訪內容'] = { rich_text: richText(data.content) }
   if (data.address !== undefined) properties['地址'] = { rich_text: richText(data.address) }
-  if (data.city !== undefined) properties['縣市'] = { rich_text: richText(data.city) }
-  if (data.district !== undefined) properties['鄉鎮市區'] = { rich_text: richText(data.district) }
+  // 「縣市」「鄉鎮市區」不存在於客情資料庫，寫入會讓整筆更新 400——見 createVisit 的說明。
+  // 編輯表單是整包 JSON.stringify(form) 送出、必帶這兩個鍵，所以編輯儲存必然失敗。
+  // 兩者由客戶 relation 解析，這裡刻意忽略。
+  // 「狀態」原本宣告在型別裡卻從未寫入，等於使用者改了也不會存——一併補上（status 型別）。
+  if (data.status !== undefined) {
+    properties['狀態'] = data.status ? { status: { name: data.status } } : { status: null }
+  }
   if (data.tags !== undefined) properties['客戶標籤'] = { multi_select: data.tags.map((name) => ({ name })) }
   if (data.competitorEquipment !== undefined) properties['競品'] = { multi_select: data.competitorEquipment.map((name) => ({ name })) }
   if (data.interestedProductIds !== undefined) properties['有興趣的產品'] = { relation: data.interestedProductIds.map((id) => ({ id })) }

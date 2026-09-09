@@ -132,6 +132,12 @@ async function processEvents(events: any[]) {
       const formOptions = await getVisitFormOptions()
 
       // ── 每個客戶建立一筆紀錄 ──────────────────────────────────────────────
+      // 逐筆的 try/catch 只是為了「一筆壞掉不影響其他筆」，不代表可以靜默失敗——
+      // 2026-09 就是因為 createVisit 寫入不存在的欄位、錯誤被這裡吞掉，
+      // 導致連續 8 天沒有任何客情紀錄進系統而無人察覺。
+      // 因此每則日報結束後一律結算成敗，全數失敗時以明確的告警等級記錄。
+      let created = 0
+      const failures: { customer: string; message: string }[] = []
       for (const visit of report.visits) {
         try {
           // 比對 Notion 客戶主檔
@@ -191,14 +197,26 @@ async function processEvents(events: any[]) {
             ).catch(() => false)
           }
 
+          created++
           console.log(
             `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}` +
             (claim.claimed ? ` · 已自動認領（${claim.reason}）` : ` · 未認領（${claim.reason}）`) +
             (stageAdvanced ? ` · 階段推進為 ${devStageForReaction(validReaction)}` : '')
           )
-        } catch (err) {
-          console.error(`[LINE Webhook] createVisit error (${visit.customerName}):`, err)
+        } catch (err: any) {
+          const message = err?.body?.message ?? err?.message ?? String(err)
+          failures.push({ customer: visit.customerName, message })
+          console.error(`[LINE Webhook] createVisit error (${visit.customerName}): ${message}`)
         }
+      }
+
+      if (failures.length > 0) {
+        const level = created === 0 ? '🚨 全數失敗' : '⚠️ 部分失敗'
+        console.error(
+          `[LINE Webhook] ${level} — ${salesperson} ${report.date}：` +
+          `成功 ${created} / 失敗 ${failures.length}。` +
+          `首個原因：${failures[0].message}`
+        )
       }
     } catch (err) {
       console.error('[LINE Webhook] processEvents error:', err)
