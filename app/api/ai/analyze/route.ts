@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { withApiAuth } from '@/lib/api-auth'
 import Anthropic from '@anthropic-ai/sdk'
 import { listVisits, type Visit } from '@/lib/system-notion'
 
@@ -77,9 +76,10 @@ function formatVisitsCompact(visits: Visit[]): string {
   }).join('\n')
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: '未授權' }, { status: 401 })
+// 依 CLAUDE.md 安全鐵則 1：一律用 withApiAuth 宣告授權規則。
+// 原本只檢查 `if (!session)`，等於任何登入者都能觸發按次計費的 Anthropic API。
+// 這幾支是客情分析工具，綁 bd:view 權限。
+export const POST = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: '尚未設定 ANTHROPIC_API_KEY' }, { status: 503 })
@@ -216,4 +216,4 @@ ${customInstructions?.trim() ? `\n【分析重點與限制（請嚴格遵守）�
     console.error('AI analyze error:', error)
     return NextResponse.json({ error: 'AI 分析失敗，請稍後重試' }, { status: 500 })
   }
-}
+})

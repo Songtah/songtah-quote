@@ -18,6 +18,7 @@ import { isDailyReport, parseDailyReport, devStageForReaction } from '@/lib/line
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
+import { customerNameStem, pickUniqueCustomerMatch } from '@/lib/customer-name-match'
 import { isInReportWindow, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
 import { advanceCustomerDevStage } from '@/lib/notion/customers'
 import { detectCompetitors } from '@/lib/competitor-detector'
@@ -141,11 +142,19 @@ async function processEvents(events: any[]) {
       for (const visit of report.visits) {
         try {
           // 比對 Notion 客戶主檔
-          let customerId: string | undefined
-          const matches = await searchSystemCustomers(visit.customerName)
-          if (matches.length > 0) customerId = matches[0].id
-          // 只有唯一命中才算比對確定；多筆同名時不觸發自動認領（見 visit-claim 第一層）
-          const unambiguousMatch = matches.length === 1
+          // searchSystemCustomers 連地址／行政區都比對，直接取 matches[0] 會把客情接到
+          // 名稱毫不相干、只是地址剛好含這幾個字的客戶身上。一律先驗名稱字根。
+          // 另外日報寫的是簡稱（「誠鴻牙科」），主檔是正式名（「誠鴻牙醫診所」），
+          // 整串查不到時改用字根重查一次。
+          let matches = await searchSystemCustomers(visit.customerName)
+          const stem = customerNameStem(visit.customerName)
+          if (matches.length === 0 && stem && stem !== visit.customerName) {
+            matches = await searchSystemCustomers(stem)
+          }
+          const matched = pickUniqueCustomerMatch(visit.customerName, matches)
+          const customerId = matched?.id
+          // 唯一且名稱驗證通過才算比對確定（見 visit-claim 第一層）
+          const unambiguousMatch = Boolean(matched)
 
           // 確認 customerReaction 在系統選項內，否則清空
           const validReaction = formOptions.customerReactions.includes(visit.customerReaction)

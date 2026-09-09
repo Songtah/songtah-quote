@@ -890,13 +890,13 @@ export default function VisitsContent({
             整理與分析
             <span className="text-stone-300 transition-transform group-open:rotate-180">⌄</span>
           </summary>
-          <div className="mt-2 flex flex-wrap justify-end gap-2 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-stone-900/[0.06] sm:max-w-xl">
+          <div className="mt-2 flex flex-wrap justify-end gap-2 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-stone-900/[0.06] sm:max-w-3xl">
           {/* 一鍵批次 AI 分析 */}
           <button
             onClick={handleBatchAnalyze}
             disabled={batchAnalyzing || batchPendingCount === 0}
             title={batchPendingCount === 0 ? '所有已載入紀錄均已填寫互動類型與客戶反應' : `分析 ${batchPendingCount} 筆缺少互動類型或客戶反應的紀錄`}
-            className="flex min-h-11 items-center gap-1.5 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {batchAnalyzing && batchProgress ? (
               <><span className="animate-pulse text-base leading-none">✨</span> 分析中 {batchProgress.done}/{batchProgress.total}</>
@@ -907,7 +907,7 @@ export default function VisitsContent({
           <button
             onClick={openAiModal}
             disabled={visits.length === 0}
-            className="flex min-h-11 items-center gap-1.5 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 ring-1 ring-violet-200 transition-all hover:bg-violet-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="text-base leading-none">✦</span>
             AI 商機分析
@@ -916,21 +916,21 @@ export default function VisitsContent({
             <>
               <button
                 onClick={() => { setAutoLinkOpen(true); setAutoLinkDone(false); setAutoLinkStats(null) }}
-                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+                className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
                 title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
               >
                 <span className="text-base leading-none">🔗</span> 補齊關聯
               </button>
               <button
                 onClick={() => { setDetectOpen(true); setDetectDone(false); setDetectStats(null) }}
-                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+                className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
                 title="掃描拜訪內文，自動偵測並填入競品欄位"
               >
                 <span className="text-base leading-none">🔍</span> 偵測競品
               </button>
               <button
                 onClick={() => { setDedupOpen(true); setDedupDone(false); setDedupStats(null); runDedup(true) }}
-                className="flex min-h-11 items-center gap-1.5 rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-stone-100 active:scale-95"
+                className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-stone-100 active:scale-95"
                 title="找出同客戶+同日期+同業務的重複紀錄，保留最完整一筆、刪除其餘"
               >
                 <span className="text-base leading-none">🧹</span> 刪除重複

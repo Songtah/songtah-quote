@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
+import { customerNameStem, pickUniqueCustomerMatch } from '@/lib/customer-name-match'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -65,47 +66,34 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
       if (!rawName) continue
 
-      const customers = await searchSystemCustomers(rawName)
-
-      if (customers.length === 0) {
-        noMatchCount++
-        if (noMatchNames.length < 5) noMatchNames.push(rawName)
-        continue
+      // 先用整串簡稱查；查不到再用字根重查一次（「誠鴻牙科」→「誠鴻」）。
+      // searchSystemCustomers 連地址／行政區都比對，回傳的候選可能與名稱無關，
+      // 因此**不論候選幾筆**都必須通過名稱字根驗證才可關聯（見 lib/customer-name-match）。
+      let customers = await searchSystemCustomers(rawName)
+      const stem = customerNameStem(rawName)
+      if (customers.length === 0 && stem && stem !== rawName) {
+        customers = await searchSystemCustomers(stem)
       }
 
-      if (customers.length > 1) {
-        // 只有完全相符才視為唯一
-        const exact = customers.filter(
-          (c) => c.name === rawName || c.name.includes(rawName) || rawName.includes(c.name)
-        )
-        if (exact.length !== 1) {
+      const match = pickUniqueCustomerMatch(rawName, customers)
+      if (!match) {
+        if (customers.length === 0) {
+          noMatchCount++
+          if (noMatchNames.length < 5) noMatchNames.push(rawName)
+        } else {
+          // 有候選但名稱驗不過或不唯一 → 交給人工，不亂猜
           multiMatchCount++
           if (multiMatchNames.length < 5) multiMatchNames.push(rawName)
-          continue
         }
-        // 剛好 1 個相符 → 用這個
-        const match = exact[0]
-        if (!dryRun) {
-          await notion.pages.update({
-            page_id: page.id,
-            properties: {
-              '🏥 牙科單位資料': { relation: [{ id: match.id }] },
-              // 同時補齊客戶名稱為完整名稱
-              '單位名稱': { title: [{ text: { content: match.name } }] },
-            } as any,
-          })
-        }
-        linked++
         continue
       }
 
-      // customers.length === 1 → 唯一結果，直接關聯
-      const match = customers[0]
       if (!dryRun) {
         await notion.pages.update({
           page_id: page.id,
           properties: {
             '🏥 牙科單位資料': { relation: [{ id: match.id }] },
+            // 同時把簡稱補齊為主檔的完整名稱
             '單位名稱': { title: [{ text: { content: match.name } }] },
           } as any,
         })
