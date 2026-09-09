@@ -10,7 +10,7 @@
  * 實測 80% 的轄區外回報只發生過一次（＝支援/路過），把認領做成順手的預設會製造錯誤歸屬。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Handshake, MapPin, MapPinOff, TriangleAlert, UserRoundPlus } from 'lucide-react'
+import { Handshake, MapPin, MapPinOff, TriangleAlert, UserRoundPlus, Users } from 'lucide-react'
 
 type Suggestion = {
   customerId: string
@@ -19,7 +19,7 @@ type Suggestion = {
   customerDistrict: string
   customerType: string
   salesperson: string
-  tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog'
+  tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog' | 'territory-visited-by-others'
   visitCount: number
   looksDeveloping: boolean
   contested: boolean
@@ -69,7 +69,9 @@ export function ClaimSuggestionsPanel() {
     } finally { setBusy('') }
   }
 
-  const backlog = (items ?? []).filter((s) => s.tier === 'in-territory-backlog' && !s.contested)
+  // 轄區歸屬確定的兩類：自己跑過的舊回報、以及同事跑過但轄區是你的
+  const TERRITORY_TIERS = ['in-territory-backlog', 'territory-visited-by-others']
+  const backlog = (items ?? []).filter((s) => TERRITORY_TIERS.includes(s.tier) && !s.contested)
 
   const previewBulk = async () => {
     setBusy('bulk'); setError(''); setDone('')
@@ -119,10 +121,10 @@ export function ClaimSuggestionsPanel() {
       {backlog.length > 0 && (
         <div className="mt-4 rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-600/15">
           <p className="text-sm font-semibold text-emerald-800">
-            有 {backlog.length} 家在你轄區內、但回報早於轄區設定，所以沒有自動認領
+            有 {backlog.length} 家在你轄區內、有人跑過、但目前沒有人負責
           </p>
           <p className="mt-1 text-xs leading-5 text-emerald-700">
-            這些的歸屬是確定的（就在你的轄區、目前無人負責），可以一次認領完。歸屬有爭議的不會包含在內。
+            包含你自己早於轄區設定時回報的，以及同事支援時跑過的。歸屬是確定的（就在你的轄區、無人負責），可以一次認領完。
           </p>
           {!bulkPreview ? (
             <button onClick={previewBulk} disabled={busy === 'bulk'}
@@ -180,12 +182,18 @@ export function ClaimSuggestionsPanel() {
                     <MapPin className="size-3" />這區現在是你的轄區
                   </span>
                 )}
+                {s.tier === 'territory-visited-by-others' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <Users className="size-3" />同事跑過，轄區是你的
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-xs text-stone-400">
                 {s.customerCity}{s.customerDistrict}
                 {s.lastVisitDate && ` · 最後回報 ${s.lastVisitDate}`}
                 {s.tier === 'outside-territory' && ' · 不在你的轄區內'}
                 {s.tier === 'in-territory-backlog' && ' · 這筆回報早於轄區設定，所以沒有自動認領'}
+                {s.tier === 'territory-visited-by-others' && ` · ${s.otherVisitors.join('、')} 跑過但沒有人負責`}
               </p>
 
               {s.contested && (
@@ -217,7 +225,8 @@ export function ClaimSuggestionsPanel() {
 
       <p className="mt-3 text-[11px] leading-5 text-stone-400">
         標為「只是支援」會同時建立一筆跨區支援報備，之後不會再問你這家。認領則會把客戶主檔的負責業務寫成你，只在該客戶仍無人負責時生效。
-        標「這區現在是你的轄區」的，是新增轄區之前就回報過的舊紀錄——系統不會回頭自動認領，需要你按一下確認。
+        標「這區現在是你的轄區」的，是新增轄區之前就回報過的舊紀錄；標「同事跑過」的是別人支援時留下的紀錄。
+        兩者系統都不會回頭自動認領，需要你按一下確認。
       </p>
     </div>
   )

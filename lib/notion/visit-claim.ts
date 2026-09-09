@@ -36,6 +36,16 @@
  * 會有 81 筆建議（77 家客戶）從清單上不見、客戶卻仍然無人負責。
  * 因此改成第四種情況 `in-territory-backlog`——留在建議清單上，標明「這區現在是你的了」，
  * 一鍵認領即可。只有**設轄區之後的新回報**才走第一層自動認領。
+ *
+ * ── 第二個來源：同事跑過、但轄區是你的 ──────────────────────────────────────
+ * 建議原本只有一個資料源「你自己回報過的客戶」，於是同事去支援跑了一趟、留下紀錄，
+ * 而該轄區的主人自己沒跑過時，系統從來不會告訴他這家值得認領。
+ * 實測回填名單中未認領的 1,147 家裡，1,002 家落在某人轄區內，其中
+ * **269 家只有別人跑過**（Duncan 116、Eason 64、Gus 60、Hank 29），全數掉進這個縫。
+ * 既有的轄區「未開發名單」雖然看得到，但那份有 5,809 家，這 1,002 家只佔 17.2%，
+ * 混在裡面分不出哪些已經有人踩過線。
+ * 故新增 tier `territory-visited-by-others`。轄區歸屬本來就凌駕拜訪紀錄
+ * （既有轄區認領流程亦然），所以不標爭議、不需主管核可，但會列出跑過的同事供協調。
  */
 import { getCachedValue, setCachedValue, deleteRedisValue, getRedisValue, setRedisValue } from './shared'
 import {
@@ -61,7 +71,7 @@ export type ClaimDecision =
   | { action: 'auto-claim'; territoryKey: string }
   | {
       action: 'suggest'
-      tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog'
+      tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog' | 'territory-visited-by-others'
       /** 該業務對該客戶累積回報次數 */
       visitCount: number
       /** 依 DEVELOPING_VISIT_THRESHOLD 判定像是在開發，而非單純支援 */
@@ -75,6 +85,8 @@ export type ClaimDecision =
 export type ClaimContext = {
   /** 業務姓名 → 其有效轄區的 `縣市|行政區` 集合 */
   territoriesBy: Map<string, Set<string>>
+  /** `縣市|行政區` → 轄區主人（反查用，供「同事跑過但轄區是你的」判定） */
+  ownerByTerritory: Map<string, string>
   /** 業務姓名 → 是否可承接新客戶 */
   canClaimBy: Map<string, boolean>
 }
@@ -84,10 +96,11 @@ const CONTEXT_TTL = 10 * 60_000
 
 /** 轄區與帳號承接模式的組合快照；兩者都不常變，快取 10 分鐘。 */
 export async function loadClaimContext(): Promise<ClaimContext> {
-  const cached = getCachedValue<{ t: [string, string[]][]; c: [string, boolean][] }>(CONTEXT_CACHE_KEY)
+  const cached = getCachedValue<{ t: [string, string[]][]; o: [string, string][]; c: [string, boolean][] }>(CONTEXT_CACHE_KEY)
   if (cached) {
     return {
       territoriesBy: new Map(cached.t.map(([k, v]) => [k, new Set(v)])),
+      ownerByTerritory: new Map(cached.o),
       canClaimBy: new Map(cached.c),
     }
   }
@@ -96,21 +109,25 @@ export async function loadClaimContext(): Promise<ClaimContext> {
     getSystemUsers().catch(() => []),
   ])
   const territoriesBy = new Map<string, Set<string>>()
+  const ownerByTerritory = new Map<string, string>()
   for (const t of territories) {
     // 只有生效中的轄區算數；暫停／結束者不觸發自動認領
     if (t.status === '結束' || t.status === '暫停') continue
     if (!t.salesperson || !t.city || !t.district) continue
+    const key = `${t.city}|${t.district}`
     const set = territoriesBy.get(t.salesperson) ?? new Set<string>()
-    set.add(`${t.city}|${t.district}`)
+    set.add(key)
     territoriesBy.set(t.salesperson, set)
+    ownerByTerritory.set(key, t.salesperson)
   }
   const canClaimBy = new Map(users.map((u) => [u.name, canAcceptNewBusiness(u)]))
 
   setCachedValue(CONTEXT_CACHE_KEY, {
     t: Array.from(territoriesBy, ([k, v]) => [k, Array.from(v)] as [string, string[]]),
+    o: Array.from(ownerByTerritory),
     c: Array.from(canClaimBy),
   }, CONTEXT_TTL)
-  return { territoriesBy, canClaimBy }
+  return { territoriesBy, ownerByTerritory, canClaimBy }
 }
 
 export function invalidateClaimContext() {
@@ -136,8 +153,14 @@ export function decideClaim(input: {
    * false/省略 = 即時路徑（建檔當下），轄區內直接認領。
    */
   retroactive?: boolean
+  /**
+   * false = 這位業務自己沒跑過這家，是「同事跑過、轄區是你的」那一類。
+   * 只影響轄區內的 tier 命名與文案；各道把關完全相同。
+   */
+  visitedBySelf?: boolean
 }): ClaimDecision {
   const { salesperson, customer, context, visitCount, otherVisitors, retroactive } = input
+  const visitedBySelf = input.visitedBySelf !== false
 
   if (!customer) return { action: 'skip', reason: 'customer-unmatched' }
   const owner = (customer.salesperson ?? '').trim()
@@ -164,13 +187,17 @@ export function decideClaim(input: {
   if (inTerritory && !retroactive) return { action: 'auto-claim', territoryKey: key }
 
   // 第二層＋第三層：轄區外／沒設轄區／轄區內的舊回報 → 只建議，並附上加權訊號
+  const tier = inTerritory
+    ? (visitedBySelf ? 'in-territory-backlog' : 'territory-visited-by-others')
+    : territories && territories.size > 0 ? 'outside-territory' : 'no-territory'
   return {
     action: 'suggest',
-    tier: inTerritory ? 'in-territory-backlog'
-      : territories && territories.size > 0 ? 'outside-territory' : 'no-territory',
+    tier,
     visitCount,
     looksDeveloping: visitCount >= DEVELOPING_VISIT_THRESHOLD,
-    contested: contested.length > 0,
+    // 轄區歸屬凌駕拜訪紀錄（既有轄區認領流程亦然），所以「同事跑過」不算爭議、不需主管核可；
+    // 但同事名單仍會帶出去供協調。
+    contested: tier === 'territory-visited-by-others' ? false : contested.length > 0,
     otherVisitors: contested,
   }
 }
@@ -181,7 +208,9 @@ export function describeDecision(d: ClaimDecision, customerName: string): string
     case 'auto-claim':
       return `${customerName} 在你的轄區內且尚無人負責，已自動認領給你。`
     case 'suggest': {
-      const where = d.tier === 'in-territory-backlog' ? '這區現在是你的轄區了'
+      const where = d.tier === 'territory-visited-by-others'
+          ? `這家在你的轄區內，${d.otherVisitors.join('、')} 跑過但還沒有人負責`
+        : d.tier === 'in-territory-backlog' ? '這區現在是你的轄區了'
         : d.tier === 'no-territory' ? '你目前沒有設定轄區' : '這家不在你的轄區內'
       const nth = d.looksDeveloping ? `你已經回報過這家 ${d.visitCount} 次，看起來是你在開發。` : ''
       const war = d.contested ? `另有 ${d.otherVisitors.join('、')} 也拜訪過這家，認領需主管核可。` : ''
@@ -213,7 +242,7 @@ export type ClaimSuggestion = {
   customerDistrict: string
   customerType: string
   salesperson: string
-  tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog'
+  tier: 'outside-territory' | 'no-territory' | 'in-territory-backlog' | 'territory-visited-by-others'
   visitCount: number
   looksDeveloping: boolean
   contested: boolean
@@ -221,7 +250,10 @@ export type ClaimSuggestion = {
   lastVisitDate: string
 }
 
-const SUGGESTIONS_CACHE_KEY = 'visit-claim-suggestions-v1'
+/** 轄區歸屬確定的兩種 tier：排序最優先，也是批次認領唯一收的範圍 */
+export const TERRITORY_TIERS = new Set<ClaimSuggestion['tier']>(['in-territory-backlog', 'territory-visited-by-others'])
+
+const SUGGESTIONS_CACHE_KEY = 'visit-claim-suggestions-v2'   // v2=新增第二個來源
 const SUGGESTIONS_TTL = 12 * 60 * 60_000   // 12 小時；由每晚排程重算保持新鮮
 
 /**
@@ -273,9 +305,41 @@ export async function computeClaimSuggestions(): Promise<ClaimSuggestion[]> {
     }
   }
   // 像在開發的排前面，其次回報次數多的，最後才是單次支援
+  // ── 第二個來源：同事跑過、但轄區是你的 ──
+  // 上面那圈只看「回報者本人」，所以轄區主人自己沒跑過的客戶永遠不會浮出來。
+  for (const [customerId, signal] of Object.entries(signals)) {
+    const customer = byId.get(customerId)
+    if (!customer) continue
+    const territoryOwner = context.ownerByTerritory.get(`${customer.city}|${customer.district}`)
+    if (!territoryOwner) continue
+    const visitors = Object.keys(signal.visitors)
+    if (visitors.includes(territoryOwner)) continue          // 自己跑過的已由上面那圈處理
+    if (dismissed.has(dismissKey(territoryOwner, customerId))) continue
+    const decision = decideClaim({
+      salesperson: territoryOwner, customer, context,
+      visitCount: 0, otherVisitors: visitors,
+      retroactive: true, visitedBySelf: false,
+    })
+    if (decision.action !== 'suggest') continue
+    out.push({
+      customerId,
+      customerName: customer.name,
+      customerCity: customer.city,
+      customerDistrict: customer.district,
+      customerType: customer.type,
+      salesperson: territoryOwner,
+      tier: decision.tier,
+      visitCount: 0,
+      looksDeveloping: false,
+      contested: false,
+      otherVisitors: decision.otherVisitors,
+      lastVisitDate: signal.lastDate,
+    })
+  }
+
   // 轄區內待辦排最前（歸屬最明確、最該一鍵清掉），其次像在開發的，最後才是單次支援
   out.sort((a, b) =>
-    Number(b.tier === 'in-territory-backlog') - Number(a.tier === 'in-territory-backlog') ||
+    Number(TERRITORY_TIERS.has(b.tier)) - Number(TERRITORY_TIERS.has(a.tier)) ||
     Number(b.looksDeveloping) - Number(a.looksDeveloping) ||
     b.visitCount - a.visitCount ||
     b.lastVisitDate.localeCompare(a.lastVisitDate))

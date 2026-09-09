@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import {
   listClaimSuggestions, addDismissed, invalidateClaimSuggestions,
-  loadClaimContext, decideClaim,
+  loadClaimContext, decideClaim, TERRITORY_TIERS,
 } from '@/lib/notion/visit-claim'
 import { assignSalesperson, listCustomersByArea } from '@/lib/notion/customers'
 import { createCrossSupportLog } from '@/lib/notion/cross-support'
@@ -68,7 +68,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     // 比照 /api/territories/[id]/claim：先 dryRun 預覽再寫入，單次上限 100 家。
     if (action === 'claim-all-in-territory') {
       const pool = (await listClaimSuggestions(salesperson))
-        .filter((s) => s.tier === 'in-territory-backlog' && !s.contested)
+        .filter((s) => TERRITORY_TIERS.has(s.tier) && !s.contested)
       if (pool.length === 0) {
         return NextResponse.json({ error: '沒有可批次認領的轄區內待辦' }, { status: 409 })
       }
@@ -77,7 +77,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
         return NextResponse.json({
           dryRun: true, total: pool.length, willClaim: batch.length,
           excludedContested: (await listClaimSuggestions(salesperson))
-            .filter((s) => s.tier === 'in-territory-backlog' && s.contested).length,
+            .filter((s) => TERRITORY_TIERS.has(s.tier) && s.contested).length,
           sample: batch.slice(0, 20).map((s) => ({
             name: s.customerName, area: `${s.customerCity}${s.customerDistrict}`, visitCount: s.visitCount,
           })),
