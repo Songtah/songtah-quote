@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { SalesTodayDashboard } from '@/components/SalesTodayDashboard'
 import { authOptions } from '@/lib/auth'
-import { getTodayDashboard } from '@/lib/dashboard-today'
+import { getTodayDashboard, getTeamTodayDashboard } from '@/lib/dashboard-today'
 import { canView } from '@/lib/permissions'
 
 export default async function DashboardPage() {
@@ -31,11 +31,20 @@ export default async function DashboardPage() {
   const canViewTeamPerformance =
     role === 'admin' || accountType === '中央管理' || accountType === '總經理'
   const salespersonId = (session.user as any)?.id as string | undefined
-  const data = await getTodayDashboard(userName, salespersonId ?? '', {
-    bd: hasPersonalSalesQueue && visibleModules.bd,
-    quote: hasPersonalSalesQueue && visibleModules.quote,
-    rma: hasPersonalSalesQueue && visibleModules.rma,
-  })
+  // 中央管理／總經理／admin 沒有對應的「業務人員」select，用個人視角會全部是 0。
+  // 這些帳號改看全體：資料源都是本來就已過濾、量體可控的（當日拜訪／未結案追蹤／
+  // 進行中報價／未結案工單），不做全庫掃描。
+  const data = hasPersonalSalesQueue
+    ? await getTodayDashboard(userName, salespersonId ?? '', {
+        bd: visibleModules.bd,
+        quote: visibleModules.quote,
+        rma: visibleModules.rma,
+      })
+    : await getTeamTodayDashboard({
+        bd: visibleModules.bd,
+        quote: visibleModules.quote,
+        rma: visibleModules.rma,
+      })
   const hour = Number(new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     hour12: false,

@@ -30,10 +30,18 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
   try {
     const me = session.user?.name?.trim() ?? ''
     const requested = req.nextUrl.searchParams.get('salesperson')?.trim() ?? ''
-    // 只有主管能看別人的建議；業務一律只看自己的
-    const focus = requested && isManager(session) ? requested : me
+    const manager = isManager(session)
+    // 業務一律只看自己的。主管沒指定業務時看**全體**——中央管理／admin 帳號沒有
+    // 對應的「業務人員」值，若退回看自己會永遠是空的。
+    const focus = manager ? (requested || undefined) : me
     const items = await listClaimSuggestions(focus)
-    return NextResponse.json({ focus, canActOnContested: isManager(session), items })
+    const salespeople = manager
+      ? Array.from(new Set(items.map((i) => i.salesperson))).sort((a, b) => a.localeCompare(b, 'zh-TW'))
+      : undefined
+    return NextResponse.json({
+      focus: focus ?? '', viewingAll: manager && !requested,
+      canActOnContested: manager, items, salespeople,
+    })
   } catch (error) {
     console.error('claim-suggestions GET error:', error)
     return NextResponse.json({ error: '讀取待認領建議失敗' }, { status: 500 })

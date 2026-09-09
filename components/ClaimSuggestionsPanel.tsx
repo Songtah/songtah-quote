@@ -30,6 +30,7 @@ type Suggestion = {
 export function ClaimSuggestionsPanel() {
   const [items, setItems] = useState<Suggestion[] | null>(null)
   const [canActOnContested, setCanAct] = useState(false)
+  const [viewingAll, setViewingAll] = useState(false)
   const [busy, setBusy] = useState('')
   const [bulkPreview, setBulkPreview] = useState<{ total: number; willClaim: number; excludedContested: number; sample: { name: string; area: string; visitCount: number }[] } | null>(null)
   const [error, setError] = useState('')
@@ -42,6 +43,7 @@ export function ClaimSuggestionsPanel() {
       if (!res.ok) throw new Error(json.error ?? '讀取失敗')
       setItems(json.items ?? [])
       setCanAct(Boolean(json.canActOnContested))
+      setViewingAll(Boolean(json.viewingAll))
     } catch (e: any) {
       setError(e?.message ?? '讀取待認領建議失敗')
       setItems([])
@@ -71,7 +73,8 @@ export function ClaimSuggestionsPanel() {
 
   // 轄區歸屬確定的兩類：自己跑過的舊回報、以及同事跑過但轄區是你的
   const TERRITORY_TIERS = ['in-territory-backlog', 'territory-visited-by-others']
-  const backlog = (items ?? []).filter((s) => TERRITORY_TIERS.includes(s.tier) && !s.contested)
+  // 全體視角混了多位業務，批次認領會把不同人的客戶一起處理，故只在單人視角開放
+  const backlog = viewingAll ? [] : (items ?? []).filter((s) => TERRITORY_TIERS.includes(s.tier) && !s.contested)
 
   const previewBulk = async () => {
     setBusy('bulk'); setError(''); setDone('')
@@ -110,7 +113,9 @@ export function ClaimSuggestionsPanel() {
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">客情回報後續</p>
           <h2 className="mt-1 text-lg font-bold text-stone-800">待認領建議</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
-            你回報過、但目前還沒有人負責的客戶。設好轄區之後的新回報會自動認領，這裡列的是需要你確認的。
+            {viewingAll
+              ? '全體業務的待認領建議。有人回報過、但客戶目前還沒有人負責，各筆標明該由誰處理。'
+              : '你回報過、但目前還沒有人負責的客戶。設好轄區之後的新回報會自動認領，這裡列的是需要你確認的。'}
           </p>
         </div>
         {items && items.length > 0 && (
@@ -166,6 +171,7 @@ export function ClaimSuggestionsPanel() {
             <div key={s.customerId} className="rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.06]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-stone-800">{s.customerName}</span>
+                {viewingAll && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">{s.salesperson}</span>}
                 {s.customerType && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{s.customerType}</span>}
                 {s.looksDeveloping && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">

@@ -17,6 +17,7 @@ type Suggestion = {
   id: string; name: string; type: string; city: string; district: string
   address: string; phone: string; salesperson: string
   kind: Kind; reasons: string[]; score: number; lastVisit: string | null; isMine: boolean
+  owner?: string          // 全體視角時標明這筆是誰的
 }
 type Result = {
   mode: 'today' | 'area'
@@ -28,6 +29,7 @@ type Result = {
   existingOnly?: boolean
   salespeople?: string[]
   needsSalesperson?: boolean
+  viewingAll?: boolean
 }
 type RegionRow = { city: string; district: string; salesperson: string; count: number }
 type Adoption = { totalCopies: number; totalSuggested: number; totalVisited: number; rate: number }
@@ -134,7 +136,7 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
           {(data?.salespeople?.length ?? 0) > 0 && (
             <select value={who} onChange={(e) => setWho(e.target.value)} className="select-soft text-sm"
               aria-label="查看哪位業務的名單">
-              <option value="">{data?.needsSalesperson ? '請選擇業務' : '我自己'}</option>
+              <option value="">全部業務</option>
               {data!.salespeople!.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           )}
@@ -228,7 +230,8 @@ export default function VisitSuggestionsContent({ currentUser }: { currentUser?:
                         <Icon className="size-3" />{M.label}
                       </span>
                       {s.type && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{s.type}</span>}
-                      {!s.isMine && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">尚未認領</span>}
+                      {s.owner && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">{s.owner}</span>}
+                      {!s.isMine && !s.owner && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">尚未認領</span>}
                     </div>
                     <ul className="mt-1.5 space-y-0.5">
                       {s.reasons.map((r, i) => (

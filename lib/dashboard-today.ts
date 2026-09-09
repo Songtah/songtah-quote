@@ -36,13 +36,20 @@ function sameOwner(value: string, owner: string) {
   return value.trim().toLocaleLowerCase('zh-TW') === owner.trim().toLocaleLowerCase('zh-TW')
 }
 
-async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+/**
+ * 逾時就回退成 fallback，首頁不因單一資料源慢而整頁卡住。
+ *
+ * 個人視角 2.5s 夠用；全體視角要放寬——實測未結案待追蹤（219 筆、需解析 relation）
+ * 要 3.8s、工單 2.1s，用 2.5s 會全部退回 fallback，首頁就變成一排 0
+ * （這正是 2026-09-09 之前中央管理帳號看到全 0 的直接原因）。
+ */
+async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T, ms = 2500): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       promise,
       new Promise<T>((resolve) => {
-        timeout = setTimeout(() => resolve(fallback), 2500)
+        timeout = setTimeout(() => resolve(fallback), ms)
       }),
     ])
   } catch (error) {
@@ -217,13 +224,80 @@ export async function getTodayDashboard(
  */
 export async function getBdTodayDashboard(owner: string, salespersonId: string, viewAll: boolean): Promise<TodayDashboardData> {
   if (!viewAll) return getTodayDashboard(owner, salespersonId, { bd: true, quote: false, rma: false })
+  return getTeamTodayDashboard({ bd: true, quote: false, rma: false })
+}
 
-  // 中央管理帳號沒有對應的「業務人員」select。不可為了首頁摘要即時掃描
-  // 全體客情並解析所有 relation，否則會放大成大量 Notion request 並觸發 429。
+/**
+ * 全體視角（中央管理／總經理／admin）。
+ *
+ * 這些帳號沒有對應的「業務人員」select 值，用個人視角會全部是 0。
+ * 但也不能為了首頁摘要就即時全掃客情並解析所有 relation——那會放大成大量
+ * Notion request 並觸發 429（2026-09-09 實測掃太兇確實會逾時）。
+ * 因此只取「本來就已經按條件過濾、量體可控」的來源：
+ *   當日拜訪（單日，數十筆）· 未結案待追蹤（已按客戶去重，約 250 筆）
+ *   進行中報價（limit 100）· 未結案工單（limit 100）
+ * 轄區新機構需要單一業務的轄區才有意義，全體視角不計算。
+ */
+/** 全體視角的逾時：實測最慢的待追蹤 3.8s，留一倍餘裕 */
+const TEAM_TIMEOUT_MS = 10_000
+
+export async function getTeamTodayDashboard(
+  access: { bd: boolean; quote: boolean; rma: boolean },
+): Promise<TodayDashboardData> {
+  const date = todayTW()
+  const [allVisits, allFollowUps, quoteResult, ticketResult] = await Promise.all([
+    access.bd
+      ? withDashboardTimeout(
+          listVisits({ dateFrom: date, dateTo: date, fetchAll: true }).then((r) => r.items),
+          [], TEAM_TIMEOUT_MS,
+        )
+      : Promise.resolve([]),
+    access.bd ? withDashboardTimeout(listOpenFollowUps(), [], TEAM_TIMEOUT_MS) : Promise.resolve([]),
+    access.quote
+      ? withDashboardTimeout(listQuotes({ limit: 100 }), { items: [], hasMore: false, nextCursor: null }, TEAM_TIMEOUT_MS)
+      : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
+    access.rma
+      ? withDashboardTimeout(listSystemTickets({ limit: 100 }), { items: [], hasMore: false, nextCursor: null }, TEAM_TIMEOUT_MS)
+      : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
+  ])
+
+  const quotes = quoteResult.items.filter((q) => ACTIVE_QUOTE_STATUSES.has(q.status))
+  const openTickets = ticketResult.items.filter((t) => !CLOSED_TICKET_STATUSES.has(t.status))
+  const overdueTickets = openTickets.filter((t) => t.scheduledDate && t.scheduledDate < date)
+
+  // 全體視角的工作佇列要標上是誰的，否則看不出來這筆該找誰
+  const workItems: TodayWorkItem[] = [
+    ...allFollowUps.map((v): TodayWorkItem => ({
+      id: v.id,
+      kind: 'follow-up',
+      time: v.nextFollowUpDate || '待安排',
+      customer: `${v.customerName || '未命名客戶'}（${v.salesperson || '未指派'}）`,
+      action: v.followUpAction || '完成客戶追蹤',
+      href: '/bd',
+      overdue: Boolean(v.nextFollowUpDate && v.nextFollowUpDate < date),
+    })),
+    ...allVisits.map((v): TodayWorkItem => ({
+      id: v.id,
+      kind: 'visit',
+      time: '今天',
+      customer: `${v.customerName || '未命名客戶'}（${v.salesperson || '未指派'}）`,
+      action: v.followUpAction || v.interactionPurpose || '今日已回報',
+      href: '/bd',
+    })),
+  ]
+    .sort((a, b) => Number(b.overdue ?? false) - Number(a.overdue ?? false))
+    .slice(0, 30)
+
   return {
-    date: todayTW(),
-    counts: { visits: 0, followUps: 0, quotes: 0, overdueTickets: 0, territoryNewOpenings: 0 },
+    date,
+    counts: {
+      visits: allVisits.length,
+      followUps: allFollowUps.length,
+      quotes: quotes.length,
+      overdueTickets: overdueTickets.length,
+      territoryNewOpenings: 0,
+    },
     nextAction: null,
-    workItems: [],
+    workItems,
   }
 }

@@ -36,14 +36,21 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       .map((a) => a.name)
       .sort((a, b) => a.localeCompare(b, 'zh-TW'))
 
-    // 環境變數／管理帳號的 session 沒有業務姓名，「今天該跑誰」對它沒有意義——
-    // 回 200 加上業務清單讓主管自己選，而不是回 400 讓整頁壞掉。
-    if (!salesperson) {
+    // 中央管理／admin 的 session 沒有對應的「業務人員」值，用它當範圍會永遠是空的。
+    // 主管沒指定業務時 → 彙總全體業務的名單，各筆標明是誰的。
+    if (canViewAll && !sp.get('salesperson')) {
+      const each = await Promise.all(
+        salespeople.map((name) => buildVisitSuggestions({ mode, city, district, salesperson: name, limit: 500 })
+          .catch(() => null))
+      )
+      const merged = each.flatMap((r, i) => (r?.items ?? []).map((it) => ({ ...it, owner: salespeople[i] })))
+      merged.sort((a, b) => b.score - a.score)
+      const byKind = { overdue: 0, hot: 0, stale: 0, newOpening: 0 } as Record<string, number>
+      for (const it of merged) byKind[it.kind]++
       return NextResponse.json({
-        mode, items: [], total: 0,
-        byKind: { overdue: 0, hot: 0, stale: 0, newOpening: 0 },
-        scope: '這個帳號不是業務，請先選擇要查看哪一位業務的名單',
-        builtAt: '', salespeople, needsSalesperson: true,
+        mode, items: merged.slice(0, limit), total: merged.length, byKind,
+        scope: `全體業務（${salespeople.length} 位）`,
+        builtAt: '', salespeople, viewingAll: true,
       })
     }
 
