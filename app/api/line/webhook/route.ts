@@ -14,10 +14,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { waitUntil } from '@vercel/functions'
-import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
+import { isDailyReport, parseDailyReport, devStageForReaction } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
 import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
+import { advanceCustomerDevStage } from '@/lib/notion/customers'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
 export const dynamic = 'force-dynamic'
@@ -179,9 +180,21 @@ async function processEvents(events: any[]) {
             ? await applyAutoClaimForVisit({ salesperson, customerId, unambiguous: unambiguousMatch })
             : { claimed: false, reason: 'customer-unmatched' }
 
+          // 漏斗由系統自己推進（業務只回報，不該再進系統點階段）。
+          // 只推進自己名下或無人負責的客戶；別人的客戶會 throw，吞掉即可。
+          let stageAdvanced = false
+          if (customerId) {
+            stageAdvanced = await advanceCustomerDevStage(
+              customerId,
+              devStageForReaction(validReaction),
+              { actorName: salesperson, canManageAll: false },
+            ).catch(() => false)
+          }
+
           console.log(
             `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}` +
-            (claim.claimed ? ` · 已自動認領（${claim.reason}）` : ` · 未認領（${claim.reason}）`)
+            (claim.claimed ? ` · 已自動認領（${claim.reason}）` : ` · 未認領（${claim.reason}）`) +
+            (stageAdvanced ? ` · 階段推進為 ${devStageForReaction(validReaction)}` : '')
           )
         } catch (err) {
           console.error(`[LINE Webhook] createVisit error (${visit.customerName}):`, err)

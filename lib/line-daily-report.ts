@@ -180,13 +180,44 @@ function isNonVisitEntry(name: string): boolean {
 
 // ── 推斷客戶反應 ──────────────────────────────────────────────────────────────
 
+// 回傳值**必須**是 Notion「客戶反應」select 的實際選項名稱。
+// 原本回傳「積極配合／有興趣／需考慮／暫不需要」,這四個沒有一個在選項清單裡,
+// 於是 webhook 的 formOptions.customerReactions.includes() 永遠 false、一律清空——
+// 實測 5,068 筆有客戶關聯的拜訪只有 149 筆有反應值,其餘全是這個對不上造成的靜默失效。
+// 規則由強到弱排列,先命中者優先。
+const REACTION_RULES: { pattern: RegExp; value: string }[] = [
+  { pattern: /訂購|下單|成交|購買|訂貨|要了|確認數量/,      value: '確認下單' },
+  { pattern: /報價|估價/,                                  value: '要求報價' },
+  { pattern: /試用|試機|試作|留給.*試|放.*試/,              value: '同意試用' },
+  { pattern: /太貴|價格高|價格有疑慮|嫌貴|價錢.*高/,         value: '價格有疑慮' },
+  { pattern: /競品|對手|別家|他牌|其他品牌/,                value: '使用競品' },
+  { pattern: /再訪|下次再來|安排.*拜訪|約.*再來/,           value: '安排再次拜訪' },
+  { pattern: /很有興趣|積極|主動詢問|一直問/,               value: '積極詢問' },
+  { pattern: /有興趣|感興趣|有詢問|詢問/,                   value: '有興趣待確認' },
+  { pattern: /不需要|拒絕|不考慮|暫不|已有|沒需求|用不到/,   value: '近期無需求' },
+  { pattern: /冷淡|沒反應|不太理/,                          value: '反應冷淡' },
+  { pattern: /不確定|考慮|再看看|等等看|討論|觀望/,          value: '持觀望態度' },
+]
+
 function inferReaction(notes: string[]): string {
   const text = notes.join(' ')
-  if (/訂購|下單|成交|購買|訂貨/.test(text)) return '積極配合'
-  if (/有詢問|有興趣|感興趣|詢問價格|要報價|詢問/.test(text)) return '有興趣'
-  if (/不確定|考慮|再看看|等等看|討論/.test(text)) return '需考慮'
-  if (/不需要|拒絕|不考慮|暫不|已有/.test(text)) return '暫不需要'
+  for (const rule of REACTION_RULES) if (rule.pattern.test(text)) return rule.value
   return ''
+}
+
+/**
+ * 客戶反應 → 該推進到哪個開發階段。
+ *
+ * 依 CLAUDE.md 最高原則：業務只回報客情紀錄，漏斗要由系統自己推進。
+ * 原本只有「在系統裡手動新增客情」與「開報價」會推進階段，LINE 回報完全不會——
+ * 而業務幾乎都用 LINE，所以 5,891 筆拜訪換來 0 筆「已接觸」，漏斗形同虛設。
+ *
+ * 「已成交」刻意不由口頭反應決定：成交以實際訂單為準（見 campaign-autoclose）。
+ */
+export function devStageForReaction(reaction: string): '已接觸' | '試用中' | '報價中' {
+  if (reaction === '同意試用') return '試用中'
+  if (reaction === '要求報價' || reaction === '價格有疑慮' || reaction === '確認下單') return '報價中'
+  return '已接觸'   // 有客戶關聯的拜訪本身就代表已接觸
 }
 
 // ── 推斷是否需追蹤與下次追蹤日 ────────────────────────────────────────────────

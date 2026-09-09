@@ -17,6 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { createVisit } from '@/lib/system-notion'
+import { advanceCustomerDevStage } from '@/lib/notion/customers'
+import { devStageForReaction } from '@/lib/line-daily-report'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
@@ -61,6 +63,15 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
           needsFollowUp:       v.needsFollowUp === true,
           nextFollowUpDate:    v.needsFollowUp === true ? (v.nextFollowUpDate ?? '') : '',
         })
+        // 漏斗由系統推進；別人名下的客戶會 throw，吞掉不影響匯入
+        if (v.customerId) {
+          await advanceCustomerDevStage(
+            v.customerId,
+            devStageForReaction(v.customerReaction ?? ''),
+            { actorName: canImportForOthers ? (v.salesperson ?? actorName) : actorName, canManageAll: false },
+          ).catch(() => false)
+        }
+
         results.push({ ok: true, id: visit.id, customerName: v.customerName })
 
         await logAuditEvent({
