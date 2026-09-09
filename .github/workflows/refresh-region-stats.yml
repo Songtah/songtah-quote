@@ -23,6 +23,8 @@ jobs:
           test "$code" = "200"
 
       - name: 追蹤名單成交自動判定
+        # 各步驟彼此獨立：一步遇到 Notion 逾時不該讓後面的全部被跳過
+        if: always()
         env:
           CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
         run: |
@@ -34,6 +36,8 @@ jobs:
           test "$code" = "200"
 
       - name: 拜訪建議映射重算(最後拜訪日/設備/訂單)
+        # 各步驟彼此獨立：一步遇到 Notion 逾時不該讓後面的全部被跳過
+        if: always()
         env:
           CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
         run: |
@@ -45,6 +49,8 @@ jobs:
           test "$code" = "200"
 
       - name: 待認領建議重算(客情回報觸發認領的第二/三層)
+        # 各步驟彼此獨立：一步遇到 Notion 逾時不該讓後面的全部被跳過
+        if: always()
         env:
           CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
         run: |
@@ -56,6 +62,8 @@ jobs:
           test "$code" = "200"
 
       - name: 待追蹤自動結案(客戶已有更新拜訪 → 該筆後續已被取代)
+        # 各步驟彼此獨立：一步遇到 Notion 逾時不該讓後面的全部被跳過
+        if: always()
         env:
           CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
         run: |
