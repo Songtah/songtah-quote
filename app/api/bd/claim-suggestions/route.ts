@@ -8,14 +8,19 @@
  * 兩個動作都會寫入正式資料，故各自重驗：
  *  - claim   → 逐筆重讀客戶，只寫「負責業務仍空白」者；有爭議（他人也拜訪過）需主管操作。
  *  - support → 建立跨區支援報備（順手補上那個沒人主動填的機制），並記入否決名單。
+ *  - assign  → **中央管理限定**：把客戶指派給任一位業務（不限建議對象）。
+ *              規則比照公司客戶調度（/api/customers/assign-company）：指派對象必須是
+ *              可承接新客戶的在職業務；只寫負責業務仍空白者（零覆蓋）；已歇業不指派；寫稽核。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import {
-  listClaimSuggestions, addDismissed, invalidateClaimSuggestions,
+  listClaimSuggestions, addDismissed, pruneClaimSuggestions,
   loadClaimContext, decideClaim, TERRITORY_TIERS,
 } from '@/lib/notion/visit-claim'
-import { assignSalesperson, listCustomersByArea } from '@/lib/notion/customers'
+import { assignSalesperson, listCustomersByArea, getSystemCustomerById } from '@/lib/notion/customers'
+import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
+import { isInactiveCustomer } from '@/lib/customer-status'
 import { createCrossSupportLog } from '@/lib/notion/cross-support'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
@@ -25,6 +30,18 @@ export const maxDuration = 120
 const MANAGER_TYPES = new Set(['中央管理', '總經理', '行政'])
 const isManager = (session: any) =>
   session.user?.role === 'admin' || MANAGER_TYPES.has(session.user?.accountType ?? '')
+/** 指派客戶給業務屬於中央調度，與 CLAUDE.md「公司客戶可經中央管理專屬流程指派」同一權限 */
+const isCentralManagement = (session: any) =>
+  session.user?.role === 'admin' || session.user?.accountType === '中央管理'
+
+/** 可被指派的業務：在職、業務帳號、且為「全面開發」承接模式 */
+async function listAssignableSalespeople(): Promise<string[]> {
+  const users = await getSystemUsers().catch(() => [])
+  return users
+    .filter((u) => u.accountType === '業務' && canAcceptNewBusiness(u))
+    .map((u) => u.name)
+    .sort((a, b) => a.localeCompare(b, 'zh-TW'))
+}
 
 export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: NextRequest, _ctx, session) => {
   try {
@@ -38,9 +55,12 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
     const salespeople = manager
       ? Array.from(new Set(items.map((i) => i.salesperson))).sort((a, b) => a.localeCompare(b, 'zh-TW'))
       : undefined
+    const canAssign = isCentralManagement(session)
     return NextResponse.json({
       focus: focus ?? '', viewingAll: manager && !requested,
       canActOnContested: manager, items, salespeople,
+      canAssign,
+      assignableSalespeople: canAssign ? await listAssignableSalespeople() : undefined,
     })
   } catch (error) {
     console.error('claim-suggestions GET error:', error)
@@ -62,8 +82,51 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     if (!customerId && action !== 'claim-all-in-territory') {
       return NextResponse.json({ error: '缺少客戶' }, { status: 400 })
     }
-    if (action !== 'claim' && action !== 'support' && action !== 'claim-all-in-territory') {
-      return NextResponse.json({ error: '動作必須是 claim、support 或 claim-all-in-territory' }, { status: 400 })
+    if (!['claim', 'support', 'claim-all-in-territory', 'assign'].includes(action)) {
+      return NextResponse.json({ error: '動作必須是 claim、support、claim-all-in-territory 或 assign' }, { status: 400 })
+    }
+
+    // ── 中央管理指派 ─────────────────────────────────────────────────────────
+    if (action === 'assign') {
+      if (!isCentralManagement(session)) {
+        return NextResponse.json({ error: '只有中央管理可以指派客戶給業務' }, { status: 403 })
+      }
+      const assignTo = String(body.assignTo ?? '').trim()
+      if (!assignTo) return NextResponse.json({ error: '請選擇要指派的業務' }, { status: 400 })
+
+      const assignable = await listAssignableSalespeople()
+      if (!assignable.includes(assignTo)) {
+        return NextResponse.json({ error: `${assignTo} 不是可承接新客戶的在職業務` }, { status: 400 })
+      }
+
+      // 寫入前重讀客戶當下狀態
+      const customer = await getSystemCustomerById(customerId)
+      if (!customer) return NextResponse.json({ error: '找不到該客戶' }, { status: 404 })
+      if (customer.salesperson) {
+        await pruneClaimSuggestions({ customerIds: [customerId] })
+        return NextResponse.json({ error: `此客戶已由 ${customer.salesperson} 負責，未變更` }, { status: 409 })
+      }
+      if (isInactiveCustomer(customer.status)) {
+        return NextResponse.json({ error: `此客戶機構狀態為「${customer.status}」，不指派` }, { status: 409 })
+      }
+
+      // assignSalesperson 仍會逐筆重讀、只寫負責業務空白者（零覆蓋鐵則）
+      const result = await assignSalesperson([customer.id], assignTo)
+      await pruneClaimSuggestions({ customerIds: [customerId] })
+      const suggestedTo = String(body.suggestedTo ?? '').trim()
+      await logAuditEvent({
+        module: 'bd', action: 'update', entityType: 'claim-suggestion',
+        entityId: customerId, entityTitle: customer.name,
+        summary: `中央管理將 ${customer.name}（${customer.city}${customer.district}）指派給 ${assignTo}`
+          + (suggestedTo && suggestedTo !== assignTo ? `（系統原建議 ${suggestedTo}）` : ''),
+        actor: getAuditActor(session), request: getAuditRequestContext(req),
+        after: { action: 'assign', assignTo, suggestedTo, assigned: result.assigned },
+      }).catch(() => {})
+
+      if (result.assigned === 0) {
+        return NextResponse.json({ error: '指派未生效，該客戶剛剛已被其他人負責' }, { status: 409 })
+      }
+      return NextResponse.json({ ok: true, action: 'assign', assignTo })
     }
     // 業務只能處理自己的建議
     if (salesperson !== me && !isManager(session)) {
@@ -94,7 +157,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
       // assignSalesperson 逐筆重讀、只寫負責業務空白者，不需要在這裡再擋一次
       const ids = batch.map((s) => s.customerId)
       const result = await assignSalesperson(ids, salesperson)
-      await invalidateClaimSuggestions()
+      await pruneClaimSuggestions({ customerIds: ids })
       await logAuditEvent({
         module: 'bd', action: 'update', entityType: 'claim-suggestion',
         entityId: `bulk:${salesperson}`, entityTitle: `${salesperson} 批次認領轄區內待辦`,
@@ -128,7 +191,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
         console.error('cross-support log create failed:', error)
       })
       await addDismissed(salesperson, customerId)
-      await invalidateClaimSuggestions()
+      await pruneClaimSuggestions({ customerIds: [customerId], salesperson })
       await logAuditEvent({
         module: 'bd', action: 'update', entityType: 'claim-suggestion',
         entityId: customerId, entityTitle: suggestion.customerName,
@@ -153,7 +216,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     })).find((c) => c.id.replace(/-/g, '') === customerId.replace(/-/g, ''))
     if (!fresh) return NextResponse.json({ error: '找不到該客戶' }, { status: 404 })
     if (fresh.salesperson) {
-      await invalidateClaimSuggestions()
+      await pruneClaimSuggestions({ customerIds: [customerId] })
       return NextResponse.json({ error: `此客戶已由 ${fresh.salesperson} 負責` }, { status: 409 })
     }
     // 再跑一次完整判定，確保承接模式等把關在寫入當下仍成立
@@ -167,7 +230,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
 
     // assignSalesperson 內部仍會逐筆重讀、只寫空白者（零覆蓋鐵則）
     const result = await assignSalesperson([fresh.id], salesperson)
-    await invalidateClaimSuggestions()
+    await pruneClaimSuggestions({ customerIds: [customerId] })
     await logAuditEvent({
       module: 'bd', action: 'update', entityType: 'claim-suggestion',
       entityId: customerId, entityTitle: suggestion.customerName,

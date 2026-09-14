@@ -355,8 +355,34 @@ export async function listClaimSuggestions(salesperson?: string): Promise<ClaimS
   return salesperson ? all.filter((s) => s.salesperson === salesperson) : all
 }
 
+/**
+ * 整份清掉，下一次讀取會觸發全庫重算（拜訪庫＋客戶庫全掃，約 60 秒）。
+ * **只給會改變 tier 判定的事件用**（轄區新增／修改／結束）。
+ * 單一客戶的認領／指派／標記支援請用 pruneClaimSuggestions——
+ * 2026-09-14 實測：主管連續指派時每次都整份清掉，每筆都觸發一次全庫掃描，
+ * 很快就被 Notion 限流（429 rate_limited），整個面板變成「讀取失敗」。
+ */
 export async function invalidateClaimSuggestions() {
   try { deleteRedisValue(SUGGESTIONS_CACHE_KEY) } catch { /* 失效失敗下次仍會過期 */ }
+}
+
+/**
+ * 從快取中移除受影響的建議，其餘保留，不觸發重算。
+ * 客戶一旦有人負責，所有業務對它的建議都不再成立，所以預設整家移除；
+ * 帶 salesperson 時只移除該業務那一筆（「只是支援」只代表他本人不認領）。
+ * 快取不存在就什麼都不做——下次讀取本來就會重算。全域正確性由每晚排程重算保證。
+ */
+export async function pruneClaimSuggestions(params: { customerIds: string[]; salesperson?: string }) {
+  try {
+    const cached = await getRedisValue<ClaimSuggestion[]>(SUGGESTIONS_CACHE_KEY)
+    if (!cached) return
+    const ids = new Set(params.customerIds.map((id) => id.replace(/-/g, '')))
+    const next = cached.filter((sug) => {
+      if (!ids.has(sug.customerId.replace(/-/g, ''))) return true
+      return params.salesperson ? sug.salesperson !== params.salesperson : false
+    })
+    if (next.length !== cached.length) await setRedisValue(SUGGESTIONS_CACHE_KEY, next, SUGGESTIONS_TTL)
+  } catch { /* 修剪失敗不影響寫入結果；最壞情況是清單上多留一筆，按下去會得到 409 */ }
 }
 
 // ── 「只是支援」的否決名單 ──────────────────────────────────────────────────
@@ -411,7 +437,7 @@ export async function applyAutoClaimForVisit(input: {
     const { assignSalesperson } = await import('./customers')
     const result = await assignSalesperson([customer!.id], salesperson)
     if (result.assigned > 0) {
-      await invalidateClaimSuggestions()
+      await pruneClaimSuggestions({ customerIds: [customer!.id] })
       invalidateClaimContext()
       return { claimed: true, reason: decision.territoryKey }
     }

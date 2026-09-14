@@ -31,6 +31,14 @@ export function ClaimSuggestionsPanel() {
   const [items, setItems] = useState<Suggestion[] | null>(null)
   const [canActOnContested, setCanAct] = useState(false)
   const [viewingAll, setViewingAll] = useState(false)
+  // 中央管理指派：可指派的業務清單與每張卡目前選的對象
+  const [canAssign, setCanAssign] = useState(false)
+  const [assignable, setAssignable] = useState<string[]>([])
+  const [assignPick, setAssignPick] = useState<Record<string, string>>({})
+  // 全體視角可達 1,500 筆，一次全渲染（每張卡含下拉選單）會讓瀏覽器卡住，改為分批顯示
+  const PAGE = 30
+  const [visibleCount, setVisibleCount] = useState(PAGE)
+  const [ownerFilter, setOwnerFilter] = useState('')
   const [busy, setBusy] = useState('')
   const [bulkPreview, setBulkPreview] = useState<{ total: number; willClaim: number; excludedContested: number; sample: { name: string; area: string; visitCount: number }[] } | null>(null)
   const [error, setError] = useState('')
@@ -44,6 +52,8 @@ export function ClaimSuggestionsPanel() {
       setItems(json.items ?? [])
       setCanAct(Boolean(json.canActOnContested))
       setViewingAll(Boolean(json.viewingAll))
+      setCanAssign(Boolean(json.canAssign))
+      setAssignable(json.assignableSalespeople ?? [])
     } catch (e: any) {
       setError(e?.message ?? '讀取待認領建議失敗')
       setItems([])
@@ -68,6 +78,25 @@ export function ClaimSuggestionsPanel() {
         : `已把 ${s.customerName} 記為跨區支援，不會再問你。`)
     } catch (e: any) {
       setError(e?.message ?? '處理失敗')
+    } finally { setBusy('') }
+  }
+
+  const assign = async (s: Suggestion, key: string) => {
+    const to = assignPick[key] ?? (assignable.includes(s.salesperson) ? s.salesperson : '')
+    if (!to) { setError('請先選擇要指派的業務'); return }
+    setBusy(key); setError(''); setDone('')
+    try {
+      const res = await fetch('/api/bd/claim-suggestions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'assign', customerId: s.customerId, assignTo: to, suggestedTo: s.salesperson }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? '指派失敗')
+      // 同一家客戶可能同時是多位業務的建議，指派後一併移除
+      setItems((cur) => (cur ?? []).filter((x) => x.customerId !== s.customerId))
+      setDone(`已將 ${s.customerName} 指派給 ${to}。`)
+    } catch (e: any) {
+      setError(e?.message ?? '指派失敗')
     } finally { setBusy('') }
   }
 
@@ -103,6 +132,10 @@ export function ClaimSuggestionsPanel() {
       await load()
     } catch (e: any) { setError(e?.message ?? '認領失敗') } finally { setBusy('') }
   }
+
+  const owners = Array.from(new Set((items ?? []).map((i) => i.salesperson))).sort((a, b) => a.localeCompare(b, 'zh-TW'))
+  const filtered = (items ?? []).filter((i) => !ownerFilter || i.salesperson === ownerFilter)
+  const shown = filtered.slice(0, visibleCount)
 
   if (items !== null && items.length === 0 && !error) return null
 
@@ -164,40 +197,58 @@ export function ClaimSuggestionsPanel() {
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
       {items === null && <p className="mt-4 text-sm text-stone-400">載入中…</p>}
 
+      {viewingAll && owners.length > 1 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); setVisibleCount(PAGE) }}
+            className="select-soft text-sm" aria-label="只看某位業務的建議">
+            <option value="">全部業務（{items?.length ?? 0}）</option>
+            {owners.map((o) => (
+              <option key={o} value={o}>{o}（{(items ?? []).filter((i) => i.salesperson === o).length}）</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="mt-4 space-y-2.5">
-        {(items ?? []).map((s) => {
+        {shown.map((s) => {
           const blocked = s.contested && !canActOnContested
+          // 全體視角時同一家客戶可能出現在多位業務名下，key 要含業務
+          const key = `${s.customerId}|${s.salesperson}`
+          // 主管看的是別人的建議，文案不能寫「你」
+          const who = viewingAll ? s.salesperson : '你'
+          const whose = viewingAll ? `${s.salesperson} 的` : '你的'
+          const picked = assignPick[key] ?? (assignable.includes(s.salesperson) ? s.salesperson : '')
           return (
-            <div key={s.customerId} className="rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.06]">
+            <div key={key} className="rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.06]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-stone-800">{s.customerName}</span>
                 {viewingAll && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">{s.salesperson}</span>}
                 {s.customerType && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{s.customerType}</span>}
                 {s.looksDeveloping && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
-                    <UserRoundPlus className="size-3" />你回報過 {s.visitCount} 次
+                    <UserRoundPlus className="size-3" />{who}回報過 {s.visitCount} 次
                   </span>
                 )}
                 {s.tier === 'no-territory' && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">
-                    <MapPinOff className="size-3" />你尚未設定轄區
+                    <MapPinOff className="size-3" />{who}尚未設定轄區
                   </span>
                 )}
                 {s.tier === 'in-territory-backlog' && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                    <MapPin className="size-3" />這區現在是你的轄區
+                    <MapPin className="size-3" />這區現在是{whose}轄區
                   </span>
                 )}
                 {s.tier === 'territory-visited-by-others' && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                    <Users className="size-3" />同事跑過，轄區是你的
+                    <Users className="size-3" />同事跑過，轄區是{whose.replace(/的$/, '')}的
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-stone-400">
                 {s.customerCity}{s.customerDistrict}
                 {s.lastVisitDate && ` · 最後回報 ${s.lastVisitDate}`}
-                {s.tier === 'outside-territory' && ' · 不在你的轄區內'}
+                {s.tier === 'outside-territory' && ` · 不在${whose}轄區內`}
                 {s.tier === 'in-territory-backlog' && ' · 這筆回報早於轄區設定，所以沒有自動認領'}
                 {s.tier === 'territory-visited-by-others' && ` · ${s.otherVisitors.join('、')} 跑過但沒有人負責`}
               </p>
@@ -209,28 +260,58 @@ export function ClaimSuggestionsPanel() {
                 </p>
               )}
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => act(s, 'support')}
-                  disabled={busy === s.customerId}
+                  disabled={busy === s.customerId || busy === key}
                   className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95 disabled:opacity-40">
                   <Handshake className="size-3.5" />只是支援，不認領
                 </button>
-                <button
-                  onClick={() => act(s, 'claim')}
-                  disabled={busy === s.customerId || blocked}
-                  title={blocked ? '此客戶歸屬有爭議，需主管核可' : undefined}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
-                  <UserRoundPlus className="size-3.5" />認領這家客戶
-                </button>
+                {canAssign ? (
+                  <>
+                    <select
+                      value={picked}
+                      onChange={(e) => setAssignPick((m) => ({ ...m, [key]: e.target.value }))}
+                      className="select-soft text-xs"
+                      aria-label={`${s.customerName} 要指派給哪位業務`}>
+                      <option value="">選擇業務</option>
+                      {assignable.map((n) => (
+                        <option key={n} value={n}>{n}{n === s.salesperson ? '（建議）' : ''}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => assign(s, key)}
+                      disabled={busy === key || !picked}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
+                      <UserRoundPlus className="size-3.5" />{busy === key ? '指派中…' : picked ? `指派給 ${picked}` : '指派'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => act(s, 'claim')}
+                    disabled={busy === s.customerId || blocked}
+                    title={blocked ? '此客戶歸屬有爭議，需主管核可' : undefined}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
+                    <UserRoundPlus className="size-3.5" />認領這家客戶
+                  </button>
+                )}
               </div>
             </div>
           )
         })}
       </div>
 
+      {filtered.length > shown.length && (
+        <button onClick={() => setVisibleCount((n) => n + PAGE)}
+          className="mt-3 w-full rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.06] transition-all hover:bg-stone-100 active:scale-95">
+          再顯示 {Math.min(PAGE, filtered.length - shown.length)} 筆（還有 {filtered.length - shown.length} 筆）
+        </button>
+      )}
+
       <p className="mt-3 text-[11px] leading-5 text-stone-400">
-        標為「只是支援」會同時建立一筆跨區支援報備，之後不會再問你這家。認領則會把客戶主檔的負責業務寫成你，只在該客戶仍無人負責時生效。
+        {canAssign
+          ? '指派會把客戶主檔的負責業務寫成所選的業務，只在該客戶仍無人負責時生效，並留下稽核紀錄；清單上的「（建議）」是系統依回報與轄區推薦的人選，可改派給其他業務。'
+          : '標為「只是支援」會同時建立一筆跨區支援報備，之後不會再問你這家。認領則會把客戶主檔的負責業務寫成你，只在該客戶仍無人負責時生效。'}
         標「這區現在是你的轄區」的，是新增轄區之前就回報過的舊紀錄；標「同事跑過」的是別人支援時留下的紀錄。
         兩者系統都不會回頭自動認領，需要你按一下確認。
       </p>
