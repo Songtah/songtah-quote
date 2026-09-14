@@ -21,6 +21,7 @@ import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
 import { CrossSupportMyPanel } from '@/components/CrossSupportMyPanel'
 import { CollabPointsPanel } from '@/components/CollabPointsPanel'
 import { ClaimSuggestionsPanel } from '@/components/ClaimSuggestionsPanel'
+import { TerritoryNewOpeningsPanel } from '@/components/TerritoryNewOpeningsPanel'
 import type { TodayDashboardData, TodayWorkItem } from '@/lib/dashboard-today'
 
 type VisibleModules = Partial<Record<'bd' | 'crm' | 'quote' | 'orders' | 'products' | 'rma' | 'marketing' | 'clinicMonitor' | 'admin' | 'accounts' | 'audit', boolean>>
@@ -81,7 +82,7 @@ export function SalesTodayDashboard({
   const summary = [
     { label: '今日拜訪', value: data.counts.visits, href: '/bd' },
     { label: '待追蹤', value: data.counts.followUps, href: '/bd' },
-    { label: '轄區新機構', value: data.counts.territoryNewOpenings, href: '/bd', danger: data.counts.territoryNewOpenings > 0 },
+    { label: '轄區新機構', value: data.counts.territoryNewOpenings, href: '#territory-new-openings', danger: data.counts.territoryNewOpenings > 0 },
     { label: '進行中報價', value: data.counts.quotes, href: '/quotes' },
     { label: '逾期工單', value: data.counts.overdueTickets, href: '/tickets', danger: data.counts.overdueTickets > 0 },
   ].filter((item) => {
@@ -184,6 +185,12 @@ export function SalesTodayDashboard({
           {visibleModules.bd && (
             <section className="mt-6" aria-label="待認領建議">
               <ClaimSuggestionsPanel />
+            </section>
+          )}
+
+          {visibleModules.bd && (
+            <section id="territory-new-openings" className="mt-6 scroll-mt-6" aria-label="轄區新機構">
+              <TerritoryNewOpeningsPanel />
             </section>
           )}
 

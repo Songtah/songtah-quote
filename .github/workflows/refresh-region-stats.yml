@@ -73,3 +73,16 @@ jobs:
             -H "x-cron-secret: ${CRON_SECRET}")
           echo "HTTP $code"; cat /tmp/resp5.json
           test "$code" = "200"
+
+      - name: 醫事比對重算(轄區新機構與市場監控共用)
+        # 各步驟彼此獨立：一步遇到 Notion 逾時不該讓後面的全部被跳過
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp6.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/refresh-medical-monitor" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp6.json
+          test "$code" = "200"

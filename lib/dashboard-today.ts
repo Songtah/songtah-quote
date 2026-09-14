@@ -2,9 +2,8 @@ import { todayTW } from '@/lib/ceo-stats'
 import { listQuotes } from '@/lib/notion'
 import { listOpenFollowUps, listVisits } from '@/lib/notion/visits'
 import { listSystemTickets } from '@/lib/notion/tickets'
-import { listTerritories } from '@/lib/notion/territories'
-import { listPipelineCustomers } from '@/lib/notion/customers'
 import { getSystemUserById, canAcceptNewBusiness } from '@/lib/notion/accounts'
+import { listTerritoryNewOpenings } from '@/lib/territory-new-openings'
 
 export type TodayWorkItem = {
   id: string
@@ -61,42 +60,18 @@ async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T, ms = 25
 }
 
 /**
- * 轄區「新機構」數：醫事監控從衛福部 BAS 掃到、匯入後尚未有人認領的新開業機構。
+ * 轄區「新機構」數：與個人頁「轄區新機構」視窗同一份計算（lib/territory-new-openings）。
  *
- * 刻意不算「轄區內所有未認領客戶」——那是 6,000 筆量級的存量池（多數是從未進過
- * 開發漏斗的既有醫事機構），放在首頁沒有行動意義。首頁要回答的是「今天有什麼
- * 該趕快聯絡」，也就是剛掃到的新開業機構；存量池在轄區面板逐區處理。
- *
- * 條件：開發來源=BAS新開業、負責業務空白、且落在本人正式轄區內。
- * 轄區行政區留空＝整個縣市都算本人轄區。
- *
- * 必須與 /api/bd/pipeline 的可見範圍用同一道把關（canAcceptNewBusiness）：
- * 「既有客戶維護」模式的業務在跟進看板看不到未認領客戶、也無權認領，
- * 若首頁仍顯示筆數，點進去會是空的死路。帳號讀取失敗時一律回 0（fail-closed）。
+ * 原本只算「已匯入客戶庫、開發來源＝BAS新開業、無人負責」，全庫實測只有 1 筆，
+ * 卡片幾乎永遠是 0；衛福部開業但尚未建檔的機構（當日 29 家落在業務轄區）完全不計入。
+ * 「既有客戶維護」模式的業務不承接新客戶，維持回 0。帳號讀取失敗 fail-closed。
  */
-const BAS_NEW_OPENING_SOURCE = 'BAS新開業'
-
-async function countTerritoryNewOpenings(salespersonId: string): Promise<number> {
+async function countTerritoryNewOpenings(salespersonId: string, owner: string): Promise<number> {
   if (!salespersonId) return 0
-
   const account = await getSystemUserById(salespersonId).catch(() => null)
   if (!account || !canAcceptNewBusiness(account)) return 0
-
-  const [territories, pipeline] = await Promise.all([
-    listTerritories(),
-    listPipelineCustomers(),
-  ])
-  const mine = territories.filter((t) => t.salespersonId === salespersonId)
-  if (mine.length === 0) return 0
-
-  const cityOnly = new Set(mine.filter((t) => !t.district).map((t) => t.city))
-  const cityDistrict = new Set(mine.filter((t) => t.district).map((t) => `${t.city}|${t.district}`))
-
-  return pipeline.filter((c) =>
-    c.devSource === BAS_NEW_OPENING_SOURCE &&
-    !c.salesperson.trim() &&
-    (cityOnly.has(c.city) || cityDistrict.has(`${c.city}|${c.district}`))
-  ).length
+  const { items } = await listTerritoryNewOpenings({ salesperson: owner, allowCompute: false })
+  return items.length
 }
 
 async function listOwnerTickets(owner: string) {
@@ -151,7 +126,7 @@ export async function getTodayDashboard(
           { items: [], hasMore: false, nextCursor: null },
         )
       : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
-    access.bd ? withDashboardTimeout(countTerritoryNewOpenings(salespersonId), 0) : Promise.resolve(0),
+    access.bd ? withDashboardTimeout(countTerritoryNewOpenings(salespersonId, owner), 0) : Promise.resolve(0),
   ])
 
   const visits = allVisits.filter((visit) => sameOwner(visit.salesperson, owner))
