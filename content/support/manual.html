@@ -1,0 +1,761 @@
+<title>崧達系統操作手冊</title>
+<meta name="description" content="崧達企業管理系統的完整操作說明：登入、權限、客戶、業務開發、報價、訂貨、產品、技術支援、行銷活動、市場監控與管理功能。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f6f5f0;
+    --surface: #ffffff;
+    --ink: #232b25;
+    --muted: #666c63;
+    --rule: #dfddd3;
+    --forest: #344a33;
+    --leaf: #4f9227;
+    --gold: #8d6a43;
+    --tint: #eef2e8;
+    --warn-bg: #fbf3e6;
+    --warn-ink: #7a4f14;
+    --chip: #ecebe4;
+    --focus: #4f9227;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #141915;
+      --surface: #1b211c;
+      --ink: #e6eae2;
+      --muted: #9aa294;
+      --rule: #2f3830;
+      --forest: #a8cd92;
+      --leaf: #82c451;
+      --gold: #d6b384;
+      --tint: #202a21;
+      --warn-bg: #2b2418;
+      --warn-ink: #e5c28e;
+      --chip: #252c26;
+      --focus: #82c451;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #141915;
+    --surface: #1b211c;
+    --ink: #e6eae2;
+    --muted: #9aa294;
+    --rule: #2f3830;
+    --forest: #a8cd92;
+    --leaf: #82c451;
+    --gold: #d6b384;
+    --tint: #202a21;
+    --warn-bg: #2b2418;
+    --warn-ink: #e5c28e;
+    --chip: #252c26;
+    --focus: #82c451;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.85;
+    padding-inline: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--gold); text-underline-offset: 3px; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+  code, .path {
+    font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 0.86em;
+    background: var(--chip);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .masthead {
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-block: 44px 34px;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    gap: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; color: var(--forest); font-weight: 700; letter-spacing: 0.18em; font-size: 13px; }
+  .brand svg { width: 34px; height: auto; flex: none; }
+  h1 {
+    font-family: "Noto Serif TC", "Songti TC", serif;
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.3;
+    margin: 0;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 62ch; color: var(--muted); font-size: 17px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted); }
+  .meta b { color: var(--ink); font-weight: 500; }
+
+  .layout {
+    max-width: 1180px;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    gap: 56px;
+    padding-block: 36px 96px;
+  }
+  nav.toc { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; font-size: 14px; }
+  nav.toc details { border: 0; }
+  nav.toc summary { list-style: none; cursor: pointer; font-weight: 700; color: var(--forest); font-size: 12px; letter-spacing: 0.14em; padding-block: 4px 10px; }
+  nav.toc summary::-webkit-details-marker { display: none; }
+  .toc-group { font-size: 11px; letter-spacing: 0.16em; color: var(--muted); margin: 18px 0 6px; font-weight: 700; }
+  .toc-group:first-of-type { margin-top: 4px; }
+  nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+  nav.toc a { display: block; color: var(--ink); text-decoration: none; padding: 4px 10px; border-radius: 6px; line-height: 1.5; }
+  nav.toc a:hover { background: var(--chip); }
+
+  article { max-width: 760px; min-width: 0; }
+  section { scroll-margin-top: 24px; padding-block: 8px 30px; }
+  section + section { border-top: 1px solid var(--rule); padding-top: 34px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.18em; color: var(--leaf); font-weight: 700; margin: 0 0 4px; }
+  h2 {
+    font-family: "Noto Serif TC", "Songti TC", serif;
+    font-weight: 700;
+    font-size: 27px;
+    line-height: 1.4;
+    margin: 0 0 12px;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  h3 { font-size: 18px; margin: 28px 0 6px; line-height: 1.5; color: var(--forest); font-weight: 700; }
+  h4 { font-size: 15.5px; margin: 18px 0 2px; font-weight: 700; }
+  p { margin: 0 0 12px; max-width: 68ch; }
+  ul.list, ol.list { margin: 0 0 14px; padding-left: 1.3em; max-width: 68ch; }
+  ul.list li, ol.list li { margin-bottom: 5px; }
+  ul.list li::marker { color: var(--leaf); }
+  ol.list li::marker { color: var(--forest); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .where { font-size: 14px; color: var(--muted); margin: -4px 0 14px; }
+
+  .note, .auto, .warn { border-radius: 10px; padding: 14px 18px; margin: 14px 0 18px; max-width: 68ch; font-size: 15px; }
+  .note { background: var(--surface); border: 1px solid var(--rule); }
+  .auto { background: var(--tint); }
+  .warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .note > b:first-child, .auto > b:first-child, .warn > b:first-child { display: block; font-size: 12px; letter-spacing: 0.14em; margin-bottom: 4px; }
+  .auto > b:first-child { color: var(--leaf); }
+  .note p:last-child, .auto p:last-child, .warn p:last-child, .auto ul:last-child, .note ul:last-child { margin-bottom: 0; }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 10px 0 16px; font-size: 14px; }
+  .chip { background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 2px 11px; white-space: nowrap; }
+  .chip.end { background: var(--tint); border-color: transparent; color: var(--forest); font-weight: 500; }
+  .arrow { color: var(--muted); padding-inline: 2px; }
+  .flow .branch { color: var(--muted); font-size: 13px; margin-left: 4px; }
+
+  .table-wrap { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.6; }
+  th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; background: var(--ground); white-space: nowrap; }
+  td:first-child { font-weight: 500; white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .sample {
+    font-family: "IBM Plex Mono", "Noto Sans TC", ui-monospace, monospace;
+    font-size: 13.5px;
+    line-height: 1.75;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 14px 18px;
+    white-space: pre-wrap;
+    margin: 10px 0 16px;
+    max-width: 68ch;
+  }
+  .sample .hl { color: var(--leaf); font-weight: 500; }
+
+  .faq details { border-bottom: 1px solid var(--rule); padding-block: 10px; max-width: 68ch; }
+  .faq summary { cursor: pointer; font-weight: 700; list-style-position: outside; }
+  .faq details p { margin: 8px 0 4px; }
+
+  .footer { max-width: 1180px; margin-inline: auto; border-top: 1px solid var(--rule); padding-block: 22px 40px; font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 20px; padding-top: 20px; }
+    nav.toc { position: static; max-height: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+    nav.toc summary { padding-bottom: 0; }
+    nav.toc details[open] summary { padding-bottom: 8px; }
+    nav.toc ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 480px) {
+    body { padding-inline: 16px; font-size: 15.5px; }
+    nav.toc ul { grid-template-columns: 1fr; }
+    h2 { font-size: 23px; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="brand">
+    <svg viewBox="0 0 574.42 437.21" aria-hidden="true"><polygon fill="#62ab31" points="180.18 33.06 232.23 61.98 279.35 0 338.05 61.98 383.49 30.98 574.42 437.21 0 437.21 180.18 33.06"/><path fill="#fcfdfd" d="M124.44,340.8v-24.18h117.34l-101.26-65.32,12.38-20.48,102.03,61.29-32-58.94c-1.02-1.88-1.84-3.35-2.91-5.26l-22.66-40.27,20.78-11.58,58.14,104.63,2.17-119.52,23.86.44-2.46,120.1,61.93-102.94,20.42,12.3-62.19,103.12,104.27-57.98,11.55,20.8-102.9,59.62h117.05v24.18H124.44Z"/></svg>
+    <span>SONG TAH · 企業管理系統</span>
+  </div>
+  <h1>崧達系統操作手冊</h1>
+  <p class="lede">給全體同仁的使用說明：從登入、每天的工作，到報價、訂貨、技術支援、行銷活動與管理功能。依左側選單的順序編排，遇到問題可以直接跳到最後的「常見問題」。</p>
+  <div class="meta">
+    <span>網址 <b>songtah-quote.vercel.app</b></span>
+    <span>系統內 <b>左側選單「支援中心」</b></span>
+    <span>適用版本 <b>2026 年 9 月</b></span>
+    <span>更新日期 <b>2026/09/15</b></span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="目錄">
+    <details open id="toc-details">
+      <summary>目錄</summary>
+      <p class="toc-group">入門</p>
+      <ul>
+        <li><a href="#start">登入與畫面</a></li>
+        <li><a href="#principle">業務只做一件事</a></li>
+        <li><a href="#line-report">LINE 日報怎麼寫</a></li>
+        <li><a href="#roles">帳號類型與權限</a></li>
+      </ul>
+      <p class="toc-group">工作</p>
+      <ul>
+        <li><a href="#home">首頁</a></li>
+        <li><a href="#customers">客戶</a></li>
+        <li><a href="#bd">業務開發</a></li>
+      </ul>
+      <p class="toc-group">交易</p>
+      <ul>
+        <li><a href="#quotes">報價</a></li>
+        <li><a href="#orders">訂貨</a></li>
+        <li><a href="#products">產品與價格</a></li>
+      </ul>
+      <p class="toc-group">服務</p>
+      <ul>
+        <li><a href="#tickets">技術支援</a></li>
+        <li><a href="#marketing">行銷與活動</a></li>
+        <li><a href="#monitor">市場監控</a></li>
+      </ul>
+      <p class="toc-group">管理</p>
+      <ul>
+        <li><a href="#ceo">業績總覽</a></li>
+        <li><a href="#admin">行政管理</a></li>
+        <li><a href="#accounts">帳號權限</a></li>
+        <li><a href="#audit">操作紀錄</a></li>
+      </ul>
+      <p class="toc-group">附錄</p>
+      <ul>
+        <li><a href="#automation">系統自動排程</a></li>
+        <li><a href="#faq">常見問題</a></li>
+      </ul>
+    </details>
+  </nav>
+
+  <article>
+
+    <section id="start">
+      <p class="eyebrow">入門</p>
+      <h2>登入與畫面</h2>
+      <h3>登入</h3>
+      <ol class="list">
+        <li>開啟 <span class="path">songtah-quote.vercel.app</span>，輸入帳號與密碼後按「登入系統」。</li>
+        <li>帳號由中央管理建立。忘記密碼或看不到該有的功能，請聯絡中央管理。</li>
+        <li>手機與電腦使用同一個網址；手機版選單在畫面上方。</li>
+      </ol>
+      <h3>畫面結構</h3>
+      <p>左側選單分成四組，只會出現你有權限的項目，所以每個人看到的選單可能不同。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>分組</th><th>選單項目</th></tr></thead>
+          <tbody>
+            <tr><td>工作</td><td>首頁、客戶、業務開發</td></tr>
+            <tr><td>交易</td><td>報價、訂貨、產品與價格</td></tr>
+            <tr><td>服務</td><td>技術支援、行銷與活動、市場監控</td></tr>
+            <tr><td>管理</td><td>業績總覽、行政管理、帳號權限、操作紀錄</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <b>小技巧</b>
+        <p>畫面右下角的「A」圓形按鈕可以放大字級（一般／大／特大），設定會記在這台裝置上。</p>
+      </div>
+    </section>
+
+    <section id="principle">
+      <p class="eyebrow">入門</p>
+      <h2>業務只做一件事：回報每日 LINE 日報</h2>
+      <p>系統的設計原則是：<b>業務唯一需要手動做的，就是在 LINE 群組發每日報表。</b>其餘的建檔、客戶關聯、認領、追蹤提醒、結案，都由系統自動完成，不需要業務再進系統點選或補欄位。</p>
+      <div class="auto">
+        <b>系統自動處理</b>
+        <ul class="list">
+          <li>每一則「行程回報」的每個編號客戶，自動建立一筆客情紀錄，並比對到客戶主檔。</li>
+          <li>回報到自己轄區內、目前無人負責的客戶，自動認領為負責業務。</li>
+          <li>依回報內容推斷客戶反應（例如「要求報價」「同意試用」）與下次追蹤日。</li>
+          <li>待追蹤項目在客戶被再次拜訪、狀態結案，或超過 90 天時自動結案。</li>
+          <li>客戶的開發階段隨回報與報價、訂單自動推進。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="line-report">
+      <p class="eyebrow">入門</p>
+      <h2>LINE 日報怎麼寫才會被系統收到</h2>
+      <p>系統會讀取業務群組裡的「每日報表」訊息。只要照平常的格式寫，大多數情況都能正確收到；下面幾點決定一則訊息會不會被當成拜訪回報。</p>
+      <div class="sample">每日報表
+職稱：北區業務
+日期：2026/09/07（一）
+——————————————
+<span class="hl">行程回報：</span>
+1.漢鼎牙技所
+送貨。例行關心。耗材使用都正常
+2.元利牙體技術所
+送貨。收款。有告知牙齒有缺貨，到貨再通知</div>
+      <h3>判斷規則</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>訊息情況</th><th>系統處理</th></tr></thead>
+          <tbody>
+            <tr><td>寫了「行程回報」</td><td>任何時間發送都收，包括隔天早上補報</td></tr>
+            <tr><td>「日期」早於發送當天</td><td>視為補回報，收</td></tr>
+            <tr><td>「日期」晚於發送當天</td><td>視為明天的行程計畫，不收</td></tr>
+            <tr><td>當天日期、沒寫「行程回報」</td><td>下午 5 點到凌晨 3 點發送才收；白天發送視為當天計畫</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>寫作建議</h3>
+      <ul class="list">
+        <li><b>日期寫正確。</b>隔天補報時，請把「日期」改成實際拜訪那天，否則會被當成當天的計畫。</li>
+        <li><b>每個客戶用編號開頭</b>（1. 2. 3.），客戶名稱放在編號後面，拜訪內容寫在下一行。</li>
+        <li><b>客戶名稱越完整越好。</b>「誠鴻牙醫診所」比「誠鴻」更容易對到正確客戶；同名機構很多時，簡稱可能對不到。</li>
+        <li>公司會議、進公司等非拜訪項目系統會自動略過，照寫無妨。</li>
+        <li>同一天同一家客戶重複發送，系統不會重複建立紀錄。</li>
+      </ul>
+      <div class="auto">
+        <b>系統自動處理</b>
+        <p>日報收到後會先暫存；若當下處理失敗或逾時，每小時自動重試，最多四次。</p>
+      </div>
+    </section>
+
+    <section id="roles">
+      <p class="eyebrow">入門</p>
+      <h2>帳號類型與權限</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>帳號類型</th><th>主要用途</th><th>特有權限</th></tr></thead>
+          <tbody>
+            <tr><td>業務</td><td>回報日報、查看自己的客戶與建議、開報價與訂貨</td><td>可認領自己轄區內的客戶</td></tr>
+            <tr><td>行政</td><td>報價審核、訂單處理</td><td>報價簽核、行政管理、業績總覽</td></tr>
+            <tr><td>技術</td><td>技術支援工單與設備</td><td>依頁面權限設定</td></tr>
+            <tr><td>中央管理</td><td>客戶調度、產品維護、系統設定</td><td>指派客戶給業務、產品後台、帳號權限、看全體業務資料</td></tr>
+            <tr><td>總經理</td><td>決策與簽核</td><td>報價第二層核准、業績總覽、看全體資料</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>業務承接模式</h3>
+      <p>業務帳號另有「承接模式」，決定能不能接新客戶：</p>
+      <ul class="list">
+        <li><b>全面開發</b>：可認領轄區客戶、會收到轄區新機構與待認領建議。</li>
+        <li><b>既有客戶維護</b>：只看自己名下的客戶，不承接新客戶。</li>
+        <li><b>暫停承接</b>：暫時不分派新客戶。</li>
+      </ul>
+      <p>每個頁面的「檢視」與「編輯」權限可以分開設定，詳見 <a href="#accounts">帳號權限</a>。</p>
+    </section>
+
+    <section id="home">
+      <p class="eyebrow">工作</p>
+      <h2>首頁</h2>
+      <p class="where">左側選單「首頁」。業務看到自己的工作；主管看到全體業務的彙總。</p>
+      <h3>最上方兩塊</h3>
+      <ul class="list">
+        <li><b>下一個動作</b>：系統挑出今天最優先處理的一件事（例如逾期的追蹤），按「開始處理」直接前往。</li>
+        <li><b>今天還有</b>：待處理的數字，例如待追蹤、報價、工單、轄區新機構；點數字可以跳到對應清單。</li>
+      </ul>
+      <h3>往下的視窗</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>視窗</th><th>內容</th><th>需要做什麼</th></tr></thead>
+          <tbody>
+            <tr><td>本月業績／週月季年統計</td><td>訂單金額與趨勢</td><td>檢視即可</td></tr>
+            <tr><td>課程／活動客戶</td><td>參加或報名課程、展會後還沒被拜訪的客戶；即將上課的排前面</td><td>安排拜訪；拜訪回報後自動消失</td></tr>
+            <tr><td>待認領建議</td><td>你回報過、但目前沒人負責的客戶</td><td>確認是「認領」或「只是支援」</td></tr>
+            <tr><td>轄區新機構</td><td>衛福部登記開業、在你轄區、還沒人負責的機構</td><td>檢視即可，可點地址導航</td></tr>
+            <tr><td>跨區支援名單</td><td>你到別人轄區支援的紀錄</td><td>檢視即可</td></tr>
+            <tr><td>協作積分</td><td>同事協助互動的積分紀錄</td><td>主管確認、認列或駁回</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <b>主管與中央管理</b>
+        <p>在「課程／活動客戶」「待認領建議」可以看到全體業務的資料，並把無人負責或公司戶的客戶直接指派給業務。</p>
+      </div>
+    </section>
+
+    <section id="customers">
+      <p class="eyebrow">工作</p>
+      <h2>客戶</h2>
+      <p class="where">左側選單「客戶」。</p>
+      <h3>找客戶</h3>
+      <ol class="list">
+        <li>在搜尋框輸入客戶名稱、縣市、行政區或業務姓名。</li>
+        <li>需要縮小範圍時，用下方的「縣市／行政區／業務」篩選，「清除篩選」可還原。</li>
+        <li>點客戶名稱進入客戶頁。首頁上方的搜尋框也能直接搜尋客戶。</li>
+      </ol>
+      <h3>客戶頁有什麼</h3>
+      <ul class="list">
+        <li><b>基本資訊</b>：地址、電話、機構代碼、負責業務、開發階段、人員數。</li>
+        <li><b>客戶標籤</b>：客戶分類標記。</li>
+        <li><b>拜訪紀錄</b>：歷次客情紀錄。</li>
+        <li><b>報價與訂單</b>：這家客戶的報價單與訂貨單。</li>
+        <li><b>技術支援工單</b>與<b>設備清單</b>：點設備可看設備詳情與維修紀錄。</li>
+        <li><b>參加活動</b>：參加過的課程、展會，含日期與來源。</li>
+      </ul>
+      <div class="warn">
+        <b>資料保護</b>
+        <p>還沒有負責業務的客戶，地址與電話不對一般業務開放；認領後才看得到。</p>
+      </div>
+    </section>
+
+    <section id="bd">
+      <p class="eyebrow">工作</p>
+      <h2>業務開發</h2>
+      <p class="where">左側選單「業務開發」，上方有四個分頁。</p>
+
+      <h3>今日工作</h3>
+      <p>今天該處理的客戶與我的轄區。在「我的轄區」可以查看轄區名單、既有客戶名單，或按「認領此區客戶」。</p>
+      <ol class="list">
+        <li>按「認領此區客戶」，系統先列出會認領的客戶（預覽）。</li>
+        <li>確認清單後再按確認，才會寫入。已經有人負責的客戶一律略過。</li>
+      </ol>
+
+      <h3>客情紀錄</h3>
+      <p>所有拜訪與互動紀錄。可以搜尋、篩選，也可以手動「新增客情紀錄」（例如電話聯繫）。</p>
+      <ul class="list">
+        <li><b>編輯</b>：點紀錄上的「編輯」修改內容、客戶反應、追蹤日。</li>
+        <li><b>AI 商機分析</b>：針對紀錄內容產生商機分析報告。</li>
+        <li><b>批次補齊客戶關聯</b>：把還沒對到客戶的紀錄，自動補上客戶。</li>
+        <li><b>刪除重複項目</b>：清除同一天同一家的重複紀錄。</li>
+      </ul>
+
+      <h3>紀錄匯入</h3>
+      <p>用 LINE 群組匯出的聊天記錄（<span class="path">.txt</span>）補匯客情紀錄，適合補回漏掉的日期。</p>
+      <ol class="list">
+        <li>在 LINE 群組選「匯出聊天記錄」，存成 .txt 檔。</li>
+        <li>上傳檔案；可指定「只匯入某位業務」與「起始日期」。</li>
+        <li>確認匯入結果。已經存在的紀錄會自動略過，不會重複建立。</li>
+      </ol>
+
+      <h3>拜訪建議</h3>
+      <p>系統依資料排出「今天該跑誰」，每筆都寫明推薦原因。</p>
+      <ul class="list">
+        <li><b>今天模式</b>：不用選區，名單＝自己的客戶加上轄區內未認領的客戶。</li>
+        <li><b>指定區域</b>：選縣市與行政區，出差前規劃路線用。</li>
+      </ul>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>標籤</th><th>代表</th></tr></thead>
+          <tbody>
+            <tr><td>追蹤逾期</td><td>之前回報需要追蹤、已過或快到追蹤日（最優先）</td></tr>
+            <tr><td>客戶正熱</td><td>最近回報「要求報價」「同意試用」等積極反應</td></tr>
+            <tr><td>活動足跡</td><td>報名或參加了課程、展會，之後還沒拜訪</td></tr>
+            <tr><td>新開業</td><td>衛福部新開業、尚未接觸的機構</td></tr>
+            <tr><td>太久沒跑</td><td>自己的客戶超過 3 個月沒拜訪</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>可以用標籤篩選，按「複製」把名單貼到行程或 LINE。主管可切換查看任一位業務，或看「全部業務」。</p>
+    </section>
+
+    <section id="quotes">
+      <p class="eyebrow">交易</p>
+      <h2>報價</h2>
+      <p class="where">左側選單「報價」。</p>
+      <h3>建立報價單</h3>
+      <ol class="list">
+        <li>在報價單管理按新增，填寫客戶資訊（名稱、統一編號、電話、地址）。</li>
+        <li>「選擇產品」加入品項，確認數量、單價、規格。</li>
+        <li>填寫有效期限、付款條件、備註後送出。送出後狀態為「待行政審核」。</li>
+      </ol>
+      <h3>簽核流程</h3>
+      <div class="flow">
+        <span class="chip">待行政審核</span><span class="arrow">→</span><span class="chip end">已核准</span>
+      </div>
+      <div class="flow">
+        <span class="chip">待行政審核</span><span class="arrow">→</span><span class="chip">待總經理審核</span><span class="arrow">→</span><span class="chip end">已核准</span>
+        <span class="branch">行政可呈總經理</span>
+      </div>
+      <div class="flow">
+        <span class="chip">任一審核階段</span><span class="arrow">→</span><span class="chip">已退回</span><span class="arrow">→</span><span class="chip">待行政審核</span>
+        <span class="branch">修改後重新送審</span>
+      </div>
+      <ul class="list">
+        <li>已呈總經理的報價單，只有總經理可以核准，行政不能代為核准。</li>
+        <li>核准後才能產生 <b>PDF</b> 與分享連結；未核准時 PDF 按鈕為灰色。</li>
+        <li>其他狀態：已送出、已確認、已過期。</li>
+      </ul>
+      <div class="note">
+        <b>價格規則</b>
+        <p>報價單成立後，品名與單價就固定在這張單上；之後產品改價，不會影響已經開出的報價。</p>
+      </div>
+    </section>
+
+    <section id="orders">
+      <p class="eyebrow">交易</p>
+      <h2>訂貨</h2>
+      <p class="where">左側選單「訂貨」。</p>
+      <h3>建立訂貨單</h3>
+      <ol class="list">
+        <li>按新增，填寫訂單基本資訊：客戶名稱、聯絡人、電話、地址、業務姓名、訂貨日期。</li>
+        <li>選擇品項並輸入數量。尚未定價的產品會標示「待定價」，不會以 0 元帶入。</li>
+        <li>有適用的促銷時，在「關聯促銷活動」選擇，系統自動套用。</li>
+        <li>儲存。訂單狀態可在清單上直接切換。</li>
+      </ol>
+      <div class="flow">
+        <span class="chip">草稿</span><span class="arrow">→</span><span class="chip">已送出</span><span class="arrow">→</span><span class="chip">確認中</span><span class="arrow">→</span><span class="chip end">已到貨</span>
+        <span class="branch">或 已取消</span>
+      </div>
+      <h3>促銷怎麼套用</h3>
+      <ul class="list">
+        <li>單品特價、買 A 送 B、加價購：只對指定的那個品項生效。</li>
+        <li>系列折扣、系列買 N 送 M：同系列不同規格合計計算。</li>
+        <li>系列買 N 送 M 達標時，會自動跳出該系列選單讓你挑贈品；<b>贈品沒選滿不能儲存</b>。</li>
+        <li>促銷價格與贈品由系統重新驗算，前端手動改成促銷價不會通過。</li>
+      </ul>
+      <p>業務可在「我的業績明細」查看近 6 個月的訂單與品項明細（從首頁業績卡片進入）。</p>
+    </section>
+
+    <section id="products">
+      <p class="eyebrow">交易</p>
+      <h2>產品與價格</h2>
+      <p class="where">左側選單「產品與價格」。</p>
+      <ul class="list">
+        <li>從「商品分類總覽」的分類卡片進入，或在「產品清單」搜尋。</li>
+        <li>同系列不同規格集中顯示在同一張系列卡片。</li>
+        <li>已停售或中央停用的產品，在報價、訂貨選品時不會出現；目錄頁仍顯示並標註狀態。</li>
+      </ul>
+      <h3>中央管理：維護產品</h3>
+      <p>中央管理帳號可以編輯：商品圖片、商品介紹、技術規格、文件資料、形象素材，以及<b>後台售價覆寫</b>。貨號、品名與目錄基準價來自 ERP，不能在這裡改。</p>
+      <div class="note">
+        <b>售價的優先順序</b>
+        <p>後台售價覆寫 → 目錄基準價 → 待定價。清空覆寫即回到基準價。改價只影響之後選入的品項，已成立的報價與訂單不會變動。</p>
+      </div>
+    </section>
+
+    <section id="tickets">
+      <p class="eyebrow">服務</p>
+      <h2>技術支援</h2>
+      <p class="where">左側選單「技術支援」。</p>
+      <h3>建立工單</h3>
+      <ol class="list">
+        <li>按新建工單，先搜尋客戶與設備。</li>
+        <li>填寫案件基本資訊：優先級（低／中／高／緊急）、業務窗口、技術支援對口、預計維修日期。</li>
+        <li>填寫問題詳情、原因判斷、暫定解法、關鍵料件與備註後送出。</li>
+      </ol>
+      <h3>處理進度</h3>
+      <p>在工單頁「更新處理進度」切換狀態：</p>
+      <div class="flow">
+        <span class="chip">尚未處理</span><span class="arrow">→</span><span class="chip">已受理</span><span class="arrow">→</span><span class="chip">診斷問題中</span><span class="arrow">→</span><span class="chip">維修中</span><span class="arrow">→</span><span class="chip">測試中</span><span class="arrow">→</span><span class="chip">後續追蹤</span><span class="arrow">→</span><span class="chip end">結案</span>
+      </div>
+      <p>工單會出現在客戶頁的「技術支援工單」與設備的維修紀錄中。</p>
+    </section>
+
+    <section id="marketing">
+      <p class="eyebrow">服務</p>
+      <h2>行銷與活動</h2>
+      <p class="where">左側選單「行銷與活動」，分為「促銷活動」「活動管理」「活動規劃」三個分頁。</p>
+
+      <h3>促銷活動</h3>
+      <p>新增促銷時先選活動類型與條件類型（折扣、贈品、加購組合），系統依品項是單品或系列開放對應的類型；必填項目沒填不能儲存，例如買 A 送 B 必須指定贈品。建好的促銷會出現在訂貨單的「關聯促銷活動」。</p>
+
+      <h3>活動管理：建立活動</h3>
+      <ol class="list">
+        <li>按「新增活動」，填寫名稱、日期、地點、類型（研討會／產品發表／培訓／展覽／其他）、報名截止日、簡介。</li>
+        <li>點進活動，進行以下設定。</li>
+      </ol>
+
+      <h4>線上報名頁（一個活動一個頁面）</h4>
+      <ol class="list">
+        <li>勾選「開放線上報名」。</li>
+        <li>收費活動：勾選「收費活動」，填每人報名費與付款說明（例如匯款帳號）。</li>
+        <li>視需要填名額、截止日，並上傳廣告圖（建議橫式 1200×630，4 MB 內）。</li>
+        <li>按「儲存設定」，再用右側的「複製連結」或「下載 QR」分享出去。</li>
+      </ol>
+      <p>報名者填寫基本資料與單位資訊後送出；收費活動會看到應繳金額與付款說明。額滿、截止或活動結束時，表單自動關閉。</p>
+
+      <h4>展會簽到 QR code</h4>
+      <p>在活動頁按「展會簽到 QR code」，下載後放在攤位。訪客掃描填寫即完成簽到，狀態記為「已到場」。活動日前一天到結束後一天才開放簽到。</p>
+
+      <h4>報名名單</h4>
+      <ul class="list">
+        <li><b>客戶配對</b>：系統每小時自動把報名者對到客戶，顯示客戶名稱，點名稱可進客戶頁。</li>
+        <li>配對不對或沒配到：按「編輯」搜尋正確客戶，或「取消配對」。人工調整過的，系統不會再改。</li>
+        <li><b>付款</b>：收費活動可把付款狀態改為未付款、已付款或已退款。</li>
+        <li><b>狀態</b>：已報名、已確認、已到場、取消。</li>
+      </ul>
+
+      <h4>匯入歷史紀錄</h4>
+      <ol class="list">
+        <li>活動管理右上角按「匯入歷史紀錄」。</li>
+        <li>上傳 Excel（.xlsx）或 CSV，或直接貼上。表頭上方有標題列也沒關係，系統會自動找到表頭；有「地址」欄配對會更準。</li>
+        <li>確認欄位對應，並選擇「沒寫出席與否時視為」已到場或已報名。</li>
+        <li>按「預覽匯入結果」檢查（此時還不會寫入），確認後按「確認匯入」。重複的紀錄會自動略過。</li>
+      </ol>
+      <div class="auto">
+        <b>系統自動處理</b>
+        <ul class="list">
+          <li>報名者在客戶庫查不到、但在衛福部開業名單中唯一相符時，自動建立客戶並依轄區指派業務。</li>
+          <li>報名、到場的客戶會出現在負責業務的首頁「課程／活動客戶」與拜訪建議。</li>
+        </ul>
+      </div>
+
+      <h3>活動規劃：辦課成本試算</h3>
+      <p>輸入課程的場地、講師、教材、行銷、餐飲、交通與其他費用，以及每人報名費與預計人數，系統計算總成本、總收入、淨利與利潤率。可關聯到活動，在活動頁對照。</p>
+    </section>
+
+    <section id="monitor">
+      <p class="eyebrow">服務</p>
+      <h2>市場監控</h2>
+      <p class="where">左側選單「市場監控」，有四個分頁。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>分頁</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>客戶監控</td><td>與衛福部醫事機構資料比對：新開業機構、疑似歇業、代碼變更、資料不一致</td></tr>
+            <tr><td>區域客戶儀表板</td><td>各縣市、行政區的客戶數與分布，可點進查看名單</td></tr>
+            <tr><td>業務轄區管理</td><td>劃分業務轄區、檢視市場數與未開發數、公司與業務間的客戶調度</td></tr>
+            <tr><td>商機偵測</td><td>依關鍵字從客情紀錄找出潛在商機</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>客戶監控的常用操作</h3>
+      <ul class="list">
+        <li><b>匯入新開業機構</b>：勾選後按匯入，先看匯入預覽再確認。匯入的客戶開發階段為「線索」。</li>
+        <li><b>更新開業狀態</b>：疑似歇業的機構，逐筆選擇狀態（停業、已歇業、撤銷），會直接寫入客戶主檔，請確認後再操作。</li>
+        <li>比對結果每晚自動重算，也保存在伺服器上，重新整理不會消失。</li>
+      </ul>
+      <h3>業務轄區管理</h3>
+      <ol class="list">
+        <li>「＋ 新增轄區」，選業務與縣市、行政區（可全選目前結果）。</li>
+        <li>業務之後可在自己的業務開發頁逐筆認領轄區客戶。</li>
+        <li>公司戶調度：選「公司 → 業務」或「業務 → 公司」，逐筆勾選客戶後執行。盤商客戶不開放調度。</li>
+      </ol>
+    </section>
+
+    <section id="ceo">
+      <p class="eyebrow">管理</p>
+      <h2>業績總覽</h2>
+      <p class="where">總經理、中央管理、行政可見。</p>
+      <p>全公司的月度業績走勢、業務排行（業績與拜訪量）、訂單分佈、客情活動量、今日業務動態，以及近期高風險操作提醒。</p>
+    </section>
+
+    <section id="admin">
+      <p class="eyebrow">管理</p>
+      <h2>行政管理</h2>
+      <p class="where">管理員與行政可見。</p>
+      <p>集中處理報價簽核：待審核的報價單會列在這裡，可核准、呈總經理或退回，並留下備註。流程見 <a href="#quotes">報價</a>。</p>
+      <p>另有兩個工具頁：<span class="path">/assets</span> 品牌素材庫（共用圖片，可下載壓縮版或原圖）、<span class="path">/admin/trip-planner</span> 出國行程規劃。</p>
+    </section>
+
+    <section id="accounts">
+      <p class="eyebrow">管理</p>
+      <h2>帳號權限</h2>
+      <p class="where">有帳號權限的使用者可見，通常為中央管理。</p>
+      <ol class="list">
+        <li>新增帳號：填帳號名稱、帳號類型（中央管理／業務／行政／技術）、狀態。</li>
+        <li>業務帳號設定「業務承接模式」。</li>
+        <li>在「頁面權限」逐項勾選檢視與編輯。</li>
+      </ol>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>頁面權限項目</th><th>對應功能</th></tr></thead>
+          <tbody>
+            <tr><td>客戶管理</td><td>客戶</td></tr>
+            <tr><td>業務開發</td><td>業務開發、首頁的業務視窗</td></tr>
+            <tr><td>報價、訂貨、產品</td><td>對應選單</td></tr>
+            <tr><td>技術支援</td><td>技術支援工單</td></tr>
+            <tr><td>促銷活動、活動管理、辦課成本</td><td>行銷與活動的三個分頁</td></tr>
+            <tr><td>客戶資料監控</td><td>市場監控</td></tr>
+            <tr><td>行政管理、帳號權限</td><td>對應管理頁面</td></tr>
+            <tr><td>素材庫、行程規劃</td><td>品牌素材庫、行程規劃</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>密碼一律加密儲存，系統無法查詢原密碼，只能重設。</p>
+    </section>
+
+    <section id="audit">
+      <p class="eyebrow">管理</p>
+      <h2>操作紀錄</h2>
+      <p class="where">系統管理員可見。</p>
+      <p>查詢誰在什麼時間對哪筆資料做了什麼操作，例如新增客戶、指派業務、核准報價、上傳圖片、人工調整配對。系統自動建立的客戶也會記錄依據。</p>
+    </section>
+
+    <section id="automation">
+      <p class="eyebrow">附錄</p>
+      <h2>系統自動排程</h2>
+      <p>以下工作由系統定時執行，不需要任何人操作。時間為台灣時間。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>時間</th><th>工作內容</th></tr></thead>
+          <tbody>
+            <tr><td class="num">收到時</td><td>LINE 日報建立客情紀錄、自動認領、推進開發階段</td></tr>
+            <tr><td class="num">每小時</td><td>重試沒處理完的 LINE 日報</td></tr>
+            <tr><td class="num">08:00–22:00 每小時</td><td>活動報名自動配對客戶；每天第一輪重試先前沒配到的</td></tr>
+            <tr><td class="num">每天 05:00</td><td>區域客戶統計、追蹤名單成交判定、拜訪建議、待認領建議、待追蹤自動結案、衛福部醫事比對</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="faq" class="faq">
+      <p class="eyebrow">附錄</p>
+      <h2>常見問題</h2>
+      <p>這裡找不到答案，或發現系統有問題，請到左側選單「支援中心」使用「回報系統問題」，會直接建立一張技術支援工單。</p>
+      <details>
+        <summary>我發了日報，客情紀錄卻沒有出現？</summary>
+        <p>先確認三件事：訊息開頭是「每日報表」、隔天補報時有寫「行程回報」或把日期改成拜訪當天、客戶前面有編號。系統每小時會重試一次；隔一小時仍沒出現，請把那則訊息的時間告訴中央管理。</p>
+      </details>
+      <details>
+        <summary>客情紀錄對到錯的客戶，或沒有對到客戶？</summary>
+        <p>在「業務開發 → 客情紀錄」按編輯修正客戶。之後回報時請盡量寫完整的客戶名稱。</p>
+      </details>
+      <details>
+        <summary>左側選單少了某個功能？</summary>
+        <p>選單只顯示你有權限的頁面。需要使用時，請中央管理在「帳號權限」幫你開啟。</p>
+      </details>
+      <details>
+        <summary>報價單的 PDF 按鈕是灰色的？</summary>
+        <p>報價單需要核准後才能產生 PDF。請確認目前狀態，待審核中請等行政或總經理簽核。</p>
+      </details>
+      <details>
+        <summary>訂貨單儲存時提示贈品沒選滿？</summary>
+        <p>系列買 N 送 M 已達標，需要在跳出的選單中選滿贈品數量才能儲存；關掉的話可以按促銷橫幅上的「選擇贈品」重開。</p>
+      </details>
+      <details>
+        <summary>活動報名者配到錯的客戶？</summary>
+        <p>到活動頁的報名名單，在「客戶配對」欄按編輯改成正確客戶，或取消配對。人工調整過的，系統不會再自動改。</p>
+      </details>
+      <details>
+        <summary>首頁的「課程／活動客戶」一直沒有消失？</summary>
+        <p>拜訪紀錄每晚更新一次，拜訪回報後最慢隔天就會從清單移除。</p>
+      </details>
+      <details>
+        <summary>為什麼看不到某家客戶的地址電話？</summary>
+        <p>這家客戶目前沒有負責業務，資料不對一般業務開放。若在你的轄區內，可以在業務開發頁認領；不在轄區內請洽中央管理指派。</p>
+      </details>
+    </section>
+
+  </article>
+</div>
+
+<footer class="footer">崧達企業股份有限公司 · 企業管理系統操作手冊 · 內部使用</footer>
+
+<script>
+  // 手機寬度時目錄預設收合，避免佔掉整個第一屏
+  (function () {
+    var d = document.getElementById('toc-details');
+    if (d && window.matchMedia('(max-width: 900px)').matches) d.removeAttribute('open');
+  })();
+</script>

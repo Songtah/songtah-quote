@@ -16,7 +16,7 @@ import { useSession } from 'next-auth/react'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
 import {
   BadgeDollarSign, BriefcaseBusiness, Building2, CircleUserRound, FileText,
-  Headphones, Home, Menu, PackageCheck, Settings2, ShoppingBag, TrendingUp,
+  Headphones, Home, LifeBuoy, Menu, PackageCheck, Settings2, ShoppingBag, TrendingUp,
   UsersRound, X, type LucideIcon,
 } from 'lucide-react'
 
@@ -26,7 +26,7 @@ export type SessionUserLike = {
   permissions?: UserPermissions
 }
 
-type NavGroup = '工作' | '交易' | '服務' | '管理'
+type NavGroup = '工作' | '交易' | '服務' | '管理' | '支援'
 
 export type NavItem = {
   href: string
@@ -55,6 +55,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/admin', label: '行政管理', group: '管理', module: 'admin', adminOrStaff: true, icon: Settings2 },
   { href: '/settings/accounts', label: '帳號權限', group: '管理', module: 'accounts', icon: CircleUserRound },
   { href: '/settings/audit', label: '操作紀錄', group: '管理', module: null, adminOnly: true, icon: FileText },
+  // 操作手冊與問題回報，所有帳號都看得到
+  { href: '/support', label: '支援中心', group: '支援', module: null, icon: LifeBuoy },
 ]
 
 function canViewModule(
@@ -86,7 +88,7 @@ export function useVisibleNav(sessionUser?: SessionUserLike) {
     return canViewModule(role, permissions, item.module, sessionLoading)
   })
 
-  const visibleGroups = (['工作', '交易', '服務', '管理'] as const)
+  const visibleGroups = (['工作', '交易', '服務', '管理', '支援'] as const)
     .map((group) => ({ group, items: visibleItems.filter((item) => item.group === group) }))
     .filter(({ items }) => items.length > 0)
 

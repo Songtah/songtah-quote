@@ -52,6 +52,7 @@ function getPageTitle(pathname: string): string {
     '/events':            '活動管理',
     '/course-costs':      '辦課成本試算',
     '/marketing':         '行銷管理',
+    '/support':           '支援中心',
   }
   if (exact[pathname]) return exact[pathname]
   if (/^\/customers\//.test(pathname)) return '客戶詳情'
