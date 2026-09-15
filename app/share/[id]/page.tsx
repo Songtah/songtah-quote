@@ -70,7 +70,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
             <div className="relative flex justify-between items-center gap-6">
               <div className="flex flex-col justify-center">
                 <div className="bg-white/90 rounded-xl px-4 py-2 inline-flex items-center mb-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
-                  <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-48 object-contain" />
+                  <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-48 object-contain" />
                 </div>
                 <div className="text-stone-400 text-[10px] font-semibold tracking-[0.22em] uppercase">
                   SONGTAH TRADING CO.,LTD.

@@ -36,7 +36,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
   return (
     <div className="min-h-screen bg-cream-100 px-4 py-8 sm:py-12">
       <div className="mx-auto max-w-2xl">
-        <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="mx-auto h-auto w-36 object-contain" />
+        <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="mx-auto h-auto w-36 object-contain" />
 
         {!event || !event.onlineRegistration ? (
           <div className="card-soft mt-6 p-8 text-center text-sm text-stone-500">此活動目前未開放線上報名。</div>

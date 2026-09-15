@@ -106,7 +106,7 @@ export function AppSidebar({ sessionUser }: { sessionUser?: SessionUserLike }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-stone-900/[0.06] bg-[#fdfdfb] px-5 py-6 lg:flex">
       <Link href="/dashboard" className="mb-8 block px-2" aria-label="崧達企業 — 回首頁">
-        <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-36" priority />
+        <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-36" priority />
       </Link>
       <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-label="主要導覽">
         {visibleGroups.map(({ group, items }) => (
@@ -149,7 +149,7 @@ export function AppMobileNav({ sessionUser }: { sessionUser?: SessionUserLike })
   return (
     <header className="sticky top-0 z-30 border-b border-stone-900/[0.06] bg-white/95 backdrop-blur-xl lg:hidden">
       <div className="flex h-16 items-center justify-between px-4">
-        <Link href="/dashboard"><Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="h-auto w-28" priority /></Link>
+        <Link href="/dashboard"><Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-28" priority /></Link>
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}

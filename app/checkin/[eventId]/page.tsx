@@ -23,7 +23,7 @@ export default async function CheckinPage({
   return (
     <div className="min-h-screen bg-cream-100 px-4 py-10">
       <div className="mx-auto max-w-md">
-        <Image src="/Logo.svg" alt="崧達企業" width={520} height={78} className="mx-auto h-auto w-40 object-contain" />
+        <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="mx-auto h-auto w-40 object-contain" />
         <div className="card-soft mt-6 p-6">
           {!event ? (
             <p className="py-8 text-center text-sm text-stone-500">簽到連結無效，請向現場人員索取新的 QR code。</p>
