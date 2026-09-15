@@ -8,9 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { parseLineTxt } from '@/lib/line-txt-parser'
-import { isDailyReport, parseDailyReport } from '@/lib/line-daily-report'
+import { isDailyReport, parseDailyReport, decideDailyReportIngest } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
-import { isInReportWindowTime, businessDayOf, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
+import { businessDayOf, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +64,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
   // 回報窗與業務日：與 webhook 用同一套判定（lib/line-report-window）。
   // 匯入路徑原本完全沒做這道過濾，白天的訊息只要長得像日報就會被匯入。
   let skippedByWindow = 0
+  let skippedPlans = 0
   for (const msg of reportMessages) {
     // 只匯入業務名單上的業務（非名單成員的訊息一律跳過）
     if (!isKnownSalesperson(msg.sender)) continue
@@ -71,8 +72,14 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     if (!canImportForOthers && salesperson !== actorName) continue
     // 業務篩選：只匯入指定業務的日報
     if (salespersonFilter && salesperson !== salespersonFilter) continue
-    // 回報窗 17:00～隔日 03:00；救援匯入可用 ignoreWindow 放行
-    if (!ignoreWindow && !isInReportWindowTime(msg.time)) { skippedByWindow++; continue }
+    // 與 webhook 同一判定（lib/line-daily-report decideDailyReportIngest）：
+    // 行程回報與補回報前幾天的照收、事前計畫不收，同日無標記才看回報窗。ignoreWindow（救援用）全部放行。
+    const hour = Number((msg.time ?? '').split(':')[0])
+    const decision = decideDailyReportIngest({ text: msg.text, twHour: hour, sendBusinessDay: businessDayOf(msg.date, msg.time) })
+    if (!ignoreWindow && !decision.ingest) {
+      if (decision.reason.includes('計畫')) skippedPlans++; else skippedByWindow++
+      continue
+    }
     // 業務日 03:00 換日：凌晨發的日報屬前一天。日報若沒寫「日期：」就用這個值，
     // 不可退回「今天」——否則匯入歷史檔案會把全部紀錄標成匯入當日。
     const report = parseDailyReport(msg.text, businessDayOf(msg.date, msg.time))
@@ -97,6 +104,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     dailyReports: reportMessages.length,
     total: visits.length,
     skippedByWindow,
+    skippedPlans,
     reportWindow: REPORT_WINDOW_LABEL,
     visits,
   })

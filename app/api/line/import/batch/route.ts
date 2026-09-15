@@ -12,10 +12,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/system-notion'
 import type { ParsedVisitItem } from '@/app/api/line/import/route'
+import { customerNameStem } from '@/lib/customer-name-match'
 
 export const dynamic = 'force-dynamic'
 
 const BATCH_SIZE = 30
+
+/**
+ * 去重鍵與 webhook（lib/line-report-ingest）一致：業務＋日期＋客戶名稱字根。
+ * 原本只比「完整名稱＋日期」：同一家寫法不同（「誠鴻牙科」vs「誠鴻牙醫診所」）會重複建立，
+ * 不同業務同日拜訪同一家則會被誤判為重複而漏掉。
+ */
+const dedupKey = (salesperson: string, date: string, name: string) =>
+  `${salesperson}|${date}|${(customerNameStem(name) || name).toLowerCase().replace(/\s/g, '')}`
+
+/** 內容完全相同＝同一筆（日報原文照抄）；太短的內容不當依據 */
+const contentKey = (salesperson: string, date: string, content: string) => {
+  const c = (content ?? '').replace(/\s/g, '')
+  return c.length >= 10 ? `c:${salesperson}|${date}|${c}` : ''
+}
 
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   let visits: ParsedVisitItem[]
@@ -53,7 +68,10 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
   const existingSet = new Set<string>()
   for (const v of existingResult.items) {
     if (v.customerName && v.date) {
-      existingSet.add(`${v.customerName.toLowerCase().trim()}|${v.date}`)
+      existingSet.add(dedupKey(v.salesperson, v.date, v.customerName))
+      // 列表上的名稱是客戶主檔正式名稱（與日報簡稱不同），另以「業務＋日期＋內容」比對同一筆
+      const ck = contentKey(v.salesperson, v.date, v.content)
+      if (ck) existingSet.add(ck)
     }
   }
 
@@ -62,8 +80,9 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
   let imported = 0, skipped = 0, errors = 0
 
   for (const item of batch) {
-    const key = `${item.customerName.toLowerCase().trim()}|${item.date}`
-    if (existingSet.has(key)) { skipped++; continue }
+    const key = dedupKey(item.salesperson, item.date, item.customerName)
+    const ck = contentKey(item.salesperson, item.date, item.content)
+    if (existingSet.has(key) || (ck && existingSet.has(ck))) { skipped++; continue }
 
     try {
       const validReaction = formOptions.customerReactions.includes(item.customerReaction)
@@ -89,6 +108,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
       })
 
       existingSet.add(key)
+      if (ck) existingSet.add(ck)
       imported++
     } catch {
       errors++

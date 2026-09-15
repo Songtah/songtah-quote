@@ -2,8 +2,12 @@
  * POST /api/line/webhook
  *
  * 接收 LINE Messaging API Webhook。
- * 只處理符合「每日報表」格式的業務訊息，其他訊息一律忽略。
- * 每個編號客戶自動建立一筆客情紀錄。
+ * 只處理業務名單成員、內容為「行程回報」的每日報表，每個編號客戶建立一筆客情紀錄。
+ *
+ * 2026-09-15 改寫（見 lib/line-report-ingest.ts 檔頭事故說明）：
+ *   - 是否匯入改看「行程回報」標記與報表日期（隔天補回報照收、事前計畫不收），同日無標記才看回報窗
+ *   - 每則日報先存 Redis 佇列再處理；逾時或失敗由每小時排程 /api/cron/line-report-retry 重試
+ *   - 時限 60 → 300 秒；建檔與認領分兩階段；同業務同日同客戶不重複建立
  *
  * 環境變數：
  *   LINE_CHANNEL_SECRET       — 簽名驗證（必填）
@@ -14,17 +18,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { waitUntil } from '@vercel/functions'
-import { isDailyReport, parseDailyReport, devStageForReaction } from '@/lib/line-daily-report'
+import { isDailyReport, decideDailyReportIngest } from '@/lib/line-daily-report'
 import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
-import { createVisit, searchSystemCustomers, getVisitFormOptions } from '@/lib/system-notion'
-import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
-import { customerNameStem, pickUniqueCustomerMatch } from '@/lib/customer-name-match'
-import { isInReportWindow, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
-import { advanceCustomerDevStage } from '@/lib/notion/customers'
-import { detectCompetitors } from '@/lib/competitor-detector'
+import { enqueueReport, runQueuedReport } from '@/lib/line-report-ingest'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60  // Vercel function 最長 60 秒
+export const maxDuration = 300
 
 // ── 簽名驗證 ──────────────────────────────────────────────────────────────────
 
@@ -94,139 +93,31 @@ async function processEvents(events: any[]) {
       if (targetGroupId && event.source?.groupId !== targetGroupId) continue
 
       const text: string = event.message.text ?? ''
+      if (!isDailyReport(text)) continue
 
-      // ── 只處理每日報表格式 ────────────────────────────────────────────────
-      if (!isDailyReport(text)) {
-        console.log(`[LINE Webhook] skip (not daily report): "${text.slice(0, 30)}…"`)
-        continue
-      }
-
-      // ── 只在「業務回報窗：17:00～隔日 03:00（台北）」內擷取 ───────────────────
-      // 03:00～17:00 之間發送的訊息一律忽略（避免誤抓日間非回報時段的資料）。
+      // 回報或計畫：看「行程回報」標記與報表日期，同日無標記才看回報窗（lib/line-daily-report）
       const ts = typeof event.timestamp === 'number' ? event.timestamp : Date.now()
       const twHour = new Date(ts + 8 * 3600_000).getUTCHours()
-      if (!isInReportWindow(ts)) {
-        console.log(`[LINE Webhook] skip (非回報窗：台北 ${String(twHour).padStart(2, '0')}:xx，只收 ${REPORT_WINDOW_LABEL})`)
+      // 日報沒寫日期時的業務日：03:00 前算前一天
+      const fallbackDate = new Date(ts + 8 * 3600_000 - 3 * 3600_000).toISOString().slice(0, 10)
+      const decision = decideDailyReportIngest({ text, twHour, sendBusinessDay: fallbackDate })
+      if (!decision.ingest) {
+        console.log(`[LINE Webhook] skip（${decision.reason}）`)
         continue
       }
 
-      const report = parseDailyReport(text)
-      if (!report || report.visits.length === 0) {
-        console.log('[LINE Webhook] skip: parsed report has no visits')
-        continue
-      }
-
-      const groupId: string = event.source.groupId
-      const userId: string = event.source.userId ?? ''
-
-      // 取得發送人顯示名稱
-      const displayName = await getLineDisplayName(groupId, userId)
-
-      // 只抓取業務名單上的業務（非名單成員的訊息一律跳過）
+      const displayName = await getLineDisplayName(event.source.groupId, event.source.userId ?? '')
       if (!isKnownSalesperson(displayName)) {
         console.log(`[LINE Webhook] skip (非業務名單): "${displayName}"`)
         continue
       }
       const salesperson = resolveSalesperson(displayName)
 
-      // 取得系統表單選項
-      const formOptions = await getVisitFormOptions()
-
-      // ── 每個客戶建立一筆紀錄 ──────────────────────────────────────────────
-      // 逐筆的 try/catch 只是為了「一筆壞掉不影響其他筆」，不代表可以靜默失敗——
-      // 2026-09 就是因為 createVisit 寫入不存在的欄位、錯誤被這裡吞掉，
-      // 導致連續 8 天沒有任何客情紀錄進系統而無人察覺。
-      // 因此每則日報結束後一律結算成敗，全數失敗時以明確的告警等級記錄。
-      let created = 0
-      const failures: { customer: string; message: string }[] = []
-      for (const visit of report.visits) {
-        try {
-          // 比對 Notion 客戶主檔
-          // searchSystemCustomers 連地址／行政區都比對，直接取 matches[0] 會把客情接到
-          // 名稱毫不相干、只是地址剛好含這幾個字的客戶身上。一律先驗名稱字根。
-          // 另外日報寫的是簡稱（「誠鴻牙科」），主檔是正式名（「誠鴻牙醫診所」），
-          // 整串查不到時改用字根重查一次。
-          let matches = await searchSystemCustomers(visit.customerName)
-          const stem = customerNameStem(visit.customerName)
-          if (matches.length === 0 && stem && stem !== visit.customerName) {
-            matches = await searchSystemCustomers(stem)
-          }
-          const matched = pickUniqueCustomerMatch(visit.customerName, matches)
-          const customerId = matched?.id
-          // 唯一且名稱驗證通過才算比對確定（見 visit-claim 第一層）
-          const unambiguousMatch = Boolean(matched)
-
-          // 確認 customerReaction 在系統選項內，否則清空
-          const validReaction = formOptions.customerReactions.includes(visit.customerReaction)
-            ? visit.customerReaction
-            : ''
-
-          // 從內文偵測競品
-          const detectedCompetitors = detectCompetitors(
-            visit.content,
-            formOptions.competitorOptions
-          )
-
-          await createVisit({
-            customerName: visit.customerName,
-            customerId,
-            date: report.date,
-            salesperson,
-            content: visit.content,
-            interactionType: '拜訪',
-            interactionPurpose: '',
-            customerReaction: validReaction,
-            followUpAction: '',
-            needsFollowUp: visit.needsFollowUp,
-            // 由解析器依內容推斷（講「下週回」就 +7 天，沒講就 +14 天）。
-            // 沒有到期日就沒有逾期可言——實測手動填答率 2/5,891。
-            nextFollowUpDate: visit.nextFollowUpDate,
-            status: '',
-            address: '',
-            city: '',
-            district: '',
-            tags: [],
-            competitorEquipment: detectedCompetitors,
-            interestedProductIds: [],
-          })
-
-          // 第一層：轄區內且無人負責 → 直接認領；其餘情況留給每晚重算的「待認領建議」
-          const claim = customerId
-            ? await applyAutoClaimForVisit({ salesperson, customerId, unambiguous: unambiguousMatch })
-            : { claimed: false, reason: 'customer-unmatched' }
-
-          // 漏斗由系統自己推進（業務只回報，不該再進系統點階段）。
-          // 只推進自己名下或無人負責的客戶；別人的客戶會 throw，吞掉即可。
-          let stageAdvanced = false
-          if (customerId) {
-            stageAdvanced = await advanceCustomerDevStage(
-              customerId,
-              devStageForReaction(validReaction),
-              { actorName: salesperson, canManageAll: false },
-            ).catch(() => false)
-          }
-
-          created++
-          console.log(
-            `[LINE Webhook] ✅ ${visit.customerName} / ${salesperson} / ${report.date}` +
-            (claim.claimed ? ` · 已自動認領（${claim.reason}）` : ` · 未認領（${claim.reason}）`) +
-            (stageAdvanced ? ` · 階段推進為 ${devStageForReaction(validReaction)}` : '')
-          )
-        } catch (err: any) {
-          const message = err?.body?.message ?? err?.message ?? String(err)
-          failures.push({ customer: visit.customerName, message })
-          console.error(`[LINE Webhook] createVisit error (${visit.customerName}): ${message}`)
-        }
-      }
-
-      if (failures.length > 0) {
-        const level = created === 0 ? '🚨 全數失敗' : '⚠️ 部分失敗'
-        console.error(
-          `[LINE Webhook] ${level} — ${salesperson} ${report.date}：` +
-          `成功 ${created} / 失敗 ${failures.length}。` +
-          `首個原因：${failures[0].message}`
-        )
-      }
+      const record = await enqueueReport({
+        id: String(event.message.id ?? `${ts}-${event.source.userId ?? ''}`),
+        text, salesperson, fallbackDate,
+      })
+      await runQueuedReport(record)
     } catch (err) {
       console.error('[LINE Webhook] processEvents error:', err)
     }

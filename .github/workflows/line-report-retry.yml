@@ -1,0 +1,23 @@
+name: LINE 日報重試 — 每小時重跑沒處理完的日報
+
+on:
+  # 全天每小時（業務晚上與隔天早上都會回報）；webhook 逾時或部分失敗的日報在一小時內補進
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 觸發正式站重試端點
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/line-report-retry" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp.json
+          test "$code" = "200"

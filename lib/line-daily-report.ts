@@ -29,6 +29,47 @@ export type DailyReport = {
 
 // ── 判斷是否為行程回報訊息 ────────────────────────────────────────────────────
 
+/**
+ * 這則「每日報表」要不要當成拜訪回報匯入（webhook 與 .txt 匯入共用唯一判定，2026-09-15 修正）。
+ *
+ * 業務每天發兩則：早上的計畫、晚上（或隔天早上）的實際回報。原本只看發送時間（17:00～03:00），
+ * 以 7/1～9/9 的 556 則實測：
+ *   - Eason 固定隔天早上 9～10 點才回報前一天（標「行程回報」、日期寫前一天）→ 9 月幾乎全被丟掉
+ *   - Hank、Duncan 晚上回報是把早上的「工作安排」直接補上結果再發一次，**沒有「行程回報」字樣**
+ *     → 不能用「工作安排」當成計畫的判斷依據，否則他們的回報會全數漏掉
+ * 所以判斷改為「回報標記＋報表日期相對於發送日」，發送時間只用在同日無標記的情況：
+ *   1. 有「行程回報／行程報告」         → 收（任何時間）
+ *   2. 報表日期早於發送的業務日（補回報）→ 收（重複的由去重擋下，不會多建）
+ *   3. 報表日期晚於發送的業務日（明天計畫）→ 不收
+ *   4. 同日 → 沿用回報窗：17:00～03:00 收，其餘視為當天早上的計畫
+ */
+const REPORT_MARKER = /行程回報|行程報告|拜訪回報|今日回報/
+
+export function reportDateOf(text: string): string {
+  const dateLine = text.split('\n').find((l) => /日期[：:]/.test(l))
+  const m = dateLine?.match(/(\d{4})\s*\/\s*(\d{1,2})\s*\/\s*(\d{1,2})/)
+  return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : ''
+}
+
+export function decideDailyReportIngest(input: {
+  text: string
+  /** 發送時的台北小時 */
+  twHour: number
+  /** 發送時所屬業務日（03:00 換日） */
+  sendBusinessDay: string
+}): { ingest: boolean; reason: string } {
+  if (REPORT_MARKER.test(input.text)) return { ingest: true, reason: '行程回報' }
+  const reportDate = reportDateOf(input.text)
+  if (reportDate && input.sendBusinessDay) {
+    if (reportDate < input.sendBusinessDay) return { ingest: true, reason: `補回報 ${reportDate}` }
+    if (reportDate > input.sendBusinessDay) return { ingest: false, reason: `日期為 ${reportDate}，屬事前計畫` }
+  }
+  const inWindow = input.twHour >= 17 || input.twHour < 3
+  return inWindow
+    ? { ingest: true, reason: '回報窗內' }
+    : { ingest: false, reason: `同日且不在回報窗（台北 ${input.twHour} 時），視為當天計畫` }
+}
+
 export function isDailyReport(text: string): boolean {
   // 認得兩種開頭標記：「行程回報」(舊格式) 或「每日報表」(如 Eason 直接條列、無行程回報字樣)。
   // 純晨間「行程規劃」會在 parseDailyReport 內被濾掉，這裡先寬鬆放行。
@@ -68,11 +109,13 @@ export function parseDailyReport(text: string, fallbackDate?: string): DailyRepo
   // 2) 沒回報但有「行程規劃」→ 純晨間規劃，不匯入
   // 3) 兩者皆無（如 Eason：每日報表→職稱→日期→條列）→ 整則皆為條目，
   //    迴圈會自動略過 header 行（每日報表/職稱/日期/分隔線），從第一個編號條目開始
-  const bodyIdx = lines.findIndex((l) => /行程回報/.test(l))
+  const bodyIdx = lines.findIndex((l) => REPORT_MARKER.test(l))
   let bodyLines: string[]
   if (bodyIdx !== -1) {
     bodyLines = lines.slice(bodyIdx + 1)
   } else if (lines.some((l) => /行程規劃/.test(l))) {
+    // 純晨間「行程規劃」不匯入（沿用原規則）。
+    // 注意「工作安排」不能比照：Hank、Duncan 的晚間回報就是補完結果的「工作安排」，是否匯入由 decideDailyReportIngest 決定
     return null
   } else {
     bodyLines = lines
@@ -104,7 +147,8 @@ export function parseDailyReport(text: string, fallbackDate?: string): DailyRepo
 
     // 編號條目：1.名稱 / 1．名稱 / 1、名稱 / 1)名稱 / 全形數字１２３
     // 分隔符後可有空白；支援半形與全形數字，涵蓋各業務不同的編號寫法。
-    const numMatch = t.match(/^([0-9０-９]+)[\.．、)）:：]\s*(.+)/)
+    // 冒號後緊接數字的是時間（「9:30-10:40公司例行性會議」），不是編號——曾被解析成名為「30」的客戶
+    const numMatch = t.match(/^([0-9０-９]+)(?:[\.．、)）]|[:：](?![0-9０-９]))\s*(.+)/)
     if (numMatch) {
       flush()
       const rest = numMatch[2].trim()

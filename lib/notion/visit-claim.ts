@@ -425,9 +425,11 @@ export async function applyAutoClaimForVisit(input: {
   if (!unambiguous) return { claimed: false, reason: 'ambiguous-customer-match' }
 
   try {
-    const [customers, context] = await Promise.all([getAllSystemCustomers(), loadClaimContext()])
-    const bare = customerId.replace(/-/g, '')
-    const customer = customers.find((c) => c.id.replace(/-/g, '') === bare)
+    // 只讀這一家客戶。原本呼叫 getAllSystemCustomers() 全掃客戶庫（約 1 萬筆、冷啟動 60 秒），
+    // 在 LINE webhook 的 60 秒時限內，每則日報建完第 1 筆客情就被砍掉——
+    // 9/9～9/14 各業務每天只進 1～2 筆的直接原因。
+    const { getSystemCustomerById } = await import('./customers')
+    const [customer, context] = await Promise.all([getSystemCustomerById(customerId), loadClaimContext()])
     const decision = decideClaim({ salesperson, customer: customer ?? null, context, visitCount: 1, otherVisitors: [] })
     if (decision.action !== 'auto-claim') {
       return { claimed: false, reason: decision.action === 'skip' ? decision.reason : decision.tier }
