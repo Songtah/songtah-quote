@@ -578,11 +578,15 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                     className="flex items-center justify-between rounded-2xl border border-stone-900/[0.06] p-3 hover:bg-brand-50/40 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-800 truncate">{ev.institution}</p>
-                      <p className="text-xs text-stone-400">{ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : ''}</p>
+                      <p className="text-sm font-medium text-stone-800 truncate">{(ev as any).eventName || ev.institution}</p>
+                      <p className="text-xs text-stone-400">
+                        {(ev as any).eventDate || (ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : '')}
+                        {ev.source ? `・${ev.source}` : ''}{ev.contact ? `・${ev.contact}` : ''}
+                      </p>
                     </div>
                     <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                       ev.status === '已確認' ? 'bg-brand-50 text-green-700' :
+                      ev.status === '已到場' ? 'bg-emerald-50 text-emerald-700' :
                       ev.status === '取消'   ? 'bg-red-100 text-red-600' :
                       'bg-blue-100 text-blue-700'
                     }`}>{ev.status}</span>

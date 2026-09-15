@@ -45,7 +45,7 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       )
       const merged = each.flatMap((r, i) => (r?.items ?? []).map((it) => ({ ...it, owner: salespeople[i] })))
       merged.sort((a, b) => b.score - a.score)
-      const byKind = { overdue: 0, hot: 0, stale: 0, newOpening: 0 } as Record<string, number>
+      const byKind = { overdue: 0, hot: 0, stale: 0, newOpening: 0, event: 0 } as Record<string, number>
       for (const it of merged) byKind[it.kind]++
       return NextResponse.json({
         mode, items: merged.slice(0, limit), total: merged.length, byKind,

@@ -15,6 +15,7 @@
  *
  * 新版改用四個訊號評分（2026-09-09 使用者定案），每筆都帶「為什麼推這家」：
  *   1. 逾期追蹤最優先   2. 太久沒拜訪   3. 客戶反應強度   4. 新開業機構
+ *   5. 活動足跡（2026-09-15）：課程報名／展會簽到後尚未拜訪 —— 見 lib/registration-footprint.ts
  * 客戶等級與訂單一律不用——前者要業務手填（違反最高原則且實測填答率 0），
  * 後者密度不足以支撐任何排序。
  *
@@ -27,6 +28,7 @@ import { listCustomersByArea, getAllSystemCustomers, NON_CLAIMABLE_OWNERS } from
 import { scanCustomerVisitSignals, type CustomerVisitSignal } from './visits'
 import { listTerritories } from './territories'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { getEventFootprints, FOOTPRINT_WINDOW_DAYS, type EventFootprint } from '@/lib/registration-footprint'
 
 // ── 快取層 ─────────────────────────────────────────────────────
 
@@ -72,7 +74,7 @@ const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 1
 
 // ── 型別 ───────────────────────────────────────────────────────
 
-export type SuggestionKind = 'overdue' | 'hot' | 'stale' | 'newOpening'
+export type SuggestionKind = 'overdue' | 'hot' | 'stale' | 'newOpening' | 'event'
 
 export type VisitSuggestion = {
   id: string
@@ -97,6 +99,7 @@ export const KIND_LABEL: Record<SuggestionKind, string> = {
   hot: '客戶正熱',
   stale: '太久沒跑',
   newOpening: '新開業',
+  event: '活動足跡',
 }
 
 export type VisitSuggestionResult = {
@@ -115,7 +118,7 @@ type Candidate = {
   address: string; phone: string; salesperson: string; status: string; devSource?: string
 }
 
-function scoreCustomer(c: Candidate, sig: CustomerVisitSignal | undefined, me: string) {
+function scoreCustomer(c: Candidate, sig: CustomerVisitSignal | undefined, me: string, fp?: EventFootprint) {
   const reasons: string[] = []
   let score = 0
   let kind: SuggestionKind = 'stale'
@@ -174,6 +177,23 @@ function scoreCustomer(c: Candidate, sig: CustomerVisitSignal | undefined, me: s
     reasons.push('BAS 新開業機構，尚未接觸')
   }
 
+  // ⑤ 活動足跡 —— 客戶主動來上課／到攤位，且之後還沒被拜訪過。
+  //    已到場 > 活動已過的報名 > 還沒辦的報名（可先拜訪提醒出席）；隨活動日衰減，超過 60 天不再推。
+  if (fp && (!lastVisit || lastVisit < fp.date)) {
+    const since = daysBetween(fp.date)
+    const upcoming = fp.date > today()
+    if (upcoming || since <= FOOTPRINT_WINDOW_DAYS) {
+      const base = fp.status === '已到場' ? 110 : upcoming ? 50 : 80
+      const heat = upcoming ? base : base * decay(since)
+      score += heat
+      if (heat >= 50 && kind !== 'overdue') kind = 'event'
+      const verb = fp.source === '展會簽到' || fp.status === '已到場'
+        ? `到「${fp.eventName}」現場簽到`
+        : upcoming ? `報名了 ${fp.date.slice(5).replace('-', '/')}「${fp.eventName}」` : `報名「${fp.eventName}」`
+      reasons.push(upcoming ? `${verb}，可先拜訪提醒出席` : `${fp.date} ${verb}，之後尚未拜訪`)
+    }
+  }
+
   return { score, kind, reasons, isMine, lastVisit }
 }
 
@@ -192,7 +212,10 @@ export async function buildVisitSuggestions(params: {
   const mode = params.mode ?? 'today'
   const limit = params.limit ?? 20
 
-  const [{ builtAt, signals }, territories] = await Promise.all([getSignals(), listTerritories().catch(() => [])])
+  const [{ builtAt, signals }, territories, footprints] = await Promise.all([
+    getSignals(), listTerritories().catch(() => []),
+    getEventFootprints().catch(() => ({} as Record<string, EventFootprint>)),   // 足跡失敗不影響其他訊號
+  ])
 
   // 我的有效轄區（today 模式的地理範圍）
   const myAreas = new Set(
@@ -228,7 +251,7 @@ export async function buildVisitSuggestions(params: {
     if (params.existingOnly && c.salesperson !== me) continue
 
     const sig = signals[c.id.replace(/-/g, '')]
-    const { score, kind, reasons, isMine, lastVisit } = scoreCustomer(c, sig, me)
+    const { score, kind, reasons, isMine, lastVisit } = scoreCustomer(c, sig, me, footprints[c.id.replace(/-/g, '')])
     if (score <= 0 || reasons.length === 0) continue
 
     items.push({
@@ -240,7 +263,7 @@ export async function buildVisitSuggestions(params: {
 
   items.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'zh-TW'))
 
-  const byKind: Record<SuggestionKind, number> = { overdue: 0, hot: 0, stale: 0, newOpening: 0 }
+  const byKind: Record<SuggestionKind, number> = { overdue: 0, hot: 0, stale: 0, newOpening: 0, event: 0 }
   for (const i of items) byKind[i.kind]++
 
   return { mode, items: items.slice(0, limit), total: items.length, byKind, scope, builtAt }

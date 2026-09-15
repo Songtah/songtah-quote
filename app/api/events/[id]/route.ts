@@ -3,10 +3,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import {
   getEventById, updateEvent, deleteEvent, listEventRegistrations,
-  updateRegistrationStatus, getRegistrationById,
+  updateRegistrationStatus,
 } from '@/lib/system-notion'
-import { getSystemCustomerById } from '@/lib/notion/customers'
-import { createVisit } from '@/lib/notion/visits'
+import { processRegistrations } from '@/lib/registration-footprint'
+import { signCheckinToken, isCheckinOpen } from '@/lib/checkin-token'
 import { canEdit } from '@/lib/permissions'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -23,6 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const event = await getEventById(id)
   if (!event) return NextResponse.json({ error: '找不到活動' }, { status: 404 })
+
+  // 展會簽到連結（含簽章）只給能編輯活動的人
+  if (url.searchParams.get('checkin') === '1') {
+    if (!canEdit(session as any, 'events')) return NextResponse.json({ error: '無權限' }, { status: 403 })
+    const t = signCheckinToken(id)
+    if (!t) return NextResponse.json({ error: '伺服器未設定簽章密鑰' }, { status: 500 })
+    return NextResponse.json({ url: `${req.nextUrl.origin}/checkin/${id}?t=${t}`, open: isCheckinOpen(event) })
+  }
   return NextResponse.json(event)
 }
 
@@ -38,35 +46,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // If updating a registration status
   if (body._type === 'registration') {
-    const before = await getRegistrationById(id)
     await updateRegistrationStatus(id, body.status)
-
-    // 報名確認且已配對客戶 → 自動產生一筆待追蹤客情,提醒業務活動後跟進
-    // (不新增 Notion schema,重用既有拜訪 DB 的「是否需追蹤」機制)
-    if (body.status === '已確認' && before && before.status !== '已確認' && before.customerId) {
-      try {
-        const [event, customer] = await Promise.all([
-          getEventById(before.eventId),
-          getSystemCustomerById(before.customerId),
-        ])
-        await createVisit({
-          customerName: customer?.name || before.institution || '活動報名客戶',
-          date: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10),
-          salesperson: customer?.salesperson ?? '',
-          content: `活動報名確認：「${event?.name ?? ''}」，請安排跟進拜訪，了解活動後續需求。`,
-          address: '',
-          city: customer?.city ?? '',
-          district: customer?.district ?? '',
-          customerId: before.customerId,
-          needsFollowUp: true,
-          followUpAction: '活動後跟進',
-        })
-      } catch (e) {
-        console.error('events registration → 自動待追蹤建立失敗', e)
-      }
-    }
-
+    // 2026-09-15 移除「確認報名 → 自動建一筆待追蹤客情」：那會寫入沒有發生過的拜訪，
+    // 讓該客戶的「最近拜訪日」被刷新、壓掉太久沒拜訪訊號，也會觸發追蹤自動結案的「已有更新拜訪」條件。
+    // 活動後的跟進改由拜訪建議的「活動足跡」訊號驅動（lib/registration-footprint.ts），不寫假拜訪。
     return NextResponse.json({ ok: true })
+  }
+
+  // 重新配對這場活動的報名（通常由每小時排程處理，這裡給活動負責人立即更新用）
+  if (body._type === 'process-registrations') {
+    const regs = await listEventRegistrations(id)
+    const result = await processRegistrations({ onlyIds: regs.map((r) => r.id), retryUnmatched: true })
+    return NextResponse.json({ ok: true, ...result })
   }
 
   await updateEvent(id, body)

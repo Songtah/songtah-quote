@@ -1,5 +1,10 @@
 /**
  * lib/notion/events.ts — 活動管理 / 報名（從 system-notion.ts 抽出）
+ *
+ * 報名 DB 同時是「客戶足跡」的唯一來源（2026-09-15）：
+ *   課程報名 ← 外掛表單直接寫入 Notion（來源＝報名表單，可只填「表單活動」文字）
+ *   展會簽到 ← 系統公開簽到頁 /checkin（來源＝展會簽到，狀態＝已到場）
+ * 活動關聯與客戶配對由系統自動補（lib/registration-footprint.ts），不需人工。
  */
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
@@ -33,7 +38,13 @@ export type EventRegistration = {
   registeredAt:  string
   eventId:       string
   customerId:    string   // 客戶配對 relation (first ID)
+  source:        string   // 報名表單／展會簽到／人工登記（空＝外掛表單未帶）
+  formEventName: string   // 外掛表單填的活動名稱，系統據此補「活動」relation
+  city:          string
+  matchNote:     string   // 系統配對依據或未配對原因
 }
+
+export const REGISTRATION_SOURCES = ['報名表單', '展會簽到', '人工登記'] as const
 
 function mapEvent(page: any): EventItem {
   return {
@@ -66,7 +77,16 @@ function mapRegistration(page: any): EventRegistration {
     registeredAt: getProp(page, '報名時間')?.created_time ?? '',
     eventId:      eventRel[0]?.id ?? '',
     customerId:   custRel[0]?.id ?? '',
+    source:        getSelect(page, '來源'),
+    formEventName: getText(page, '表單活動'),
+    city:          getText(page, '縣市'),
+    matchNote:     getText(page, '配對說明'),
   }
+}
+
+/** 列表快取鍵帶 limit（v2:${limit}），舊版刪的是 v1 鍵，新增/編輯後最多 5 分鐘看不到。逐一清掉常用 limit。 */
+function invalidateEventsList() {
+  for (const n of [10, 20, 50, 100]) deleteRedisValue(`events-list-v2:${n}`)
 }
 
 export async function listEvents(options?: {
@@ -152,7 +172,7 @@ export async function createEvent(data: {
       },
     })
   )
-  deleteRedisValue('events-list-v1')
+  invalidateEventsList()
   return mapEvent(page)
 }
 
@@ -180,14 +200,14 @@ export async function updateEvent(id: string, data: Partial<{
   await notionCallWithRetry('updateEvent', () =>
     notion.pages.update({ page_id: id, properties: props })
   )
-  deleteRedisValue('events-list-v1')
+  invalidateEventsList()
 }
 
 export async function deleteEvent(id: string): Promise<void> {
   await notionCallWithRetry('deleteEvent', () =>
     notion.pages.update({ page_id: id, archived: true })
   )
-  deleteRedisValue('events-list-v1')
+  invalidateEventsList()
 }
 
 export async function listEventRegistrations(eventId: string): Promise<EventRegistration[]> {
@@ -258,4 +278,95 @@ export async function updateRegistrationStatus(id: string, status: string): Prom
       properties: { '狀態': { select: { name: status } } },
     })
   )
+}
+
+const rt = (v: string) => ({ rich_text: [{ text: { content: v.slice(0, 1900) } }] })
+
+/** 建立報名（展會簽到／人工登記用；外掛表單直接寫 Notion 不經此） */
+export async function createRegistration(data: {
+  eventId: string
+  institution: string
+  contact?: string
+  phone?: string
+  email?: string
+  city?: string
+  attendees?: number
+  status: string
+  source: string
+  note?: string
+}): Promise<EventRegistration> {
+  if (!DB.registrations) throw new Error('NOTION_REGISTRATIONS_DB not set')
+  const page: any = await notionCallWithRetry('createRegistration', () =>
+    notion.pages.create({
+      parent: { database_id: normalizeDatabaseId(DB.registrations!) },
+      properties: {
+        '機構名稱': { title: [{ text: { content: data.institution.slice(0, 200) } }] },
+        '活動':     { relation: [{ id: data.eventId }] },
+        '狀態':     { select: { name: data.status } },
+        '來源':     { select: { name: data.source } },
+        ...(data.contact ? { '聯絡人': rt(data.contact) } : {}),
+        ...(data.phone ? { '電話': { phone_number: data.phone } } : {}),
+        ...(data.email ? { '信箱': { email: data.email } } : {}),
+        ...(data.city ? { '縣市': rt(data.city) } : {}),
+        ...(data.attendees ? { '參加人數': { number: data.attendees } } : {}),
+        ...(data.note ? { '備註': rt(data.note) } : {}),
+      } as any,
+    })
+  )
+  return mapRegistration(page)
+}
+
+/** 近 N 天建立的報名（足跡訊號與自動配對共用；報名量小，直接依建立時間過濾） */
+export async function listRecentRegistrations(sinceDays: number): Promise<EventRegistration[]> {
+  if (!DB.registrations) return []
+  const since = new Date(Date.now() - sinceDays * 86400e3).toISOString()
+  const items: EventRegistration[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listRecentRegistrations', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.registrations!),
+        page_size: 100,
+        filter: { timestamp: 'created_time', created_time: { on_or_after: since } } as any,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) items.push(mapRegistration(page))
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  return items
+}
+
+/** 系統補寫：活動關聯／客戶配對／來源／配對說明。只寫有給的欄位。 */
+export async function updateRegistrationLinks(id: string, data: {
+  eventId?: string; customerId?: string | null; source?: string; matchNote?: string
+}): Promise<void> {
+  const props: Record<string, any> = {}
+  if (data.eventId) props['活動'] = { relation: [{ id: data.eventId }] }
+  if (data.customerId !== undefined) props['客戶配對'] = { relation: data.customerId ? [{ id: data.customerId }] : [] }
+  if (data.source) props['來源'] = { select: { name: data.source } }
+  if (data.matchNote !== undefined) props['配對說明'] = rt(data.matchNote)
+  if (!Object.keys(props).length) return
+  await notionCallWithRetry('updateRegistrationLinks', () =>
+    notion.pages.update({ page_id: id, properties: props })
+  )
+}
+
+/** 全部活動（輕量；活動數量少，供表單活動名稱比對與足跡顯示活動名稱） */
+export async function listAllEvents(): Promise<EventItem[]> {
+  if (!DB.events) return []
+  const items: EventItem[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('listAllEvents', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.events!),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of res.results ?? []) items.push(mapEvent(page))
+    cursor = res.has_more ? res.next_cursor : undefined
+  } while (cursor)
+  return items
 }

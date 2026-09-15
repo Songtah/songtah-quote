@@ -91,6 +91,13 @@
 3. **BAS 新開業自動入池**：醫事監控匯入（`createSystemCustomer`）一律帶 `開發階段=線索、開發來源=BAS新開業`，讓新開業機構直接出現在漏斗的未認領區。
 4. **開發拜訪不加新欄位**：「這筆是不是開發拜訪」由拜訪對象的開發階段推導（∈ 線索/已接觸），不要求業務多填型態欄位；客戶反應（要求報價/同意試用/使用競品…）是階段推進與競品檔案的訊號源。
 
+## 行銷活動足跡鐵則（2026-09-15 建立）
+
+1. **報名 DB＝客戶足跡唯一來源**：課程報名由外掛表單直接寫 Notion 報名 DB；展會參與由公開簽到頁 `/checkin/[eventId]?t=簽章` 寫同一個 DB（來源＝展會簽到、狀態＝已到場）。官網課程庫（形象網站 repo）暫不整合，勿另建第三套活動資料。
+2. **活動關聯與客戶配對全自動**：`lib/registration-footprint.ts` 的 `processRegistrations` 每小時（`process-registrations.yml`）依「表單活動」補活動 relation、依名稱字根＋縣市＋電話末 8 碼補客戶配對；不唯一就不配對並寫「配對說明」，已有配對不覆寫。
+3. **足跡只當拜訪建議訊號，禁止寫假拜訪**：舊版「報名確認→自動建待追蹤客情」已移除——它會刷新最近拜訪日、壓掉太久沒拜訪訊號並誤觸追蹤自動結案。跟進一律由拜訪建議 `event` 訊號驅動，拜訪後自動消失。
+4. **公開簽到 API 是 withApiAuth 的明確例外**：`/api/public/checkin` 以 HMAC 簽章（NEXTAUTH_SECRET，fail-closed）＋活動期間限定＋IP 限流＋honeypot 取代登入，回應不得透露任何客戶資料或配對結果。
+
 ## 安全鐵則（2026 資安稽核後建立）
 
 1. **API route 一律用 `withApiAuth` 宣告授權規則，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。統一閘道在 `lib/api-auth.ts`——`export const POST = withApiAuth(rule, async (req, ctx, session) => {...})`，規則為 `'session'`（只需登入）／`'admin'`（role==='admin'）／`'central-management'`（role==='admin' 或 accountType==='中央管理'）／`{ roles: [...] }`（accountType 任一）／`{ module, action:'view'|'edit' }`（沿用 `lib/permissions` 的 canView/canEdit）。**新增任何 route 一律走 withApiAuth**。例外只有雙重驗證的 `daily-report`（cron secret）與 `line/webhook`（HMAC），這兩個維持手動驗證。高權限路由（accounts、admin/medical-monitor、clinic-monitor、line/import、dashboard/ceo）已全數採用;其餘 module-edit 寫入路由仍有正確的 inline `canEdit` 檢查（安全），可漸進改用 withApiAuth。

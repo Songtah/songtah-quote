@@ -10,9 +10,9 @@
  * 每筆都列出完整理由（可能同時命中多個訊號），排序依評分。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Flame, MapPin, Phone, Sparkles, Clock3, Copy, Check } from 'lucide-react'
+import { CalendarClock, Flame, MapPin, Phone, Sparkles, Clock3, Copy, Check, Ticket } from 'lucide-react'
 
-type Kind = 'overdue' | 'hot' | 'stale' | 'newOpening'
+type Kind = 'overdue' | 'hot' | 'stale' | 'newOpening' | 'event'
 type Suggestion = {
   id: string; name: string; type: string; city: string; district: string
   address: string; phone: string; salesperson: string
@@ -37,10 +37,11 @@ type Adoption = { totalCopies: number; totalSuggested: number; totalVisited: num
 const KIND_META: Record<Kind, { label: string; icon: typeof Flame; cls: string }> = {
   overdue:    { label: '追蹤逾期', icon: CalendarClock, cls: 'bg-rose-50 text-rose-700 ring-rose-200' },
   hot:        { label: '客戶正熱', icon: Flame,         cls: 'bg-brand-50 text-brand-700 ring-brand-200' },
+  event:      { label: '活動足跡', icon: Ticket,        cls: 'bg-amber-50 text-amber-700 ring-amber-200' },
   newOpening: { label: '新開業',   icon: Sparkles,      cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   stale:      { label: '太久沒跑', icon: Clock3,        cls: 'bg-stone-100 text-stone-600 ring-stone-200' },
 }
-const KIND_ORDER: Kind[] = ['overdue', 'hot', 'newOpening', 'stale']
+const KIND_ORDER: Kind[] = ['overdue', 'hot', 'event', 'newOpening', 'stale']
 
 const telHref = (p: string) => 'tel:' + p.replace(/[^\d+]/g, '')
 const mapHref = (name: string, addr: string) =>

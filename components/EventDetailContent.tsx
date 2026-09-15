@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import Link from 'next/link'
 import type { EventItem, EventRegistration, CourseCost } from '@/lib/system-notion'
 
 const STATUS_STYLE: Record<string, string> = {
   '已報名': 'bg-blue-100 text-blue-700',
   '已確認': 'bg-brand-50 text-green-700',
+  '已到場': 'bg-emerald-50 text-emerald-700',
   '取消':   'bg-red-100 text-red-600',
 }
 
@@ -30,6 +32,46 @@ export function EventDetailContent({ id }: { id: string }) {
   const [loading, setLoading]       = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [courseCost, setCourseCost] = useState<CourseCost | null>(null)
+  const [checkin, setCheckin]       = useState<{ url: string; open: boolean; qr: string } | null>(null)
+  const [checkinError, setCheckinError] = useState('')
+  const [copied, setCopied]         = useState(false)
+  const [matching, setMatching]     = useState(false)
+  const [matchResult, setMatchResult] = useState('')
+
+  const loadRegs = useCallback(() =>
+    fetch(`/api/events/${id}?registrations=1`).then(r => r.json())
+      .then((list) => setRegs(Array.isArray(list) ? list : [])), [id])
+
+  async function showCheckinQr() {
+    setCheckinError('')
+    try {
+      const res = await fetch(`/api/events/${id}?checkin=1`)
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? '無法產生簽到連結')
+      const qr = await QRCode.toDataURL(json.url, { width: 480, margin: 1 })
+      setCheckin({ url: json.url, open: json.open, qr })
+    } catch (e: any) {
+      setCheckinError(e?.message ?? '無法產生簽到連結')
+    }
+  }
+
+  async function rematch() {
+    setMatching(true); setMatchResult('')
+    try {
+      const res = await fetch(`/api/events/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _type: 'process-registrations' }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? '配對失敗')
+      setMatchResult(`新配對 ${json.customerMatched} 筆、仍未配對 ${json.unmatched} 筆`)
+      await loadRegs()
+    } catch (e: any) {
+      setMatchResult(e?.message ?? '配對失敗')
+    } finally {
+      setMatching(false)
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -66,7 +108,7 @@ export function EventDetailContent({ id }: { id: string }) {
   }
 
   const totalAttendees = regs.reduce((sum, r) => sum + (r.attendees || 0), 0)
-  const confirmed = regs.filter(r => r.status === '已確認')
+  const confirmed = regs.filter(r => r.status === '已確認' || r.status === '已到場')
   const pending   = regs.filter(r => r.status === '已報名')
   const cancelled = regs.filter(r => r.status === '取消')
 
@@ -125,7 +167,7 @@ export function EventDetailContent({ id }: { id: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: '報名總數', value: regs.length, color: 'text-stone-900' },
-          { label: '已確認', value: confirmed.length, color: 'text-green-600' },
+          { label: '已確認／到場', value: confirmed.length, color: 'text-green-600' },
           { label: '待確認', value: pending.length, color: 'text-blue-600' },
           { label: '預計出席人數', value: totalAttendees, color: 'text-purple-600' },
         ].map(s => (
@@ -155,6 +197,53 @@ export function EventDetailContent({ id }: { id: string }) {
           </div>
         </div>
       )}
+
+      {/* 客戶足跡：展會簽到 QR ＋ 自動配對說明 */}
+      <div className="card-soft p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-stone-900">客戶足跡</h3>
+            <p className="mt-1 text-sm leading-6 text-stone-500">
+              課程報名（外掛表單）與展會簽到都寫進這份名單，系統每小時自動配對客戶，
+              配對到的客戶會出現在負責業務的拜訪建議，不需要人工轉交。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={showCheckinQr}
+              className="rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95">
+              展會簽到 QR code
+            </button>
+            <button onClick={rematch} disabled={matching}
+              className="rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95 disabled:opacity-40">
+              {matching ? '配對中…' : '立即重新配對'}
+            </button>
+          </div>
+        </div>
+        {matchResult && <p className="mt-3 rounded-2xl bg-stone-50 px-4 py-2.5 text-sm text-stone-600">{matchResult}</p>}
+        {checkinError && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{checkinError}</p>}
+        {checkin && (
+          <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-cream-50 p-4 sm:flex-row sm:items-start">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={checkin.qr} alt="展會簽到 QR code" className="size-44 rounded-xl bg-white p-2 ring-1 ring-stone-900/5" />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className={checkin.open ? 'font-semibold text-emerald-700' : 'font-semibold text-amber-700'}>
+                {checkin.open ? '目前開放簽到' : '尚未開放：活動日前 1 天至結束後 1 天可簽到'}
+              </p>
+              <p className="mt-1 break-all text-xs text-stone-500">{checkin.url}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={() => { navigator.clipboard.writeText(checkin.url); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
+                  {copied ? '已複製' : '複製連結'}
+                </button>
+                <a href={checkin.qr} download={`簽到QR-${event.name}.png`}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
+                  下載 QR 圖檔
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Registrations table */}
       <div className="card-soft overflow-hidden">
@@ -195,7 +284,9 @@ export function EventDetailContent({ id }: { id: string }) {
                     <td className="px-4 py-3">
                       {reg.customerId
                         ? <Link href={`/customers/${reg.customerId}`} className="text-xs text-brand-600 hover:underline">查看客戶 →</Link>
-                        : <span className="text-stone-300 text-xs">未配對</span>}
+                        : <span className="text-stone-400 text-xs">未配對</span>}
+                      {reg.matchNote && <p className="mt-0.5 max-w-[16rem] text-[11px] leading-4 text-stone-400">{reg.matchNote}</p>}
+                      {reg.source && <p className="mt-0.5 text-[11px] text-stone-400">來源：{reg.source}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <select
@@ -206,6 +297,7 @@ export function EventDetailContent({ id }: { id: string }) {
                       >
                         <option value="已報名">已報名</option>
                         <option value="已確認">已確認</option>
+                        <option value="已到場">已到場</option>
                         <option value="取消">取消</option>
                       </select>
                     </td>
