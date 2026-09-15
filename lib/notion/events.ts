@@ -44,7 +44,7 @@ export type EventRegistration = {
   matchNote:     string   // 系統配對依據或未配對原因
 }
 
-export const REGISTRATION_SOURCES = ['報名表單', '展會簽到', '人工登記'] as const
+export const REGISTRATION_SOURCES = ['報名表單', '展會簽到', '人工登記', '歷史匯入'] as const
 
 function mapEvent(page: any): EventItem {
   return {

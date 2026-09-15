@@ -186,7 +186,10 @@ export function EventsContent() {
             </button>
           ))}
         </div>
-        <button onClick={openCreate} className="button-primary min-h-11 px-5">+ 新增活動</button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/events/import" className="button-secondary min-h-11 px-5 inline-flex items-center transition-all active:scale-95">匯入歷史紀錄</Link>
+          <button onClick={openCreate} className="button-primary min-h-11 px-5">+ 新增活動</button>
+        </div>
       </div>
 
       {/* Events list */}
