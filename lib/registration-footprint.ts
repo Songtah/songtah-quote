@@ -205,7 +205,7 @@ function resolveViaBas(reg: ResolveInput, codes: Map<string, CustomerWithCode>):
 }
 
 /** 轄區主人；轄區表與 BAS 的「台／臺」寫法可能不同，兩種都試 */
-function territoryOwner(ctx: ClaimContext, city: string, district: string): string {
+export function territoryOwner(ctx: ClaimContext, city: string, district: string): string {
   const forms = (s: string) => Array.from(new Set([s, s.replace(/台/g, '臺'), s.replace(/臺/g, '台')]))
   for (const c of forms(city)) for (const d of forms(district)) {
     const owner = ctx.ownerByTerritory.get(`${c}|${d}`)
@@ -355,7 +355,7 @@ export async function processRegistrations(params: {
   }
 
   if (!params.dryRun && (result.customerMatched || result.customerCreated || result.eventLinked)) {
-    await deleteRedisValue(FOOTPRINTS_CACHE_KEY)
+    invalidateEventFootprints()
   }
   return result
 }
@@ -376,6 +376,7 @@ const FOOTPRINTS_CACHE_KEY = 'event-footprints-v1'
 /** 人工調整配對後呼叫，讓拜訪建議立即反映 */
 export function invalidateEventFootprints() {
   deleteRedisValue(FOOTPRINTS_CACHE_KEY)
+  deleteRedisValue('event-customers-v1')   // 首頁「課程／活動客戶」視窗（lib/event-customers）
 }
 
 /** 客戶 id（去 dash）→ 最近一次足跡。已到場優先於報名。快取 1 小時，配對寫入時清除。 */

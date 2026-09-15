@@ -41,6 +41,11 @@ export async function refreshSuggestionMaps(): Promise<{ builtAt: string; signal
   return maps
 }
 
+/** 每家客戶的拜訪訊號（最近拜訪日等），每晚重建；其他彙總（課程客戶視窗）共用同一份 */
+export async function getVisitSignals() {
+  return getSignals()
+}
+
 async function getSignals() {
   const cached = await getRedisValue<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }>(SIGNALS_CACHE_KEY)
   return cached ?? refreshSuggestionMaps()   // 冷啟動當場算，之後由每晚 cron 保鮮
