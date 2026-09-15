@@ -64,7 +64,7 @@ export function EventDetailContent({ id }: { id: string }) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? '配對失敗')
-      setMatchResult(`新配對 ${json.customerMatched} 筆、仍未配對 ${json.unmatched} 筆`)
+      setMatchResult(`新配對 ${json.customerMatched} 筆、依衛福部名單新建客戶 ${json.customerCreated ?? 0} 筆、仍未配對 ${json.unmatched} 筆`)
       await loadRegs()
     } catch (e: any) {
       setMatchResult(e?.message ?? '配對失敗')
