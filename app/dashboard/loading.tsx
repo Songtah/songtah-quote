@@ -8,8 +8,9 @@ export default function DashboardLoading() {
           <div className="h-9 w-56 animate-pulse rounded-full bg-stone-100" />
         </div>
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,.75fr)]">
-          <div className="h-[300px] animate-pulse rounded-3xl bg-[#eef6ef]" />
-          <div className="h-[300px] animate-pulse rounded-3xl bg-[#fdfdfb]" />
+          {/* 骨架與實際卡片同色（白底細框），避免載入時出現一大塊綠色 */}
+          <div className="h-[300px] animate-pulse rounded-3xl bg-stone-50 ring-1 ring-stone-900/[0.05]" />
+          <div className="h-[300px] animate-pulse rounded-3xl bg-stone-50 ring-1 ring-stone-900/[0.05]" />
         </div>
         <div className="mt-8 space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (

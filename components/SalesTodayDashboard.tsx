@@ -148,9 +148,9 @@ export function SalesTodayDashboard({
                     <p className="mt-3 text-base leading-7 text-stone-600">搜尋客戶或記錄拜訪，系統就會把下一步放到這裡。</p>
                     {(visibleModules.crm || visibleModules.bd) && (
                       <div className="mt-8">
-                        <ShimmerButton onClick={() => router.push(visibleModules.crm ? '/customers' : '/bd')} background="#8a6c32" shimmerColor="#fff7df" className="h-12 px-6 text-sm font-bold shadow-lg shadow-brand-500/20 active:scale-95">
+                        <button onClick={() => router.push(visibleModules.crm ? '/customers' : '/bd')} className="button-primary h-12 px-6 text-sm font-bold">
                           {visibleModules.crm ? '找客戶' : '前往業務開發'} <ArrowRight className="ml-2 size-4" />
-                        </ShimmerButton>
+                        </button>
                       </div>
                     )}
                   </>
