@@ -316,7 +316,9 @@ export async function processRegistrations(params: {
     scanned: regs.length, eventLinked: 0, customerMatched: 0, customerCreated: 0, unmatched: 0, deferred: 0,
     ...(params.dryRun ? { planned: [] } : {}),
   }
-  const needsCustomer = (r: EventRegistration) => !r.customerId && (params.retryUnmatched || !r.matchNote)
+  // 人工指定或人工取消配對的（配對說明以「人工」開頭）一律不自動重配，尊重人的判斷
+  const needsCustomer = (r: EventRegistration) =>
+    !r.customerId && !r.matchNote.startsWith('人工') && (params.retryUnmatched || !r.matchNote)
   const pending = regs.filter((r) => (!r.eventId && r.formEventName) || !r.source || needsCustomer(r))
   if (!pending.length) return result
 
@@ -370,6 +372,11 @@ export type EventFootprint = {
 }
 
 const FOOTPRINTS_CACHE_KEY = 'event-footprints-v1'
+
+/** 人工調整配對後呼叫，讓拜訪建議立即反映 */
+export function invalidateEventFootprints() {
+  deleteRedisValue(FOOTPRINTS_CACHE_KEY)
+}
 
 /** 客戶 id（去 dash）→ 最近一次足跡。已到場優先於報名。快取 1 小時，配對寫入時清除。 */
 export async function getEventFootprints(): Promise<Record<string, EventFootprint>> {

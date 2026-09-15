@@ -24,6 +24,13 @@ export type EventItem = {
   description: string
   createdAt:   string
   campaignIds: string[]   // 關聯追蹤名單(可選,供業務準備↔執行互查)
+  /** 線上報名頁（/register/[id]）設定 */
+  onlineRegistration: boolean
+  paid:        boolean
+  fee:         number     // 每人報名費（收費時）
+  paymentNote: string     // 付款方式說明（匯款帳號等），報名完成後顯示
+  bannerUrl:   string     // 廣告圖
+  capacity:    number     // 名額；0＝不限
 }
 
 export type EventRegistration = {
@@ -44,7 +51,14 @@ export type EventRegistration = {
   district:      string   // 行政區（由地址解析），配對時確認客戶區域
   address:       string
   matchNote:     string   // 系統配對依據或未配對原因
+  jobTitle:      string
+  unitType:      string   // 牙醫診所／牙體技術所／醫院／學校／其他
+  paymentStatus: string   // 免費／未付款／已付款／已退款
+  amount:        number   // 應繳金額
 }
+
+export const PAYMENT_STATUSES = ['免費', '未付款', '已付款', '已退款'] as const
+export const UNIT_TYPES = ['牙醫診所', '牙體技術所', '醫院', '學校', '其他'] as const
 
 export const REGISTRATION_SOURCES = ['報名表單', '展會簽到', '人工登記', '歷史匯入'] as const
 
@@ -61,8 +75,17 @@ function mapEvent(page: any): EventItem {
     description: getText(page, '簡介'),
     createdAt:   getProp(page, '建立時間')?.created_time ?? '',
     campaignIds: (getProp(page, '關聯追蹤名單')?.relation ?? []).map((r: any) => r.id),
+    onlineRegistration: getProp(page, '線上報名')?.checkbox === true,
+    paid:        getProp(page, '收費')?.checkbox === true,
+    fee:         getNumber(page, '報名費'),
+    paymentNote: getText(page, '付款說明'),
+    bannerUrl:   getProp(page, '廣告圖')?.url ?? '',
+    capacity:    getNumber(page, '名額'),
   }
 }
+
+const sameDb = (page: any, dbId?: string) =>
+  !!dbId && (page?.parent?.database_id ?? '').replace(/-/g, '') === normalizeDatabaseId(dbId).replace(/-/g, '')
 
 function mapRegistration(page: any): EventRegistration {
   const eventRel  = getProp(page, '活動')?.relation ?? []
@@ -85,6 +108,10 @@ function mapRegistration(page: any): EventRegistration {
     district:      getText(page, '行政區'),
     address:       getText(page, '地址'),
     matchNote:     getText(page, '配對說明'),
+    jobTitle:      getText(page, '職稱'),
+    unitType:      getSelect(page, '單位類型'),
+    paymentStatus: getSelect(page, '付款狀態'),
+    amount:        getNumber(page, '應繳金額'),
   }
 }
 
@@ -143,6 +170,8 @@ export async function getEventById(id: string): Promise<EventItem | null> {
     const page: any = await notionCallWithRetry('getEventById', () =>
       notion.pages.retrieve({ page_id: id })
     )
+    // 公開報名頁會拿網址上的 id 來查：必須確認是活動管理 DB 的頁面，否則任何 Notion 頁面 id 都會被當成活動
+    if (!sameDb(page, DB.events) || page.archived || page.in_trash) return null
     return mapEvent(page)
   } catch {
     return null
@@ -190,6 +219,12 @@ export async function updateEvent(id: string, data: Partial<{
   status:      string
   description: string
   campaignIds: string[]
+  onlineRegistration: boolean
+  paid:        boolean
+  fee:         number
+  paymentNote: string
+  bannerUrl:   string
+  capacity:    number
 }>): Promise<void> {
   const props: Record<string, any> = {}
   if (data.name)        props['活動名稱'] = { title: [{ text: { content: data.name } }] }
@@ -200,6 +235,13 @@ export async function updateEvent(id: string, data: Partial<{
   if (data.description != null) props['簡介'] = { rich_text: [{ text: { content: data.description } }] }
   if (data.deadline)    props['報名截止日'] = { date: { start: data.deadline } }
   if (data.campaignIds !== undefined) props['關聯追蹤名單'] = { relation: data.campaignIds.map((id) => ({ id })) }
+  if (data.onlineRegistration !== undefined) props['線上報名'] = { checkbox: !!data.onlineRegistration }
+  if (data.paid !== undefined)        props['收費']     = { checkbox: !!data.paid }
+  if (data.fee !== undefined)         props['報名費']   = { number: data.fee > 0 ? data.fee : null }
+  if (data.paymentNote !== undefined) props['付款說明'] = { rich_text: [{ text: { content: data.paymentNote.slice(0, 1900) } }] }
+  if (data.bannerUrl !== undefined)   props['廣告圖']   = { url: data.bannerUrl || null }
+  if (data.capacity !== undefined)    props['名額']     = { number: data.capacity > 0 ? data.capacity : null }
+  if (!Object.keys(props).length) return
 
   await notionCallWithRetry('updateEvent', () =>
     notion.pages.update({ page_id: id, properties: props })
@@ -269,10 +311,18 @@ export async function getRegistrationById(id: string): Promise<EventRegistration
     const page: any = await notionCallWithRetry('getRegistrationById', () =>
       notion.pages.retrieve({ page_id: id })
     )
+    if (!sameDb(page, DB.registrations) || page.archived || page.in_trash) return null
     return mapRegistration(page)
   } catch {
     return null
   }
+}
+
+export async function updateRegistrationPayment(id: string, paymentStatus: string): Promise<void> {
+  if (!(PAYMENT_STATUSES as readonly string[]).includes(paymentStatus)) throw new Error(`無效的付款狀態：${paymentStatus}`)
+  await notionCallWithRetry('updateRegistrationPayment', () =>
+    notion.pages.update({ page_id: id, properties: { '付款狀態': { select: { name: paymentStatus } } } as any })
+  )
 }
 
 export async function updateRegistrationStatus(id: string, status: string): Promise<void> {
@@ -300,6 +350,10 @@ export async function createRegistration(data: {
   status: string
   source: string
   note?: string
+  jobTitle?: string
+  unitType?: string
+  paymentStatus?: string
+  amount?: number
 }): Promise<EventRegistration> {
   if (!DB.registrations) throw new Error('NOTION_REGISTRATIONS_DB not set')
   const page: any = await notionCallWithRetry('createRegistration', () =>
@@ -318,6 +372,10 @@ export async function createRegistration(data: {
         ...(data.address ? { '地址': rt(data.address) } : {}),
         ...(data.attendees ? { '參加人數': { number: data.attendees } } : {}),
         ...(data.note ? { '備註': rt(data.note) } : {}),
+        ...(data.jobTitle ? { '職稱': rt(data.jobTitle) } : {}),
+        ...(data.unitType ? { '單位類型': { select: { name: data.unitType } } } : {}),
+        ...(data.paymentStatus ? { '付款狀態': { select: { name: data.paymentStatus } } } : {}),
+        ...(typeof data.amount === 'number' ? { '應繳金額': { number: data.amount } } : {}),
       } as any,
     })
   )

@@ -3,7 +3,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import Link from 'next/link'
-import type { EventItem, EventRegistration, CourseCost } from '@/lib/system-notion'
+import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
+import type { CourseCost } from '@/lib/system-notion'
+import { EventRegistrationPageSettings } from '@/components/EventRegistrationPageSettings'
+import { RegistrationCustomerCell } from '@/components/RegistrationCustomerCell'
+
+type EventRegistration = BaseRegistration & { customerName?: string; customerArea?: string }
+
+const PAY_STYLE: Record<string, string> = {
+  '未付款': 'bg-amber-50 text-amber-700',
+  '已付款': 'bg-emerald-50 text-emerald-700',
+  '已退款': 'bg-stone-100 text-stone-500',
+}
 
 const STATUS_STYLE: Record<string, string> = {
   '已報名': 'bg-blue-100 text-blue-700',
@@ -88,6 +99,16 @@ export function EventDetailContent({ id }: { id: string }) {
       .catch(() => {})
   }, [id])
 
+  async function changePayment(regId: string, paymentStatus: string) {
+    setUpdatingId(regId)
+    const res = await fetch(`/api/events/${regId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _type: 'registration-payment', paymentStatus }),
+    })
+    if (res.ok) setRegs(prev => prev.map(r => r.id === regId ? { ...r, paymentStatus } : r))
+    setUpdatingId(null)
+  }
+
   async function changeStatus(regId: string, status: string) {
     setUpdatingId(regId)
     await fetch(`/api/events/${regId}`, {
@@ -107,6 +128,8 @@ export function EventDetailContent({ id }: { id: string }) {
     return <div className="card-soft py-16 text-center text-stone-400">找不到活動</div>
   }
 
+  const showPayment = event.paid || regs.some(r => r.paymentStatus && r.paymentStatus !== '免費')
+  const seatsTaken = regs.filter(r => r.status !== '取消').reduce((sum, r) => sum + (r.attendees || 1), 0)
   const totalAttendees = regs.reduce((sum, r) => sum + (r.attendees || 0), 0)
   const confirmed = regs.filter(r => r.status === '已確認' || r.status === '已到場')
   const pending   = regs.filter(r => r.status === '已報名')
@@ -198,6 +221,12 @@ export function EventDetailContent({ id }: { id: string }) {
         </div>
       )}
 
+      <EventRegistrationPageSettings
+        event={event}
+        seatsTaken={seatsTaken}
+        onSaved={(patch) => setEvent(prev => prev ? { ...prev, ...patch } : prev)}
+      />
+
       {/* 客戶足跡：展會簽到 QR ＋ 自動配對說明 */}
       <div className="card-soft p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -260,34 +289,58 @@ export function EventDetailContent({ id }: { id: string }) {
               <thead className="bg-cream-50 text-xs text-stone-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">機構名稱</th>
-                  <th className="px-4 py-3 text-left font-medium">聯絡人</th>
-                  <th className="px-4 py-3 text-left font-medium">信箱</th>
-                  <th className="px-4 py-3 text-left font-medium">電話</th>
-                  <th className="px-4 py-3 text-center font-medium">人數</th>
                   <th className="px-4 py-3 text-left font-medium">客戶配對</th>
+                  <th className="px-4 py-3 text-left font-medium">聯絡人</th>
+                  <th className="px-4 py-3 text-left font-medium">電話</th>
+                  <th className="px-4 py-3 text-left font-medium">信箱</th>
+                  <th className="px-4 py-3 text-center font-medium">人數</th>
+                  {showPayment && <th className="px-4 py-3 text-left font-medium">付款</th>}
                   <th className="px-4 py-3 text-left font-medium">狀態</th>
                   <th className="px-4 py-3 text-left font-medium">報名時間</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-900/[0.06]">
                 {regs.map(reg => (
-                  <tr key={reg.id} className="transition-colors hover:bg-brand-50/50">
-                    <td className="px-4 py-3 font-medium text-stone-900">{reg.institution}</td>
-                    <td className="px-4 py-3 text-stone-600">{reg.contact || '—'}</td>
+                  <tr key={reg.id} className="align-top transition-colors hover:bg-brand-50/50">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-stone-900">{reg.institution}</p>
+                      {(reg.city || reg.unitType) && <p className="text-[11px] text-stone-400">{[`${reg.city}${reg.district}`, reg.unitType].filter(Boolean).join('・')}</p>}
+                      {reg.source && <p className="text-[11px] text-stone-400">來源：{reg.source}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <RegistrationCustomerCell
+                        registrationId={reg.id}
+                        institution={reg.institution}
+                        value={{ customerId: reg.customerId, customerName: reg.customerName ?? '', customerArea: reg.customerArea ?? '', matchNote: reg.matchNote }}
+                        onChange={(v) => setRegs(prev => prev.map(r => r.id === reg.id ? { ...r, ...v } : r))}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-stone-600">
+                      {reg.contact || '—'}
+                      {reg.jobTitle && <p className="text-[11px] text-stone-400">{reg.jobTitle}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{reg.phone || '—'}</td>
                     <td className="px-4 py-3 text-stone-600">
                       {reg.email
                         ? <a href={`mailto:${reg.email}`} className="text-brand-600 hover:underline">{reg.email}</a>
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-stone-600">{reg.phone || '—'}</td>
                     <td className="px-4 py-3 text-center text-stone-900">{reg.attendees || 1}</td>
-                    <td className="px-4 py-3">
-                      {reg.customerId
-                        ? <Link href={`/customers/${reg.customerId}`} className="text-xs text-brand-600 hover:underline">查看客戶 →</Link>
-                        : <span className="text-stone-400 text-xs">未配對</span>}
-                      {reg.matchNote && <p className="mt-0.5 max-w-[16rem] text-[11px] leading-4 text-stone-400">{reg.matchNote}</p>}
-                      {reg.source && <p className="mt-0.5 text-[11px] text-stone-400">來源：{reg.source}</p>}
-                    </td>
+                    {showPayment && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {reg.amount > 0 && <p className="text-xs font-semibold text-stone-700">NT$ {reg.amount.toLocaleString('zh-TW')}</p>}
+                        {reg.paymentStatus && reg.paymentStatus !== '免費' ? (
+                          <select
+                            className={`mt-0.5 rounded-full border-0 px-2 py-0.5 text-xs font-medium ${PAY_STYLE[reg.paymentStatus] ?? 'bg-stone-100 text-stone-600'}`}
+                            value={reg.paymentStatus}
+                            disabled={updatingId === reg.id}
+                            onChange={e => changePayment(reg.id, e.target.value)}
+                          >
+                            {['未付款', '已付款', '已退款'].map(s => <option key={s}>{s}</option>)}
+                          </select>
+                        ) : <span className="text-xs text-stone-400">{reg.paymentStatus || '—'}</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <select
                         className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${STATUS_STYLE[reg.status] ?? 'bg-stone-100 text-stone-600'}`}
