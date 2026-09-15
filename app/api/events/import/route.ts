@@ -87,7 +87,8 @@ export const POST = withApiAuth({ module: 'events', action: 'edit' }, async (req
         if (keys.has(dk)) { skipped++; continue }
         const reg = await createRegistration({
           eventId, institution: r.institution, contact: r.contact, phone: r.phone, email: r.email,
-          city: r.city, attendees: r.attendees, status: r.status, source: '歷史匯入',
+          city: r.city, district: r.district, address: r.address,
+          attendees: r.attendees, status: r.status, source: '歷史匯入',
           note: r.note ? `職稱／備註：${r.note}` : undefined,
         })
         keys.add(dk)

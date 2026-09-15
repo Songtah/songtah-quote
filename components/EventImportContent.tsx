@@ -16,16 +16,16 @@ import {
 const FIELD_LABEL: Record<ImportField, string> = {
   eventName: '活動名稱', eventDate: '活動日期', eventType: '活動類型', institution: '所屬單位（機構）',
   contact: '姓名', phone: '電話', email: '信箱', city: '縣市', status: '出席／報名狀態', attendees: '人數',
-  note: '職稱／備註',
+  note: '職稱／備註', address: '地址',
 }
-const FIELD_ORDER: ImportField[] = ['institution', 'contact', 'phone', 'city', 'eventName', 'eventDate', 'status', 'eventType', 'note', 'email', 'attendees']
+const FIELD_ORDER: ImportField[] = ['institution', 'contact', 'phone', 'address', 'city', 'eventName', 'eventDate', 'status', 'eventType', 'note', 'email', 'attendees']
 
 type Preview = {
   rows: number
   counts: { toImport: number; duplicate: number; matched: number; created: number; unmatched: number; cancelled: number }
   events: { name: string; date: string; type: string; existingId: string; rows: number; duplicates: number }[]
   newCustomers: { name: string; area: string; assignTo: string }[]
-  details: { index: number; eventName: string; institution: string; contact: string; result: string; note: string }[]
+  details: { index: number; eventName: string; institution: string; contact: string; area: string; result: string; note: string }[]
 }
 
 type Phase = 'input' | 'preview' | 'importing' | 'done'
@@ -202,6 +202,7 @@ export function EventImportContent() {
             <h2 className="text-lg font-bold text-stone-800">1. 上傳或貼上名單</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">
               直接上傳 Excel（.xlsx）或 CSV；也可以在 Excel 選取含表頭的範圍複製後貼到下方。
+              有「地址」欄最好：系統會用縣市＋行政區確認是哪一家，同名機構不會配錯。
               表頭上方有標題或說明列沒關係，系統會自動找到表頭。多場課程可以放在同一份，也可以一場一份。
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -294,14 +295,14 @@ export function EventImportContent() {
                 {parsed.rows.length > 0 && (
                   <table className="w-full text-xs">
                     <thead className="bg-cream-50 text-stone-500">
-                      <tr>{['活動', '日期', '機構', '姓名', '電話', '縣市', '狀態'].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+                      <tr>{['活動', '日期', '機構', '姓名', '電話', '區域', '狀態'].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-stone-900/[0.06]">
                       {parsed.rows.slice(0, 5).map((r, i) => (
                         <tr key={i}>
                           <td className="px-3 py-2">{r.eventName}</td><td className="px-3 py-2 whitespace-nowrap">{r.eventDate}</td>
                           <td className="px-3 py-2">{r.institution}</td><td className="px-3 py-2">{r.contact}</td>
-                          <td className="px-3 py-2">{r.phone}</td><td className="px-3 py-2">{r.city}</td><td className="px-3 py-2">{r.status}</td>
+                          <td className="px-3 py-2">{r.phone}</td><td className="px-3 py-2 whitespace-nowrap">{r.city}{r.district}</td><td className="px-3 py-2">{r.status}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -388,12 +389,14 @@ export function EventImportContent() {
           <div className="mt-2 max-h-96 overflow-auto">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-cream-50 text-stone-500">
-                <tr>{['機構', '姓名', '活動', '結果', '說明'].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+                <tr>{['機構', '區域', '姓名', '活動', '結果', '說明'].map((h) => <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-stone-900/[0.06]">
                 {shownDetails.slice(0, 300).map((d) => (
                   <tr key={d.index}>
-                    <td className="px-3 py-2">{d.institution}</td><td className="px-3 py-2">{d.contact}</td>
+                    <td className="px-3 py-2">{d.institution}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-stone-500">{d.area || '—'}</td>
+                    <td className="px-3 py-2">{d.contact}</td>
                     <td className="px-3 py-2">{d.eventName}</td><td className="px-3 py-2 whitespace-nowrap">{d.result}</td>
                     <td className="px-3 py-2 text-stone-500">{d.note}</td>
                   </tr>

@@ -41,6 +41,8 @@ export type EventRegistration = {
   source:        string   // 報名表單／展會簽到／人工登記（空＝外掛表單未帶）
   formEventName: string   // 外掛表單填的活動名稱，系統據此補「活動」relation
   city:          string
+  district:      string   // 行政區（由地址解析），配對時確認客戶區域
+  address:       string
   matchNote:     string   // 系統配對依據或未配對原因
 }
 
@@ -80,6 +82,8 @@ function mapRegistration(page: any): EventRegistration {
     source:        getSelect(page, '來源'),
     formEventName: getText(page, '表單活動'),
     city:          getText(page, '縣市'),
+    district:      getText(page, '行政區'),
+    address:       getText(page, '地址'),
     matchNote:     getText(page, '配對說明'),
   }
 }
@@ -290,6 +294,8 @@ export async function createRegistration(data: {
   phone?: string
   email?: string
   city?: string
+  district?: string
+  address?: string
   attendees?: number
   status: string
   source: string
@@ -308,6 +314,8 @@ export async function createRegistration(data: {
         ...(data.phone ? { '電話': { phone_number: data.phone } } : {}),
         ...(data.email ? { '信箱': { email: data.email } } : {}),
         ...(data.city ? { '縣市': rt(data.city) } : {}),
+        ...(data.district ? { '行政區': rt(data.district) } : {}),
+        ...(data.address ? { '地址': rt(data.address) } : {}),
         ...(data.attendees ? { '參加人數': { number: data.attendees } } : {}),
         ...(data.note ? { '備註': rt(data.note) } : {}),
       } as any,

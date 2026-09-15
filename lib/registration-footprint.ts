@@ -68,7 +68,10 @@ function matchEvent(formName: string, events: EventItem[]): EventItem | null {
 
 // ── 2. 客戶解析（配對或依 BAS 建檔）────────────────────────────────
 
-export type ResolveInput = { institution: string; city: string; phone: string }
+export type ResolveInput = { institution: string; city: string; district?: string; phone: string }
+
+const sameCity = (a: string, b: string) => !!a && !!b && tw(a).slice(0, 2) === tw(b).slice(0, 2)
+const sameDistrict = (a: string, b: string) => !!a && !!b && tw(a) === tw(b)
 
 type InstitutionKind = 'lab' | 'clinic' | 'hospital' | 'company' | ''
 
@@ -118,15 +121,39 @@ async function matchCustomer(
     !isInactiveCustomer(c.status) && isSameCustomerName(name, c.name) &&
     kindCompatible(kind, kindFromCustomerType(c.type) || kindFromName(c.name)))
   if (hits.length === 0) return { customerId: null, note: '客戶庫查無此機構', notFound: true }
-  if (hits.length === 1) return { customerId: hits[0].id, note: `名稱相符：${hits[0].name}` }
 
+  // ── 區域確認：有縣市（地址／地區）時，連「名稱唯一相符」也要區域一致才算同一家 ──
+  // 名稱唯一不代表是同一家：客戶庫只收了其中一家分店時，別縣市的同名機構會被直接配上。
+  // 客戶主檔沒填縣市／行政區的視為「無法排除」，不當作衝突。
   if (reg.city) {
-    const inCity = hits.filter((c) => tw(c.city).startsWith(tw(reg.city).slice(0, 2)))
-    if (inCity.length === 1) return { customerId: inCity[0].id, note: `名稱＋縣市相符：${inCity[0].name}` }
-    if (inCity.length > 1) hits = inCity
-    // 同名的都在別的縣市＝不是同一家（實測「高登」在北市、高雄、桃園各有一家，報名者在新北）
-    // → 視為客戶庫查無，交給 BAS 確認；BAS 那關仍要求唯一相符且代碼不在客戶庫才建
-    else return { customerId: null, note: `客戶庫在${reg.city}查無此機構`, notFound: true }
+    const area = reg.district ? `${reg.city}${reg.district}` : reg.city
+    const inCity = hits.filter((c) => !c.city || sameCity(c.city, reg.city))
+    if (inCity.length === 0) {
+      // 同名的都在別的縣市＝不是同一家（實測「高登」在北市、高雄、桃園各有一家，報名者在新北）
+      // → 視為客戶庫查無，交給 BAS 確認；BAS 那關仍要求區域一致、唯一相符且代碼不在客戶庫才建
+      return { customerId: null, note: `客戶庫在${reg.city}查無此機構（同名者在其他縣市）`, notFound: true }
+    }
+    if (reg.district) {
+      const inDistrict = inCity.filter((c) => c.city && c.district && sameDistrict(c.district, reg.district!))
+      if (inDistrict.length === 1) return { customerId: inDistrict[0].id, note: `名稱＋地址區域相符：${inDistrict[0].name}（${area}）` }
+      if (inDistrict.length > 1) hits = inDistrict
+      else {
+        const noDistrict = inCity.filter((c) => !c.city || !c.district)
+        if (noDistrict.length === 0) {
+          // 同縣市的同名者都在別的行政區：可能是不同分店，也可能客戶搬家——交給 BAS 以機構代碼確認
+          return { customerId: null, note: `客戶庫在${area}查無此機構（同名者在同縣市其他行政區）`, notFound: true }
+        }
+        if (noDistrict.length === 1 && inCity.length === 1) {
+          return { customerId: noDistrict[0].id, note: `名稱＋縣市相符（客戶主檔未填行政區，請留意）：${noDistrict[0].name}` }
+        }
+        hits = noDistrict
+      }
+    } else {
+      if (inCity.length === 1) return { customerId: inCity[0].id, note: `名稱＋縣市相符：${inCity[0].name}` }
+      hits = inCity
+    }
+  } else if (hits.length === 1) {
+    return { customerId: hits[0].id, note: `名稱相符（未提供地區，未確認區域）：${hits[0].name}` }
   }
 
   const tail = phoneTail(reg.phone)
@@ -142,8 +169,6 @@ async function matchCustomer(
   }
 }
 
-const sameCity = (a: string, b: string) => !!a && !!b && tw(a).slice(0, 2) === tw(b).slice(0, 2)
-
 type BasResolution =
   | { kind: 'none' | 'ambiguous'; note: string }
   | { kind: 'existing'; customerId: string; note: string }
@@ -155,9 +180,16 @@ function resolveViaBas(reg: ResolveInput, codes: Map<string, CustomerWithCode>):
   if (kind === 'company') return { kind: 'none', note: '公司行號，不在衛福部醫事機構名單內，未自動建檔' }
   let hits = loadOpenBasInstitutions().filter((b) =>
     isSameCustomerName(reg.institution, b.name) && kindCompatible(kind, kindFromBas(b.kind)))
-  if (reg.city && hits.length > 1) {
+  // 有區域就必須區域一致：不能因為衛福部名單裡剛好只有一家同名、在別的縣市，就在那裡建一筆客戶
+  if (reg.city && hits.length) {
     const inCity = hits.filter((b) => sameCity(b.city, reg.city))
-    if (inCity.length) hits = inCity
+    if (!inCity.length) return { kind: 'none', note: `客戶庫與衛福部開業名單在${reg.city}皆查無此機構，未自動建檔` }
+    hits = inCity
+    if (reg.district) {
+      const inDistrict = hits.filter((b) => sameDistrict(b.district, reg.district!))
+      if (!inDistrict.length) return { kind: 'none', note: `客戶庫與衛福部開業名單在${reg.city}${reg.district}皆查無此機構，未自動建檔` }
+      hits = inDistrict
+    }
   }
   if (hits.length === 0) {
     return { kind: 'none', note: '客戶庫與衛福部開業名單皆查無（可能是錯字、個人、已歇業或非醫事機構），未自動建檔' }

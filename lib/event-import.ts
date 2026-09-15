@@ -15,12 +15,16 @@ export type ImportRow = {
   phone: string
   email: string
   city: string
+  /** 行政區：由地址或地區欄解析，配對時與縣市一起確認客戶區域 */
+  district: string
+  address: string
   status: string        // 已到場／已報名／取消
   attendees: number
   note: string          // 職稱等補充，寫入報名「備註」
 }
 
-export type ImportField = keyof ImportRow
+/** 可對應到檔案欄位的項目（行政區由地址／地區推導，不單獨對應） */
+export type ImportField = Exclude<keyof ImportRow, 'district'>
 
 export const EVENT_TYPES = ['研討會', '產品發表', '培訓', '展覽', '其他'] as const
 
@@ -33,7 +37,8 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
   contact:     ['姓名', '聯絡人', '學員姓名', '學員', '參加者', '報名人'],
   phone:       ['電話', '手機', '聯絡電話', '行動電話', '連絡電話', '手機號碼'],
   email:       ['信箱', 'email', 'e-mail', '電子郵件', '電子信箱'],
-  city:        ['縣市', '地區', '所在縣市', '區域'],
+  city:        ['縣市', '地區', '所在縣市', '區域', '所在地區'],
+  address:     ['地址', '診所地址', '機構地址', '單位地址', '通訊地址', '聯絡地址', '住址'],
   status:      ['報名狀態', '狀態', '出席', '出席狀況', '是否出席', '報到', '簽到', '到場'],
   attendees:   ['人數', '參加人數', '報名人數'],
   note:        ['職稱', '職務', '身分', '備註'],
@@ -164,6 +169,23 @@ export function normalizeCity(raw: string): string {
   return `${m[1]}市`   // 新竹、嘉義市縣同名，無後綴時以市為準
 }
 
+/**
+ * 地址或地區原文 → { 縣市, 行政區 }（台／臺統一為「台」，比對時兩邊都會再正規化）。
+ * 「臺中市北屯區崇德路…」「40401台中北屯區」「新竹縣竹北市」「高雄岡山區」「彰化市」皆可；
+ * 沒有縣市開頭的（「松山區」「台北場」）一律不解析——各縣市都有東區、中正區，只有行政區會配錯。
+ */
+export function parseArea(raw: string): { city: string; district: string } {
+  const s = (raw ?? '').replace(/臺/g, '台').replace(/\s/g, '').replace(/^\d{3,6}/, '')
+  const city = normalizeCity(s)
+  if (!city) return { city: '', district: '' }
+  const m = s.match(/^(台北|新北|基隆|桃園|新竹|苗栗|台中|彰化|南投|雲林|嘉義|台南|高雄|屏東|宜蘭|花蓮|台東|澎湖|金門|連江)(市|縣)?/)!
+  const rest = s.slice(m[0].length)
+  // 縣轄市寫成「彰化市」：縣市＝彰化縣、行政區＝彰化市
+  if (!rest && m[2] === '市' && city.endsWith('縣')) return { city, district: m[0] }
+  const d = rest.match(/^(.{1,3}?[區鄉鎮市])/)
+  return { city, district: d ? d[1] : '' }
+}
+
 export const IMPORT_MAX_ROWS = 3000
 
 /**
@@ -218,7 +240,13 @@ export function toImportRow(
       eventName, eventDate, eventType, institution, contact,
       phone: (get('phone') || split.phone).slice(0, 30),
       email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email.slice(0, 100) : '',
-      city: normalizeCity(get('city')),
+      ...(() => {
+        // 地址優先（最精確）；沒有地址才用縣市／地區欄（可能只有縣市，或「台中市北屯區」）
+        const address = get('address').slice(0, 200)
+        const fromAddress = parseArea(address)
+        const area = fromAddress.city ? fromAddress : parseArea(get('city'))
+        return { city: area.city, district: area.district, address }
+      })(),
       status: statusForDate(normalizeStatus(get('status'), defaults.status), eventDate, today),
       attendees: Math.min(attendees, 100),
       note: get('note').slice(0, 200),

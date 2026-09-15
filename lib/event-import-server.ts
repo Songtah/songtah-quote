@@ -9,7 +9,7 @@ import {
 import { createCustomerResolver } from '@/lib/registration-footprint'
 import { customerNameStem } from '@/lib/customer-name-match'
 import {
-  eventKey, parseLooseDate, statusForDate, IMPORT_MAX_ROWS, EVENT_TYPES, type ImportRow,
+  eventKey, parseLooseDate, parseArea, normalizeCity, statusForDate, IMPORT_MAX_ROWS, EVENT_TYPES, type ImportRow,
 } from '@/lib/event-import'
 
 const phoneTail = (s: string) => (s ?? '').replace(/\D/g, '').slice(-8)
@@ -21,6 +21,12 @@ export function sanitizeImportRows(input: unknown): ImportRow[] {
   const out: ImportRow[] = []
   for (const r of input.slice(0, IMPORT_MAX_ROWS) as any[]) {
     const eventDate = parseLooseDate(str(r?.eventDate, 20))
+    // 區域在伺服器端重算：有地址以地址為準，否則只接受格式正確的縣市＋行政區
+    const address = str(r?.address, 200)
+    const fromAddress = parseArea(address)
+    const city = fromAddress.city || normalizeCity(str(r?.city, 10))
+    const districtRaw = str(r?.district, 6)
+    const district = fromAddress.city ? fromAddress.district : (city && /^.{1,4}[區鄉鎮市]$/.test(districtRaw) ? districtRaw : '')
     const row: ImportRow = {
       eventName: str(r?.eventName, 200),
       eventDate,
@@ -29,7 +35,7 @@ export function sanitizeImportRows(input: unknown): ImportRow[] {
       contact: str(r?.contact, 50),
       phone: str(r?.phone, 30),
       email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str(r?.email, 100)) ? str(r?.email, 100) : '',
-      city: str(r?.city, 10),
+      city, district, address,
       status: statusForDate(['已到場', '已報名', '已確認', '取消'].includes(r?.status) ? r.status : '已報名', eventDate),
       attendees: Math.min(Math.max(Number(r?.attendees) || 1, 1), 100),
       note: str(r?.note, 200),
@@ -66,7 +72,7 @@ export type ImportPreview = {
   counts: { toImport: number; duplicate: number; matched: number; created: number; unmatched: number; cancelled: number }
   events: { name: string; date: string; type: string; existingId: string; rows: number; duplicates: number }[]
   newCustomers: { code: string; name: string; area: string; assignTo: string }[]
-  details: { index: number; eventName: string; institution: string; contact: string; result: string; note: string }[]
+  details: { index: number; eventName: string; institution: string; contact: string; area: string; result: string; note: string }[]
 }
 
 /** 預覽：不寫入任何資料。客戶解析用 dryRun 解析器，與實際匯入後的自動配對同一套規則。 */
@@ -87,7 +93,7 @@ export async function buildImportPreview(rows: ImportRow[]): Promise<ImportPrevi
     const existing = findEventByNameDate(events, r.eventName, r.eventDate)
     const summary = eventSummary.get(key) ?? { name: r.eventName, date: r.eventDate, type: r.eventType, existingId: existing?.id ?? '', rows: 0, duplicates: 0 }
     eventSummary.set(key, summary)
-    const base = { index: i, eventName: r.eventName, institution: r.institution, contact: r.contact }
+    const base = { index: i, eventName: r.eventName, institution: r.institution, contact: r.contact, area: `${r.city}${r.district}` }
 
     const dk = registrationDupKey(r)
     const inFile = seen.get(key) ?? new Set<string>()
@@ -108,7 +114,7 @@ export async function buildImportPreview(rows: ImportRow[]): Promise<ImportPrevi
       continue
     }
     // 同機構（字根＋縣市＋電話）只解析一次
-    const instKey = `${customerNameStem(r.institution)}|${r.city}|${phoneTail(r.phone)}`
+    const instKey = `${customerNameStem(r.institution)}|${r.city}|${r.district}|${phoneTail(r.phone)}`
     let res = resolvedByInstitution.get(instKey)
     if (!res) {
       res = await resolve(r)
