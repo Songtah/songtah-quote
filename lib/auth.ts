@@ -139,7 +139,8 @@ export const authOptions: NextAuthOptions = {
       }).catch((e) => console.error('audit logout error:', e))
     },
   },
-  pages: { signIn: '/login' },
+  // signOut：中文登出頁（取代 NextAuth 內建英文頁；直接連 /api/auth/signout 也會導到這裡）
+  pages: { signIn: '/login', signOut: '/logout' },
   session: { strategy: 'jwt', maxAge: 8 * 60 * 60, updateAge: 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
   // 讓 NextAuth 信任 Vercel / proxy 的 X-Forwarded-Host，

@@ -138,7 +138,7 @@ export function AppSidebar({ sessionUser }: { sessionUser?: SessionUserLike }) {
       </nav>
       <div className="mt-auto flex items-center justify-between gap-2 rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-stone-900/[0.04]">
         <span className="min-w-0 truncate text-xs font-semibold text-stone-500">{userName}</span>
-        <Link href="/api/auth/signout" className="text-xs font-semibold text-stone-400 hover:text-brand-700">登出</Link>
+        <Link href="/logout" className="text-xs font-semibold text-stone-400 hover:text-brand-700">登出</Link>
       </div>
     </aside>
   )
@@ -186,7 +186,7 @@ export function AppMobileNav({ sessionUser }: { sessionUser?: SessionUserLike })
               </div>
             </div>
           ))}
-          <Link href="/api/auth/signout" className="mt-2 flex items-center justify-center rounded-full bg-stone-100 px-4 py-3 text-sm font-semibold text-stone-500">登出</Link>
+          <Link href="/logout" className="mt-2 flex items-center justify-center rounded-full bg-stone-100 px-4 py-3 text-sm font-semibold text-stone-500">登出</Link>
         </nav>
       )}
     </header>

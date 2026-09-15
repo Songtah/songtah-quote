@@ -1,16 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CircleCheck, LockKeyhole, ShieldCheck } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // 從登出頁回來時顯示「已安全登出」（讀網址參數，不用 useSearchParams 以免需要 Suspense 包裝）
+  const [loggedOut, setLoggedOut] = useState(false)
+  useEffect(() => {
+    setLoggedOut(new URLSearchParams(window.location.search).get('loggedOut') === '1')
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -55,6 +60,12 @@ export default function LoginPage() {
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-800">登入開始今天的工作</h2>
               <p className="mt-2 text-sm text-stone-400">請使用公司帳號登入</p>
             </div>
+
+            {loggedOut && (
+              <p className="mb-5 flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                <CircleCheck className="size-4" /> 已安全登出，下次見
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
