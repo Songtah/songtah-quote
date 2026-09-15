@@ -37,6 +37,7 @@ import { logAuditEvent } from '@/lib/audit'
 import { getRedisValue, setRedisValue, deleteRedisValue } from '@/lib/notion/shared'
 import { isSameCustomerName, customerNameStem } from '@/lib/customer-name-match'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { UNKNOWN_INSTITUTION } from '@/lib/event-import'
 
 /** 足跡有效期：超過就不再當作拜訪訊號 */
 export const FOOTPRINT_WINDOW_DAYS = 60
@@ -69,13 +70,53 @@ function matchEvent(formName: string, events: EventItem[]): EventItem | null {
 
 export type ResolveInput = { institution: string; city: string; phone: string }
 
+type InstitutionKind = 'lab' | 'clinic' | 'hospital' | 'company' | ''
+
+/**
+ * 從名稱看機構類別。名字字根相同但類別不同的不是同一家——
+ * 實測（2025–2026 課程名單 345 筆）：「三口管理顧問股份有限公司」被配到三口牙技所、
+ * 「品安牙技所」因為有 5 家品安牙醫診所而被判無法確定。
+ * 名稱同時出現兩種類別（「高新牙醫診所-康新機技工所」）視為無法判斷，不過濾。
+ */
+function kindFromName(name: string): InstitutionKind {
+  const s = name ?? ''
+  const lab = /(牙體技術|牙技|技工|技術所|齒研|鑲牙)/.test(s)
+  const clinic = /(牙醫|診所|牙科)/.test(s)
+  const hospital = /醫院/.test(s)
+  const company = /(公司|企業社|商行)/.test(s)
+  const hits = [lab, clinic, hospital, company].filter(Boolean).length
+  if (hits !== 1) return hospital && clinic && !lab ? 'hospital' : ''   // 「XX醫院牙科」算醫院
+  return lab ? 'lab' : clinic ? 'clinic' : hospital ? 'hospital' : 'company'
+}
+
+function kindFromCustomerType(type: string): InstitutionKind {
+  if (/(牙體技術所|鑲牙所)/.test(type)) return 'lab'
+  if (/(牙醫診所|衛生所)/.test(type)) return 'clinic'
+  if (/醫院/.test(type)) return 'hospital'
+  if (/(公司|同業)/.test(type)) return 'company'
+  return ''
+}
+
+function kindFromBas(kind: string): InstitutionKind {
+  if (/(牙體技術所|鑲牙所)/.test(kind)) return 'lab'
+  if (/(診所|衛生所)/.test(kind)) return 'clinic'
+  return 'hospital'
+}
+
+/** 類別兩邊都看得出來且不同 → 不是同一家；任一邊看不出來就不排除 */
+const kindCompatible = (a: InstitutionKind, b: InstitutionKind) => !a || !b || a === b
+
 async function matchCustomer(
   reg: ResolveInput, customers: CustomerListItem[],
 ): Promise<{ customerId: string | null; note: string; notFound?: boolean }> {
   const name = reg.institution.trim()
+  if (name === UNKNOWN_INSTITUTION) return { customerId: null, note: '未填所屬單位，無法對應客戶' }
   if (customerNameStem(name).length < 2) return { customerId: null, note: '機構名稱太短，無法比對' }
 
-  let hits = customers.filter((c) => !isInactiveCustomer(c.status) && isSameCustomerName(name, c.name))
+  const kind = kindFromName(name)
+  let hits = customers.filter((c) =>
+    !isInactiveCustomer(c.status) && isSameCustomerName(name, c.name) &&
+    kindCompatible(kind, kindFromCustomerType(c.type) || kindFromName(c.name)))
   if (hits.length === 0) return { customerId: null, note: '客戶庫查無此機構', notFound: true }
   if (hits.length === 1) return { customerId: hits[0].id, note: `名稱相符：${hits[0].name}` }
 
@@ -109,7 +150,11 @@ type BasResolution =
   | { kind: 'create'; inst: BasInstitution }
 
 function resolveViaBas(reg: ResolveInput, codes: Map<string, CustomerWithCode>): BasResolution {
-  let hits = loadOpenBasInstitutions().filter((b) => isSameCustomerName(reg.institution, b.name))
+  const kind = kindFromName(reg.institution)
+  // 公司行號不在衛福部名單內，名稱再像也不建檔
+  if (kind === 'company') return { kind: 'none', note: '公司行號，不在衛福部醫事機構名單內，未自動建檔' }
+  let hits = loadOpenBasInstitutions().filter((b) =>
+    isSameCustomerName(reg.institution, b.name) && kindCompatible(kind, kindFromBas(b.kind)))
   if (reg.city && hits.length > 1) {
     const inCity = hits.filter((b) => sameCity(b.city, reg.city))
     if (inCity.length) hits = inCity

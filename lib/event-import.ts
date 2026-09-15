@@ -17,6 +17,7 @@ export type ImportRow = {
   city: string
   status: string        // 已到場／已報名／取消
   attendees: number
+  note: string          // 職稱等補充，寫入報名「備註」
 }
 
 export type ImportField = keyof ImportRow
@@ -33,8 +34,9 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
   phone:       ['電話', '手機', '聯絡電話', '行動電話', '連絡電話', '手機號碼'],
   email:       ['信箱', 'email', 'e-mail', '電子郵件', '電子信箱'],
   city:        ['縣市', '地區', '所在縣市', '區域'],
-  status:      ['狀態', '出席', '出席狀況', '是否出席', '報到', '簽到', '到場'],
+  status:      ['報名狀態', '狀態', '出席', '出席狀況', '是否出席', '報到', '簽到', '到場'],
   attendees:   ['人數', '參加人數', '報名人數'],
+  note:        ['職稱', '職務', '身分', '備註'],
 }
 
 const normHeader = (s: string) => s.replace(/[\s（）()＊*:：]/g, '').toLowerCase()
@@ -53,6 +55,28 @@ export function detectColumns(headers: string[]): Partial<Record<ImportField, nu
     }
   }
   return out
+}
+
+/**
+ * 找表頭列：整理過的 Excel 常在表頭上方放標題與說明（實例：第 5 列才是表頭）。
+ * 取前 20 列中第一個「認得機構名稱，且至少認得 3 個欄位」的列；找不到就當第 1 列。
+ */
+export function findHeaderRow(table: string[][]): number {
+  for (let i = 0; i < Math.min(table.length, 20); i++) {
+    const cols = detectColumns(table[i])
+    if (cols.institution !== undefined && Object.keys(cols).length >= 3) return i
+  }
+  return 0
+}
+
+/** Excel 儲存格值 → 字串。日期轉 YYYY-MM-DD（read-excel-file 以 UTC 午夜表示日期，用 UTC 取值避免時區跨日） */
+export function cellToString(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) return ''
+    return `${v.getUTCFullYear()}-${String(v.getUTCMonth() + 1).padStart(2, '0')}-${String(v.getUTCDate()).padStart(2, '0')}`
+  }
+  return String(v).trim()
 }
 
 /** 解析 CSV 或 Tab 分隔（Excel 複製貼上），支援雙引號包住的逗號與換行 */
@@ -102,21 +126,42 @@ export function parseLooseDate(raw: string): string {
 export function normalizeStatus(raw: string, fallback: string): string {
   const s = (raw ?? '').replace(/\s/g, '')
   if (!s) return fallback
-  if (/^(取消|未出席|缺席|沒來|未到|否|n|no|x|✗)$/i.test(s)) return '取消'
-  if (/^(報名|已報名|待確認)$/.test(s)) return '已報名'
+  // 否定詞先判斷：「報名後未到場」含「到場」、「取消報名」含「報名」，順序錯就會判反
+  if (/(取消|退款|退費|未到|未出席|缺席|沒來|沒到)/.test(s) || /^(否|n|no|x|✗)$/i.test(s)) return '取消'
+  if (/(欲參加|未確認|待確認|候補)/.test(s)) return '已報名'
   if (/^(已確認|確認)$/.test(s)) return '已確認'
   if (/(出席|到場|報到|簽到|已到)/.test(s) || /^(是|y|yes|v|✓|○|o|1)$/i.test(s)) return '已到場'
+  if (/^(報名|已報名)$/.test(s)) return '已報名'
+  // 「報名名單」只表示這列來自報名表，出席與否依畫面指定
   return fallback
 }
 
+/** 活動類型原文 → 系統選項（實例：課程、說明會／實作、課程／原廠參訪） */
+export function normalizeEventType(raw: string, fallback: string): string {
+  const s = (raw ?? '').trim()
+  if ((EVENT_TYPES as readonly string[]).includes(s)) return s
+  // 說明會先判斷：「說明會／實作」是產品說明會，不是培訓課
+  if (/(說明會|研討|講座)/.test(s)) return '研討會'
+  if (/(課程|實作|工作坊|培訓|班)/.test(s)) return '培訓'
+  if (/發表/.test(s)) return '產品發表'
+  if (/(展覽|展會|參展)/.test(s)) return '展覽'
+  return s ? '其他' : fallback
+}
+
+/**
+ * 地區原文 → 客戶所在縣市。只接受以縣市開頭的值；
+ * 「台北場」「台中場」是上課場地不是客戶所在地、「松山區」沒有縣市，一律視為未填，避免把錯的縣市拿去縮小配對。
+ */
 export function normalizeCity(raw: string): string {
   const s = (raw ?? '').replace(/臺/g, '台').trim()
-  if (!s) return ''
+  if (!s || /場$/.test(s)) return ''
   const m = s.match(/^(台北|新北|基隆|桃園|新竹|苗栗|台中|彰化|南投|雲林|嘉義|台南|高雄|屏東|宜蘭|花蓮|台東|澎湖|金門|連江)(市|縣)?/)
-  if (!m) return s.slice(0, 10)
-  if (m[2]) return m[0]
+  if (!m) return ''
   const county = ['苗栗', '彰化', '南投', '雲林', '屏東', '宜蘭', '花蓮', '台東', '澎湖', '金門', '連江']
-  return m[1] + (county.includes(m[1]) ? '縣' : '市')   // 新竹、嘉義市縣同名，無後綴時以市為準
+  // 「彰化市」「宜蘭市」是縣轄市，所在縣市應為彰化縣、宜蘭縣；新竹、嘉義才有獨立的市
+  if (county.includes(m[1])) return `${m[1]}縣`
+  if (m[2]) return m[0]
+  return `${m[1]}市`   // 新竹、嘉義市縣同名，無後綴時以市為準
 }
 
 export const IMPORT_MAX_ROWS = 3000
@@ -125,32 +170,58 @@ export const IMPORT_MAX_ROWS = 3000
  * 將一列原始資料轉成 ImportRow；回傳錯誤訊息表示此列無效。
  * defaults 用在單一課程名單（檔案沒有課程欄）與空白狀態。
  */
+/** 台北今天 YYYY-MM-DD */
+export const todayTW = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
+
+/**
+ * 活動還沒辦＝不可能已到場：狀態一律降為「已報名」（取消維持取消）。
+ * 前端預覽與伺服器寫入共用，確保兩邊看到的一致。
+ */
+export function statusForDate(status: string, eventDate: string, today = todayTW()): string {
+  return eventDate > today && status === '已到場' ? '已報名' : status
+}
+
+/** 沒填所屬單位的紀錄在報名 DB 的機構名稱；自動配對看到這個值一律跳過 */
+export const UNKNOWN_INSTITUTION = '（未填單位）'
+const BLANK_INSTITUTION = /^(無|none|n\/?a|不詳|未填|-|—|－)$/i
+
+/** 單位欄常夾帶電話（實例：「全欣美 黃老闆 0926590966」）：拆出電話，名稱只留單位 */
+export function splitInstitutionPhone(raw: string): { institution: string; phone: string } {
+  const m = raw.match(/\s*(0\d[\d-]{7,11})\s*$/)
+  if (!m) return { institution: raw.trim(), phone: '' }
+  return { institution: raw.slice(0, m.index).trim(), phone: m[1] }
+}
+
 export function toImportRow(
   cells: string[],
   cols: Partial<Record<ImportField, number>>,
   defaults: { eventName: string; eventDate: string; eventType: string; status: string },
+  today = todayTW(),
 ): { row?: ImportRow; error?: string } {
   const get = (f: ImportField) => (cols[f] !== undefined ? (cells[cols[f]!] ?? '').trim() : '')
   const eventName = (get('eventName') || defaults.eventName).slice(0, 200)
   const eventDateRaw = get('eventDate') || defaults.eventDate
   const eventDate = parseLooseDate(eventDateRaw)
-  const institution = get('institution').slice(0, 100)
-  const typeRaw = get('eventType')
-  const eventType = (EVENT_TYPES as readonly string[]).includes(typeRaw) ? typeRaw : defaults.eventType
+  const split = splitInstitutionPhone(get('institution'))
+  const eventType = normalizeEventType(get('eventType'), defaults.eventType)
+  const contact = get('contact').slice(0, 50)
   if (!eventName) return { error: '缺活動名稱' }
   if (!eventDate) return { error: eventDateRaw ? `日期無法辨識：${eventDateRaw}` : '缺活動日期' }
-  if (institution.replace(/\s/g, '').length < 2) return { error: '缺機構名稱' }
+  // 沒填單位但有姓名：仍是出席紀錄，保留下來（標成未填單位、不配對客戶），不要丟掉
+  const hasInstitution = split.institution.replace(/\s/g, '').length >= 2 && !BLANK_INSTITUTION.test(split.institution)
+  if (!hasInstitution && !contact) return { error: '缺所屬單位與姓名' }
+  const institution = hasInstitution ? split.institution.slice(0, 100) : UNKNOWN_INSTITUTION
   const attendees = Number(get('attendees').replace(/\D/g, '')) || 1
   const email = get('email')
   return {
     row: {
-      eventName, eventDate, eventType, institution,
-      contact: get('contact').slice(0, 50),
-      phone: get('phone').slice(0, 30),
+      eventName, eventDate, eventType, institution, contact,
+      phone: (get('phone') || split.phone).slice(0, 30),
       email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email.slice(0, 100) : '',
       city: normalizeCity(get('city')),
-      status: normalizeStatus(get('status'), defaults.status),
+      status: statusForDate(normalizeStatus(get('status'), defaults.status), eventDate, today),
       attendees: Math.min(attendees, 100),
+      note: get('note').slice(0, 200),
     },
   }
 }

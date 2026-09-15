@@ -94,7 +94,7 @@
 ## 行銷活動足跡鐵則（2026-09-15 建立）
 
 1. **報名 DB＝客戶足跡唯一來源**：課程報名由外掛表單直接寫 Notion 報名 DB；展會參與由公開簽到頁 `/checkin/[eventId]?t=簽章` 寫同一個 DB（來源＝展會簽到、狀態＝已到場）；過去紀錄由 `/events/import` 匯入（來源＝歷史匯入，先預覽再寫入，配對與建檔走同一個 `createCustomerResolver`，足跡日期一律取活動日）。官網課程庫（形象網站 repo）暫不整合，勿另建第三套活動資料。
-2. **活動關聯與客戶配對全自動**：`lib/registration-footprint.ts` 的 `processRegistrations` 每小時（`process-registrations.yml`）依「表單活動」補活動 relation、依名稱字根＋縣市＋電話末 8 碼補客戶配對；不唯一就不配對並寫「配對說明」，已有配對不覆寫。
+2. **活動關聯與客戶配對全自動**：`lib/registration-footprint.ts` 的 `processRegistrations` 每小時（`process-registrations.yml`）依「表單活動」補活動 relation、依名稱字根＋縣市＋電話末 8 碼補客戶配對，且名稱看得出的機構類別（牙技所／診所／醫院／公司）必須與客戶相符（實測未比類別會把顧問公司配到牙技所）；不唯一就不配對並寫「配對說明」，已有配對不覆寫。
 3. **足跡只當拜訪建議訊號，禁止寫假拜訪**：舊版「報名確認→自動建待追蹤客情」已移除——它會刷新最近拜訪日、壓掉太久沒拜訪訊號並誤觸追蹤自動結案。跟進一律由拜訪建議 `event` 訊號驅動，拜訪後自動消失。
 5. **查無客戶→比照醫事監控自動建檔，但必須先過 BAS**：客戶庫查無（或同名者都在別縣市）時，以 `data/clinic-snapshot.json` 開業名單**唯一相符**才建檔；BAS 代碼已在客戶庫則直接配對那家。建檔與醫事監控匯入共用 `lib/bas-customer-import.ts` 的 `createCustomerFromBas`（開發來源＝活動報名），轄區業務可承接新客戶才指派（只寫空白）。BAS 查無或不唯一一律不建——訪客手打的名稱不得直接進客戶主檔。
 4. **公開簽到 API 是 withApiAuth 的明確例外**：`/api/public/checkin` 以 HMAC 簽章（NEXTAUTH_SECRET，fail-closed）＋活動期間限定＋IP 限流＋honeypot 取代登入，回應不得透露任何客戶資料或配對結果。

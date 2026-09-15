@@ -9,15 +9,16 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  parseDelimited, detectColumns, toImportRow, eventKey,
+  parseDelimited, detectColumns, findHeaderRow, cellToString, toImportRow, eventKey,
   EVENT_TYPES, IMPORT_MAX_ROWS, type ImportField, type ImportRow,
 } from '@/lib/event-import'
 
 const FIELD_LABEL: Record<ImportField, string> = {
-  eventName: '活動名稱', eventDate: '活動日期', eventType: '活動類型', institution: '機構名稱',
-  contact: '姓名', phone: '電話', email: '信箱', city: '縣市', status: '出席狀態', attendees: '人數',
+  eventName: '活動名稱', eventDate: '活動日期', eventType: '活動類型', institution: '所屬單位（機構）',
+  contact: '姓名', phone: '電話', email: '信箱', city: '縣市', status: '出席／報名狀態', attendees: '人數',
+  note: '職稱／備註',
 }
-const FIELD_ORDER: ImportField[] = ['institution', 'contact', 'phone', 'city', 'eventName', 'eventDate', 'status', 'email', 'eventType', 'attendees']
+const FIELD_ORDER: ImportField[] = ['institution', 'contact', 'phone', 'city', 'eventName', 'eventDate', 'status', 'eventType', 'note', 'email', 'attendees']
 
 type Preview = {
   rows: number
@@ -49,7 +50,13 @@ export function EventImportContent() {
   const [raw, setRaw] = useState('')
   const [fileName, setFileName] = useState('')
   const [cols, setCols] = useState<Partial<Record<ImportField, number>> | null>(null)
-  const [defaults, setDefaults] = useState({ eventName: '', eventDate: '', eventType: '培訓', status: '已到場' })
+  // 狀態預設「已報名」：多數名單只記錄報名、沒記出席，不應假設人有到
+  const [defaults, setDefaults] = useState({ eventName: '', eventDate: '', eventType: '培訓', status: '已報名' })
+  // Excel：保留檔案以切換工作表；grid 為目前工作表內容（有值時取代貼上的文字）
+  const [xlsxFile, setXlsxFile] = useState<File | null>(null)
+  const [sheetNames, setSheetNames] = useState<string[]>([])
+  const [sheet, setSheet] = useState('')
+  const [grid, setGrid] = useState<string[][] | null>(null)
   const [phase, setPhase] = useState<Phase>('input')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -58,9 +65,13 @@ export function EventImportContent() {
   const [progress, setProgress] = useState('')
   const [summary, setSummary] = useState<{ events: number; imported: number; skipped: number; matched: number; created: number; unmatched: number } | null>(null)
 
-  const table = useMemo(() => (raw.trim() ? parseDelimited(raw) : []), [raw])
-  const headers = table[0] ?? []
-  const body = table.slice(1)
+  const table = useMemo(
+    () => grid ?? (raw.trim() ? parseDelimited(raw) : []),
+    [grid, raw])
+  // 表頭上方常有標題、說明列，自動找出真正的表頭
+  const headerRow = useMemo(() => findHeaderRow(table), [table])
+  const headers = useMemo(() => table[headerRow] ?? [], [table, headerRow])
+  const body = useMemo(() => table.slice(headerRow + 1).filter((r) => r.some((c) => c !== '')), [table, headerRow])
   const effectiveCols = useMemo(() => cols ?? detectColumns(headers), [cols, headers])
 
   const parsed = useMemo(() => {
@@ -69,24 +80,52 @@ export function EventImportContent() {
     body.forEach((cells, i) => {
       const r = toImportRow(cells, effectiveCols, defaults)
       if (r.row) rows.push(r.row)
-      else errors.push({ line: i + 2, error: r.error ?? '無效' })
+      else errors.push({ line: headerRow + i + 2, error: r.error ?? '無效' })
     })
     return { rows, errors }
-  }, [body, effectiveCols, defaults])
+  }, [body, effectiveCols, defaults, headerRow])
 
   const needsEventDefaults = effectiveCols.eventName === undefined || effectiveCols.eventDate === undefined
 
+  async function loadSheet(file: File, name: string) {
+    const { default: readXlsxFile } = await import('read-excel-file')
+    const rows = await readXlsxFile(file, { sheet: name })
+    setGrid(rows.map((r) => r.map(cellToString)))
+    setSheet(name)
+    setCols(null)
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    if (/\.xlsx?$/i.test(file.name)) {
-      setError('Excel 檔請直接在 Excel 全選複製後貼到下方，或另存成 CSV 再上傳。')
-      return
-    }
     setError('')
     setFileName(file.name)
-    setRaw(await readTextFile(file))
     setCols(null)
+    try {
+      if (/\.xlsx$/i.test(file.name)) {
+        const { readSheetNames } = await import('read-excel-file')
+        const names = await readSheetNames(file)
+        setXlsxFile(file)
+        setSheetNames(names)
+        setRaw('')
+        // 預設挑第一個看起來是名單的工作表（找得到所屬單位欄的）
+        const { default: readXlsxFile } = await import('read-excel-file')
+        let pick = names[0]
+        for (const n of names) {
+          const rows = (await readXlsxFile(file, { sheet: n })).slice(0, 20).map((r) => r.map(cellToString))
+          if (detectColumns(rows[findHeaderRow(rows)] ?? []).institution !== undefined) { pick = n; break }
+        }
+        await loadSheet(file, pick)
+      } else if (/\.xls$/i.test(file.name)) {
+        setError('舊版 .xls 請在 Excel 另存為 .xlsx 或 CSV 後再上傳。')
+      } else {
+        setXlsxFile(null); setSheetNames([]); setGrid(null)
+        setRaw(await readTextFile(file))
+      }
+    } catch (err: any) {
+      setError(`讀取檔案失敗：${err?.message ?? '格式不支援'}`)
+    }
   }
 
   function setCol(field: ImportField, value: string) {
@@ -144,6 +183,7 @@ export function EventImportContent() {
 
   function reset() {
     setRaw(''); setFileName(''); setCols(null); setPreview(null); setSummary(null); setPhase('input'); setError('')
+    setXlsxFile(null); setSheetNames([]); setSheet(''); setGrid(null)
   }
 
   const shownDetails = (preview?.details ?? []).filter((d) => !detailFilter || d.result.startsWith(detailFilter))
@@ -159,26 +199,39 @@ export function EventImportContent() {
       {phase === 'input' && (
         <>
           <div className="card-soft p-5 sm:p-6">
-            <h2 className="text-lg font-bold text-stone-800">1. 貼上名單</h2>
+            <h2 className="text-lg font-bold text-stone-800">1. 上傳或貼上名單</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">
-              在 Excel 選取含表頭的整個範圍，複製後貼到下方；或上傳 CSV。第一列必須是表頭（例如：課程名稱、日期、診所名稱、姓名、電話、縣市、出席）。
-              多場課程可以放在同一份，也可以一場一份。
+              直接上傳 Excel（.xlsx）或 CSV；也可以在 Excel 選取含表頭的範圍複製後貼到下方。
+              表頭上方有標題或說明列沒關係，系統會自動找到表頭。多場課程可以放在同一份，也可以一場一份。
             </p>
-            <textarea
-              value={raw}
-              onChange={(e) => { setRaw(e.target.value); setFileName(''); setCols(null) }}
-              rows={8}
-              placeholder={'課程名稱\t日期\t診所名稱\t姓名\t電話\t縣市\t出席\n全口重建工作坊\t2025/3/15\t崧達牙醫診所\t王小明\t0912-345-678\t台中市\t出席'}
-              className="input-soft mt-4 w-full font-mono text-xs"
-            />
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <label className="button-secondary inline-flex min-h-11 cursor-pointer items-center px-5 transition-all active:scale-95">
-                上傳 CSV
-                <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFile} className="hidden" />
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <label className="button-primary inline-flex min-h-11 cursor-pointer items-center px-5 transition-all active:scale-95">
+                上傳 Excel／CSV
+                <input type="file" accept=".xlsx,.csv,.tsv,.txt,.xls" onChange={onFile} className="hidden" />
               </label>
               {fileName && <span className="text-sm text-stone-500">{fileName}</span>}
-              {body.length > 0 && <span className="text-sm text-stone-500">讀到 {body.length} 列資料</span>}
+              {sheetNames.length > 1 && xlsxFile && (
+                <label className="flex items-center gap-2 text-sm text-stone-600">
+                  工作表
+                  <select value={sheet} onChange={(e) => loadSheet(xlsxFile, e.target.value).catch((err) => setError(err?.message ?? '讀取工作表失敗'))} className="select-soft text-sm">
+                    {sheetNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+              )}
+              {body.length > 0 && <span className="text-sm text-stone-500">表頭在第 {headerRow + 1} 列，讀到 {body.length} 列資料</span>}
             </div>
+            {!grid && (
+              <textarea
+                value={raw}
+                onChange={(e) => { setRaw(e.target.value); setFileName(''); setCols(null) }}
+                rows={6}
+                placeholder={'或貼上：\n課程名稱\t日期\t所屬單位\t姓名\t電話\t縣市\t出席\n全口重建工作坊\t2025/3/15\t崧達牙醫診所\t王小明\t0912-345-678\t台中市\t出席'}
+                className="input-soft mt-4 w-full font-mono text-xs"
+              />
+            )}
+            {grid && (
+              <button onClick={reset} className="mt-3 text-xs text-stone-500 underline-offset-2 hover:underline">改用貼上</button>
+            )}
           </div>
 
           {headers.length > 0 && (
@@ -217,7 +270,7 @@ export function EventImportContent() {
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-xs font-semibold text-stone-600">出席狀態空白時視為</span>
+                    <span className="text-xs font-semibold text-stone-600">沒寫出席與否時（空白、「報名名單」）視為</span>
                     <select value={defaults.status} onChange={(e) => setDefaults({ ...defaults, status: e.target.value })} className="select-soft mt-1 w-full text-sm">
                       <option value="已到場">已到場（有出席）</option>
                       <option value="已報名">已報名（不確定是否出席）</option>
