@@ -66,9 +66,11 @@ export function deleteRedisValue(key: string): void {
 
 export const DB = {
   customers: process.env.NOTION_CUSTOMERS_SYSTEM_DB ?? process.env.NOTION_CUSTOMERS_DB,
-  events: process.env.NOTION_EVENTS_DB,
-  registrations: process.env.NOTION_REGISTRATIONS_DB,
-  course_costs: process.env.NOTION_COURSE_COSTS_DB,
+  // 活動／報名／辦課成本：正式站未設環境變數（2026-09-15 匯入時報「NOTION_EVENTS_DB not set」），
+  // 比照其他 DB 內建預設 ID，否則活動管理在正式站會靜默變成空清單、簽到與匯入寫入失敗
+  events: process.env.NOTION_EVENTS_DB ?? '36dc5ca6467a46c299e2fe6efe5ab05e',
+  registrations: process.env.NOTION_REGISTRATIONS_DB ?? '39f9723b83ce44dab9b9348288814469',
+  course_costs: process.env.NOTION_COURSE_COSTS_DB ?? '1f95a3af3f504b91a6a6d5aaa1f213a9',
   visits: process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16',
   tickets:
     process.env.NOTION_TICKETS_SYSTEM_DB ??
