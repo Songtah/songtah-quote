@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { parseLineTxt } from '@/lib/line-txt-parser'
 import { isDailyReport, parseDailyReport, decideDailyReportIngest } from '@/lib/line-daily-report'
-import { resolveSalesperson, isKnownSalesperson } from '@/lib/line-salesperson-map'
+import { resolveSalesperson, isKnownSalesperson, LINE_DISPLAY_NAMES } from '@/lib/line-salesperson-map'
 import { businessDayOf, REPORT_WINDOW_LABEL } from '@/lib/line-report-window'
 
 export const dynamic = 'force-dynamic'
@@ -49,7 +49,8 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
   const actorName = session.user?.name ?? ''
   if (!canImportForOthers) salespersonFilter = actorName
 
-  const messages = parseLineTxt(fileContent)
+  // 另一種匯出格式（「16:56 姓名 內容」）發話人與內容之間沒有分隔符號，給解析器業務顯示名稱當比對依據
+  const messages = parseLineTxt(fileContent, LINE_DISPLAY_NAMES)
   if (messages.length === 0) {
     return NextResponse.json(
       { error: '無法解析訊息，請確認是否為 LINE 聊天記錄 .txt 格式' },

@@ -25,6 +25,9 @@ const MAP: Record<string, string> = {
  */
 export const INACTIVE_SALESPERSONS = new Set(['Ada', 'Chloe', 'Vivienne', '洪爺', 'James'])
 
+/** 對應表裡的 LINE 顯示名稱；供 .txt 解析器在沒有分隔符號的格式中切出發話人 */
+export const LINE_DISPLAY_NAMES = Object.keys(MAP)
+
 /**
  * 將 LINE 顯示名稱轉換為系統業務姓名。
  * 先查完整比對，再查部分包含，都找不到就回傳原名。

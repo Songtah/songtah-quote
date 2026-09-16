@@ -25,7 +25,7 @@ export type IngestResult = {
   created: number
   skippedExisting: number
   failures: { customer: string; message: string }[]
-  planned?: { customer: string; date: string }[]
+  planned?: { customer: string; date: string; content: string }[]
 }
 
 const stemKey = (name: string) => (customerNameStem(name) || name).toLowerCase().replace(/\s/g, '')
@@ -41,6 +41,12 @@ export async function ingestDailyReport(input: {
    * Notion 查詢有數秒延遲，連續處理多則日報時剛建的紀錄可能還查不到，靠這份記憶避免重複建立。
    */
   batchKeys?: Set<string>
+  /**
+   * 補匯歷史紀錄時設 true：不做自動認領。
+   * 補幾個月前的拜訪不該讓客戶在今天被直接指派出去——回放既有資料一律走「待認領建議」讓人確認
+   * （與 visit-claim 的 retroactive 規則一致）。
+   */
+  skipClaim?: boolean
 }): Promise<IngestResult> {
   const report = parseDailyReport(input.text, input.fallbackDate)
   const result: IngestResult = { date: report?.date ?? input.fallbackDate, total: 0, created: 0, skippedExisting: 0, failures: [] }
@@ -95,7 +101,7 @@ export async function ingestDailyReport(input: {
       if (idKey) remember(idKey)
 
       if (input.dryRun) {
-        result.planned!.push({ customer: visit.customerName, date: report.date })
+        result.planned!.push({ customer: visit.customerName, date: report.date, content: visit.content })
         continue
       }
       const reaction = formOptions!.customerReactions.includes(visit.customerReaction) ? visit.customerReaction : ''
@@ -132,8 +138,10 @@ export async function ingestDailyReport(input: {
   // ── 第二階段：自動認領與開發階段推進（失敗不影響已建的紀錄）──
   for (const v of createdVisits) {
     if (!v.customerId) continue
-    const claim = await applyAutoClaimForVisit({ salesperson: input.salesperson, customerId: v.customerId, unambiguous: v.unambiguous })
-      .catch(() => ({ claimed: false, reason: 'error' }))
+    const claim = input.skipClaim
+      ? { claimed: false, reason: 'backfill-skip' }
+      : await applyAutoClaimForVisit({ salesperson: input.salesperson, customerId: v.customerId, unambiguous: v.unambiguous })
+        .catch(() => ({ claimed: false, reason: 'error' }))
     await advanceCustomerDevStage(v.customerId, devStageForReaction(v.reaction), { actorName: input.salesperson, canManageAll: false })
       .catch(() => false)
     if (claim.claimed) console.log(`[LINE ingest] 自動認領 ${v.name} → ${input.salesperson}（${claim.reason}）`)
