@@ -177,7 +177,11 @@ export function parseDailyReport(text: string, fallbackDate?: string): DailyRepo
 
 // ── 從「名稱-內容」或「名稱，內容」中拆出名稱與內容 ──────────────────────────
 
-function extractNameAndContent(rest: string): { name: string; inlineContent: string } {
+function extractNameAndContent(raw: string): { name: string; inlineContent: string } {
+  // 先去掉編號後多出來的標點：「1..啟信，調貨」是業務把上午的計畫貼到行程回報下方時
+  // 多帶了一個點（實測 Sam 常態），不處理會建出名為「.啟信」的客戶而永遠配對不到。
+  const rest = raw.replace(/^[.。．、,，·•:：\-\s]+/, '')
+
   // 先試 -（Dash）分隔：名稱通常 ≤ 8 字
   const dashIdx = rest.indexOf('-')
   if (dashIdx > 0 && dashIdx <= 10) {
@@ -208,9 +212,11 @@ const NON_VISIT_KEYWORDS = [
 ]
 
 // 明顯的任務描述動詞開頭（不是客戶名稱）
+// 「與…」一律排除：與公司討論、與經理確認替代產品、與小胖對帳……開頭是「與」的都是對內溝通，
+// 不是拜訪客戶，進系統只會變成配不到客戶的空紀錄（使用者 2026-09-16 指定）。
 const TASK_VERB_PREFIXES = [
   '致電', '通知', '整理', '前往', '協助', '遠端', '預約', '邀約',
-  '推薦客戶', '整理公司', '與小胖', '與Julian', '與Aaron',
+  '推薦客戶', '整理公司', '與',
   '9:', '19:', '08:', '10:', '11:', '12:', '13:', '14:', '15:', '16:', '17:', '18:',
 ]
 
