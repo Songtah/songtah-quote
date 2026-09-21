@@ -101,10 +101,45 @@ const FORM_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 // city 一律傳入：BAS 查詢限定同縣市，跨縣市同名多為不同家（使用者 2026-09-21 定調）
-function MohwLookupButton({ name, code, kind, customerStatus, city }: { name: string; code?: string; kind?: string; customerStatus?: string; city?: string }) {
+//
+// 衛福部即時查詢是「開業狀態」的唯一權威來源——快照是每月一次的靜態資料，
+// 而客戶主檔的機構狀態是人工值，兩者都可能過時。查到結果與主檔不符時，
+// 直接給一鍵套用，不必再自己到下拉選一次（使用者 2026-09-21 定調）。
+const BAS_TO_CRM_STATUS = (basStatus: string): string => {
+  const s = basStatus ?? ''
+  if (/撤銷|註銷|廢止/.test(s)) return '撤銷'
+  if (/歇業/.test(s)) return '已歇業'
+  if (/停業/.test(s)) return '停業'
+  if (/開業/.test(s)) return '開業'
+  return ''
+}
+
+function MohwLookupButton({ name, code, kind, customerStatus, city, customerId, onResolved }: {
+  name: string; code?: string; kind?: string; customerStatus?: string; city?: string
+  customerId?: string; onResolved?: (id: string, status: string) => void
+}) {
   const [loading, setLoading] = useState(false)
   const [result, setResult]   = useState<any>(null)
   const [err, setErr]         = useState('')
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied]   = useState('')
+
+  async function applyStatus(next: string) {
+    if (!customerId) return
+    setApplying(true)
+    try {
+      const res = await fetch('/api/admin/medical-monitor/status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, status: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '更新失敗'); return }
+      setApplied(next)
+      onResolved?.(customerId, next)
+    } catch (e: any) {
+      setErr(e?.message ?? '更新失敗')
+    } finally { setApplying(false) }
+  }
 
   async function run() {
     setLoading(true); setErr(''); setResult(null)
@@ -159,6 +194,24 @@ function MohwLookupButton({ name, code, kind, customerStatus, city }: { name: st
             <div className="text-stone-500">衛福部查無此名稱</div>
           )}
           <div className="text-brand-700 bg-brand-50 rounded-2xl px-2.5 py-2 leading-relaxed">💡 {result.suggestion}</div>
+          {/* 衛福部狀態與主檔不符 → 一鍵套用（權威來源是衛福部即時查詢） */}
+          {(() => {
+            if (!customerId || !result.found) return null
+            const next = BAS_TO_CRM_STATUS(result.status)
+            if (!next || next === (customerStatus ?? '')) return null
+            return (
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white border border-stone-200 px-2.5 py-2">
+                <span className="text-[11px] text-stone-500">
+                  主檔「{customerStatus || '未填'}」≠ 衛福部「{result.status}」
+                </span>
+                <button
+                  onClick={() => applyStatus(next)}
+                  disabled={applying || !!applied}
+                  className="ml-auto text-xs px-3.5 py-1.5 rounded-full bg-brand-500 text-white font-medium hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-50"
+                >{applied ? `✓ 已更新為${applied}` : applying ? '更新中…' : `套用衛福部狀態：${next}`}</button>
+              </div>
+            )
+          })()}
           {result.candidates?.length > 1 && (
             <div className="text-stone-400">其他候選：{result.candidates.slice(1, 5).map((c: any) => c.name).join('、')}</div>
           )}
@@ -583,7 +636,7 @@ function SuspectedClosuresTab({ items, onResolved }: {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
-              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <DismissButton category="closure" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
@@ -670,7 +723,7 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
               </div>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <MohwLookupButton name={item.customerName} code={item.suggestedCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <MohwLookupButton name={item.customerName} code={item.suggestedCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <DismissButton category="invalidcode" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
@@ -777,7 +830,7 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
               <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} city={item.customerCity} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} />
               <DismissButton category="inconsistent" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
@@ -831,7 +884,7 @@ function CodeChangedTab({ items, onResolved }: {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
-              <MohwLookupButton name={item.customerName} code={item.newCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <MohwLookupButton name={item.customerName} code={item.newCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <DismissButton category="codechange" customerId={item.customerId} customerName={item.customerName} institutionCode={item.oldCode} onDismissed={hide} />
             </div>
           </div>
@@ -874,7 +927,7 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
-              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <DismissButton category="hospital" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
