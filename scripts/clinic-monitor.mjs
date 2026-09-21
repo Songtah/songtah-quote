@@ -25,6 +25,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { parseStatus } from '../lib/mohw-bas.mjs'
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -184,7 +185,7 @@ async function fetchDetail(basSeq, zoneSeq, cookieStr) {
     if (!res.ok) return null
     const html = decodeEntities(await res.text())
     const code   = html.match(/機構代碼[\s\S]{0,400}?<span[^>]*>\s*([A-Za-z0-9]{5,20})\s*<\/span>/)?.[1] ?? null
-    const status = html.match(/開業狀態[\s\S]{0,200}?<span[^>]*>\s*([^<]{1,20}?)\s*<\/span>/)?.[1]?.trim() ?? ''
+    const status = parseStatus(html)   // 多種版型依序嘗試，見 lib/mohw-bas.mjs
     if (!code) return null
     return { code, status }
   } catch {
