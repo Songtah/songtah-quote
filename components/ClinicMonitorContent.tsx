@@ -1109,6 +1109,76 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
 }
 
 
+
+// ── 🔎 異常候選批次查證（第 3 層）────────────────────────────────────────────
+// 全台 8,466 家逐筆即時查約 40 分鐘、失敗率 6.6%、還可能觸發 WAF 封鎖；
+// 候選只有一百多筆卻涵蓋所有需要確認的對象，40 秒就跑完——這層投報率最高。
+// 只查證不自動改主檔：狀態要由人按「套用衛福部狀態」。
+interface VerifySummary {
+  checked: number; mismatched: number; closed: number; notFound: number; failed: number
+  startedAt: string; finishedAt: string
+}
+
+function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; onDone?: () => void }) {
+  const [running, setRunning] = useState(false)
+  const [summary, setSummary] = useState<VerifySummary | null>(null)
+  const [err, setErr] = useState('')
+
+  async function run() {
+    setRunning(true); setErr(''); setSummary(null)
+    try {
+      const res = await fetch('/api/admin/medical-monitor/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '查證失敗'); return }
+      setSummary(data.summary as VerifySummary)
+      onDone?.()
+    } catch (e: any) {
+      setErr(e?.message ?? '查證失敗')
+    } finally { setRunning(false) }
+  }
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-sm font-semibold text-stone-700">🔎 異常候選批次查證</span>
+        <span className="text-[11px] text-stone-400">
+          對疑似歇業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，逐筆即時查衛福部（限同縣市）
+        </span>
+        <button
+          onClick={run}
+          disabled={running || candidateCount === 0}
+          className="ml-auto text-xs px-4 py-2 rounded-full bg-brand-500 text-white font-medium hover:bg-brand-600 shadow-sm shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50"
+        >{running ? `查證中…（約 ${Math.ceil(candidateCount * 1.2 / 60)} 分鐘）` : '開始批次查證'}</button>
+      </div>
+      {err && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{err}</p>}
+      {summary && (
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {[
+            ['已查證', summary.checked, 'text-stone-700'],
+            ['與主檔不符', summary.mismatched, 'text-amber-600'],
+            ['衛福部已停歇業', summary.closed, 'text-red-600'],
+            ['衛福部查無', summary.notFound, 'text-stone-500'],
+            ['查詢失敗', summary.failed, 'text-stone-400'],
+          ].map(([label, value, cls]) => (
+            <div key={String(label)} className="rounded-xl bg-stone-50 px-3 py-2 text-center">
+              <div className={`text-lg font-bold tabular-nums ${cls}`}>{value as number}</div>
+              <div className="text-[10px] text-stone-400">{label as string}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+        衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
+        本功能<strong className="text-stone-500">只查證與記錄，不自動改客戶主檔</strong>——
+        查出不符者請到各分類用「查衛福部 → 套用衛福部狀態」逐筆確認。
+        全台逐筆即時查約需 40 分鐘且可能被衛福部阻擋，故只對候選批次查證。
+      </p>
+    </div>
+  )
+}
+
 // ── 🏚️ 未在衛福部登錄（查無代碼）──────────────────────────────────────────────
 // 使用者 2026-09-21 定調：這些多為未立案機構（技工所佔大宗），
 // 本資料庫以合法立案為管理主體，故獨立區隔——不納入歇業判定、不計入新增／減少趨勢。
@@ -1688,6 +1758,12 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {history.length > 0 && <Dashboard history={history} />}
 
       <KindTrendChart trend={kindTrend} loading={kindTrendLoading} onRefresh={() => loadKindTrend(true)} />
+
+      {stats && (
+        <VerifyBatchBlock
+          candidateCount={(stats.suspectedClosures ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
+        />
+      )}
 
       <UnregisteredBlock byKind={kindTrend?.codeNotFoundByKind} total={kindTrend?.codeNotFoundStock ?? 0} />
 

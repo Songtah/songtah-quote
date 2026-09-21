@@ -436,6 +436,17 @@ async function main() {
   }
   const newCount = pending.length
 
+  // 客戶優先：全台 8,466 家裡只有「是我們客戶」的那些需要狀態新鮮度，
+  // 先把這批排在過期回抓的最前面（使用者 2026-09-21 定調）。
+  let customerCodes = new Set()
+  try {
+    const pre = await fetchSongtahCustomers()
+    customerCodes = new Set(Array.from(pre.byCode?.keys?.() ?? []))
+    log(`客戶代碼載入：${customerCodes.size} 筆（回抓將優先處理這批）`)
+  } catch (e) {
+    warn('載入客戶代碼失敗，回抓改用純時間排序：', e.message)
+  }
+
   // 過期回抓：挑最久沒更新、且已超過 STALE_DAYS 的，補在新項目之後（新項目優先）
   const staleBefore = Date.now() - STALE_DAYS * 86400_000
   const staleRows = []
@@ -450,9 +461,16 @@ async function main() {
       if (at < staleBefore) staleRows.push({ ...row, ck, cfg, cookieStr: r.session.cookieStr, at, reason: 'stale' })
     }
   }
-  staleRows.sort((a, b) => a.at - b.at)
-  pending.push(...staleRows.slice(0, REFRESH_LIMIT))
-  log(`待抓詳細頁：${pending.length} 筆（新 ${newCount}、過期回抓 ${pending.length - newCount}／候選 ${staleRows.length}）`)
+  // 排序：是客戶的優先，其次最久沒更新的
+  staleRows.sort((a, b) => {
+    const ca = customerCodes.has(cache[a.ck]?.code) ? 0 : 1
+    const cb = customerCodes.has(cache[b.ck]?.code) ? 0 : 1
+    return ca !== cb ? ca - cb : a.at - b.at
+  })
+  const picked = staleRows.slice(0, REFRESH_LIMIT)
+  const pickedCustomers = picked.filter((r) => customerCodes.has(cache[r.ck]?.code)).length
+  pending.push(...picked)
+  log(`待抓詳細頁：${pending.length} 筆（新 ${newCount}、過期回抓 ${picked.length}／候選 ${staleRows.length}；其中客戶 ${pickedCustomers} 筆）`)
 
   let fetched = 0, resolved = 0, timedOut = false
   for (let i = 0; i < pending.length; i += CONCURRENCY) {
