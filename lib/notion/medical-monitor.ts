@@ -25,10 +25,14 @@ export interface MonitorHistoryEntry {
   totalLabs:         number   // 全台：牙技+鑲牙
   totalHospitals:    number   // 全台：醫院
   totalSchools:      number   // 全台：學校（教育部 schools.json）
-  custClinics:       number   // 崧達客戶：牙醫診所+衛生所
-  custLabs:          number   // 崧達客戶：牙體技術所+鑲牙所
-  custHospitals:     number   // 崧達客戶：醫院
+  custClinics:       number   // 崧達客戶：牙醫診所+衛生所（全部，含已歇業／無代碼／未立案）
+  custLabs:          number   // 崧達客戶：牙體技術所+鑲牙所（全部）
+  custHospitals:     number   // 崧達客戶：醫院（全部）
   custSchools:       number   // 崧達客戶：學術機構
+  /** 與「全台」同口徑：客戶中代碼命中 BAS 開業清單者。舊紀錄沒有此欄，UI 需容忍 undefined */
+  custClinicsInBas?:   number
+  custLabsInBas?:      number
+  custHospitalsInBas?: number
   customerWithCode:  number
   inBasOpen:         number   // 客戶代碼比中 BAS 開業
   toDevelop:         number   // 待開發（BAS 有、非客戶）
@@ -99,6 +103,8 @@ export async function upsertMedicalTrend(e: MonitorHistoryEntry): Promise<void> 
     '客戶_牙體技術所':{ number: e.custLabs },
     '客戶_醫院':      { number: e.custHospitals },
     '客戶_學校':      { number: e.custSchools },
+    // 註：cust*InBas 只存 Redis 趨勢紀錄，不寫這個 Notion DB——
+    // 該 DB 沒有對應欄位，寫入未知屬性會整筆失敗（且不得在此自動改 schema）。
     '客戶有代碼':     { number: e.customerWithCode },
     '在BAS開業':      { number: e.inBasOpen },
     '待開發':         { number: e.toDevelop },

@@ -874,6 +874,7 @@ interface HistoryEntry {
   month: string; computedAt: string
   totalClinics: number; totalLabs: number; totalHospitals: number; totalSchools: number
   custClinics: number; custLabs: number; custHospitals: number; custSchools: number
+  custClinicsInBas?: number; custLabsInBas?: number; custHospitalsInBas?: number
   customerWithCode: number; inBasOpen: number; toDevelop: number
   suspectedClosures: number; hospitalUnverified: number; codeChanged: number; inconsistentData: number
 }
@@ -888,11 +889,14 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
   if (history.length === 0) return null
   const cur = history[0], prev = history[1]
   const series = history.slice(0, 6).reverse()   // 舊→新
-  const CATS: { label: string; total: keyof HistoryEntry; cust: keyof HistoryEntry }[] = [
-    { label: '牙醫診所',   total: 'totalClinics',   cust: 'custClinics' },
-    { label: '牙體技術所', total: 'totalLabs',      cust: 'custLabs' },
-    { label: '醫院',       total: 'totalHospitals', cust: 'custHospitals' },
-    { label: '學校',       total: 'totalSchools',   cust: 'custSchools' },
+  // 「全台」＝ BAS 開業清單數；「客戶」必須用同口徑（客戶中代碼命中 BAS 開業者），
+  // 否則會出現客戶數大於全台總數的矛盾（實測診所 7,281 > 全台 7,149，因為客戶端混入
+  // 已歇業、無代碼、未立案者）。inBas 為舊紀錄沒有的欄位，缺值時退回全部數並標註。
+  const CATS: { label: string; total: keyof HistoryEntry; cust: keyof HistoryEntry; inBas?: keyof HistoryEntry; note?: string }[] = [
+    { label: '牙醫診所',   total: 'totalClinics',   cust: 'custClinics',   inBas: 'custClinicsInBas' },
+    { label: '牙體技術所', total: 'totalLabs',      cust: 'custLabs',      inBas: 'custLabsInBas' },
+    { label: '醫院',       total: 'totalHospitals', cust: 'custHospitals', inBas: 'custHospitalsInBas' },
+    { label: '學校',       total: 'totalSchools',   cust: 'custSchools',   note: '全台為教育部各級學校名錄，與客戶數非同口徑' },
   ]
   const N = (h: HistoryEntry, k: keyof HistoryEntry) => Number(h[k]) || 0
   return (
@@ -902,6 +906,10 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
         {CATS.map(cat => {
           const vals = series.map(h => N(h, cat.total))
           const max = Math.max(1, ...vals)
+          const hasInBas = cat.inBas ? typeof cur[cat.inBas] === 'number' : false
+          const custValue = hasInBas ? N(cur, cat.inBas!) : N(cur, cat.cust)
+          const custPrev = prev ? (hasInBas ? N(prev, cat.inBas!) : N(prev, cat.cust)) : undefined
+          const others = hasInBas ? N(cur, cat.cust) - custValue : 0
           return (
             <div key={cat.label} className="bg-white rounded-2xl border border-stone-200 p-3">
               <div className="text-xs text-stone-400 font-medium">{cat.label}</div>
@@ -910,9 +918,13 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
                 <span className="text-[10px] text-stone-400">全台</span>{DELTA(N(cur, cat.total), prev && N(prev, cat.total))}
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-brand-600">{N(cur, cat.cust).toLocaleString()}</span>
-                <span className="text-[10px] text-stone-400">客戶</span>{DELTA(N(cur, cat.cust), prev && N(prev, cat.cust))}
+                <span className="text-sm font-semibold tabular-nums text-brand-600">{custValue.toLocaleString()}</span>
+                <span className="text-[10px] text-stone-400">{hasInBas ? '客戶（在 BAS 開業）' : '客戶'}</span>{DELTA(custValue, custPrev)}
               </div>
+              {hasInBas && others > 0 && (
+                <div className="text-[10px] text-stone-400">另有 {others.toLocaleString()} 家未登錄／已歇業</div>
+              )}
+              {cat.note && <div className="text-[10px] text-stone-400">{cat.note}</div>}
               <div className="mt-2 flex items-end gap-0.5 h-8">
                 {series.map((h, i) => (
                   <div key={i} title={`${h.month}：全台 ${N(h, cat.total)}`} className="flex-1 bg-brand-200 rounded-sm" style={{ height: `${Math.max(6, (N(h, cat.total) / max) * 100)}%` }} />

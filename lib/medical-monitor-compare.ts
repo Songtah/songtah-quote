@@ -756,6 +756,10 @@ export async function computeMonitor(): Promise<MonitorResult> {
   }
 
   // 崧達客戶各類型數量（供儀表板「客戶」線）
+  //
+  // 兩個口徑要分開記，混用會出現「客戶數 > 全台總數」這種不可能的畫面（實測診所 7,281 > 全台 7,149）：
+  //   cust*      ＝ 客戶主檔中該類型的**全部**客戶（含已歇業、無代碼、未立案）
+  //   cust*InBas ＝ 其中**代碼命中 BAS 開業清單**者，才與「全台（BAS 開業數）」同口徑
   let custClinics = 0, custLabs = 0, custHospitals = 0, custSchools = 0
   for (const c of allCustomers) {
     const t = c.type || ''
@@ -764,12 +768,38 @@ export async function computeMonitor(): Promise<MonitorResult> {
     else if (t === '醫院')                         custHospitals++
     else if (t === '學術機構')                     custSchools++
   }
+  // 分類一律用「命中的 BAS 機構類別」，不用客戶主檔的客戶類型——
+  // 用客戶類型會和「全台」的分母對不起來（實測技工所 1,136 > 全台 1,103、醫院 193 > 188，
+  // 因為主檔把鑲牙所、醫院附設牙科等歸類方式與 BAS 不同）。
+  // 分桶規則必須與快照宣告的三個總數**逐字對齊**，否則分母對不起來：
+  //   totalClinics 7,149 ＝ 牙醫診所 7,127 ＋ 衛生所 22
+  //   totalLabs    1,103 ＝ 牙體技術所（**不含**鑲牙所 26）
+  //   totalHospitals 188 ＝ 醫院
+  // 所以這裡用命中的 BAS kind 嚴格比對，鑲牙所與未知 kind 一律不計入三桶
+  //（用客戶主檔的「客戶類型」分桶會讓技工所 1,136 > 全台 1,103、醫院 192 > 188）。
+  // 以**機構代碼去重**：客戶主檔存在多筆共用同一代碼的重複客戶（實測技工所 7 組、醫院 4 組），
+  // 逐筆計數會讓客戶數超過全台總數。
+  const inBasCodes = { clinic: new Set<string>(), lab: new Set<string>(), hospital: new Set<string>() }
+  let duplicateCodeCustomers = 0
+  for (const c of [...normalOperating, ...inconsistentData]) {
+    const kind = c.snapshotKind || ''
+    const bucket = kind === '牙體技術所' ? inBasCodes.lab
+      : (kind === '牙醫診所' || kind === '衛生所' || kind === '診所') ? inBasCodes.clinic
+        : kind === '醫院' ? inBasCodes.hospital : null
+    if (!bucket) continue
+    if (bucket.has(c.institutionCode)) duplicateCodeCustomers++
+    bucket.add(c.institutionCode)
+  }
+  const custClinicsInBas = inBasCodes.clinic.size
+  const custLabsInBas = inBasCodes.lab.size
+  const custHospitalsInBas = inBasCodes.hospital.size
 
   // 記一筆每月比對紀錄（依快照月份去重、伺服器端持久），供趨勢對照
   await pushMonitorHistory({
     month: snapshot.month, computedAt: result.computedAt,
     totalClinics: stats.totalClinics, totalLabs: stats.totalLabs, totalHospitals: stats.totalHospitals, totalSchools,
     custClinics, custLabs, custHospitals, custSchools,
+    custClinicsInBas, custLabsInBas, custHospitalsInBas,
     customerWithCode: stats.customerWithCode,
     inBasOpen: stats.normalOperating,
     toDevelop: newClinic.length + newLab.length + newHospital.length,
