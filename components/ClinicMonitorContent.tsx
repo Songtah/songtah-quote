@@ -362,7 +362,7 @@ function CategoryModal({ category, closureItems, hospitalItems, result, onClose,
         <div className="p-5 overflow-y-auto">
           {category === 'closure'      && <SuspectedClosuresTab items={closureItems} onResolved={onResolved} />}
           {category === 'hospital'     && <HospitalUnverifiedTab items={hospitalItems} onResolved={onResolved} />}
-          {category === 'codechange'   && <CodeChangedTab items={result.codeChanged ?? []} />}
+          {category === 'codechange'   && <CodeChangedTab items={result.codeChanged ?? []} onResolved={onResolved} />}
           {category === 'inconsistent' && <InconsistentDataTab items={result.inconsistentData} />}
           {category === 'selfmanaged'  && <SelfManagedTab items={result.selfManagedCustomers} />}
           {category === 'academic'     && <AcademicTab items={result.academicInstitutions ?? []} />}
@@ -788,7 +788,10 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
 }
 
 // ── 更換代碼 Tab ────────────────────────────────────────────────────────────────
-function CodeChangedTab({ items }: { items: CodeChanged[] }) {
+function CodeChangedTab({ items, onResolved }: {
+  items: CodeChanged[]
+  onResolved?: (id: string, status: string) => void
+}) {
   const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
@@ -803,22 +806,34 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {visible(items).map((item) => (
-          <div key={item.customerId} className="flex items-center gap-3 px-4 py-3">
-            <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="flex-1 min-w-0 hover:opacity-80">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
-                {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
+                  {item.customerStatus && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-50 text-stone-500">目前：{item.customerStatus}</span>}
+                </div>
+                <div className="text-xs text-stone-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  <span className="mx-2">·</span>
+                  <span className="font-mono text-stone-400 line-through">{item.oldCode}</span>
+                  <span className="mx-1 text-amber-500">→</span>
+                  <span className="font-mono text-amber-700 font-semibold">{item.newCode}</span>
+                </div>
+                {item.snapshotName && (
+                  <div className="text-[11px] text-stone-400 mt-0.5">
+                    衛福部：{item.snapshotName}{item.snapshotAddress && `（${item.snapshotAddress}）`}
+                  </div>
+                )}
               </div>
-              <div className="text-xs text-stone-400 mt-0.5">
-                {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                <span className="mx-2">·</span>
-                <span className="font-mono text-stone-400 line-through">{item.oldCode}</span>
-                <span className="mx-1 text-amber-500">→</span>
-                <span className="font-mono text-amber-700 font-semibold">{item.newCode}</span>
-              </div>
-            </a>
-            <DismissButton category="codechange" customerId={item.customerId} customerName={item.customerName} institutionCode={item.oldCode} onDismissed={hide} />
-            <ChevronRight />
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
+              <MohwLookupButton name={item.customerName} code={item.newCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <DismissButton category="codechange" customerId={item.customerId} customerName={item.customerName} institutionCode={item.oldCode} onDismissed={hide} />
+            </div>
           </div>
         ))}
       </div>
