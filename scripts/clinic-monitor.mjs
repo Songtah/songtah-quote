@@ -51,6 +51,12 @@ const KIND_CONFIGS = [
 const TOTAL_BUDGET_MS = (+process.env.BAS_BUDGET_MIN || 20) * 60_000   // 全程時間預算（含列表+詳細）；到點即停，下次續抓
 const CONCURRENCY     = 6             // 詳細頁並行數（對 WAF 禮貌）
 
+// 開業狀態會過期：原本只有「快取沒有 code」才抓詳細頁，一旦抓過就永遠不再更新，
+// 於是 2026-06 抓到的 8,456 筆全部凍結在「開業」——機構後來歇業，系統仍顯示開業。
+// 改為輪流回抓：超過 STALE_DAYS 沒更新的，每次跑補抓一批（受時間預算約束）。
+const STALE_DAYS      = +process.env.BAS_STALE_DAYS || 90
+const REFRESH_LIMIT   = +process.env.BAS_REFRESH_LIMIT || 1200   // 每次最多回抓幾筆舊快取
+
 // ── Logging ─────────────────────────────────────────────────────────────────
 
 const log  = (...a) => console.log('[clinic-monitor]', ...a)
@@ -424,10 +430,28 @@ async function main() {
     const r = lists[cfg.label]; if (!r) continue
     for (const row of r.rows) {
       const ck = cacheKeyOf(row.basSeq, row.zoneSeq)
-      if (!cache[ck]?.code) pending.push({ ...row, ck, cfg, cookieStr: r.session.cookieStr })
+      if (!cache[ck]?.code) pending.push({ ...row, ck, cfg, cookieStr: r.session.cookieStr, reason: 'new' })
     }
   }
-  log(`待抓詳細頁：${pending.length} 筆（快取已有則略過）`)
+  const newCount = pending.length
+
+  // 過期回抓：挑最久沒更新、且已超過 STALE_DAYS 的，補在新項目之後（新項目優先）
+  const staleBefore = Date.now() - STALE_DAYS * 86400_000
+  const staleRows = []
+  for (const cfg of KIND_CONFIGS) {
+    const r = lists[cfg.label]
+    if (!r) continue
+    for (const row of r.rows) {
+      const ck = cacheKeyOf(row.basSeq, row.zoneSeq)
+      const ce = cache[ck]
+      if (!ce?.code) continue
+      const at = Date.parse(ce.fetchedAt ?? '') || 0
+      if (at < staleBefore) staleRows.push({ ...row, ck, cfg, cookieStr: r.session.cookieStr, at, reason: 'stale' })
+    }
+  }
+  staleRows.sort((a, b) => a.at - b.at)
+  pending.push(...staleRows.slice(0, REFRESH_LIMIT))
+  log(`待抓詳細頁：${pending.length} 筆（新 ${newCount}、過期回抓 ${pending.length - newCount}／候選 ${staleRows.length}）`)
 
   let fetched = 0, resolved = 0, timedOut = false
   for (let i = 0; i < pending.length; i += CONCURRENCY) {
@@ -439,8 +463,10 @@ async function main() {
       fetched++
       const kind = p.cfg.kind === 'A' ? classifyMedical(p.name) : p.cfg.label
       if (d?.code) {
+        const before = cache[p.ck]?.status
         cache[p.ck] = { code: d.code, status: d.status, name: p.name, address: `${p.city}${p.dist}`, kind, fetchedAt: today.toISOString() }
         resolved++
+        if (before && before !== d.status) log(`    開業狀態變更：${p.name}（${d.code}）${before} → ${d.status}`)
       }
       // 抓不到 code 的不寫 cache → 下次再試
     }
