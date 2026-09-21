@@ -776,6 +776,120 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
   )
 }
 
+
+// ── 📈 近半年新增／減少（依機構類別）──────────────────────────────────────────
+// 新增＝比對後新出現（異動類型「新開業」）；減少＝原有機構代碼但查不到（「新增停業」「查無代碼」）。
+// 「恢復開業」不計入——首次建立快照那個月整批 7,839 筆都是它，是基準月產物不是真實異動。
+interface KindTrendPoint {
+  month: string; baseline: boolean
+  kinds: Record<string, { added: number; removed: number }>
+}
+interface KindTrend { points: KindTrendPoint[]; codeNotFoundStock: number; codeNotFoundByKind?: Record<string, number>; computedAt: string }
+const TREND_KINDS = ['牙醫診所', '牙體技術所', '醫院'] as const
+
+function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null; loading: boolean; onRefresh: () => void }) {
+  const points = trend?.points ?? []
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">📈 近半年新增／減少（依機構類別）</p>
+        <span className="text-[11px] text-stone-400">
+          新增＝比對後新出現的機構｜減少＝原有機構代碼但查不到（停業或查無）
+        </span>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="ml-auto rounded-full bg-stone-50 px-3 py-1 text-[11px] font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95 disabled:opacity-50"
+        >{loading ? '計算中…' : '重新計算'}</button>
+      </div>
+
+      {loading && points.length === 0 ? (
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 text-center text-sm text-stone-400">計算中…</div>
+      ) : points.length === 0 ? (
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 text-center text-sm text-stone-400">
+          尚無資料，點「重新計算」產生
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {TREND_KINDS.map((kind) => {
+              const added = points.map((p) => p.kinds?.[kind]?.added ?? 0)
+              const removed = points.map((p) => p.kinds?.[kind]?.removed ?? 0)
+              const max = Math.max(1, ...added, ...removed)
+              const sumA = added.reduce((a, b) => a + b, 0)
+              const sumR = removed.reduce((a, b) => a + b, 0)
+              return (
+                <div key={kind} className="rounded-2xl border border-stone-200 bg-white p-3">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-medium text-stone-500">{kind}</span>
+                    <span className="text-[11px] tabular-nums">
+                      <span className="text-emerald-600">+{sumA}</span>
+                      <span className="mx-1 text-stone-300">/</span>
+                      <span className="text-red-500">−{sumR}</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-stretch gap-1" style={{ height: 96 }}>
+                    {points.map((p, i) => (
+                      <div key={p.month} className="flex flex-1 flex-col items-center justify-center">
+                        <div className="flex w-full flex-1 items-end justify-center">
+                          {added[i] > 0 && (
+                            <div
+                              title={`${p.month} 新增 ${added[i]}`}
+                              className="w-full max-w-[18px] rounded-t-sm bg-emerald-400"
+                              style={{ height: `${(added[i] / max) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                        <div className="h-px w-full bg-stone-200" />
+                        <div className="flex w-full flex-1 items-start justify-center">
+                          {removed[i] > 0 && (
+                            <div
+                              title={`${p.month} 減少 ${removed[i]}`}
+                              className="w-full max-w-[18px] rounded-b-sm bg-red-300"
+                              style={{ height: `${(removed[i] / max) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-1 flex gap-1">
+                    {points.map((p) => (
+                      <span key={p.month} className="flex-1 text-center text-[9px] text-stone-400">
+                        {p.month.slice(5)}{p.baseline ? '*' : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-2 space-y-0.5 text-[11px] text-stone-400">
+            <p>
+              <span className="mr-2"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" /> 新增</span>
+              <span><span className="inline-block h-2 w-2 rounded-sm bg-red-300 align-middle" /> 減少</span>
+              {points.some((p) => p.baseline) && <span className="ml-3">* 首次建立快照的基準月，數字僅供參考</span>}
+            </p>
+            {!!trend?.codeNotFoundStock && (
+              <p>
+                另有 <strong className="text-stone-600">{trend.codeNotFoundStock.toLocaleString()}</strong> 家客戶「有機構代碼但 BAS 查無」
+                {trend.codeNotFoundByKind && (
+                  <span className="ml-1">
+                    （診所 {trend.codeNotFoundByKind['牙醫診所'] ?? 0}
+                    ／技工所 {trend.codeNotFoundByKind['牙體技術所'] ?? 0}
+                    ／醫院 {trend.codeNotFoundByKind['醫院'] ?? 0}）
+                  </span>
+                )}
+                — 這是存量、未歸月份，故不計入上圖
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // 📋 本月異動彈窗（讀「診所監控紀錄」DB）
 interface ChangeRow { type: string; name: string; code: string; address: string; customer: string; customerUrl: string }
 const CHANGE_BADGE: Record<string, string> = {
@@ -936,6 +1050,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
   // 比對紀錄（每月趨勢）
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  // 近半年新增／減少（依機構類別）
+  const [kindTrend, setKindTrend] = useState<KindTrend | null>(null)
+  const [kindTrendLoading, setKindTrendLoading] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
 
@@ -964,6 +1081,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   useEffect(() => {
     let cancelled = false
     loadHistory()
+    loadKindTrend()
     ;(async () => {
       try {
         const res = await fetch('/api/admin/medical-monitor')   // 不帶 refresh → 回上次結果
@@ -1007,6 +1125,16 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
   function onStatusResolved(id: string) {
     setResolvedIds(prev => new Set(prev).add(id))
+  }
+
+  async function loadKindTrend(refresh = false) {
+    setKindTrendLoading(true)
+    try {
+      const res = await fetch(`/api/admin/medical-monitor/kind-trend?months=6${refresh ? '&refresh=1' : ''}`)
+      const data = await res.json()
+      if (res.ok && Array.isArray(data.points)) setKindTrend(data as KindTrend)
+    } catch { /* 靜默：圖表失敗不影響其他區塊 */ }
+    finally { setKindTrendLoading(false) }
   }
 
   async function loadHistory() {
@@ -1236,6 +1364,8 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       {/* 比對紀錄（每月趨勢，伺服器持久）*/}
       {saveMsg && <div className="text-sm px-4 py-2 rounded-xl bg-stone-50 border border-stone-200 text-stone-700">{saveMsg}</div>}
       {history.length > 0 && <Dashboard history={history} />}
+
+      <KindTrendChart trend={kindTrend} loading={kindTrendLoading} onRefresh={() => loadKindTrend(true)} />
 
       {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
       {result?.hasSnapshot && (

@@ -212,3 +212,161 @@ export async function getClinicMonitorRecords(months = 3): Promise<ClinicMonitor
   await setRedisValue(cacheKey, records, 10 * 60_000)  // cache 10 min
   return records
 }
+
+// ─── 近半年「新增／減少」趨勢（依機構類別）──────────────────────────────────────
+//
+// 使用者定義（2026-09-21）：
+//   新增 ＝ 比對後增加的量　　　　　　　　　　　　→ 異動類型「新開業」
+//   減少 ＝ 原先有機構代碼、比對後遺失或查不到　→ 異動類型「新增停業」與「查無代碼」
+// 「恢復開業」刻意不計入新增：2026-06 首次建立快照時整批 7,839 筆都被標成恢復開業，
+// 那是基準月的產物不是真實異動；之後每月只有個位數，計入只會讓圖失真。
+//
+// 「查無代碼」是**存量**不是月流量：實測 1,920 筆全部沒有月份欄位、且同一天產生
+// （全量比對的結果）。有月份者計入該月減少，沒月份者另外回傳 codeNotFoundStock，
+// 由 UI 以文字標註，不混進長條圖。
+//
+// 鐵則 #0：監控紀錄 DB 已超過 10,000 筆（無過濾查詢會靜默截斷），
+// 故一律「逐月分區 + 只取三種異動類型」查詢。
+export type MonitorTrendKind = '牙醫診所' | '牙體技術所' | '醫院'
+export type MonitorKindTrendPoint = {
+  month: string
+  baseline: boolean                 // 首次快照月，數字僅供參考
+  kinds: Record<MonitorTrendKind, { added: number; removed: number }>
+}
+export type MonitorKindTrend = {
+  points: MonitorKindTrendPoint[]
+  /** 沒有月份的「查無代碼」存量，以機構代碼去重（同一家每次比對都會再寫一筆，實測 9,185 列只有 1,532 家） */
+  codeNotFoundStock: number
+  codeNotFoundByKind: Record<MonitorTrendKind | '其他', number>
+  computedAt: string
+}
+
+/** 由機構代碼與名稱判斷類別（實測 8,534 筆客戶代碼對照，命中率 99.2%） */
+export function guessInstitutionKind(code: string, name: string): MonitorTrendKind | '其他' {
+  const n = name ?? ''
+  if (n.includes('鑲牙所')) return '牙體技術所'
+  if ((code ?? '').startsWith('2')) return '牙體技術所'
+  if (n.includes('醫院')) return '醫院'
+  if (n.includes('衛生所') || n.includes('大學') || n.includes('學系')) return '其他'
+  return '牙醫診所'
+}
+
+const TREND_KINDS: MonitorTrendKind[] = ['牙醫診所', '牙體技術所', '醫院']
+const emptyKinds = () => Object.fromEntries(
+  TREND_KINDS.map((k) => [k, { added: 0, removed: 0 }])
+) as MonitorKindTrendPoint['kinds']
+
+const KIND_TREND_KEY = 'medical-monitor:kind-trend-v1'
+
+export async function getMonitorKindTrend(months = 6, options?: { refresh?: boolean }): Promise<MonitorKindTrend> {
+  const dbId = process.env.NOTION_CLINIC_MONITOR_DB
+  const empty: MonitorKindTrend = {
+    points: [], codeNotFoundStock: 0,
+    codeNotFoundByKind: { 牙醫診所: 0, 牙體技術所: 0, 醫院: 0, 其他: 0 },
+    computedAt: new Date().toISOString(),
+  }
+  if (!dbId) return empty
+  if (!options?.refresh) {
+    const cached = await getRedisValue<MonitorKindTrend>(KIND_TREND_KEY)
+    if (cached) return cached
+  }
+
+  // 近 N 個月（含本月），舊→新
+  const now = new Date()
+  const monthKeys: string[] = []
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+    monthKeys.push(d.toISOString().slice(0, 7))
+  }
+
+  const points: MonitorKindTrendPoint[] = []
+  let stock = 0
+  for (const month of monthKeys) {
+    const kinds = emptyKinds()
+    let cursor: string | undefined
+    let total = 0
+    do {
+      const res: any = await notionCallWithRetry('getMonitorKindTrend', () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(dbId),
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+          filter: {
+            and: [
+              { property: '月份', date: { equals: `${month}-01` } },
+              { or: [
+                { property: '異動類型', select: { equals: '新開業' } },
+                { property: '異動類型', select: { equals: '新增停業' } },
+                { property: '異動類型', select: { equals: '查無代碼' } },
+              ] },
+            ],
+          },
+        })
+      )
+      for (const page of res.results ?? []) {
+        total++
+        const type = page.properties?.['異動類型']?.select?.name ?? ''
+        const code = getText(page, '機構代碼')
+        const name = getText(page, '健保名稱') || getText(page, '客戶名稱')
+        const kind = guessInstitutionKind(code, name)
+        if (kind === '其他') continue
+        if (type === '新開業') kinds[kind].added++
+        else kinds[kind].removed++          // 新增停業 / 查無代碼
+      }
+      cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
+    } while (cursor)
+    points.push({ month, baseline: false, kinds })
+    void total
+  }
+
+  // 首次快照月：只有新增、沒有減少（沒有前一個月可比），標記供 UI 註記，避免被誤讀成「那個月暴增」
+  const firstWithData = points.find((p) =>
+    TREND_KINDS.some((k) => p.kinds[k].added > 0 || p.kinds[k].removed > 0))
+  if (firstWithData && TREND_KINDS.every((k) => firstWithData.kinds[k].removed === 0)) {
+    firstWithData.baseline = true
+  }
+
+  // 沒有月份的「查無代碼」存量——必須以機構代碼去重：
+  // 每次全量比對都會把同一家重寫一列，實測 9,185 列其實只有 1,532 家。
+  const stockCodes = new Set<string>()
+  const stockKinds: Record<string, Set<string>> = {}
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('getMonitorKindTrend:stock', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(dbId),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        filter: {
+          and: [
+            { property: '異動類型', select: { equals: '查無代碼' } },
+            { property: '月份', date: { is_empty: true } },
+          ],
+        },
+      })
+    )
+    for (const page of res.results ?? []) {
+      const code = getText(page, '機構代碼')
+      if (!code || stockCodes.has(code)) continue
+      stockCodes.add(code)
+      const kind = guessInstitutionKind(code, getText(page, '健保名稱') || getText(page, '客戶名稱'))
+      ;(stockKinds[kind] ??= new Set<string>()).add(code)
+    }
+    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  stock = stockCodes.size
+
+  const out: MonitorKindTrend = {
+    points,
+    codeNotFoundStock: stock,
+    codeNotFoundByKind: {
+      牙醫診所: stockKinds['牙醫診所']?.size ?? 0,
+      牙體技術所: stockKinds['牙體技術所']?.size ?? 0,
+      醫院: stockKinds['醫院']?.size ?? 0,
+      其他: stockKinds['其他']?.size ?? 0,
+    },
+    computedAt: new Date().toISOString(),
+  }
+  await setRedisValue(KIND_TREND_KEY, out, 6 * 60 * 60_000)   // 6 小時；資料每月才變一次
+  return out
+}
