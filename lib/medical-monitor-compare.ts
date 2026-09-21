@@ -23,6 +23,8 @@ import { readFileSync, existsSync } from 'fs'
 import path from 'path'
 import { isInactiveCustomer } from '@/lib/customer-status'
 import { classifyInstitutionCode } from '@/lib/institution-code'
+import { dismissKeyOf, type MonitorDismissEntry } from '@/lib/notion/monitor-dismiss'
+export type { MonitorDismissEntry } from '@/lib/notion/monitor-dismiss'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -191,6 +193,7 @@ export interface MonitorStats {
   newOpeningExcludedExisting: number   // 名稱＋地區已是現有客戶而被排除的「新開業」數
   suspectedClosures:   number
   sameCityCandidates:  number
+  dismissed:           number   // 人工排除、不再列出的筆數
   codeNotFound:        number
   inconsistentData:    number
   codeChanged:         number
@@ -230,6 +233,8 @@ export interface MonitorResult {
   }
   suspectedClosures:     SuspectedClosure[]
   sameCityCandidates:    SameCityCandidate[]
+  /** 人工排除清單（可復原）；排除只影響顯示與統計，不改客戶主檔 */
+  dismissed:             MonitorDismissEntry[]
   codeNotFound:          CodeNotFound[]
   selfManagedCustomers:  SelfManagedCustomer[]
   inconsistentData:      InconsistentData[]
@@ -243,6 +248,16 @@ export interface MonitorResult {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+/** 讀人工排除清單；Redis 不可用時回空陣列（寧可多顯示，也不要讓比對整個失敗） */
+async function listDismissedSafe(): Promise<MonitorDismissEntry[]> {
+  try {
+    const { listDismissed } = await import('@/lib/notion/monitor-dismiss')
+    return await listDismissed()
+  } catch {
+    return []
+  }
+}
 
 const CLINIC_KINDS     = new Set(['牙醫一般診所', '牙醫診所', '牙醫專科診所', '衛生所'])
 const LAB_KINDS        = new Set(['牙體技術所', '鑲牙所'])
@@ -368,7 +383,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
       hasSnapshot: false,
       stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      suspectedClosures: [], sameCityCandidates: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
+      suspectedClosures: [], sameCityCandidates: [], dismissed: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
     }
@@ -663,6 +678,22 @@ export async function computeMonitor(): Promise<MonitorResult> {
     })
   }
 
+  // ── 套用人工排除（略過）──────────────────────────────────────────────────
+  // 排除鍵含當下代碼，代碼一變就自動失效、該筆會重新出現（見 lib/notion/monitor-dismiss）。
+  const dismissedList = await listDismissedSafe()
+  const dismissedKeys = new Set(dismissedList.map((d) => d.key))
+  const keep = <T extends { customerId: string }>(
+    category: Parameters<typeof dismissKeyOf>[0], list: T[], codeOf: (x: T) => string,
+  ) => list.filter((x) => !dismissedKeys.has(dismissKeyOf(category, x.customerId, codeOf(x))))
+
+  const suspectedClosuresKept = keep('closure', suspectedClosures, (x) => x.institutionCode)
+  const codeChangedKept       = keep('codechange', codeChanged, (x) => x.oldCode)
+  const hospitalKept          = keep('hospital', hospitalUnverified, (x) => x.institutionCode)
+  const inconsistentKept      = keep('inconsistent', inconsistentData, (x) => x.institutionCode)
+  const invalidKept           = keep('invalidcode', invalidCodes, (x) => x.institutionCode)
+  const sameCityKept          = keep('samecity', sameCityCandidates, (x) => x.institutionCode)
+  const dismissedActive = dismissedList.length
+
   // ── 分類統計 ───────────────────────────────────────────────────────────────
   const newClinic   = newOpenings.filter(n => n.category === 'clinic')
   const newLab      = newOpenings.filter(n => n.category === 'lab')
@@ -690,14 +721,15 @@ export async function computeMonitor(): Promise<MonitorResult> {
     newThisMonthLabs:      newLab.filter(n => n.isNewThisMonth).length,
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
     newOpeningExcludedExisting: excludedExisting,
-    suspectedClosures:   suspectedClosures.length,
-    sameCityCandidates:  sameCityCandidates.length,
+    suspectedClosures:   suspectedClosuresKept.length,
+    sameCityCandidates:  sameCityKept.length,
+    dismissed:           dismissedActive,
     academicInstitutions: academicInstitutions.length,
-    invalidCodes:        invalidCodes.length,
+    invalidCodes:        invalidKept.length,
     codeNotFound:        0,
-    inconsistentData:    inconsistentData.length,
-    codeChanged:         codeChanged.length,
-    hospitalUnverified:  hospitalUnverified.length,
+    inconsistentData:    inconsistentKept.length,
+    codeChanged:         codeChangedKept.length,
+    hospitalUnverified:  hospitalKept.length,
   }
 
   const result: MonitorResult = {
@@ -708,15 +740,16 @@ export async function computeMonitor(): Promise<MonitorResult> {
       labs:      newLab.slice(0, 200),
       hospitals: newHospital.slice(0, 100),
     },
-    suspectedClosures,
-    sameCityCandidates,
+    suspectedClosures:    suspectedClosuresKept,
+    sameCityCandidates:   sameCityKept,
+    dismissed:            dismissedList,
     academicInstitutions,
-    invalidCodes,
+    invalidCodes:         invalidKept,
     codeNotFound:         [],
     selfManagedCustomers: selfManagedCustomers.slice(0, 2000),
-    inconsistentData,
-    codeChanged,
-    hospitalUnverified,
+    inconsistentData:     inconsistentKept,
+    codeChanged:          codeChangedKept,
+    hospitalUnverified:   hospitalKept,
     snapshotMonth:   snapshot.month,
     snapshotFetched: snapshot.fetchedAt,
     computedAt:      new Date().toISOString(),

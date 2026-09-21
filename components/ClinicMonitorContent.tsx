@@ -5,7 +5,7 @@ import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
-  AcademicInstitution, InvalidCode, SameCityCandidate,
+  AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -207,12 +207,140 @@ function StatusEditor({ customerId, current, onResolved }: {
   )
 }
 
+
+// ── 排除異常（略過）──────────────────────────────────────────────────────────
+// 人已確認不是問題的候選，按一下就不再出現。排除鍵含當下機構代碼，
+// 代碼一變（換照、補正）該筆會自動重新出現——排除不是永久埋葬。
+function DismissButton({ category, customerId, customerName, institutionCode, onDismissed }: {
+  category: 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity'
+  customerId: string; customerName: string; institutionCode?: string
+  onDismissed?: (customerId: string) => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [asking, setAsking] = useState(false)
+  const [reason, setReason] = useState('')
+  const [err, setErr] = useState('')
+
+  async function submit() {
+    setBusy(true); setErr('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dismiss', category, customerId, customerName, institutionCode, reason }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '排除失敗'); return }
+      setAsking(false)
+      onDismissed?.(customerId)
+    } catch (e: any) {
+      setErr(e?.message ?? '排除失敗')
+    } finally { setBusy(false) }
+  }
+
+  if (!asking) {
+    return (
+      <button
+        onClick={() => setAsking(true)}
+        className="text-xs px-3 py-1.5 rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 active:scale-95 transition-all"
+        title="確認過不是問題 → 不再列出（代碼變動時會自動重新出現）"
+      >🚫 排除</button>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        className="select-soft text-xs py-1.5 px-2.5 rounded-full"
+      >
+        <option value="">選擇原因…</option>
+        <option value="實際仍營業，BAS 未更新">實際仍營業，BAS 未更新</option>
+        <option value="牙科未登記為牙醫一般科">牙科未登記為牙醫一般科</option>
+        <option value="未立案機構，不納入監控">未立案機構，不納入監控</option>
+        <option value="代碼確認無誤">代碼確認無誤</option>
+        <option value="資料差異可接受">資料差異可接受</option>
+        <option value="其他（已人工確認）">其他（已人工確認）</option>
+      </select>
+      <button
+        onClick={submit}
+        disabled={busy || !reason}
+        className="text-xs px-3 py-1.5 rounded-full bg-stone-700 text-white font-medium hover:bg-stone-800 active:scale-95 transition-all disabled:opacity-40"
+      >{busy ? '處理中…' : '確認排除'}</button>
+      <button onClick={() => { setAsking(false); setErr('') }} className="text-xs px-2 py-1.5 rounded-full text-stone-400 hover:bg-stone-100">取消</button>
+      {err && <span className="text-[11px] text-red-500">{err}</span>}
+    </div>
+  )
+}
+
+
+/** 排除後立即從清單移除（不必等重新比對） */
+function useHidden() {
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
+  return {
+    visible: <T extends { customerId: string }>(list: T[]) => list.filter(x => !hidden.has(x.customerId)),
+    hide: (id: string) => setHidden(prev => new Set(prev).add(id)),
+  }
+}
+
+// ── 已排除清單 Tab ────────────────────────────────────────────────────────────
+const DISMISS_CATEGORY_LABEL: Record<string, string> = {
+  closure: '疑似歇業', codechange: '更換代碼', hospital: '醫院待確認',
+  inconsistent: '資料不一致', invalidcode: '代碼待補正', samecity: '同縣市同名',
+}
+
+function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onRestored?: (key: string) => void }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">🚫</div><p>目前沒有被排除的項目</p></div>
+  )
+  async function restore(key: string) {
+    setBusy(key)
+    try {
+      await fetch('/api/admin/medical-monitor/dismiss', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restore', key }),
+      })
+      onRestored?.(key)
+    } finally { setBusy(null) }
+  }
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
+        🚫 這些項目已由人工確認不是問題，不再列入各分類與統計。
+        <span className="text-stone-400">機構代碼變動（換照／補正）時會自動重新出現；也可隨時按「復原」放回清單。</span>
+      </div>
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
+        {items.map(item => (
+          <div key={item.key} className="flex items-center gap-3 px-4 py-3">
+            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{DISMISS_CATEGORY_LABEL[item.category] ?? item.category}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold text-stone-900">{item.customerName || '（未填名稱）'}</span>
+                {item.institutionCode && <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>}
+              </div>
+              <div className="text-xs text-stone-400 mt-0.5">
+                {item.reason || '未填原因'} · {item.by} · {item.at.slice(0, 10)}
+              </div>
+            </div>
+            <button
+              onClick={() => restore(item.key)}
+              disabled={busy === item.key}
+              className="shrink-0 text-xs px-3 py-1.5 rounded-full bg-stone-50 text-stone-600 ring-1 ring-stone-200 hover:bg-brand-50 hover:text-brand-700 active:scale-95 transition-all disabled:opacity-50"
+            >{busy === item.key ? '處理中…' : '復原'}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── 類別彈窗（摘要卡點擊 → 卡片視窗顯示該類清單）──────────────────────────────────
-type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode'
+type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode' | 'dismissed'
 const CATEGORY_TITLE: Record<CategoryKey, string> = {
   closure: '⛔ 疑似歇業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
   inconsistent: '🔄 資料不一致', selfmanaged: '👤 公司自建',
-  academic: '🎓 學術機構', invalidcode: '⚠️ 代碼待補正',
+  academic: '🎓 學術機構', invalidcode: '⚠️ 代碼待補正', dismissed: '🚫 已排除',
 }
 
 function CategoryModal({ category, closureItems, hospitalItems, result, onClose, onResolved }: {
@@ -239,6 +367,7 @@ function CategoryModal({ category, closureItems, hospitalItems, result, onClose,
           {category === 'selfmanaged'  && <SelfManagedTab items={result.selfManagedCustomers} />}
           {category === 'academic'     && <AcademicTab items={result.academicInstitutions ?? []} />}
           {category === 'invalidcode'  && <InvalidCodeTab items={result.invalidCodes ?? []} onResolved={onResolved} />}
+          {category === 'dismissed'    && <DismissedTab items={result.dismissed ?? []} />}
         </div>
       </div>
     </div>
@@ -422,6 +551,7 @@ function SuspectedClosuresTab({ items, onResolved }: {
   items: SuspectedClosure[]
   onResolved?: (id: string, status: string) => void
 }) {
+  const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -435,7 +565,7 @@ function SuspectedClosuresTab({ items, onResolved }: {
         ⛔ 以下客戶有機構代碼，但不在衛福部開業清單中。可「查衛福部」確認，並直接編輯開業狀態（會寫回 Notion 機構狀態；標停業／已歇業／撤銷後此筆即結案移除）。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-        {items.map(item => (
+        {visible(items).map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
@@ -454,6 +584,7 @@ function SuspectedClosuresTab({ items, onResolved }: {
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <DismissButton category="closure" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
         ))}
@@ -504,6 +635,7 @@ function AcademicTab({ items }: { items: AcademicInstitution[] }) {
 // ── 狀態 8：代碼待補正 Tab ────────────────────────────────────────────────────
 
 function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolved?: (id: string, status: string) => void }) {
+  const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">✅</div><p>所有機構代碼格式都正確</p></div>
   )
@@ -514,7 +646,7 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
         <span className="text-amber-600">在補上正確代碼之前，這些機構不會被納入歇業判定——請到客戶頁補正，或確認其為未立案機構後改用「公司自建」（清空代碼）。</span>
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-        {items.map(item => (
+        {visible(items).map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
@@ -540,6 +672,7 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <MohwLookupButton name={item.customerName} code={item.suggestedCode} customerStatus={item.customerStatus} city={item.customerCity} />
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
+              <DismissButton category="invalidcode" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
         ))}
@@ -603,6 +736,7 @@ function SelfManagedTab({ items }: { items: SelfManagedCustomer[] }) {
 // ── 狀態 6：資料不一致 Tab ─────────────────────────────────────────────────────
 
 function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
+  const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -615,7 +749,7 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
         🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請確認是否需要更新。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-        {items.map(item => (
+        {visible(items).map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
@@ -642,7 +776,10 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
               </div>
               <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
-            <div className="mt-2"><MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} city={item.customerCity} /></div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} kind={item.snapshotKind === '牙體技術所' ? '2' : 'A'} customerStatus={item.customerStatus} city={item.customerCity} />
+              <DismissButton category="inconsistent" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
+            </div>
           </div>
         ))}
       </div>
@@ -652,6 +789,7 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
 
 // ── 更換代碼 Tab ────────────────────────────────────────────────────────────────
 function CodeChangedTab({ items }: { items: CodeChanged[] }) {
+  const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -664,10 +802,9 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
         🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。建議至客戶頁將機構代碼更新為新碼。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-        {items.map((item) => (
-          <a key={item.customerId} href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
-            <div className="flex-1 min-w-0">
+        {visible(items).map((item) => (
+          <div key={item.customerId} className="flex items-center gap-3 px-4 py-3">
+            <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="flex-1 min-w-0 hover:opacity-80">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
                 {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
@@ -679,9 +816,10 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
                 <span className="mx-1 text-amber-500">→</span>
                 <span className="font-mono text-amber-700 font-semibold">{item.newCode}</span>
               </div>
-            </div>
+            </a>
+            <DismissButton category="codechange" customerId={item.customerId} customerName={item.customerName} institutionCode={item.oldCode} onDismissed={hide} />
             <ChevronRight />
-          </a>
+          </div>
         ))}
       </div>
     </div>
@@ -690,6 +828,7 @@ function CodeChangedTab({ items }: { items: CodeChanged[] }) {
 
 // ── 醫院待確認 Tab ──────────────────────────────────────────────────────────────
 function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverified[]; onResolved?: (id: string, status: string) => void }) {
+  const { visible, hide } = useHidden()
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
       <div className="text-3xl mb-3">✅</div>
@@ -702,7 +841,7 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
         🏥 以下醫院客戶的機構代碼不在衛福部「牙醫一般科」開業清單中。醫院多半仍在營業，只是牙科未登記為牙醫一般科，故不列入歇業候選。請逐筆「查衛福部」確認牙科現況。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-        {items.map(item => (
+        {visible(items).map(item => (
           <div key={item.customerId} className="px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
@@ -721,6 +860,7 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} />
+              <DismissButton category="hospital" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
         ))}
@@ -1077,6 +1217,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     newOpeningExcludedExisting: readNumber(value.newOpeningExcludedExisting),
     suspectedClosures: readNumber(value.suspectedClosures),
     sameCityCandidates: readNumber(value.sameCityCandidates),
+    dismissed: readNumber(value.dismissed),
     codeNotFound: readNumber(value.codeNotFound),
     inconsistentData: readNumber(value.inconsistentData),
     codeChanged: readNumber(value.codeChanged),
@@ -1106,6 +1247,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
   const academicInstitutions = isArray(value.academicInstitutions) ? (value.academicInstitutions as AcademicInstitution[]) : []
   const invalidCodes = isArray(value.invalidCodes) ? (value.invalidCodes as InvalidCode[]) : []
   const sameCityCandidates = isArray(value.sameCityCandidates) ? (value.sameCityCandidates as SameCityCandidate[]) : []
+  const dismissed = isArray(value.dismissed) ? (value.dismissed as MonitorDismissEntry[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -1120,6 +1262,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     },
     suspectedClosures: value.suspectedClosures as SuspectedClosure[],
     sameCityCandidates,
+    dismissed,
     codeNotFound: value.codeNotFound as CodeNotFound[],
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
     inconsistentData: value.inconsistentData as InconsistentData[],
@@ -1444,6 +1587,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="🎓 學術機構"    value={stats.academicInstitutions} sub="不在 BAS 體系，不判歇業" onClick={() => setActiveCategory('academic')} />
               <StatCard label="⚠️ 代碼待補正"  value={stats.invalidCodes} sub="代碼欄不是代碼，無法比對" accent="text-amber-600" onClick={() => setActiveCategory('invalidcode')} />
               <StatCard label="👤 公司自建"    value={stats.customerNoCode} sub="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
+              <StatCard label="🚫 已排除"      value={stats.dismissed ?? 0} sub="人工確認不是問題，可復原" onClick={() => setActiveCategory('dismissed')} />
             </div>
             <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
               ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。

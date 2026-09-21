@@ -431,3 +431,8 @@ export async function getCodeNotFoundList(options?: { refresh?: boolean }): Prom
   await setRedisValue(CODE_NOT_FOUND_KEY, out, 6 * 60 * 60_000)
   return out
 }
+
+/** 清掉「最近一次比對結果」快取——排除／復原後必須清，否則畫面還是舊清單 */
+export async function invalidateMonitorResultCache(): Promise<void> {
+  await setRedisValue(MONITOR_RESULT_KEY, null as any, 1)
+}
