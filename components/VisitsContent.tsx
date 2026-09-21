@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Visit } from '@/lib/system-notion'
 import type { OverviewAnalysis } from '@/app/api/ai/analyze/route'
+import PendingMatchPanel from '@/components/PendingMatchPanel'
 
 // Legacy 拜訪性質 badge colors (for old records)
 const LEGACY_STATUS_COLORS: Record<string, string> = {
@@ -304,6 +305,7 @@ export default function VisitsContent({
 
   // ── 批次補齊客戶關聯 ─────────────────────────────────────────
   const [autoLinkOpen,    setAutoLinkOpen]    = useState(false)
+  const [pendingMatchOpen, setPendingMatchOpen] = useState(false)
   const [autoLinkRunning, setAutoLinkRunning] = useState(false)
   const [autoLinkDone,    setAutoLinkDone]    = useState(false)
   const [autoLinkStats,   setAutoLinkStats]   = useState<{
@@ -915,6 +917,13 @@ export default function VisitsContent({
           {canManageAll && (
             <>
               <button
+                onClick={() => setPendingMatchOpen(true)}
+                className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
+                title="系統比對不出唯一客戶的紀錄，逐組選擇正確客戶"
+              >
+                <span className="text-base leading-none">🧩</span> 待確認配對
+              </button>
+              <button
                 onClick={() => { setAutoLinkOpen(true); setAutoLinkDone(false); setAutoLinkStats(null) }}
                 className="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-stone-50 px-4 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
                 title="自動將客情紀錄的簡稱對照完整客戶名稱並建立關聯"
@@ -1287,6 +1296,8 @@ export default function VisitsContent({
           onDelete={(id) => { setViewingVisit(null); setDeleteConfirmId(id) }}
         />
       )}
+
+      <PendingMatchPanel open={pendingMatchOpen} onClose={() => setPendingMatchOpen(false)} />
 
       {/* ── 批次補齊客戶關聯 Modal ── */}
       <AnimatePresence>

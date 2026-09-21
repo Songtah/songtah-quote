@@ -19,7 +19,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
-import { customerNameStem, pickUniqueCustomerMatch } from '@/lib/customer-name-match'
+import { customerNameStem, pickCustomerMatch } from '@/lib/customer-name-match'
+import { loadMatchContext, narrowingFor } from '@/lib/notion/match-context'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -49,6 +50,8 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     })
 
     const pages = response.results ?? []
+    // 消歧義脈絡：同一批次共用一份（快取），避免逐筆重算
+    const matchCtx = await loadMatchContext()
     const hasMore: boolean = response.has_more ?? false
     const nextCursor: string | null = response.next_cursor ?? null
 
@@ -75,7 +78,9 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
         customers = await searchSystemCustomers(stem)
       }
 
-      const match = pickUniqueCustomerMatch(rawName, customers)
+      const salesperson: string = page.properties?.['業務人員']?.select?.name ?? ''
+      const picked = pickCustomerMatch(rawName, customers, narrowingFor(matchCtx, salesperson))
+      const match = picked.match
       if (!match) {
         if (customers.length === 0) {
           noMatchCount++

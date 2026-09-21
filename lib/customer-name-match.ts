@@ -55,3 +55,75 @@ export function pickUniqueCustomerMatch<T extends { name: string }>(
   const hits = candidates.filter((c) => isSameCustomerName(rawName, c.name))
   return hits.length === 1 ? hits[0] : null
 }
+
+// ── 用業務脈絡消歧義 ─────────────────────────────────────────────────────────
+//
+// 名稱字根在主檔大量重複（兩字字根 5,174 個裡 1,086 個重複：全美 14 家、微笑 13、陽明 13），
+// 所以「候選不唯一就放棄」在實測 824 筆未配對紀錄中放掉了 457 筆。
+// 日報本身帶著「誰回報的」，順著這條線可以縮小候選——由強到弱四層，
+// 縮到剩一家才採用，縮不到唯一仍然放棄（不錯掛的原則不變）。
+
+export type MatchNarrowing = {
+  /** 該業務的轄區鍵「縣市|行政區」 */
+  territories?: Set<string>
+  /** 該業務轄區涵蓋的縣市 */
+  territoryCities?: Set<string>
+  /** 該業務實際活動的縣市（未設轄區者的替代訊號） */
+  activeCities?: Set<string>
+  /** 該業務曾拜訪過的客戶 id（去連字號） */
+  visitedCustomerIds?: Set<string>
+}
+
+export type MatchCandidate = { id: string; name: string; city?: string; district?: string }
+
+export type MatchOutcome<T> = {
+  /** 命中唯一客戶才有值 */
+  match: T | null
+  /** 判定說明，會寫進客情的「配對說明」供稽核：例「轄區相符：臺北市大安區」 */
+  reason: string
+  /** 通過名稱字根驗證的候選（供「待確認配對」清單顯示選項） */
+  candidates: T[]
+}
+
+const normId = (id: string) => (id ?? '').replace(/-/g, '')
+
+/**
+ * 名稱比對 ＋ 業務脈絡消歧義。narrow 未給（或該業務沒有任何脈絡）時，行為與
+ * pickUniqueCustomerMatch 完全相同，所以可以安全地逐一替換呼叫點。
+ */
+export function pickCustomerMatch<T extends MatchCandidate>(
+  rawName: string, candidates: T[], narrow?: MatchNarrowing,
+): MatchOutcome<T> {
+  const hits = candidates.filter((c) => isSameCustomerName(rawName, c.name))
+  if (hits.length === 0) return { match: null, reason: '查無名稱相符的客戶', candidates: [] }
+  if (hits.length === 1) return { match: hits[0], reason: '名稱唯一相符', candidates: hits }
+  if (!narrow) return { match: null, reason: `名稱相符 ${hits.length} 家，無法判斷`, candidates: hits }
+
+  const layers: { pick: (list: T[]) => T[]; label: (c: T) => string }[] = [
+    {
+      pick: (list) => list.filter((c) => c.city && c.district &&
+        narrow.territories?.has(`${c.city}|${c.district}`)),
+      label: (c) => `轄區相符：${c.city}${c.district}`,
+    },
+    {
+      pick: (list) => list.filter((c) => c.city && narrow.territoryCities?.has(c.city)),
+      label: (c) => `轄區縣市相符：${c.city}`,
+    },
+    {
+      pick: (list) => list.filter((c) => c.city && narrow.activeCities?.has(c.city)),
+      label: (c) => `業務活動縣市相符：${c.city}`,
+    },
+    {
+      pick: (list) => list.filter((c) => narrow.visitedCustomerIds?.has(normId(c.id))),
+      label: () => '該業務過去拜訪過這家',
+    },
+  ]
+
+  let pool = hits
+  for (const layer of layers) {
+    const next = layer.pick(pool)
+    if (next.length === 1) return { match: next[0], reason: layer.label(next[0]), candidates: hits }
+    if (next.length > 1) pool = next          // 縮小後仍多筆 → 帶著較小的池子往下一層
+  }
+  return { match: null, reason: `名稱相符 ${hits.length} 家，脈絡仍無法判斷`, candidates: hits }
+}

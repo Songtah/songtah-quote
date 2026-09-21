@@ -15,7 +15,8 @@ import { parseDailyReport, devStageForReaction } from '@/lib/line-daily-report'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/notion/visits'
 import { searchSystemCustomers, advanceCustomerDevStage } from '@/lib/notion/customers'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
-import { customerNameStem, pickUniqueCustomerMatch } from '@/lib/customer-name-match'
+import { customerNameStem, pickCustomerMatch } from '@/lib/customer-name-match'
+import { loadMatchContext, narrowingFor } from '@/lib/notion/match-context'
 import { detectCompetitors } from '@/lib/competitor-detector'
 import { getRedis } from '@/lib/notion/shared'
 
@@ -82,6 +83,10 @@ export async function ingestDailyReport(input: {
   const formOptions = input.dryRun ? null : await getVisitFormOptions()
   if (input.dryRun) result.planned = []
 
+  // 消歧義脈絡（轄區／活動縣市／歷史往來）：走快取，拿不到就退化成「唯一才配」的舊行為。
+  // 絕不在這裡重算——建檔路徑全掃客戶庫曾導致 webhook 60 秒逾時。
+  const narrow = narrowingFor(await loadMatchContext(), input.salesperson)
+
   // ── 第一階段：全部先建檔（最重要，確保紀錄進系統）──
   const createdVisits: { customerId?: string; unambiguous: boolean; reaction: string; name: string }[] = []
   for (const visit of byName) {
@@ -90,7 +95,11 @@ export async function ingestDailyReport(input: {
       let matches = await searchSystemCustomers(visit.customerName)
       const stem = customerNameStem(visit.customerName)
       if (matches.length === 0 && stem && stem !== visit.customerName) matches = await searchSystemCustomers(stem)
-      const matched = pickUniqueCustomerMatch(visit.customerName, matches)
+      const picked = pickCustomerMatch(visit.customerName, matches, narrow)
+      const matched = picked.match
+      if (!matched && picked.candidates.length > 1) {
+        console.log(`[LINE ingest] 待確認配對 ${input.salesperson} ${report.date} ${visit.customerName}：${picked.reason}`)
+      }
 
       // 配對到的客戶當天已有紀錄（名稱寫法不同但同一家）→ 略過
       const idKey = matched ? `id:${matched.id.replace(/-/g, '')}` : ''
