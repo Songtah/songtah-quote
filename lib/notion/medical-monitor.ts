@@ -370,3 +370,64 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
   await setRedisValue(KIND_TREND_KEY, out, 6 * 60 * 60_000)   // 6 小時；資料每月才變一次
   return out
 }
+
+// ─── 未在衛福部登錄（查無代碼）清單 ────────────────────────────────────────────
+//
+// 客戶主檔有機構代碼，但比對 BAS 查不到。實測 1,532 家，其中牙體技術所 1,109 家——
+// 使用者 2026-09-21 定調：這些多數是未立案（非法立案）機構，而本資料庫以合法立案為管理主體，
+// 因此**獨立區隔**：不計入歇業判定、不混進新增／減少趨勢圖，單獨一區呈現即可。
+//
+// 注意：監控紀錄 DB 每次全量比對都會把同一家再寫一列（9,185 列實為 1,532 家），
+// 故一律以機構代碼去重。
+export type CodeNotFoundRow = {
+  code: string
+  name: string
+  customerName: string
+  kind: MonitorTrendKind | '其他'
+  recordedAt: string
+}
+
+const CODE_NOT_FOUND_KEY = 'medical-monitor:code-not-found-v1'
+
+export async function getCodeNotFoundList(options?: { refresh?: boolean }): Promise<{ rows: CodeNotFoundRow[]; computedAt: string }> {
+  const dbId = process.env.NOTION_CLINIC_MONITOR_DB
+  if (!dbId) return { rows: [], computedAt: new Date().toISOString() }
+  if (!options?.refresh) {
+    const cached = await getRedisValue<{ rows: CodeNotFoundRow[]; computedAt: string }>(CODE_NOT_FOUND_KEY)
+    if (cached) return cached
+  }
+  const seen = new Map<string, CodeNotFoundRow>()
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('getCodeNotFoundList', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(dbId),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        filter: { property: '異動類型', select: { equals: '查無代碼' } },
+      })
+    )
+    for (const page of res.results ?? []) {
+      const code = getText(page, '機構代碼')
+      if (!code) continue
+      const name = getText(page, '健保名稱')
+      const customerName = getText(page, '客戶名稱')
+      const prev = seen.get(code)
+      const recordedAt = (page.created_time ?? '').slice(0, 10)
+      // 同一家留最新一次紀錄
+      if (prev && prev.recordedAt >= recordedAt) continue
+      seen.set(code, {
+        code, name, customerName,
+        kind: guessInstitutionKind(code, name || customerName),
+        recordedAt,
+      })
+    }
+    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
+  } while (cursor)
+
+  const rows = Array.from(seen.values()).sort((a, b) =>
+    a.kind === b.kind ? (a.customerName || a.name).localeCompare(b.customerName || b.name, 'zh-TW') : a.kind.localeCompare(b.kind))
+  const out = { rows, computedAt: new Date().toISOString() }
+  await setRedisValue(CODE_NOT_FOUND_KEY, out, 6 * 60 * 60_000)
+  return out
+}

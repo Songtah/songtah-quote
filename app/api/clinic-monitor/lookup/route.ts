@@ -8,6 +8,7 @@
  *   name  客戶/機構名稱（查詢用）
  *   code  系統現有機構代碼（用於比對建議）
  *   kind  機構類別（'2'=牙體技術所、'1'=醫院/診所）；省略則自動嘗試
+ *   city  客戶所在縣市；**有給就只採用同縣市結果，不跨縣市**（跨縣市同名多為不同家）
  *
  * Response:
  *   { found, mohwCode, status, closed, mohwName, address, candidates, suggestion }
@@ -21,12 +22,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export const POST = withApiAuth('admin', async (req: NextRequest) => {
-  let name = '', code = '', customerStatus = '', kind: string | undefined
+  let name = '', code = '', customerStatus = '', city = '', kind: string | undefined
   try {
     const body = await req.json()
     name = (body.name ?? '').toString().trim()
     code = (body.code ?? '').toString().trim()
     customerStatus = (body.customerStatus ?? '').toString().trim()
+    city = (body.city ?? '').toString().trim()
     kind = body.kind ? String(body.kind) : undefined
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
@@ -34,13 +36,18 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
   if (!name) return NextResponse.json({ error: '缺少機構名稱' }, { status: 400 })
 
   try {
-    const r = await lookupInstitution({ name, kind })
+    const r = await lookupInstitution({ name, kind, city })
 
     // 分類變更形態 + 建議（對齊形態表 6/7/8、5）
     // form: closure(6 真歇業) / recode(7 換照換碼) / unknown(8 查無) / status_mismatch(5) / ok
     let form: 'closure' | 'recode' | 'unknown' | 'status_mismatch' | 'ok'
     let suggestion: string
-    if (!r.found) {
+    if (!r.found && r.outOfCity) {
+      // 同縣市查無，只有外縣市有同名 → 不採用（跨縣市同名多為不同家）
+      form = 'unknown'
+      const others = (r.outOfCityCandidates ?? []).map((c: any) => `${c.name}（${c.address}）`).slice(0, 3).join('、')
+      suggestion = `${city} 查無此名稱${others ? `；其他縣市有同名機構：${others}，但跨縣市不採用` : ''}。建議人工至衛福部網站確認是否遷址或歇業。`
+    } else if (!r.found) {
       form = 'unknown'
       suggestion = '衛福部查無此名稱，可能已更名或歇業，建議人工至衛福部網站確認。'
     } else if (isClosedStatus(r.status)) {
@@ -70,6 +77,9 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
       mohwName:  r.name,
       address:   r.address,
       candidates: r.candidates,
+      outOfCity: r.outOfCity ?? false,
+      outOfCityCandidates: r.outOfCityCandidates ?? [],
+      searchedCity: city,
       suggestion,
     })
   } catch (e: any) {

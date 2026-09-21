@@ -117,6 +117,23 @@ export interface HospitalUnverified {
   institutionCode:  string
 }
 
+/**
+ * 狀態 9：同縣市有同名機構（2026-09-21 新增）
+ * 客戶代碼在 BAS 查不到，但**同一個縣市內**仍有同名且現行的機構（且不只一家，
+ * 唯一一家的情形已由「更換代碼」處理）→ 這家很可能只是換照或分院重編，不是歇業。
+ * 鐵則：比對範圍限原縣市，**不得跨縣市**——跨縣市同名多半是不同家（菜市場名）。
+ */
+export interface SameCityCandidate {
+  customerId:       string
+  customerName:     string
+  customerCity:     string
+  customerDistrict: string
+  customerType:     string
+  customerStatus:   string
+  institutionCode:  string
+  candidates:       { code: string; name: string; address: string }[]
+}
+
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
@@ -173,6 +190,7 @@ export interface MonitorStats {
   newThisMonthHospitals: number
   newOpeningExcludedExisting: number   // 名稱＋地區已是現有客戶而被排除的「新開業」數
   suspectedClosures:   number
+  sameCityCandidates:  number
   codeNotFound:        number
   inconsistentData:    number
   codeChanged:         number
@@ -211,6 +229,7 @@ export interface MonitorResult {
     hospitals: NewOpening[]
   }
   suspectedClosures:     SuspectedClosure[]
+  sameCityCandidates:    SameCityCandidate[]
   codeNotFound:          CodeNotFound[]
   selfManagedCustomers:  SelfManagedCustomer[]
   inconsistentData:      InconsistentData[]
@@ -349,7 +368,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
       hasSnapshot: false,
       stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      suspectedClosures: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
+      suspectedClosures: [], sameCityCandidates: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
     }
@@ -420,6 +439,14 @@ export async function computeMonitor(): Promise<MonitorResult> {
     fallbackByArea.set(areaKey, entry)
   }
 
+  /**
+   * 同縣市同名且現行的機構（不含自己）。**查詢範圍限原縣市，不得跨縣市**——
+   * 使用者 2026-09-21 定調：跨縣市同名多為不同家，比對到只會造成誤判。
+   */
+  const sameCityOpen = (name: string, city: string, excludeCode: string) =>
+    (cityIndex.get(`${normalizeName(name)}|${tw(city)}`) ?? [])
+      .filter((x) => x.code !== excludeCode && !x.expired)
+
   // 換照找新碼：先比「同名＋縣市＋行政區」；找不到再放寬到「同名＋同縣市」（跨行政區遷址），
   // 但同縣市需「唯一」一個現行同名碼才採信，避免菜市場名誤判。跨縣市不放寬（多為不同家）。
   const findReplacement = (name: string, city: string, district: string, excludeCode: string) => {
@@ -434,6 +461,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
   // ── 逐一處理有代碼的客戶 ───────────────────────────────────────────────
   const normalOperating:   NormalOperating[]   = []
   const suspectedClosures: SuspectedClosure[]  = []
+  const sameCityCandidates: SameCityCandidate[] = []
   const codeNotFound:      CodeNotFound[]      = []
   const inconsistentData:  InconsistentData[]  = []
   const codeChanged:       CodeChanged[]       = []
@@ -563,8 +591,20 @@ export async function computeMonitor(): Promise<MonitorResult> {
         customerType: c.type, customerStatus: c.status,
         institutionCode: code,
       })
+    } else if (sameCityOpen(c.name, c.city, code).length > 0) {
+      // 同縣市有同名且現行的機構（不只一家，唯一者已走「更換代碼」）→ 很可能是換照／分院重編，
+      // 不列歇業候選，交人工從候選碼中挑。**只查原縣市，不跨縣市**（跨縣市同名多為不同家）。
+      sameCityCandidates.push({
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        institutionCode: code,
+        candidates: sameCityOpen(c.name, c.city, code)
+          .slice(0, 5)
+          .map((x) => ({ code: x.code, name: x.entry.name, address: x.entry.address })),
+      })
     } else {
-      // 歇業候選（代碼消失且無同地區替代碼）
+      // 歇業候選（代碼消失、同地區無替代碼、同縣市也查無同名）
       suspectedClosures.push({
         customerId: c.id, customerName: c.name,
         customerCity: c.city, customerDistrict: c.district,
@@ -651,6 +691,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
     newOpeningExcludedExisting: excludedExisting,
     suspectedClosures:   suspectedClosures.length,
+    sameCityCandidates:  sameCityCandidates.length,
     academicInstitutions: academicInstitutions.length,
     invalidCodes:        invalidCodes.length,
     codeNotFound:        0,
@@ -668,6 +709,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
       hospitals: newHospital.slice(0, 100),
     },
     suspectedClosures,
+    sameCityCandidates,
     academicInstitutions,
     invalidCodes,
     codeNotFound:         [],
