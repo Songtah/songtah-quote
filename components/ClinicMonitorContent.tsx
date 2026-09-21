@@ -1085,8 +1085,12 @@ function UnregisteredBlock({ byKind, total }: { byKind?: Record<string, number>;
         ))}
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
-        客戶主檔有機構代碼、但衛福部查不到。牙體技術所佔大宗，多為<strong className="text-stone-500">未立案機構</strong>——
-        本資料庫以合法立案者為管理主體，故此區獨立呈現：<strong className="text-stone-500">不納入歇業判定，也不計入上方新增／減少趨勢</strong>。
+        統計規則：客戶主檔<strong className="text-stone-500">有填機構代碼</strong>，但該代碼
+        <strong className="text-stone-500">不在目前的衛福部開業快照裡</strong>；以機構代碼去重，一家只算一次。
+        監控紀錄裡的「查無代碼」是歷史事件日誌（同一家每次比對都會再寫一列，且 2026-06 快照抓取不完整時整批誤記），
+        因此本區一律<strong className="text-stone-500">拿最新快照重新驗證</strong>後才計數。
+        這些多為未立案機構，本資料庫以合法立案者為管理主體，故獨立呈現：
+        <strong className="text-stone-500">不納入歇業判定，也不計入上方新增／減少趨勢</strong>。
       </p>
 
       {open && (

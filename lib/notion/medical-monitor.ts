@@ -262,7 +262,7 @@ const emptyKinds = () => Object.fromEntries(
   TREND_KINDS.map((k) => [k, { added: 0, removed: 0 }])
 ) as MonitorKindTrendPoint['kinds']
 
-const KIND_TREND_KEY = 'medical-monitor:kind-trend-v1'
+const KIND_TREND_KEY = 'medical-monitor:kind-trend-v2'   // v2＝存量改以目前快照複驗
 
 export async function getMonitorKindTrend(months = 6, options?: { refresh?: boolean }): Promise<MonitorKindTrend> {
   const dbId = process.env.NOTION_CLINIC_MONITOR_DB
@@ -332,44 +332,21 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
     firstWithData.baseline = true
   }
 
-  // 沒有月份的「查無代碼」存量——必須以機構代碼去重：
-  // 每次全量比對都會把同一家重寫一列，實測 9,185 列其實只有 1,532 家。
-  const stockCodes = new Set<string>()
-  const stockKinds: Record<string, Set<string>> = {}
-  let cursor: string | undefined
-  do {
-    const res: any = await notionCallWithRetry('getMonitorKindTrend:stock', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(dbId),
-        page_size: 100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-        filter: {
-          and: [
-            { property: '異動類型', select: { equals: '查無代碼' } },
-            { property: '月份', date: { is_empty: true } },
-          ],
-        },
-      })
-    )
-    for (const page of res.results ?? []) {
-      const code = getText(page, '機構代碼')
-      if (!code || stockCodes.has(code)) continue
-      stockCodes.add(code)
-      const kind = guessInstitutionKind(code, getText(page, '健保名稱') || getText(page, '客戶名稱'))
-      ;(stockKinds[kind] ??= new Set<string>()).add(code)
-    }
-    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
-  } while (cursor)
-  stock = stockCodes.size
+  // 存量改用 getCodeNotFoundList：它會拿目前快照再驗一次，
+  // 濾掉 2026-06 快照不完整造成的整批假警報（1,532 → 127）。
+  const verified = await getCodeNotFoundList()
+  const stockKindCount: Record<string, number> = {}
+  for (const r of verified.rows) stockKindCount[r.kind] = (stockKindCount[r.kind] ?? 0) + 1
+  stock = verified.rows.length
 
   const out: MonitorKindTrend = {
     points,
     codeNotFoundStock: stock,
     codeNotFoundByKind: {
-      牙醫診所: stockKinds['牙醫診所']?.size ?? 0,
-      牙體技術所: stockKinds['牙體技術所']?.size ?? 0,
-      醫院: stockKinds['醫院']?.size ?? 0,
-      其他: stockKinds['其他']?.size ?? 0,
+      牙醫診所: stockKindCount['牙醫診所'] ?? 0,
+      牙體技術所: stockKindCount['牙體技術所'] ?? 0,
+      醫院: stockKindCount['醫院'] ?? 0,
+      其他: stockKindCount['其他'] ?? 0,
     },
     computedAt: new Date().toISOString(),
   }
@@ -393,13 +370,37 @@ export type CodeNotFoundRow = {
   recordedAt: string
 }
 
-const CODE_NOT_FOUND_KEY = 'medical-monitor:code-not-found-v1'
+const CODE_NOT_FOUND_KEY = 'medical-monitor:code-not-found-v2'   // v2＝以目前快照複驗
 
-export async function getCodeNotFoundList(options?: { refresh?: boolean }): Promise<{ rows: CodeNotFoundRow[]; computedAt: string }> {
+/** 目前快照裡的所有機構代碼；讀不到回空集合（此時不做複驗，寧可多列也不少列） */
+function loadSnapshotCodes(): Set<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readFileSync } = require('fs') as typeof import('fs')
+    const path = require('path') as typeof import('path')
+    const snap = JSON.parse(readFileSync(path.join(process.cwd(), 'data', 'clinic-snapshot.json'), 'utf8'))
+    return new Set(Object.keys(snap?.codes ?? {}))
+  } catch {
+    return new Set<string>()
+  }
+}
+
+/**
+ * 「有機構代碼但 BAS 查無」清單。
+ *
+ * ⚠️ 監控紀錄 DB 裡的「查無代碼」是**歷史事件日誌**，不是現況：
+ * 2026-06 那次比對牙技所與醫院的快照抓取不完整，整批 1,406 筆被記成查無，
+ * 這些列沒有月份、也沒有任何機制回頭清掉。實測 1,532 個代碼裡有 1,405 個
+ * 在**目前**快照中其實查得到（技工所 1,093、醫院 185）。
+ * 因此本函式一律拿**目前的快照**再驗一次，只回「現在仍然查無」者（實測 127 家）。
+ */
+export async function getCodeNotFoundList(options?: { refresh?: boolean }): Promise<{
+  rows: CodeNotFoundRow[]; staleCleared: number; computedAt: string
+}> {
   const dbId = process.env.NOTION_CLINIC_MONITOR_DB
-  if (!dbId) return { rows: [], computedAt: new Date().toISOString() }
+  if (!dbId) return { rows: [], staleCleared: 0, computedAt: new Date().toISOString() }
   if (!options?.refresh) {
-    const cached = await getRedisValue<{ rows: CodeNotFoundRow[]; computedAt: string }>(CODE_NOT_FOUND_KEY)
+    const cached = await getRedisValue<{ rows: CodeNotFoundRow[]; staleCleared: number; computedAt: string }>(CODE_NOT_FOUND_KEY)
     if (cached) return cached
   }
   const seen = new Map<string, CodeNotFoundRow>()
@@ -431,9 +432,14 @@ export async function getCodeNotFoundList(options?: { refresh?: boolean }): Prom
     cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
   } while (cursor)
 
-  const rows = Array.from(seen.values()).sort((a, b) =>
-    a.kind === b.kind ? (a.customerName || a.name).localeCompare(b.customerName || b.name, 'zh-TW') : a.kind.localeCompare(b.kind))
-  const out = { rows, computedAt: new Date().toISOString() }
+  // 以目前快照複驗：代碼現在查得到的，代表當初那筆是快照不完整造成的假警報
+  const snapshotCodes = loadSnapshotCodes()
+  const all = Array.from(seen.values())
+  const rows = (snapshotCodes.size ? all.filter((r) => !snapshotCodes.has(r.code)) : all)
+    .sort((a, b) => a.kind === b.kind
+      ? (a.customerName || a.name).localeCompare(b.customerName || b.name, 'zh-TW')
+      : a.kind.localeCompare(b.kind))
+  const out = { rows, staleCleared: all.length - rows.length, computedAt: new Date().toISOString() }
   await setRedisValue(CODE_NOT_FOUND_KEY, out, 6 * 60 * 60_000)
   return out
 }
