@@ -1025,7 +1025,7 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">📈 近半年新增／減少（依機構類別）</p>
         <span className="text-[11px] text-stone-400">
-          新增＝比對後新出現的機構｜減少＝原有機構代碼但查不到（停業或查無）
+          新增＝本月快照有、上月沒有｜減少＝上月有、本月沒有（含客戶與非客戶）
         </span>
         <button
           onClick={onRefresh}
@@ -1099,9 +1099,13 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
             <p>
               <span className="mr-2"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" /> 新增</span>
               <span><span className="inline-block h-2 w-2 rounded-sm bg-red-300 align-middle" /> 減少</span>
-              {points.some((p) => p.baseline) && <span className="ml-3">* 首次建立快照的基準月，數字僅供參考</span>}
+              {points.some((p) => p.baseline) && <span className="ml-3">* 基準月（首次建立快照、無上月可比），不計入</span>}
             </p>
-            <p>未在衛福部登錄（未立案）者不計入上圖，另見下方獨立區塊。</p>
+            <p>
+              本圖是<strong className="text-stone-500">衛福部名冊</strong>的月對月變化（本月有上月沒有＝新增、上月有本月沒有＝減少），
+              與我們在系統裡人工標記的機構狀態無關——人工標記只改客戶主檔，不代表衛福部名冊有異動。
+              未立案機構（代碼從未登錄）也不計入，見下方獨立區塊。
+            </p>
           </div>
         </>
       )}

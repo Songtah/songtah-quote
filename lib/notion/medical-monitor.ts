@@ -222,10 +222,16 @@ export async function getClinicMonitorRecords(months = 3): Promise<ClinicMonitor
 // ─── 近半年「新增／減少」趨勢（依機構類別）──────────────────────────────────────
 //
 // 使用者定義（2026-09-21）：
-//   新增 ＝ 比對後增加的量　　　　　　　　　　　　→ 異動類型「新開業」
-//   減少 ＝ 原先有機構代碼、比對後遺失或查不到　→ 異動類型「新增停業」與「查無代碼」
-// 「恢復開業」刻意不計入新增：2026-06 首次建立快照時整批 7,839 筆都被標成恢復開業，
-// 那是基準月的產物不是真實異動；之後每月只有個位數，計入只會讓圖失真。
+//   新增 ＝ 比對後增加的量　　　　　　　　　　　　→ 本月快照有、上月沒有
+//   減少 ＝ 原先有機構代碼、比對後遺失或查不到　→ 上月快照有、本月沒有
+//
+// 監控紀錄把同一件事依「是不是我們的客戶」再拆成兩種標籤，四種都要計：
+//   新增：新開業（非客戶）＋ 恢復開業（是客戶）
+//   減少：停業（非客戶）　＋ 新增停業（是客戶）
+// 只計其中一半會讓兩條線的母體不同——2026-07 曾出現「減少 34 全是客戶、新增 8 全是非客戶」。
+//
+// 本圖是**衛福部市場面**的變化，與我們在系統裡人工標記的機構狀態無關：
+// 人工標記只改客戶主檔（影響本頁其他統計），不代表衛福部名冊有異動，計入會重複計算。
 //
 // 「查無代碼」是**存量**不是月流量：實測 1,920 筆全部沒有月份欄位、且同一天產生
 // （全量比對的結果）。有月份者計入該月減少，沒月份者另外回傳 codeNotFoundStock，
@@ -302,8 +308,9 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
               { property: '月份', date: { equals: `${month}-01` } },
               { or: [
                 { property: '異動類型', select: { equals: '新開業' } },
+                { property: '異動類型', select: { equals: '恢復開業' } },
+                { property: '異動類型', select: { equals: '停業' } },
                 { property: '異動類型', select: { equals: '新增停業' } },
-                { property: '異動類型', select: { equals: '查無代碼' } },
               ] },
             ],
           },
@@ -316,20 +323,15 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
         const name = getText(page, '健保名稱') || getText(page, '客戶名稱')
         const kind = guessInstitutionKind(code, name)
         if (kind === '其他') continue
-        if (type === '新開業') kinds[kind].added++
-        else kinds[kind].removed++          // 新增停業 / 查無代碼
+        if (type === '新開業' || type === '恢復開業') kinds[kind].added++
+        else kinds[kind].removed++          // 停業 / 新增停業
       }
       cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
     } while (cursor)
-    points.push({ month, baseline: false, kinds })
-    void total
-  }
-
-  // 首次快照月：只有新增、沒有減少（沒有前一個月可比），標記供 UI 註記，避免被誤讀成「那個月暴增」
-  const firstWithData = points.find((p) =>
-    TREND_KINDS.some((k) => p.kinds[k].added > 0 || p.kinds[k].removed > 0))
-  if (firstWithData && TREND_KINDS.every((k) => firstWithData.kinds[k].removed === 0)) {
-    firstWithData.baseline = true
+    // 首次建立快照的月份沒有「上月」可比，整批被標成恢復開業（實測 2026-06 有 7,905 筆）。
+    // 那不是真實異動，連同數值一起歸零，只保留標記——否則長條圖被它撐爆，其餘月份全看不見。
+    const isBaseline = total > 500
+    points.push({ month, baseline: isBaseline, kinds: isBaseline ? emptyKinds() : kinds })
   }
 
   // 未立案（代碼從未在 BAS 出現）已改由比對引擎直接產出（MonitorResult.unregistered），
