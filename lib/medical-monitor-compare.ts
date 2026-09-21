@@ -194,6 +194,7 @@ export interface MonitorStats {
   suspectedClosures:   number
   sameCityCandidates:  number
   dismissed:           number   // 人工排除、不再列出的筆數
+  inactiveExcluded:    number   // 已歇業／停業／撤銷而未納入任何統計的客戶數
   codeNotFound:        number
   inconsistentData:    number
   codeChanged:         number
@@ -410,7 +411,16 @@ export async function computeMonitor(): Promise<MonitorResult> {
   } catch { /* 無學校參照不影響其他比對 */ }
 
   // 2. 載入崧達客戶（全部，含無代碼）
-  const allCustomers = await getCustomersWithCodes()
+  const allCustomersRaw = await getCustomersWithCodes()
+
+  /**
+   * 本頁所有統計一律排除「已歇業／停業／撤銷」的客戶（使用者 2026-09-21 定調）——
+   * 這些是已結案的機構，留在分母裡會讓覆蓋率、客戶數、各類候選數全部失真。
+   * 但「已是現有客戶」的去重判斷仍用完整名單（allCustomersRaw），
+   * 否則歇業客戶的地址會被當成全新機構、重複列入待開發並可能被重新匯入。
+   */
+  const allCustomers = allCustomersRaw.filter((c) => !isInactiveCustomer(c.status))
+  const inactiveExcluded = allCustomersRaw.length - allCustomers.length
 
   const customerByCode:   Map<string, typeof allCustomers[0]> = new Map()
   const customersWithCode: typeof allCustomers = []
@@ -641,24 +651,25 @@ export async function computeMonitor(): Promise<MonitorResult> {
   // 每筆標 isNewThisMonth（本月相較上月 BAS 快照新出現者），前端可切「全部／本月新增／既有未開發」。
   // 排除「代碼已是客戶」與「名稱＋縣市＋行政區已是現有客戶」者（避免 CRM 代碼未同步/換照/同名同區誤列）。
   const customerAreaSet = new Set(
-    allCustomers.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
+    allCustomersRaw.filter((c) => c.name).map((c) => areaKeyOf(c.name, c.city, c.district))
   )
   const customerNameCitySet = new Set(
-    allCustomers
+    allCustomersRaw
       .filter((c) => c.name && c.city)
       .map((c) => `${institutionNameKey(c.name)}|${tw(c.city)}`)
   )
   const customerLooseNameSet = new Set(
-    allCustomers
+    allCustomersRaw
       .filter((c) => c.name && (!c.city || !c.district))
       .map((c) => institutionNameKey(c.name))
   )
 
   const newOpenings: NewOpening[] = []
   let excludedExisting = 0
+  const allCustomerCodes = new Set(allCustomersRaw.map((c) => c.institutionCode.trim()).filter(Boolean))
   for (const [code, entry] of Array.from(snapshotByCode)) {
     if (isExpired(entry.termDate)) continue
-    if (customerByCode.has(code)) continue
+    if (allCustomerCodes.has(code)) continue   // 含已歇業客戶：代碼已在庫，不是待開發
     const { city, district } = parseAddress(entry.address)
     const nameKey = institutionNameKey(entry.name)
     // 已是現有客戶 → 不列入新開業；補強 city/name 與資料缺漏情境，避免 CRM 代碼未同步時漏排。
@@ -724,6 +735,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     suspectedClosures:   suspectedClosuresKept.length,
     sameCityCandidates:  sameCityKept.length,
     dismissed:           dismissedActive,
+    inactiveExcluded,
     academicInstitutions: academicInstitutions.length,
     invalidCodes:        invalidKept.length,
     codeNotFound:        0,

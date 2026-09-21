@@ -901,7 +901,7 @@ function Dashboard({ history }: { history: HistoryEntry[] }) {
   const N = (h: HistoryEntry, k: keyof HistoryEntry) => Number(h[k]) || 0
   return (
     <div>
-      <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失</span></p>
+      <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失；客戶數已排除已歇業／停業／撤銷</span></p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CATS.map(cat => {
           const vals = series.map(h => N(h, cat.total))
@@ -1234,6 +1234,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     suspectedClosures: readNumber(value.suspectedClosures),
     sameCityCandidates: readNumber(value.sameCityCandidates),
     dismissed: readNumber(value.dismissed),
+    inactiveExcluded: readNumber(value.inactiveExcluded),
     codeNotFound: readNumber(value.codeNotFound),
     inconsistentData: readNumber(value.inconsistentData),
     codeChanged: readNumber(value.codeChanged),
