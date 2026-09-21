@@ -10,7 +10,7 @@ import { getCachedMonitorResult, setCachedMonitorResult } from '@/lib/system-not
 import { computeMonitor } from '@/lib/medical-monitor-compare'
 
 export type {
-  SnapshotEntry, Snapshot, InstitutionCategory, NewOpening, NormalOperating, SuspectedClosure, CodeChanged, HospitalUnverified, CodeNotFound, SelfManagedCustomer, InconsistentData, MonitorStats, AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry, MonitorResult,
+  SnapshotEntry, Snapshot, InstitutionCategory, NewOpening, NormalOperating, SuspectedClosure, CodeChanged, HospitalUnverified, CodeNotFound, SelfManagedCustomer, InconsistentData, MonitorStats, AcademicInstitution, InvalidCode, SameCityCandidate, UnregisteredInstitution, MonitorDismissEntry, MonitorResult,
 } from '@/lib/medical-monitor-compare'
 
 export const GET = withApiAuth('admin', async (req: NextRequest) => {

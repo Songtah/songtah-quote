@@ -332,12 +332,9 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
     firstWithData.baseline = true
   }
 
-  // 存量改用 getCodeNotFoundList：它會拿目前快照再驗一次，
-  // 濾掉 2026-06 快照不完整造成的整批假警報（1,532 → 127）。
-  const verified = await getCodeNotFoundList()
+  // 未立案（代碼從未在 BAS 出現）已改由比對引擎直接產出（MonitorResult.unregistered），
+  // 由頁面的獨立區塊呈現，這裡不再掃監控日誌推導（省一次全庫掃描）。
   const stockKindCount: Record<string, number> = {}
-  for (const r of verified.rows) stockKindCount[r.kind] = (stockKindCount[r.kind] ?? 0) + 1
-  stock = verified.rows.length
 
   const out: MonitorKindTrend = {
     points,

@@ -5,7 +5,7 @@ import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
-  AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry,
+  AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry, UnregisteredInstitution,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ function StatusEditor({ customerId, current, onResolved }: {
 // 人已確認不是問題的候選，按一下就不再出現。排除鍵含當下機構代碼，
 // 代碼一變（換照、補正）該筆會自動重新出現——排除不是永久埋葬。
 function DismissButton({ category, customerId, customerName, institutionCode, onDismissed }: {
-  category: 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity'
+  category: 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity' | 'unregistered'
   customerId: string; customerName: string; institutionCode?: string
   onDismissed?: (customerId: string) => void
 }) {
@@ -340,6 +340,7 @@ function useHidden() {
 const DISMISS_CATEGORY_LABEL: Record<string, string> = {
   closure: '疑似歇業', codechange: '更換代碼', hospital: '醫院待確認',
   inconsistent: '資料不一致', invalidcode: '代碼待補正', samecity: '同縣市同名',
+  unregistered: '未在衛福部登錄',
 }
 
 function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onRestored?: (key: string) => void }) {
@@ -1100,7 +1101,7 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
               <span><span className="inline-block h-2 w-2 rounded-sm bg-red-300 align-middle" /> 減少</span>
               {points.some((p) => p.baseline) && <span className="ml-3">* 首次建立快照的基準月，數字僅供參考</span>}
             </p>
-            <p>未在衛福部登錄者（查無代碼）不計入上圖，另見下方獨立區塊。</p>
+            <p>未在衛福部登錄（未立案）者不計入上圖，另見下方獨立區塊。</p>
           </div>
         </>
       )}
@@ -1170,6 +1171,8 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         </div>
       )}
       <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+        <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
+        下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
         衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
         本功能<strong className="text-stone-500">只查證與記錄，不自動改客戶主檔</strong>——
         查出不符者請到各分類用「查衛福部 → 套用衛福部狀態」逐筆確認。
@@ -1184,58 +1187,50 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
 // 本資料庫以合法立案為管理主體，故獨立區隔——不納入歇業判定、不計入新增／減少趨勢。
 interface CodeNotFoundRow { code: string; name: string; customerName: string; kind: string; recordedAt: string }
 
-function UnregisteredBlock({ byKind, total }: { byKind?: Record<string, number>; total: number }) {
+function UnregisteredBlock({ items }: { items: UnregisteredInstitution[] }) {
+  const { visible, hide } = useHidden()
   const [open, setOpen] = useState(false)
-  const [rows, setRows] = useState<CodeNotFoundRow[] | null>(null)
-  const [loading, setLoading] = useState(false)
   const [kindFilter, setKindFilter] = useState<string>('全部')
+  const rows = visible(items)
+  const kindOf = (r: UnregisteredInstitution) =>
+    r.customerType === '牙體技術所' || r.customerType === '鑲牙所' ? '牙體技術所'
+      : r.customerType === '醫院' ? '醫院'
+        : r.customerType === '牙醫診所' || r.customerType === '衛生所' ? '牙醫診所' : '其他'
+  const byKind = rows.reduce<Record<string, number>>((m, r) => ((m[kindOf(r)] = (m[kindOf(r)] ?? 0) + 1), m), {})
+  const shown = rows.filter(r => kindFilter === '全部' || kindOf(r) === kindFilter)
 
-  async function load() {
-    setOpen(true)
-    if (rows) return
-    setLoading(true)
-    try {
-      const res = await fetch('/api/admin/medical-monitor/code-not-found')
-      const data = await res.json()
-      if (res.ok && Array.isArray(data.rows)) setRows(data.rows as CodeNotFoundRow[])
-    } catch { /* 靜默 */ }
-    finally { setLoading(false) }
-  }
-
-  if (!total) return null
-  const shown = (rows ?? []).filter(r => kindFilter === '全部' || r.kind === kindFilter)
+  if (rows.length === 0) return null
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-semibold text-stone-700">🏚️ 未在衛福部登錄（查無代碼）</span>
-        <span className="text-2xl font-bold tabular-nums text-stone-800">{total.toLocaleString()}</span>
+        <span className="text-sm font-semibold text-stone-700">🏚️ 未在衛福部登錄（未立案）</span>
+        <span className="text-2xl font-bold tabular-nums text-stone-800">{rows.length.toLocaleString()}</span>
         <span className="text-xs text-stone-400">家</span>
         <button
-          onClick={load}
+          onClick={() => setOpen(true)}
           className="ml-auto rounded-full bg-stone-50 px-3 py-1 text-[11px] font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95"
         >查看清單</button>
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         {(['牙體技術所', '牙醫診所', '醫院', '其他'] as const).map(k => (
           <span key={k} className="rounded-full bg-stone-50 px-2.5 py-1 text-[11px] text-stone-500">
-            {k} <strong className="tabular-nums text-stone-700">{byKind?.[k] ?? 0}</strong>
+            {k} <strong className="tabular-nums text-stone-700">{byKind[k] ?? 0}</strong>
           </span>
         ))}
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
-        統計規則：客戶主檔<strong className="text-stone-500">有填機構代碼</strong>，但該代碼
-        <strong className="text-stone-500">不在目前的衛福部開業快照裡</strong>；以機構代碼去重，一家只算一次。
-        監控紀錄裡的「查無代碼」是歷史事件日誌（同一家每次比對都會再寫一列，且 2026-06 快照抓取不完整時整批誤記），
-        因此本區一律<strong className="text-stone-500">拿最新快照重新驗證</strong>後才計數。
-        這些多為未立案機構，本資料庫以合法立案者為管理主體，故獨立呈現：
-        <strong className="text-stone-500">不納入歇業判定，也不計入上方新增／減少趨勢</strong>。
+        統計規則：客戶有填機構代碼，但該代碼<strong className="text-stone-500">從來沒有在衛福部出現過</strong>
+        （不在目前快照，也不在歷次抓取的代碼快取）——多為未立案機構自編的號碼，技工所為大宗。
+        與「疑似歇業」的差別在於<strong className="text-stone-500">曾不曾登錄過</strong>：
+        曾登錄後消失才算歇業要追，從未登錄的不用追。本區<strong className="text-stone-500">不納入歇業判定，也不計入新增／減少趨勢</strong>；
+        已歇業／停業／撤銷的客戶不會出現在這裡（全頁統計一律排除）。
       </p>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={() => setOpen(false)}>
           <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-[#fdfdfb] shadow-2xl ring-1 ring-stone-900/[0.06]" onClick={e => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between border-b border-stone-900/[0.06] px-5 py-4">
-              <h2 className="text-lg font-bold text-stone-800">🏚️ 未在衛福部登錄（{total.toLocaleString()} 家）</h2>
+              <h2 className="text-lg font-bold text-stone-800">🏚️ 未在衛福部登錄（{rows.length.toLocaleString()} 家）</h2>
               <button onClick={() => setOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100">✕</button>
             </div>
             <div className="flex flex-wrap gap-2 border-b border-stone-100 px-5 py-3">
@@ -1251,21 +1246,31 @@ function UnregisteredBlock({ byKind, total }: { byKind?: Record<string, number>;
               <span className="ml-auto self-center text-[11px] text-stone-400">{shown.length} 筆</span>
             </div>
             <div className="overflow-y-auto p-5">
-              {loading ? <div className="py-12 text-center text-sm text-stone-400">載入中…</div>
-                : shown.length === 0 ? <div className="py-12 text-center text-sm text-stone-400">沒有資料</div>
-                  : (
-                    <div className="divide-y divide-stone-50 overflow-hidden rounded-2xl border border-stone-200">
-                      {shown.slice(0, 400).map(r => (
-                        <div key={r.code} className="flex items-center gap-3 px-4 py-2.5">
-                          <span className="shrink-0 rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{r.kind}</span>
-                          <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{r.customerName || r.name}</span>
-                          <span className="shrink-0 font-mono text-[10px] text-stone-400">{r.code}</span>
-                          <span className="shrink-0 text-[10px] text-stone-300">{r.recordedAt}</span>
+              {shown.length === 0 ? <div className="py-12 text-center text-sm text-stone-400">沒有資料</div> : (
+                <div className="divide-y divide-stone-50 overflow-hidden rounded-2xl border border-stone-200">
+                  {shown.slice(0, 400).map(r => (
+                    <div key={r.customerId} className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="shrink-0 rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{kindOf(r)}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-stone-900">{r.customerName}</span>
+                            <span className="font-mono text-[10px] text-stone-400">{r.institutionCode}</span>
+                            {r.customerStatus && <span className="text-[10px] text-stone-400">{r.customerStatus}</span>}
+                          </div>
+                          <div className="text-xs text-stone-400">{r.customerCity}{r.customerDistrict && ` ${r.customerDistrict}`}</div>
                         </div>
-                      ))}
-                      {shown.length > 400 && <div className="px-4 py-2 text-center text-[11px] text-stone-400">僅顯示前 400 筆</div>}
+                        <a href={`/customers/${r.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 underline hover:text-stone-600">客戶頁</a>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <MohwLookupButton name={r.customerName} code={r.institutionCode} customerStatus={r.customerStatus} city={r.customerCity} customerId={r.customerId} />
+                        <DismissButton category="unregistered" customerId={r.customerId} customerName={r.customerName} institutionCode={r.institutionCode} onDismissed={hide} />
+                      </div>
                     </div>
-                  )}
+                  ))}
+                  {shown.length > 400 && <div className="px-4 py-2 text-center text-[11px] text-stone-400">僅顯示前 400 筆</div>}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1371,6 +1376,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     newOpeningExcludedExisting: readNumber(value.newOpeningExcludedExisting),
     suspectedClosures: readNumber(value.suspectedClosures),
     sameCityCandidates: readNumber(value.sameCityCandidates),
+    unregistered: readNumber(value.unregistered),
     dismissed: readNumber(value.dismissed),
     inactiveExcluded: readNumber(value.inactiveExcluded),
     codeNotFound: readNumber(value.codeNotFound),
@@ -1403,6 +1409,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
   const invalidCodes = isArray(value.invalidCodes) ? (value.invalidCodes as InvalidCode[]) : []
   const sameCityCandidates = isArray(value.sameCityCandidates) ? (value.sameCityCandidates as SameCityCandidate[]) : []
   const dismissed = isArray(value.dismissed) ? (value.dismissed as MonitorDismissEntry[]) : []
+  const unregistered = isArray(value.unregistered) ? (value.unregistered as UnregisteredInstitution[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -1417,6 +1424,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     },
     suspectedClosures: value.suspectedClosures as SuspectedClosure[],
     sameCityCandidates,
+    unregistered,
     dismissed,
     codeNotFound: value.codeNotFound as CodeNotFound[],
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
@@ -1765,7 +1773,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         />
       )}
 
-      <UnregisteredBlock byKind={kindTrend?.codeNotFoundByKind} total={kindTrend?.codeNotFoundStock ?? 0} />
+      {result && <UnregisteredBlock items={result.unregistered ?? []} />}
 
       {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
       {result?.hasSnapshot && (

@@ -136,6 +136,24 @@ export interface SameCityCandidate {
   candidates:       { code: string; name: string; address: string }[]
 }
 
+/**
+ * 狀態 10：未在衛福部登錄（2026-09-21 新增，取代原本由監控日誌推導的「查無代碼」）
+ *
+ * 客戶有填機構代碼，但該代碼**從來沒有**在 BAS 出現過（不在目前快照、也不在歷次抓取的代碼快取）。
+ * 這類多是未立案機構自編的號碼（技工所為大宗），與「曾經登錄、後來消失」的歇業候選本質不同：
+ * 歇業要追、未立案不用追，混在一起會讓歇業清單永遠清不完。
+ * 本資料庫以合法立案者為管理主體，故獨立區隔、不納入歇業判定。
+ */
+export interface UnregisteredInstitution {
+  customerId:       string
+  customerName:     string
+  customerCity:     string
+  customerDistrict: string
+  customerType:     string
+  customerStatus:   string
+  institutionCode:  string
+}
+
 /** 狀態 4：查無機構代碼（已合併至 已歇業；保留型別供向下相容） */
 export interface CodeNotFound {
   customerId:       string
@@ -193,6 +211,7 @@ export interface MonitorStats {
   newOpeningExcludedExisting: number   // 名稱＋地區已是現有客戶而被排除的「新開業」數
   suspectedClosures:   number
   sameCityCandidates:  number
+  unregistered:        number   // 代碼從未在 BAS 出現過（未立案），不納入歇業判定
   dismissed:           number   // 人工排除、不再列出的筆數
   inactiveExcluded:    number   // 已歇業／停業／撤銷而未納入任何統計的客戶數
   codeNotFound:        number
@@ -234,6 +253,7 @@ export interface MonitorResult {
   }
   suspectedClosures:     SuspectedClosure[]
   sameCityCandidates:    SameCityCandidate[]
+  unregistered:          UnregisteredInstitution[]
   /** 人工排除清單（可復原）；排除只影響顯示與統計，不改客戶主檔 */
   dismissed:             MonitorDismissEntry[]
   codeNotFound:          CodeNotFound[]
@@ -384,7 +404,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
       hasSnapshot: false,
       stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      suspectedClosures: [], sameCityCandidates: [], dismissed: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
+      suspectedClosures: [], sameCityCandidates: [], unregistered: [], dismissed: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
     }
@@ -409,6 +429,16 @@ export async function computeMonitor(): Promise<MonitorResult> {
       }
     }
   } catch { /* 無學校參照不影響其他比對 */ }
+
+  // 1c. 歷次 BAS 代碼快取：用來分辨「曾登錄後消失（歇業候選）」與「從未登錄（未立案）」
+  const everKnownCodes = new Set<string>()
+  try {
+    const cp = path.join(process.cwd(), 'data', 'bas-cache.json')
+    if (existsSync(cp)) {
+      const cacheJson = JSON.parse(readFileSync(cp, 'utf8')) as Record<string, { code?: string }>
+      for (const v of Object.values(cacheJson)) if (v?.code) everKnownCodes.add(v.code)
+    }
+  } catch { /* 沒有快取就退回原行為：一律當歇業候選 */ }
 
   // 2. 載入崧達客戶（全部，含無代碼）
   const allCustomersRaw = await getCustomersWithCodes()
@@ -487,6 +517,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
   const normalOperating:   NormalOperating[]   = []
   const suspectedClosures: SuspectedClosure[]  = []
   const sameCityCandidates: SameCityCandidate[] = []
+  const unregistered: UnregisteredInstitution[] = []
   const codeNotFound:      CodeNotFound[]      = []
   const inconsistentData:  InconsistentData[]  = []
   const codeChanged:       CodeChanged[]       = []
@@ -616,6 +647,14 @@ export async function computeMonitor(): Promise<MonitorResult> {
         customerType: c.type, customerStatus: c.status,
         institutionCode: code,
       })
+    } else if (everKnownCodes.size > 0 && !everKnownCodes.has(code) && !snapshotByCode.has(code)) {
+      // 代碼從未在 BAS 出現過 → 未立案，不是歇業（歇業是「曾經登錄後消失」）
+      unregistered.push({
+        customerId: c.id, customerName: c.name,
+        customerCity: c.city, customerDistrict: c.district,
+        customerType: c.type, customerStatus: c.status,
+        institutionCode: code,
+      })
     } else if (sameCityOpen(c.name, c.city, code).length > 0) {
       // 同縣市有同名且現行的機構（不只一家，唯一者已走「更換代碼」）→ 很可能是換照／分院重編，
       // 不列歇業候選，交人工從候選碼中挑。**只查原縣市，不跨縣市**（跨縣市同名多為不同家）。
@@ -703,6 +742,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
   const inconsistentKept      = keep('inconsistent', inconsistentData, (x) => x.institutionCode)
   const invalidKept           = keep('invalidcode', invalidCodes, (x) => x.institutionCode)
   const sameCityKept          = keep('samecity', sameCityCandidates, (x) => x.institutionCode)
+  const unregisteredKept      = keep('unregistered', unregistered, (x) => x.institutionCode)
   const dismissedActive = dismissedList.length
 
   // ── 分類統計 ───────────────────────────────────────────────────────────────
@@ -734,6 +774,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     newOpeningExcludedExisting: excludedExisting,
     suspectedClosures:   suspectedClosuresKept.length,
     sameCityCandidates:  sameCityKept.length,
+    unregistered:        unregisteredKept.length,
     dismissed:           dismissedActive,
     inactiveExcluded,
     academicInstitutions: academicInstitutions.length,
@@ -754,6 +795,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     },
     suspectedClosures:    suspectedClosuresKept,
     sameCityCandidates:   sameCityKept,
+    unregistered:         unregisteredKept,
     dismissed:            dismissedList,
     academicInstitutions,
     invalidCodes:         invalidKept,
