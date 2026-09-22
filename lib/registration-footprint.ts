@@ -271,7 +271,7 @@ export function createCustomerResolver(opts: { dryRun: boolean; maxCreates?: num
     created++
     const id = customerId ?? `dryrun:${inst.code}`
     customers.push({ id, name: inst.name, city: inst.city, district: inst.district, type: '', salesperson: assignTo, status: '開業' })
-    codes.set(inst.code, { id, name: inst.name, city: inst.city, district: inst.district, type: '', status: '開業', devStage: '線索', institutionCode: inst.code })
+    codes.set(inst.code, { id, name: inst.name, city: inst.city, district: inst.district, type: '', status: '開業', devStage: '線索', devStatus: [], salesperson: assignTo ?? '', institutionCode: inst.code })
     return {
       customerId, note, outcome: 'created',
       create: { code: inst.code, name: inst.name, area: `${inst.city}${inst.district}`, assignTo },

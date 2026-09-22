@@ -461,7 +461,7 @@ export async function assignSalesperson(
 async function invalidateCustomerCaches() {
   setCachedValue('all-system-customers-v2', null as any, 1)
   setCachedValue('region-stats-rows-v2', null as any, 1)
-  try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v3') } catch {}
+  try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v4') } catch {}
 }
 
 /**
@@ -504,12 +504,16 @@ export interface CustomerWithCode {
   type:            string
   status:          string
   devStage:        string
+  /** 開發狀態（multi_select，如「公司既有客戶」「未查證名單」）——判斷是否為既有往來 */
+  devStatus:       string[]
+  /** 負責業務；供「已往來」佐證（盤商不算業務往來） */
+  salesperson:     string
   institutionCode: string
 }
 
 export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
   if (!DB.customers) return []
-  const cacheKey = 'customers-with-codes-v3' // v3=加 devStage(供「已往來客戶數」判斷);v2=分區掃描修正 10k 截斷
+  const cacheKey = 'customers-with-codes-v4' // v4=加 開發狀態/負責業務(已往來客戶數改以實證判斷);v3=加 devStage;v2=分區掃描修正 10k 截斷
   const cached = await getRedisValue<CustomerWithCode[]>(cacheKey)
   if (cached) return cached
 
@@ -525,6 +529,8 @@ export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
       type:            getSelect(page, '客戶類型'),
       status:          getSelect(page, '機構狀態'),
       devStage:        getSelect(page, '開發階段'),
+      devStatus:       (page.properties?.['開發狀態']?.multi_select ?? []).map((x: any) => x.name),
+      salesperson:     getSelect(page, '負責業務'),
       institutionCode: getText(page, '機構代碼'),
     })
   })
@@ -895,7 +901,7 @@ export async function createSystemCustomer(data: {
     })
   )
   // invalidate cache
-  try { await setRedisValue('customers-with-codes-v3', null, 1) } catch {}
+  try { await setRedisValue('customers-with-codes-v4', null, 1) } catch {}
   return { id: page.id }
 }
 
@@ -914,7 +920,7 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
     notion.pages.update({ page_id: id, properties: { '機構狀態': { select: { name: status } } } as any })
   )
   // 失效客戶快取，使下次比對讀到新狀態
-  deleteRedisValue('customers-with-codes-v3')
+  deleteRedisValue('customers-with-codes-v4')
 }
 
 /**
@@ -935,7 +941,7 @@ export async function updateCustomerInstitutionCode(id: string, code: string): P
   await notionCallWithRetry('updateCustomerInstitutionCode', () =>
     notion.pages.update({ page_id: id, properties: { '機構代碼': { rich_text: [{ text: { content: clean } }] } } as any })
   )
-  deleteRedisValue('customers-with-codes-v3')
+  deleteRedisValue('customers-with-codes-v4')
 }
 
 /**
@@ -986,7 +992,7 @@ export async function updateCustomerBasFields(id: string, patch: BasSyncPatch): 
   await notionCallWithRetry('updateCustomerBasFields', () =>
     notion.pages.update({ page_id: id, properties: props as any })
   )
-  deleteRedisValue('customers-with-codes-v3')
+  deleteRedisValue('customers-with-codes-v4')
   return changed
 }
 

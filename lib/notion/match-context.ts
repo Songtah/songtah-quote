@@ -32,9 +32,11 @@ export type MatchContext = {
   activeCitiesBy: Map<string, Set<string>>
   /** 業務 → 曾拜訪過的客戶 id（去連字號） */
   visitedBy: Map<string, Set<string>>
+  /** 所有曾被拜訪過的客戶 id（不分業務）——供「已往來客戶數」以實證判斷 */
+  visitedCustomers: Set<string>
 }
 
-const KEY = 'match-context-v1'
+const KEY = 'match-context-v2'   // v2＝加上全體已拜訪客戶集合
 const TTL_MS = 36 * 3600_000       // 每晚重算；多給一天半緩衝，排程失敗也不會立刻退化
 const MEM_TTL = 10 * 60_000
 
@@ -43,6 +45,7 @@ type Serialized = {
   tc: [string, string[]][]
   ac: [string, string[]][]
   v: [string, string[]][]
+  all?: string[]
 }
 
 const toMap = (rows: [string, string[]][]) => new Map(rows.map(([k, v]) => [k, new Set(v)]))
@@ -51,12 +54,13 @@ const fromMap = (m: Map<string, Set<string>>) =>
 
 const EMPTY: MatchContext = {
   territoriesBy: new Map(), territoryCitiesBy: new Map(),
-  activeCitiesBy: new Map(), visitedBy: new Map(),
+  activeCitiesBy: new Map(), visitedBy: new Map(), visitedCustomers: new Set(),
 }
 
 const hydrate = (s: Serialized): MatchContext => ({
   territoriesBy: toMap(s.t), territoryCitiesBy: toMap(s.tc),
   activeCitiesBy: toMap(s.ac), visitedBy: toMap(s.v),
+  visitedCustomers: new Set(s.all ?? []),
 })
 
 /**
@@ -121,6 +125,7 @@ export async function rebuildMatchContext(): Promise<MatchContext> {
   const payload: Serialized = {
     t: fromMap(territoriesBy), tc: fromMap(territoryCitiesBy),
     ac: fromMap(activeCitiesBy), v: fromMap(visitedBy),
+    all: Object.keys(signals),
   }
   setCachedValue(KEY, payload, MEM_TTL)
   await setRedisValue(KEY, payload, TTL_MS).catch(() => { /* 沒有 Redis（本機）不影響本次 */ })

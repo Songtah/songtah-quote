@@ -220,7 +220,16 @@ export interface MonitorStats {
   labsStale:      boolean          // true = 牙技所為上月沿用資料（本次未完整抓取）
   customerWithCode:    number
   customerNoCode:      number
-  customerEngaged:     number   // 已往來客戶數：排除歇業/停業/撤銷 + 排除純線索(線索/已接觸/流失)
+  /**
+   * 已往來客戶數（2026-09-22 改為實證判斷）：標記「公司既有客戶」∪ 有客情紀錄。
+   * 舊定義是「營業中且開發階段不是線索/已接觸/流失」——但開發階段 96% 空白，
+   * 等於把全部 BAS 匯入的名單都算成往來客戶（9,867），完全不能用。
+   */
+  customerEngaged:     number
+  engagedMarked:       number   // 其中：標記公司既有客戶
+  engagedVisited:      number   // 其中：有客情紀錄
+  engagedBoth:         number   // 兩者皆有
+  engagedNoContact:    number   // 兩者皆無（純名單，未曾往來）
   normalOperating:     number
   newOpeningClinics:   number
   newOpeningLabs:      number
@@ -750,6 +759,22 @@ export async function computeMonitor(): Promise<MonitorResult> {
     })
   }
 
+  // ── 已往來客戶：要有實證，不能靠「開發階段沒填」反推 ─────────────────────
+  // 兩種實證任一成立即算：①主檔開發狀態標「公司既有客戶」 ②客情紀錄裡出現過。
+  // 客情紀錄集合由夜間排程算好放快取（全掃拜訪庫，不能在請求路徑做）；
+  // 拿不到快取時退回只用①，並在 stats 標明。
+  const markedExisting = new Set(
+    allCustomers.filter((c) => (c.devStatus ?? []).includes('公司既有客戶')).map((c) => c.id.replace(/-/g, ''))
+  )
+  let visitedSet = new Set<string>()
+  try {
+    const { loadMatchContext } = await import('@/lib/notion/match-context')
+    const ctx = await loadMatchContext()
+    const activeIds = new Set(allCustomers.map((c) => c.id.replace(/-/g, '')))
+    visitedSet = new Set(Array.from(ctx.visitedCustomers).filter((id) => activeIds.has(id)))
+  } catch { /* 沒快取就只用標記 */ }
+  const engaged = new Set<string>([...Array.from(markedExisting), ...Array.from(visitedSet)])
+
   // ── 疑似復業：主檔標歇業／停業／撤銷，但代碼仍在開業名冊上 ────────────────
   // 這批客戶被全頁統計排除，若不另外掃一次，誤標或真復業永遠不會浮現。
   const suspectedReopens: SuspectedReopen[] = []
@@ -802,9 +827,11 @@ export async function computeMonitor(): Promise<MonitorResult> {
     labsStale:   snapshot.labsStale === true,
     customerWithCode:    customersWithCode.length,
     customerNoCode:      customersNoCode.length,
-    customerEngaged:     allCustomers.filter(c =>
-      !isInactiveCustomer(c.status) && !LEAD_ONLY_STAGE.has(c.devStage)
-    ).length,
+    customerEngaged:     engaged.size,
+    engagedMarked:       markedExisting.size,
+    engagedVisited:      visitedSet.size,
+    engagedBoth:         Array.from(markedExisting).filter((id) => visitedSet.has(id)).length,
+    engagedNoContact:    allCustomers.length - engaged.size,
     normalOperating:     normalOperating.length,
     newOpeningClinics:   newClinic.length,
     newOpeningLabs:      newLab.length,
