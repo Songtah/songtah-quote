@@ -1128,6 +1128,38 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
   const [running, setRunning] = useState(false)
   const [summary, setSummary] = useState<VerifySummary | null>(null)
   const [err, setErr] = useState('')
+  // 一鍵同步：把查證結果寫回客戶資料庫（只寫有衛福部實證者）
+  const [preview, setPreview] = useState<{ willUpdate: number; items: any[] } | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [appliedMsg, setAppliedMsg] = useState('')
+
+  async function loadPreview() {
+    setErr(''); setAppliedMsg('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/verify/apply', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '讀取失敗'); return }
+      setPreview({ willUpdate: data.willUpdate, items: data.items ?? [] })
+    } catch (e: any) { setErr(e?.message ?? '讀取失敗') }
+  }
+
+  async function applyAll() {
+    setApplying(true); setErr('')
+    try {
+      const res = await fetch('/api/admin/medical-monitor/verify/apply', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? '套用失敗'); return }
+      setAppliedMsg(`✓ 已更新 ${data.updated} 筆${data.failures?.length ? `，失敗 ${data.failures.length} 筆` : ''}`)
+      setPreview(null)
+      onDone?.()
+    } catch (e: any) { setErr(e?.message ?? '套用失敗') }
+    finally { setApplying(false) }
+  }
 
   async function run() {
     setRunning(true); setErr(''); setSummary(null)
@@ -1138,6 +1170,7 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '查證失敗'); return }
       setSummary(data.summary as VerifySummary)
+      if ((data.summary?.mismatched ?? 0) > 0) await loadPreview()
       onDone?.()
     } catch (e: any) {
       setErr(e?.message ?? '查證失敗')
@@ -1174,12 +1207,44 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
           ))}
         </div>
       )}
+      {/* 一鍵同步到客戶資料庫 */}
+      {preview && preview.willUpdate > 0 && (
+        <div className="mt-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-stone-700">
+              有 {preview.willUpdate} 筆的衛福部狀態與客戶主檔不同，可一鍵同步
+            </span>
+            <button
+              onClick={applyAll}
+              disabled={applying}
+              className="ml-auto rounded-full bg-brand-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
+            >{applying ? '更新中…' : `一鍵更新客戶資料庫（${preview.willUpdate} 筆）`}</button>
+          </div>
+          <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+            {preview.items.slice(0, 50).map((it: any) => (
+              <div key={it.customerId} className="flex flex-wrap items-center gap-2 text-[11px] text-stone-500">
+                <span className="text-stone-700">{it.customerName}</span>
+                <span className="text-stone-400">{it.from}</span>
+                <span className="text-brand-600">→ {it.to}</span>
+                <span className="text-stone-300">衛福部「{it.basStatus}」</span>
+              </div>
+            ))}
+            {preview.items.length > 50 && <div className="text-[11px] text-stone-400">…共 {preview.items.length} 筆</div>}
+          </div>
+        </div>
+      )}
+      {appliedMsg && <p className="mt-2 text-xs text-emerald-700 bg-brand-50 rounded-xl px-3 py-2">{appliedMsg}</p>}
+      {summary && !preview && summary.mismatched === 0 && (
+        <p className="mt-2 text-xs text-stone-500">所有查證結果都與客戶主檔一致，不需同步。</p>
+      )}
+
       <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
         <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
         下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
         衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
-        本功能<strong className="text-stone-500">只查證與記錄，不自動改客戶主檔</strong>——
-        查出不符者請到各分類用「查衛福部 → 套用衛福部狀態」逐筆確認。
+        查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值，
+        由你按「一鍵更新客戶資料庫」才寫入（只寫有衛福部實證者——查無、查詢失敗、
+        同縣市查不到一律跳過），也可以到各分類逐筆套用。
         全台逐筆即時查約需 40 分鐘且可能被衛福部阻擋，故只對候選批次查證。
       </p>
     </div>
