@@ -272,6 +272,48 @@ function StatusEditor({ customerId, current, onResolved }: {
 }
 
 
+
+// ── 單筆「查證並更新」──────────────────────────────────────────────────────────
+// 即時查衛福部（名稱完全相同＋同縣市＋唯一）→ 一次寫回所有有異動的欄位。
+// 給更換代碼等分頁逐筆處理用：不必先跑整批查證，也不必自己開客戶頁改。
+function VerifyAndUpdateButton({ customerId, customerName, city, code, crmCode, crmStatus, kind, onDone, label = '查證並更新' }: {
+  customerId: string; customerName: string; city?: string
+  code?: string; crmCode?: string; crmStatus?: string; kind?: string
+  onDone?: (id: string) => void; label?: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [bad, setBad] = useState(false)
+
+  async function run() {
+    setBusy(true); setMsg(''); setBad(false)
+    try {
+      const res = await fetch('/api/admin/medical-monitor/verify/one', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, customerName, city, code, crmCode, crmStatus, kind }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setBad(true); setMsg(data.error ?? '處理失敗'); return }
+      if (!data.ok) { setBad(true); setMsg(data.reason ?? '未更新'); return }
+      if ((data.updated ?? []).length === 0) { setMsg(data.reason ?? '無需更新'); return }
+      setMsg(`✓ 已更新：${data.updated.join('、')}`)
+      onDone?.(customerId)
+    } catch (e: any) {
+      setBad(true); setMsg(e?.message ?? '處理失敗')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button onClick={run} disabled={busy}
+        className="text-xs px-4 py-2 rounded-full bg-amber-500 text-white font-medium hover:bg-amber-600 shadow-sm shadow-amber-500/25 active:scale-95 transition-all disabled:opacity-50">
+        {busy ? '查證中…' : `🔁 ${label}`}
+      </button>
+      {msg && <span className={`text-[11px] ${bad ? 'text-red-500' : 'text-emerald-600'}`}>{msg}</span>}
+    </div>
+  )
+}
+
 // ── 排除異常（略過）──────────────────────────────────────────────────────────
 // 人已確認不是問題的候選，按一下就不再出現。排除鍵含當下機構代碼，
 // 代碼一變（換照、補正）該筆會自動重新出現——排除不是永久埋葬。
@@ -784,6 +826,11 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
               </div>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-3">
+              <VerifyAndUpdateButton
+                customerId={item.customerId} customerName={item.customerName} city={item.customerCity}
+                code={item.suggestedCode} crmCode={item.institutionCode} crmStatus={item.customerStatus}
+                label="查證並補上代碼" onDone={hide}
+              />
               <MohwLookupButton name={item.customerName} code={item.suggestedCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <DismissButton category="invalidcode" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
@@ -916,7 +963,9 @@ function CodeChangedTab({ items, onResolved }: {
   return (
     <div className="space-y-3">
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-        🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。建議至客戶頁將機構代碼更新為新碼。
+        🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。
+        按「查證並更新代碼」會即時向衛福部確認（名稱需完全相同、限同縣市、同縣市唯一），
+        通過才把機構代碼與其他有異動的欄位一起寫回；驗不過就不寫並顯示原因。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {visible(items).map((item) => (
@@ -944,6 +993,11 @@ function CodeChangedTab({ items, onResolved }: {
               <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
+              <VerifyAndUpdateButton
+                customerId={item.customerId} customerName={item.customerName} city={item.customerCity}
+                code={item.newCode} crmCode={item.oldCode} crmStatus={item.customerStatus}
+                label="查證並更新代碼" onDone={hide}
+              />
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <MohwLookupButton name={item.customerName} code={item.newCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <DismissButton category="codechange" customerId={item.customerId} customerName={item.customerName} institutionCode={item.oldCode} onDismissed={hide} />
