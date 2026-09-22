@@ -12,8 +12,8 @@ import Link from 'next/link'
 type Row = {
   id: string; title: string; unitName: string; city: string; deadline: string
   budget: number | null; customerId: string; customerSalesperson: string
+  status: string; owner: string
 }
-type Track = { tenderId: string; status: string; owner: string }
 
 const daysLeft = (deadline: string) => {
   if (!deadline) return null
@@ -24,7 +24,6 @@ const daysLeft = (deadline: string) => {
 
 export default function MyTendersPanel({ currentUser = '' }: { currentUser?: string }) {
   const [rows, setRows] = useState<Row[]>([])
-  const [tracks, setTracks] = useState<Record<string, Track>>({})
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -32,19 +31,18 @@ export default function MyTendersPanel({ currentUser = '' }: { currentUser?: str
       try {
         const res = await fetch('/api/bd/tenders')
         const data = await res.json()
-        if (res.ok) { setRows(data.records ?? []); setTracks(data.tracks ?? {}) }
+        if (res.ok) setRows(data.records ?? [])
       } catch { /* 靜默：標案失敗不影響今日工作 */ }
       finally { setLoaded(true) }
     })()
   }, [])
 
   const mine = rows.filter((r) => {
-    const t = tracks[r.id]
-    const isMine = t?.owner === currentUser || (r.customerSalesperson === currentUser && !!r.customerId)
+    const isMine = r.owner === currentUser || (r.customerSalesperson === currentUser && !!r.customerId)
     if (!isMine) return false
-    if (t && ['得標', '未得標', '放棄'].includes(t.status)) return false
+    if (['得標', '未得標', '放棄'].includes(r.status)) return false
     const d = daysLeft(r.deadline)
-    return t?.status === '投標中' || t?.status === '已投標' || (d !== null && d >= 0 && d <= 7)
+    return r.status === '投標中' || r.status === '已投標' || (d !== null && d >= 0 && d <= 7)
   }).sort((a, b) => (daysLeft(a.deadline) ?? 99) - (daysLeft(b.deadline) ?? 99))
 
   if (!loaded || mine.length === 0) return null
@@ -59,10 +57,9 @@ export default function MyTendersPanel({ currentUser = '' }: { currentUser?: str
       <ul className="mt-2 space-y-1.5">
         {mine.slice(0, 5).map((r) => {
           const d = daysLeft(r.deadline)
-          const t = tracks[r.id]
           return (
             <li key={r.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-              {t?.status && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-600">{t.status}</span>}
+              {r.status && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-600">{r.status}</span>}
               <span className="font-medium text-stone-700">{r.title}</span>
               <span className="text-stone-400">{r.unitName}</span>
               {d !== null && (

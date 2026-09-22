@@ -4,8 +4,9 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { getTenders, refreshTenders } from '@/lib/notion/tenders'
-import { listTracks, saveTrack, TENDER_STATUSES, type TenderStatus } from '@/lib/notion/tender-track'
+import { getTenders, refreshTenders, rebuildSnapshot } from '@/lib/notion/tenders'
+import { updateTenderTrack, TENDER_STATUSES, type TenderStatus } from '@/lib/notion/tenders-db'
+import { advanceCustomerDevStage } from '@/lib/notion/customers'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -19,12 +20,8 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       if (!canRefresh) return NextResponse.json({ error: '只有中央管理可以重抓' }, { status: 403 })
       return NextResponse.json(await refreshTenders())
     }
-    const [snapshot, tracks] = await Promise.all([getTenders(), listTracks()])
-    return NextResponse.json({
-      ...(snapshot ?? { records: [], stats: {}, computedAt: '', days: 0 }),
-      ready: Boolean(snapshot),
-      tracks,
-    })
+    const snapshot = await getTenders()
+    return NextResponse.json({ ...(snapshot ?? { records: [], computedAt: '' }), ready: Boolean(snapshot) })
   } catch (error: any) {
     console.error('tenders error:', error)
     return NextResponse.json({ error: error?.message ?? '讀取失敗' }, { status: 500 })
@@ -39,22 +36,25 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
 export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: NextRequest, _ctx, session) => {
   try {
     const body = await req.json().catch(() => ({}))
-    const tenderId = String(body.tenderId ?? '')
-    if (!tenderId) return NextResponse.json({ error: '缺少 tenderId' }, { status: 400 })
+    const pageId = String(body.pageId ?? '')
+    if (!pageId) return NextResponse.json({ error: '缺少 pageId' }, { status: 400 })
     const status = body.status ? String(body.status) as TenderStatus : undefined
     if (status && !TENDER_STATUSES.includes(status)) {
       return NextResponse.json({ error: `狀態須為：${TENDER_STATUSES.join('／')}` }, { status: 400 })
     }
     const actor = session?.user?.name ?? '未知'
-    const track = await saveTrack({
-      tenderId,
+    await updateTenderTrack(pageId, {
       status,
       owner: body.owner === null ? null : (body.owner === undefined ? undefined : String(body.owner)),
       note: body.note === undefined ? undefined : String(body.note).slice(0, 300),
-      actor,
-      customerId: body.customerId ? String(body.customerId) : undefined,
     })
-    return NextResponse.json({ ok: true, track })
+    // 投標＝正在報價：機關是既有客戶時把開發階段推到「報價中」（成交仍以訂單為準）
+    if (status === '投標中' && body.customerId) {
+      await advanceCustomerDevStage(String(body.customerId), '報價中', { actorName: actor, canManageAll: false })
+        .catch(() => false)
+    }
+    await rebuildSnapshot().catch(() => null)
+    return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error('tender track error:', error)
     return NextResponse.json({ error: error?.message ?? '更新失敗' }, { status: 500 })

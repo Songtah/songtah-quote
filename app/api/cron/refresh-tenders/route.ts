@@ -21,11 +21,14 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     const started = Date.now()
-    const snap = await refreshTenders()
+    const full = req.nextUrl.searchParams.get('full') === '1'
+    const snap = await refreshTenders({ full })
     return NextResponse.json({
       ok: true,
       records: snap.records.length,
       matched: snap.records.filter((r) => r.customerId).length,
+      scannedDays: snap.scannedDays,
+      scannedRecords: snap.scannedRecords,
       elapsedMs: Date.now() - started,
     })
   } catch (error: any) {

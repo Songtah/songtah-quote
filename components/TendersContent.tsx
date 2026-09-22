@@ -12,7 +12,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type Tender = {
-  id: string; unitName: string; title: string; type: string; date: string
+  id: string; pageId: string; status: string; owner: string; note: string; weBid: boolean
+  unitName: string; title: string; type: string; date: string
   category: string; matched: string[]; tier: 1 | 2
   budget: number | null; budgetText: string; deadline: string
   address: string; city: string; district: string; contact: string; phone: string; url: string
@@ -29,7 +30,6 @@ const TYPE_BADGE = (t: string) =>
 const money = (n: number | null, text: string) =>
   typeof n === 'number' ? `${(n / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })} 萬` : (text || '—')
 
-type Track = { tenderId: string; status: string; owner: string; note: string; updatedBy: string; updatedAt: string }
 const STATUSES = ['待評估', '投標中', '已投標', '得標', '未得標', '放棄'] as const
 const STATUS_STYLE: Record<string, string> = {
   待評估: 'bg-stone-100 text-stone-600', 投標中: 'bg-amber-50 text-amber-700',
@@ -49,7 +49,6 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
   canManageAll?: boolean; currentUser?: string
 }) {
   const [records, setRecords] = useState<Tender[]>([])
-  const [tracks, setTracks] = useState<Record<string, Track>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('全部')
   const [computedAt, setComputedAt] = useState('')
@@ -71,7 +70,6 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '讀取失敗')
       setRecords(data.records ?? [])
-      setTracks(data.tracks ?? {})
       setComputedAt(data.computedAt ?? '')
     } catch (e: any) {
       setErr(e?.message ?? '讀取失敗')
@@ -85,11 +83,16 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
     try {
       const res = await fetch('/api/bd/tenders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenderId: r.id, customerId: r.customerId || undefined, ...patch }),
+        body: JSON.stringify({ pageId: r.pageId, customerId: r.customerId || undefined, ...patch }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '更新失敗'); return }
-      setTracks((prev) => ({ ...prev, [r.id]: data.track }))
+      setRecords((prev) => prev.map((x) => x.id === r.id ? {
+        ...x,
+        status: patch.status ?? x.status,
+        owner: patch.owner === null ? '' : (patch.owner ?? x.owner),
+        note: patch.note ?? x.note,
+      } : x))
     } catch (e: any) { setErr(e?.message ?? '更新失敗') }
     finally { setBusy(null) }
   }
@@ -103,13 +106,12 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
     if (stage === 'open' && awarded) return false
     if (stage === 'awarded' && !awarded) return false
     if (onlyCustomer && !r.customerId) return false
-    const t = tracks[r.id]
-    if (statusFilter !== '全部' && (t?.status ?? '待評估') !== statusFilter) return false
-    if (onlyMine && r.customerSalesperson !== currentUser && t?.owner !== currentUser) return false
+    if (statusFilter !== '全部' && (r.status || '待評估') !== statusFilter) return false
+    if (onlyMine && r.customerSalesperson !== currentUser && r.owner !== currentUser) return false
     if (city !== '全部' && r.city !== city) return false
     if (q && !(r.title.includes(q) || r.unitName.includes(q) || r.customerName.includes(q))) return false
     return true
-  }), [records, tracks, stage, onlyCustomer, onlyMine, statusFilter, city, q, currentUser])
+  }), [records, stage, onlyCustomer, onlyMine, statusFilter, city, q, currentUser])
 
   const matchedCount = records.filter((r) => r.customerId).length
 
@@ -232,8 +234,8 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
               {/* 追蹤列：認領、狀態、備註 */}
               <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-2 text-xs">
                 {(() => {
-                  const t = tracks[r.id]
-                  const st = t?.status ?? '待評估'
+                  const t = { status: r.status || '待評估', owner: r.owner, note: r.note }
+                  const st = t.status
                   return (
                     <>
                       <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_STYLE[st] ?? 'bg-stone-100 text-stone-600'}`}>{st}</span>
@@ -245,7 +247,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                       >
                         {STATUSES.map((s2) => <option key={s2} value={s2}>{s2}</option>)}
                       </select>
-                      {t?.owner
+                      {t.owner
                         ? (
                           <>
                             <span className="text-stone-500">追蹤：{t.owner}</span>
@@ -262,16 +264,13 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                           </button>
                         )}
                       <input
-                        defaultValue={t?.note ?? ''}
+                        key={`${r.id}-note`}
+                        defaultValue={t.note ?? ''}
                         placeholder="備註（例：已索取規格書）"
-                        onBlur={(e) => { if (e.target.value !== (t?.note ?? '')) track(r, { note: e.target.value }) }}
+                        onBlur={(e) => { if (e.target.value !== (t.note ?? '')) track(r, { note: e.target.value }) }}
                         className="input-soft ml-auto min-w-[160px] flex-1 rounded-full px-3 py-1 text-xs"
                       />
-                      {t?.updatedAt && (
-                        <span className="text-[10px] text-stone-300">
-                          {t.updatedBy}·{t.updatedAt.slice(5, 10)}
-                        </span>
-                      )}
+                      {r.weBid && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700">崧達曾投標</span>}
                     </>
                   )
                 })()}

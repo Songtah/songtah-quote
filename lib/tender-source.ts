@@ -12,6 +12,13 @@
  * 所以第二級關鍵字必須再通過「牙科情境」檢查才收：
  *   標題或機關名稱有牙科字樣／標的分類屬醫療類／機關是醫院、衛生所、牙體技術科系。
  * 這樣 1,185 筆會收斂到十幾筆，而且抓得到「樹人醫護 牙技科牙科用3D列印機組」這種真標案。
+ *
+ * ── 完整性：改用「逐日全量」而非關鍵字搜尋（2026-09-22）──────────────────────
+ * 關鍵字搜尋只比對標案「標題」，而且分頁有上限，必然漏掉標題沒寫關鍵字的案子
+ * （例：「115-118總分院醫材118項開口合約」其實含牙科品項）。
+ * 改為呼叫 listbydate 逐日取得**當日全部公告**（實測 2026-09-22 共 1,939 筆），
+ * 在本地端用同一套兩級關鍵字＋情境規則過濾——一天一個請求，涵蓋率 100%。
+ * 每日排程只抓「上次抓到之後的日期」，所以日常成本是 1～3 個請求。
  */
 
 const API = 'https://pcc-api.openfun.app/api'
@@ -25,6 +32,9 @@ export const TENDER_KEYWORDS_PRIMARY = [
 export const TENDER_KEYWORDS_SECONDARY = [
   '3D列印機', '3D列印', '光固化', '樹脂', '列印耗材', '口內掃描', '掃描機', '切削機', '燒結爐', '咬合器',
 ]
+
+/** 排除詞：字面像牙科、實際無關（齒輪箱油、獸醫牙科…） */
+const EXCLUDE = /齒輪|齒條|齒盤|鋸齒|獸醫|動物醫院|犬貓/
 
 /** 牙科情境：標題或機關名稱出現這些字，就算第二級關鍵字也採用 */
 const DENTAL_CONTEXT = /牙|齒|口腔|贋復|義齒|植體/
@@ -100,6 +110,25 @@ type RawRecord = {
   brief?: { title?: string; type?: string; category?: string }
 }
 
+/** 命中判定：回傳命中的關鍵字與級別；沒命中回 null */
+export function matchKeywords(input: { title: string; unitName: string; category?: string }): { matched: string[]; tier: 1 | 2 } | null {
+  const hay = `${input.title} ${input.unitName}`
+  if (EXCLUDE.test(hay)) return null
+  const primary = TENDER_KEYWORDS_PRIMARY.filter((k) => hay.includes(k))
+  if (primary.length) return { matched: primary, tier: 1 }
+  const secondary = TENDER_KEYWORDS_SECONDARY.filter((k) => hay.includes(k))
+  if (secondary.length && isDentalContext(input)) return { matched: secondary, tier: 2 }
+  return null
+}
+
+/** 取某一天的全部公告（完整，不受標題關鍵字限制） */
+async function listByDate(yyyymmdd: string): Promise<RawRecord[]> {
+  const res = await fetch(`${API}/listbydate?date=${yyyymmdd}`, { signal: AbortSignal.timeout(30_000) })
+  if (!res.ok) return []
+  const json: any = await res.json()
+  return json?.records ?? []
+}
+
 async function searchKeyword(keyword: string, maxPages: number, sinceDate: string): Promise<RawRecord[]> {
   const out: RawRecord[] = []
   for (let page = 1; page <= maxPages; page++) {
@@ -140,7 +169,78 @@ async function fetchDetail(unitId: string, jobNumber: string): Promise<DetailBun
 }
 
 /**
- * 抓取近 days 天、與牙科相關的標案。
+ * 逐日全量掃描並過濾出牙科相關標案。
+ * from/to 為 YYYY-MM-DD（含）；不給 from 就往前推 days 天。
+ */
+export async function fetchTendersByDateRange(options?: {
+  from?: string
+  to?: string
+  days?: number
+  withDetail?: boolean
+  detailLimit?: number
+}): Promise<{ records: TenderRecord[]; scannedDays: number; scannedRecords: number }> {
+  const to = options?.to ?? new Date().toISOString().slice(0, 10)
+  const from = options?.from
+    ?? new Date(Date.now() - (options?.days ?? 120) * 86400_000).toISOString().slice(0, 10)
+
+  const byId = new Map<string, TenderRecord>()
+  let scannedDays = 0, scannedRecords = 0
+  for (let d = new Date(from); d.toISOString().slice(0, 10) <= to; d.setUTCDate(d.getUTCDate() + 1)) {
+    const ymd = d.toISOString().slice(0, 10).replace(/-/g, '')
+    const rows = await listByDate(ymd).catch(() => [])
+    scannedDays++; scannedRecords += rows.length
+    for (const r of rows) {
+      const title = r.brief?.title ?? ''
+      const unitName = r.unit_name ?? ''
+      const category = r.brief?.category ?? ''
+      const hit = matchKeywords({ title, unitName, category })
+      if (!hit) continue
+      const id = `${r.unit_id}|${r.job_number}`
+      const date = toDate(r.date)
+      const existing = byId.get(id)
+      if (existing) {
+        for (const k of hit.matched) if (!existing.matched.includes(k)) existing.matched.push(k)
+        if (date >= existing.date) { existing.date = date; existing.type = r.brief?.type ?? existing.type }
+        continue
+      }
+      byId.set(id, {
+        id, unitId: r.unit_id, jobNumber: r.job_number, unitName, title,
+        type: r.brief?.type ?? '', date, category,
+        matched: hit.matched, tier: hit.tier,
+        budget: null, budgetText: '', deadline: '', address: '', city: '', district: '',
+        contact: '', phone: '', url: '',
+        winner: '', awardAmount: null, basePrice: null, bidders: [],
+      })
+    }
+    await sleep(250)
+  }
+
+  const records = Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1))
+  if (options?.withDetail !== false) await enrichDetails(records, options?.detailLimit ?? 300)
+  return { records, scannedDays, scannedRecords }
+}
+
+/** 我們自己投過的標（依廠商名稱查）——得標與落標都算，供回填與戰況分析 */
+export async function fetchOurBids(companyName = '崧達'): Promise<Set<string>> {
+  const ids = new Set<string>()
+  try {
+    for (let page = 1; page <= 5; page++) {
+      const res = await fetch(`${API}/searchbycompanyname?query=${encodeURIComponent(companyName)}&page=${page}`,
+        { signal: AbortSignal.timeout(20_000) })
+      if (!res.ok) break
+      const json: any = await res.json()
+      const recs: any[] = json?.records ?? []
+      if (recs.length === 0) break
+      for (const r of recs) ids.add(`${r.unit_id}|${r.job_number}`)
+      if (page >= (json?.total_pages ?? 1)) break
+      await sleep(300)
+    }
+  } catch { /* 查不到就算了，不影響主流程 */ }
+  return ids
+}
+
+/**
+ * 抓取近 days 天、與牙科相關的標案（舊的關鍵字搜尋路徑，保留供比對用）。
  * withDetail=false 時只回公告層資料（快、供 dry-run 盤點用）。
  */
 export async function fetchDentalTenders(options?: {
@@ -191,8 +291,14 @@ export async function fetchDentalTenders(options?: {
 
   const records = Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1))
 
-  if (options?.withDetail !== false) {
-    const limit = options?.detailLimit ?? 200
+  if (options?.withDetail !== false) await enrichDetails(records, options?.detailLimit ?? 200)
+
+  return { records, stats }
+}
+
+/** 補明細：預算、截止、地址聯絡人、決標結果 */
+export async function enrichDetails(records: TenderRecord[], limit: number): Promise<void> {
+  {
     for (const rec of records.slice(0, limit)) {
       const bundle = await fetchDetail(rec.unitId, rec.jobNumber)
       await sleep(250)
@@ -207,6 +313,8 @@ export async function fetchDentalTenders(options?: {
       rec.awardAmount = parseMoney(pick(/決標品項:.*決標金額$/) || pick(/投標廠商:投標廠商1:決標金額$/))
       rec.basePrice = parseMoney(pick(/底價金額$/))
       rec.bidders = bundle.bidders
+      // 明細取的是決標公告時，案件狀態就是已決標——清單的「招標中／已決標」要跟著對
+      if (rec.winner && !/決標/.test(rec.type)) rec.type = '決標公告'
       rec.budgetText = d['採購資料:預算金額'] ?? d['已公告資料:預算金額'] ?? ''
       rec.budget = parseMoney(rec.budgetText)
       rec.deadline = (d['領投開標:截止投標'] ?? d['領投開標:截止投標時間'] ?? '').slice(0, 16)
@@ -219,6 +327,4 @@ export async function fetchDentalTenders(options?: {
       if (!rec.category) rec.category = d['採購資料:標的分類'] ?? ''
     }
   }
-
-  return { records, stats }
 }
