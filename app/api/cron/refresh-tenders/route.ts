@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import { refreshTenders } from '@/lib/notion/tenders'
+import { refreshTenders, refreshFromOfficial } from '@/lib/notion/tenders'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
   try {
     const started = Date.now()
     const full = req.nextUrl.searchParams.get('full') === '1'
+    // ?official=1：改跑官方開放資料補寫（每月一次即可，資料落後兩個月但授權可商用）
+    if (req.nextUrl.searchParams.get('official') === '1') {
+      const res = await refreshFromOfficial(Number(req.nextUrl.searchParams.get('periods')) || 4)
+      return NextResponse.json({ ok: true, mode: 'official', ...res })
+    }
     const snap = await refreshTenders({ full })
     return NextResponse.json({
       ok: true,

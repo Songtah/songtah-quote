@@ -24,6 +24,7 @@ export type TenderRow = TenderRecord & {
   customerId: string
   customerName: string
   weBid: boolean
+  dataSource: string
 }
 
 const dbId = () => process.env.NOTION_TENDERS_DB ?? '3e3dcdaafb2a81288561f750924ea729'
@@ -64,6 +65,7 @@ function mapRow(page: any): TenderRow {
     customerId: (p?.['關聯客戶']?.relation?.[0]?.id ?? '').replace(/-/g, ''),
     customerName: '',
     weBid: p?.['崧達有投標']?.checkbox ?? false,
+    dataSource: getSelect(page, '資料來源'),
   }
 }
 
@@ -97,6 +99,8 @@ async function indexByTenderId(): Promise<Map<string, { pageId: string; status: 
 export type UpsertInput = TenderRecord & {
   customerId?: string
   weBid?: boolean
+  /** 官方開放資料（可商用）或即時API（近兩個月、授權為合理使用範圍） */
+  dataSource?: '官方開放資料' | '即時API'
   /** 決標後系統自動結案用；只有在使用者尚未手動改狀態時才套用 */
   autoStatus?: TenderStatus
 }
@@ -132,6 +136,7 @@ export async function upsertTenders(records: UpsertInput[]): Promise<{ created: 
       ...(r.city ? { '縣市': { select: { name: r.city } } } : {}),
       ...(r.type ? { '公告類型': { select: { name: r.type } } } : {}),
       ...(r.url ? { '公告連結': { url: r.url } } : {}),
+      ...(r.dataSource ? { '資料來源': { select: { name: r.dataSource } } } : {}),
       ...(r.customerId ? { '關聯客戶': { relation: [{ id: r.customerId }] } } : {}),
     }
 
