@@ -12,8 +12,11 @@
  *   3. 命中案子再抓明細頁補機關代碼、地址（縣市／行政區，客戶比對必需）、預算、決標結果。
  * 成本：關鍵字數 × 2 個請求，遠低於逐日全量；命中量小（每週個位數到十幾案），明細成本可忽略。
  *
- * 限制：查詢只取第一頁（100 筆／關鍵字／年，依公告日新到舊）。日常增量遠不會滿，
+ * 限制一：查詢只取第一頁（100 筆／關鍵字／年，依公告日新到舊）。日常增量遠不會滿，
  * 但整年回補若某關鍵字超過 100 筆會截斷——歷史回補請搭配官方開放資料檔。
+ * 限制二：**明細頁有機器人驗證**，短時間抓十幾次就會跳撲克牌驗證碼並鎖住該 IP 數十分鐘
+ * （GitHub runner 的共用 IP 常常一抓就被擋）。因此明細只當加值：清單本身就足以成案，
+ * 抓不到明細的案子照樣寫入（機關代碼、地址、預算留空），之後由 enrich 流程慢慢補。
  */
 import {
   TENDER_KEYWORDS_PRIMARY, TENDER_KEYWORDS_SECONDARY,
@@ -60,6 +63,7 @@ type PccHit = {
   jobNumber: string
   title: string
   date: string         // 這則公告的日期（招標＝公告日、決標＝決標公告日）
+  deadline: string     // 截止投標日（清單上就有）
 }
 
 /**
@@ -98,6 +102,7 @@ async function searchKeyword(keyword: string, kind: '招標' | '決標', rocYear
       key: `${link[1]}|${link[2]}`, path: link[1], pk: link[2], kind,
       type: cells[1] || (kind === '招標' ? '招標公告' : '決標公告'),
       unitName: cells[2] ?? '', jobNumber, title, date,
+      deadline: rocToISO(cells[6] ?? ''),
     })
   }
   return hits
@@ -108,7 +113,7 @@ async function searchKeyword(keyword: string, kind: '招標' | '決標', rocYear
  * 回 null 代表被官網的機器人驗證擋下（明細頁短時間連抓十幾次就會跳撲克牌驗證碼，
  * 且會鎖住該 IP 一段時間）——遇到就整批停手，不要硬打。
  */
-async function fetchDetail(path: string, pk: string): Promise<Map<string, string[]> | null> {
+export async function fetchDetail(path: string, pk: string): Promise<Map<string, string[]> | null> {
   const res = await fetch(`${BASE}/prkms/urlSelector/common/${path}?pk=${pk}`, {
     headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(60_000),
   })
@@ -136,7 +141,7 @@ export async function fetchDentalTendersFromPcc(options: {
   from: string
   to?: string
   detailLimit?: number
-}): Promise<{ records: TenderRecord[]; candidates: number; skippedNoDetail: number; detailBlocked: boolean; queries: number; failedQueries: number; firstError: string }> {
+}): Promise<{ records: TenderRecord[]; candidates: number; enriched: number; detailBlocked: boolean; queries: number; failedQueries: number; firstError: string }> {
   const to = options.to ?? new Date().toISOString().slice(0, 10)
   const from = options.from
   const years: number[] = []
@@ -169,40 +174,42 @@ export async function fetchDentalTendersFromPcc(options: {
   // 關鍵字命中標案名稱只是初篩，仍要過共用的命中判定（排除齒輪／獸醫等，第二級需牙科情境）
   const candidates = Array.from(byKey.values()).sort((a, b) => (a.date < b.date ? 1 : -1))
   const records: TenderRecord[] = []
-  const limit = options.detailLimit ?? 15
+  const limit = options.detailLimit ?? 3
   let detailBlocked = false
-  let skippedNoDetail = 0
+  let enriched = 0
 
   for (const hit of candidates) {
-    if (!matchKeywords({ title: hit.title, unitName: hit.unitName })) continue
-    // 明細抓不到就整筆跳過，留到下一輪再抓：沒有機關代碼與地址的話，
-    // 既無法產生穩定的標案 ID，也無法比對客戶，寫進去只會製造殘缺列。
-    if (detailBlocked || records.length >= limit) { skippedNoDetail++; continue }
-    const detail = await fetchDetail(hit.path, hit.pk).catch(() => new Map<string, string[]>())
-    if (detail === null) { detailBlocked = true; skippedNoDetail++; continue }
-    await sleep(4_000)
+    const hitKw = matchKeywords({ title: hit.title, unitName: hit.unitName })
+    if (!hitKw) continue
+
+    // 明細是加值不是門檻：抓不到就留空欄位照樣寫入，之後再補
+    let detail: Map<string, string[]> | null = new Map()
+    if (!detailBlocked && enriched < limit) {
+      detail = await fetchDetail(hit.path, hit.pk).catch(() => new Map<string, string[]>())
+      if (detail === null) { detailBlocked = true; detail = new Map() } else { enriched++; await sleep(4_000) }
+    }
 
     const category = one(detail, '標的分類')
     // 帶上標的分類再判一次：第二級關鍵字（3D 列印、樹脂…）靠醫療分類才成立
-    const hit2 = matchKeywords({ title: hit.title, unitName: hit.unitName, category })
-    if (!hit2) continue
-
+    const hit2 = matchKeywords({ title: hit.title, unitName: hit.unitName, category }) ?? hitKw
     const address = one(detail, '機關地址')
-    const { city, district } = parseArea(address)
+    // 沒有明細地址時退而求其次用機關名稱推縣市（衛生所、縣市政府、某某縣醫院多半看得出來）
+    const area = address ? parseArea(address) : parseArea(hit.unitName)
     const unitId = one(detail, '機關代碼')
-    if (!unitId) { skippedNoDetail++; continue }
     const vendors = detail.get('廠商名稱') ?? []
     const winner = one(detail, '得標廠商') || (one(detail, '是否得標') === '是' ? (vendors[0] ?? '') : '')
 
     records.push({
-      id: `${unitId}|${hit.jobNumber}`,
+      // 沒有機關代碼時用機關名稱當鍵；寫入端同時以「機關名稱＋案號」比對既有列，
+      // 之後補到機關代碼也會更新到同一列，不會變成兩筆
+      id: unitId ? `${unitId}|${hit.jobNumber}` : `pcc|${hit.unitName}|${hit.jobNumber}`,
       unitId, jobNumber: hit.jobNumber, unitName: hit.unitName, title: hit.title,
       type: hit.type, date: hit.date, category,
       matched: hit2.matched, tier: hit2.tier,
       budget: parseMoney(one(detail, '預算金額')),
       budgetText: one(detail, '預算金額'),
-      deadline: rocToISO(one(detail, '截止投標')),
-      address, city, district,
+      deadline: rocToISO(one(detail, '截止投標')) || hit.deadline,
+      address, city: area.city, district: area.district,
       contact: one(detail, '聯絡人'),
       phone: one(detail, '聯絡電話'),
       url: `${BASE}/prkms/urlSelector/common/${hit.path}?pk=${hit.pk}`,
@@ -213,5 +220,47 @@ export async function fetchDentalTendersFromPcc(options: {
     })
   }
 
-  return { records, candidates: candidates.length, skippedNoDetail, detailBlocked, queries, failedQueries, firstError }
+  return { records, candidates: candidates.length, enriched, detailBlocked, queries, failedQueries, firstError }
+}
+
+/**
+ * 補明細：拿「尚未補到機關代碼」的既有列，重抓一次明細頁組成完整紀錄。
+ * 明細頁隨時可能被機器人驗證擋下，擋下就整批停手（回傳 blocked），下一輪再試。
+ */
+export async function enrichPendingTenders(
+  pending: { url: string; unitName: string; jobNumber: string; title: string; type: string; date: string; deadline: string }[],
+): Promise<{ records: TenderRecord[]; blocked: boolean }> {
+  const records: TenderRecord[] = []
+  for (const row of pending) {
+    const m = row.url.match(/\/common\/(tpam|atm|nonAtm)\?pk=([^&]+)/)
+    if (!m) continue
+    const detail = await fetchDetail(m[1], decodeURIComponent(m[2])).catch(() => new Map<string, string[]>())
+    if (detail === null) return { records, blocked: true }
+    const unitId = one(detail, '機關代碼')
+    if (!unitId) { await sleep(4_000); continue }
+
+    const category = one(detail, '標的分類')
+    const hit = matchKeywords({ title: row.title, unitName: row.unitName, category })
+    const address = one(detail, '機關地址')
+    const area = address ? parseArea(address) : parseArea(row.unitName)
+    const vendors = detail.get('廠商名稱') ?? []
+    const winner = one(detail, '得標廠商') || (one(detail, '是否得標') === '是' ? (vendors[0] ?? '') : '')
+    records.push({
+      id: `${unitId}|${row.jobNumber}`,
+      unitId, jobNumber: row.jobNumber, unitName: row.unitName, title: row.title,
+      type: row.type, date: row.date, category,
+      matched: hit?.matched ?? [], tier: hit?.tier ?? 1,
+      budget: parseMoney(one(detail, '預算金額')),
+      budgetText: one(detail, '預算金額'),
+      deadline: rocToISO(one(detail, '截止投標')) || row.deadline,
+      address, city: area.city, district: area.district,
+      contact: one(detail, '聯絡人'), phone: one(detail, '聯絡電話'), url: row.url,
+      winner,
+      awardAmount: parseMoney(one(detail, '總決標金額') || one(detail, '決標金額')),
+      basePrice: parseMoney(one(detail, '底價金額')),
+      bidders: vendors,
+    })
+    await sleep(4_000)
+  }
+  return { records, blocked: false }
 }

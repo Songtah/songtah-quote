@@ -87,13 +87,28 @@ export async function listTenderRows(): Promise<TenderRow[]> {
   return out
 }
 
-/** 既有列的索引：標案ID → pageId（upsert 用） */
-async function indexByTenderId(): Promise<Map<string, { pageId: string; status: string; owner: string; note: string }>> {
-  const map = new Map<string, { pageId: string; status: string; owner: string; note: string }>()
+type IndexEntry = { pageId: string; status: string; owner: string; note: string }
+
+/**
+ * 既有列的索引（upsert 用）：主鍵是標案ID，另外以「機關名稱＋案號」當備用鍵。
+ * 備用鍵的用途：官網明細頁常被機器人驗證擋下，當下拿不到機關代碼，標案ID 只能用機關名稱組；
+ * 之後補到機關代碼時要更新到**同一列**，不能變成兩筆。
+ */
+async function indexByTenderId(): Promise<{ byId: Map<string, IndexEntry>; byUnitJob: Map<string, IndexEntry> }> {
+  const byId = new Map<string, IndexEntry>()
+  const byUnitJob = new Map<string, IndexEntry>()
   for (const r of await listTenderRows()) {
-    map.set(r.id, { pageId: r.pageId, status: r.status, owner: r.owner, note: r.note })
+    const entry = { pageId: r.pageId, status: r.status, owner: r.owner, note: r.note }
+    byId.set(r.id, entry)
+    if (r.unitName && r.jobNumber) byUnitJob.set(`${r.unitName}|${r.jobNumber}`, entry)
   }
-  return map
+  return { byId, byUnitJob }
+}
+
+/** 還沒補到明細（機關代碼空白）的列，交給抓取端慢慢補 */
+export async function listTendersNeedingDetail(limit = 5): Promise<TenderRow[]> {
+  const rows = await listTenderRows()
+  return rows.filter((r) => !r.unitId && r.url).slice(0, limit)
 }
 
 export type UpsertInput = TenderRecord & {
@@ -110,7 +125,7 @@ export type UpsertInput = TenderRecord & {
  * 例外：autoStatus——案子已決標而追蹤還停在投標中／已投標時，由系統結案。
  */
 export async function upsertTenders(records: UpsertInput[]): Promise<{ created: number; updated: number }> {
-  const index = await indexByTenderId()
+  const { byId, byUnitJob } = await indexByTenderId()
   let created = 0, updated = 0
 
   for (const r of records) {
@@ -141,7 +156,7 @@ export async function upsertTenders(records: UpsertInput[]): Promise<{ created: 
       ...(r.customerId ? { '關聯客戶': { relation: [{ id: r.customerId }] } } : {}),
     }
 
-    const existing = index.get(r.id)
+    const existing = byId.get(r.id) ?? byUnitJob.get(`${r.unitName}|${r.jobNumber}`)
     if (!existing) {
       await notionCallWithRetry('upsertTenders:create', () =>
         notion.pages.create({

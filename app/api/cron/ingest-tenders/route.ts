@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { ingestTenders } from '@/lib/notion/tenders'
+import { listTendersNeedingDetail } from '@/lib/notion/tenders-db'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -19,6 +20,19 @@ function verify(req: NextRequest): boolean {
   const got = req.headers.get('x-cron-secret') ?? ''
   const a = Buffer.from(got), b = Buffer.from(secret)
   return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/** 抓取端問「哪些列還缺明細」，好慢慢補（明細頁被官網限流，只能少量多次） */
+export async function GET(req: NextRequest) {
+  if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const limit = Math.min(Number(req.nextUrl.searchParams.get('limit')) || 5, 20)
+  const rows = await listTendersNeedingDetail(limit)
+  return NextResponse.json({
+    pending: rows.map((r) => ({
+      url: r.url, unitName: r.unitName, jobNumber: r.jobNumber,
+      title: r.title, type: r.type, date: r.date, deadline: r.deadline,
+    })),
+  })
 }
 
 export async function POST(req: NextRequest) {
