@@ -1196,37 +1196,49 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
                       <span className="text-red-500">−{sumR}</span>
                     </span>
                   </div>
-                  <div className="mt-2 flex items-stretch gap-1" style={{ height: 96 }}>
+                  {/* 長條上直接標數字，並保留滑過提示；數字用 tabular-nums 對齊 */}
+                  <div className="mt-2 flex items-stretch gap-1" style={{ height: 116 }}>
                     {points.map((p, i) => (
-                      <div key={p.month} className="flex flex-1 flex-col items-center justify-center">
-                        <div className="flex w-full flex-1 items-end justify-center">
+                      <div
+                        key={p.month}
+                        className="group flex flex-1 flex-col items-center justify-center rounded-md transition-colors hover:bg-stone-50"
+                        title={`${p.month}　新增 ${added[i]}　減少 ${removed[i]}${p.baseline ? '（基準月，不計入）' : ''}`}
+                      >
+                        <div className="flex w-full flex-1 flex-col items-center justify-end">
                           {added[i] > 0 && (
-                            <div
-                              title={`${p.month} 新增 ${added[i]}`}
-                              className="w-full max-w-[18px] rounded-t-sm bg-emerald-400"
-                              style={{ height: `${(added[i] / max) * 100}%` }}
-                            />
+                            <>
+                              <span className="mb-0.5 text-[10px] font-semibold tabular-nums text-emerald-700">{added[i]}</span>
+                              <div
+                                className="w-full max-w-[20px] rounded-t-sm bg-emerald-400 transition-colors group-hover:bg-emerald-500"
+                                style={{ height: `${Math.max(4, (added[i] / max) * 82)}%` }}
+                              />
+                            </>
                           )}
                         </div>
                         <div className="h-px w-full bg-stone-200" />
-                        <div className="flex w-full flex-1 items-start justify-center">
+                        <div className="flex w-full flex-1 flex-col items-center justify-start">
                           {removed[i] > 0 && (
-                            <div
-                              title={`${p.month} 減少 ${removed[i]}`}
-                              className="w-full max-w-[18px] rounded-b-sm bg-red-300"
-                              style={{ height: `${(removed[i] / max) * 100}%` }}
-                            />
+                            <>
+                              <div
+                                className="w-full max-w-[20px] rounded-b-sm bg-red-300 transition-colors group-hover:bg-red-400"
+                                style={{ height: `${Math.max(4, (removed[i] / max) * 82)}%` }}
+                              />
+                              <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-red-600">{removed[i]}</span>
+                            </>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="mt-1 flex gap-1">
-                    {points.map((p) => (
-                      <span key={p.month} className="flex-1 text-center text-[9px] text-stone-400">
-                        {p.month.slice(5)}{p.baseline ? '*' : ''}
-                      </span>
-                    ))}
+                    {points.map((p) => {
+                      const empty = (p.kinds?.[kind]?.added ?? 0) === 0 && (p.kinds?.[kind]?.removed ?? 0) === 0
+                      return (
+                        <span key={p.month} className={`flex-1 text-center text-[10px] tabular-nums ${empty ? 'text-stone-300' : 'text-stone-500'}`}>
+                          {p.month.slice(5)} 月{p.baseline ? '*' : ''}
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               )
