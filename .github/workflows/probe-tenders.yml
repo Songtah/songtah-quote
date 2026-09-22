@@ -1,0 +1,19 @@
+name: 標案來源連通性探測（暫時）
+on: { workflow_dispatch: }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 探測各來源在 runner 端的可用性
+        run: |
+          for u in \
+            "https://pcc-api.openfun.app/api/listbydate?date=20260918" \
+            "https://web.pcc.gov.tw/prkms/tender/common/noticeDate/listTenderDateNotice?date=20260918" \
+            "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic" \
+            "https://web.pcc.gov.tw/tps/tp/OpenData/downloadFile?fileName=tender_20260701.xml" ; do
+            echo "--- $u"
+            curl -s -o /tmp/p.out -w "HTTP %{http_code} size %{size_download}\n" --max-time 30 \
+              -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36" "$u" || echo "curl failed"
+            head -c 300 /tmp/p.out; echo; echo
+          done
