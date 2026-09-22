@@ -28,20 +28,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, mode: 'official', ...res })
     }
     const snap = await refreshTenders({ full })
-    // 掃完卻連一則公告都沒有、或最新公告已經是 3 天前 → 上游或排程有問題，回 503 讓排程亮紅燈
-    const unhealthy = snap.scannedRecords === 0 || snap.staleDays > 3
+    // 查詢全數失敗、或最新公告已是 7 天前 → 來源或排程有問題，回 503 讓排程亮紅燈。
+    // （改關鍵字查詢後，候選為 0 有可能只是這幾天真的沒有牙科標案，不算異常）
+    const unhealthy = (snap.failedDays > 0 && snap.failedDays >= snap.scannedDays) || snap.staleDays > 7
     return NextResponse.json({
       ok: true,
       records: snap.records.length,
       matched: snap.records.filter((r) => r.customerId).length,
-      scannedDays: snap.scannedDays,
-      scannedRecords: snap.scannedRecords,
+      queries: snap.scannedDays,
+      candidates: snap.scannedRecords,
       failedDays: snap.failedDays,
       firstError: snap.firstError,
       latestAnnouncementDate: snap.latestAnnouncementDate,
       staleDays: snap.staleDays,
       elapsedMs: Date.now() - started,
-      ...(unhealthy ? { warning: '掃描結果異常：上游可能未更新或請求被擋' } : {}),
+      ...(unhealthy ? { warning: '抓取異常：來源可能未更新或請求被擋' } : {}),
     }, { status: unhealthy ? 503 : 200 })
   } catch (error: any) {
     console.error('refresh-tenders error:', error)

@@ -13,7 +13,8 @@
 import { getRedisValue, setRedisValue } from './shared'
 import { getAllSystemCustomers } from './customers'
 import { customerNameStem } from '@/lib/customer-name-match'
-import { fetchTendersByDateRange, fetchOurBids, matchKeywords, type TenderRecord } from '@/lib/tender-source'
+import { matchKeywords, type TenderRecord } from '@/lib/tender-source'
+import { fetchDentalTendersFromPcc } from '@/lib/tender-pcc'
 import { fetchOfficialRecent } from '@/lib/tender-official'
 import { upsertTenders, listTenderRows, type TenderRow } from './tenders-db'
 
@@ -88,34 +89,16 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
     ? new Date(Date.now() - (options?.days ?? 120) * 86400_000).toISOString().slice(0, 10)
     : new Date(new Date(cursor).getTime() - RESCAN_DAYS * 86400_000).toISOString().slice(0, 10)
 
-  const [{ records, scannedDays, scannedRecords, failedDays, firstError }, ourBids, match] = await Promise.all([
-    fetchTendersByDateRange({ from, to: today, withDetail: true }),
-    fetchOurBids('崧達'),
-    buildCustomerMatcher(),
-  ])
-
-  const upsertInput = records.map((r: TenderRecord) => {
-    const m = match({ unitName: r.unitName, city: r.city })
-    const awarded = /^決標公告/.test(r.type) && Boolean(r.winner)
-    return {
-      ...r,
-      customerId: m.customerId || undefined,
-      weBid: ourBids.has(r.id),
-      dataSource: '即時API' as const,
-      autoStatus: awarded
-        ? (/崧達/.test(r.winner) ? '得標' as const : '未得標' as const)
-        : undefined,
-    }
+  const res = await fetchDentalTendersFromPcc({ from, to: today })
+  const snap = await ingestTenders(res.records, {
+    meta: {
+      scannedDays: res.queries,
+      scannedRecords: res.candidates,
+      failedDays: res.failedQueries,
+      firstError: res.firstError || (res.detailBlocked ? '明細頁被官網機器人驗證擋下，剩餘案件留待下輪' : ''),
+    },
   })
-  await upsertTenders(upsertInput)
-  await setRedisValue(CURSOR_KEY, today, 400 * 24 * 3600_000)
-
-  // 上游有沒有把今天的公告放上來？沒抓到任何公告＝上游或排程出事，要讓人看得見
-  const latestScanned = records.map((r) => r.date).sort().pop() ?? ''
-  return await rebuildSnapshot({
-    scannedDays, scannedRecords, lastScannedDate: today,
-    latestAnnouncementDate: latestScanned, failedDays, firstError,
-  })
+  return snap
 }
 
 /**
@@ -134,7 +117,7 @@ export async function ingestTenders(
     return {
       ...r,
       customerId: m.customerId || undefined,
-      weBid: ourBids.has(r.id),
+      weBid: ourBids.has(r.id) || r.bidders.some((b) => b.includes('崧達')),
       dataSource: '即時API' as const,
       autoStatus: awarded ? (/崧達/.test(r.winner) ? '得標' as const : '未得標' as const) : undefined,
     }

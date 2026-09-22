@@ -132,7 +132,8 @@ export async function upsertTenders(records: UpsertInput[]): Promise<{ created: 
       '命中關鍵字': { rich_text: richText(r.matched.join('、')) },
       '聯絡人':   { rich_text: richText(r.contact) },
       '聯絡電話': { rich_text: richText(r.phone) },
-      '崧達有投標': { checkbox: Boolean(r.weBid) },
+      // 只在確認有投標時打勾：招標公告階段看不到投標廠商，若一律覆寫會把先前查到的事實清掉
+      ...(r.weBid ? { '崧達有投標': { checkbox: true } } : {}),
       ...(r.city ? { '縣市': { select: { name: r.city } } } : {}),
       ...(r.type ? { '公告類型': { select: { name: r.type } } } : {}),
       ...(r.url ? { '公告連結': { url: r.url } } : {}),
