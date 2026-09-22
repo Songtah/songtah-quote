@@ -1432,34 +1432,87 @@ const CHANGE_BADGE: Record<string, string> = {
   '停業': 'bg-stone-100 text-stone-600', '恢復開業': 'bg-blue-50 text-blue-700',
 }
 function ChangesModal({ month, changes, loading, onClose }: { month: string; changes: ChangeRow[]; loading: boolean; onClose: () => void }) {
+  const [typeFilter, setTypeFilter] = useState<string>('全部')
+  const [onlyCustomer, setOnlyCustomer] = useState(false)
+  const [q, setQ] = useState('')
+
+  // 備用鍵（名稱__縣市__區）是尚未解析到代碼的暫存鍵，不該出現在異動清單上
+  const rows = changes.filter(c => !(c.code ?? '').includes('__'))
+  const counts = rows.reduce<Record<string, number>>((m, c) => ((m[c.type] = (m[c.type] ?? 0) + 1), m), {})
+  const shown = rows.filter(c =>
+    (typeFilter === '全部' || c.type === typeFilter) &&
+    (!onlyCustomer || !!c.customer) &&
+    (!q || c.name.includes(q) || c.customer.includes(q) || c.address.includes(q) || c.code.includes(q)))
+  const customerCount = rows.filter(c => c.customer).length
+
+  const TYPES = ['全部', ...Object.keys(counts)]
+  const basUrl = (code: string) => `https://ma.mohw.gov.tw/Accessibility/BASSearch/MASearchBAS`
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={onClose}>
-      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
-          <h2 className="font-bold text-stone-800 text-lg">📋 本月異動（{month}）</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-stone-900/[0.06] shrink-0">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-stone-800 text-lg">📋 本月異動（{month}）</h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
+          </div>
+          <p className="mt-1 text-[11px] text-stone-400">
+            衛福部名冊的月對月變化：本月有、上月沒有＝新開業／恢復開業；上月有、本月沒有＝停業／新增停業。
+            「客戶」欄有值代表這家是我們的客戶。
+          </p>
+          {!loading && rows.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {TYPES.map(t => (
+                <button key={t} onClick={() => setTypeFilter(t)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
+                    typeFilter === t ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'text-stone-500 hover:bg-stone-100'
+                  }`}>
+                  {t}{t !== '全部' && ` ${counts[t]}`}{t === '全部' && ` ${rows.length}`}
+                </button>
+              ))}
+              <button onClick={() => setOnlyCustomer(v => !v)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
+                  onlyCustomer ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'text-stone-500 hover:bg-stone-100'
+                }`}>只看我們的客戶 {customerCount}</button>
+              <input
+                value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋名稱／代碼／地址"
+                className="input-soft ml-auto text-xs py-1.5 px-3 rounded-full min-w-[160px]"
+              />
+            </div>
+          )}
         </div>
         <div className="p-5 overflow-y-auto">
           {loading ? <div className="py-12 text-center text-stone-400 text-sm">載入中…</div>
-            : changes.length === 0 ? (
+            : rows.length === 0 ? (
               <div className="py-12 text-center text-stone-400 text-sm">
                 <div className="text-3xl mb-3">🗓️</div>
                 <p>本月尚無異動紀錄</p>
                 <p className="text-xs mt-1">需累積兩個月 BAS 快照才會產生月對月異動（下個月起自動出現）</p>
               </div>
+            ) : shown.length === 0 ? (
+              <div className="py-12 text-center text-stone-400 text-sm">沒有符合篩選的項目</div>
             ) : (
               <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
-                {changes.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${CHANGE_BADGE[c.type] ?? 'bg-stone-100 text-stone-600'}`}>{c.type}</span>
+                {shown.map((c, i) => (
+                  <div key={`${c.code}-${i}`} className="flex items-start gap-3 px-4 py-3">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 mt-0.5 ${CHANGE_BADGE[c.type] ?? 'bg-stone-100 text-stone-600'}`}>{c.type}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-stone-900">{c.name || c.customer}</span>
                         {c.code && <span className="text-[10px] font-mono text-stone-400">{c.code}</span>}
+                        {c.customer
+                          ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700">我們的客戶</span>
+                          : <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">非客戶</span>}
                       </div>
                       {c.address && <div className="text-xs text-stone-400 mt-0.5">{c.address}</div>}
+                      {c.customer && c.customer !== c.name && (
+                        <div className="text-[11px] text-stone-400 mt-0.5">對應客戶：{c.customer}</div>
+                      )}
                     </div>
-                    {c.customerUrl && <a href={c.customerUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>}
+                    <div className="shrink-0 flex flex-col items-end gap-1">
+                      {c.customerUrl && <a href={c.customerUrl} target="_blank" rel="noreferrer" className="text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>}
+                      <a href={basUrl(c.code)} target="_blank" rel="noreferrer" className="text-[11px] text-stone-300 hover:text-stone-500 underline">衛福部查詢</a>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -229,9 +229,17 @@ async function fetchSongtahCustomers() {
       else if (type === '學術機構')                        counts.custSchools++
       const code = getText(page, '機構代碼').trim()
       if (!code) continue
-      const entry = { name, pageId: page.id, code }
+      const city = page.properties['縣市']?.select?.name ?? ''
+      const dist = page.properties['行政區']?.select?.name
+        ?? (page.properties['行政區']?.rich_text ?? []).map((t) => t.plain_text).join('')
+        ?? ''
+      const entry = { name, pageId: page.id, code, city, dist }
       byCode.set(code, entry)
-      byName.set(normalizeName(name), entry)
+      // 名稱索引改記「陣列」：全台同名機構很多（實測「致臻牙體技術所」有 4 筆客戶，
+      // 分屬桃園、臺中烏日 ×2、高雄鼓山），只留一筆會把異動掛到錯的客戶身上。
+      const nk = normalizeName(name)
+      if (!byName.has(nk)) byName.set(nk, [])
+      byName.get(nk).push(entry)
     }
     cursor = res.has_more ? res.next_cursor : null
   } while (cursor)
@@ -246,15 +254,40 @@ function normalizeName(name) {
 
 // ── 比對 ─────────────────────────────────────────────────────────────────────
 
+/**
+ * 月對月異動。
+ *
+ * ⚠️ 快照裡有兩種鍵：真正的機構代碼，與「名稱__縣市__區」這種尚未解析到代碼的備用鍵。
+ * 同一家機構這個月解析到代碼後，備用鍵消失、代碼鍵出現，單純比對鍵值會產生一對假異動
+ * （實測：致臻牙體技術所（臺中烏日）同時出現「新增停業」與「恢復開業」，而它其實一直開業中）。
+ * 因此比對的身分是「代碼 **或** 名稱+地區」，兩者任一在對面存在就不算異動。
+ */
+const identityKeysOf = (key, info) => {
+  const keys = []
+  if (key && !key.includes('__')) keys.push(`code:${key}`)
+  const name = (info?.name ?? '').replace(/\s/g, '')
+  const addr = (info?.address ?? '').replace(/\s/g, '').replace(/臺/g, '台')
+  if (name) keys.push(`area:${name}|${addr}`)
+  return keys
+}
+
 function buildChanges({ currentData, prevCodes, customers, month }) {
   const changes = []
   if (!prevCodes) { log('第一次執行，只建快照'); return changes }
   const prevSet    = new Set(Object.keys(prevCodes))
   const currentSet = new Set(currentData.keys())
 
+  // 身分索引（代碼與 名稱+地區 都算）
+  const currentIds = new Set()
+  for (const [k, v] of currentData) for (const id of identityKeysOf(k, v)) currentIds.add(id)
+  const prevIds = new Set()
+  for (const [k, v] of Object.entries(prevCodes)) for (const id of identityKeysOf(k, v)) prevIds.add(id)
+
   for (const key of prevSet) {
     if (currentSet.has(key)) continue
     const prev = prevCodes[key]
+    // 代碼或同名同區仍在本月清單 → 只是鍵換了（備用鍵解析成代碼），不是異動
+    if (identityKeysOf(key, prev).some((id) => currentIds.has(id))) continue
     const cust = matchCustomer(customers, key, prev)
     changes.push({
       type: cust ? '新增停業' : '停業',
@@ -266,6 +299,7 @@ function buildChanges({ currentData, prevCodes, customers, month }) {
   }
   for (const [key, info] of currentData) {
     if (prevSet.has(key)) continue
+    if (identityKeysOf(key, info).some((id) => prevIds.has(id))) continue   // 同上：鍵換了不算新開業
     const cust = matchCustomer(customers, key, info)
     changes.push({
       type: cust ? '恢復開業' : '新開業',
@@ -278,11 +312,29 @@ function buildChanges({ currentData, prevCodes, customers, month }) {
   return changes
 }
 
+/**
+ * 監控紀錄要標示「這筆異動是哪個客戶」。
+ * 代碼相符最可靠；退而求其次用名稱，但**一定要加上地區**——
+ * 全台同名機構很多（「致臻牙體技術所」在桃園、臺中烏日、高雄鼓山都有），
+ * 只比名稱會把臺中那家的異動掛到高雄的客戶身上（使用者 2026-09-22 回報的落差）。
+ * 名稱＋縣市仍不唯一時一律不配，寧可留白。
+ */
 function matchCustomer(customers, key, info) {
   const { byCode, byName } = customers
   if (byCode.has(key)) return byCode.get(key)
   const norm = normalizeName(info.name ?? '')
-  if (norm && byName.has(norm)) return byName.get(norm)
+  if (!norm) return null
+  const list = byName.get(norm) ?? []
+  if (list.length === 0) return null
+
+  const tw = (s) => (s ?? '').replace(/臺/g, '台')
+  const addr = tw(info.address ?? '')
+  const sameArea = list.filter((e) => e.city && e.dist && addr.includes(tw(e.city)) && addr.includes(tw(e.dist)))
+  if (sameArea.length === 1) return sameArea[0]
+  const sameCity = list.filter((e) => e.city && addr.includes(tw(e.city)))
+  if (sameCity.length === 1) return sameCity[0]
+  // 沒有地址可比時，只有全台唯一同名才敢用
+  if (!addr && list.length === 1) return list[0]
   return null
 }
 
