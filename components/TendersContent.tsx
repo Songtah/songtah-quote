@@ -52,6 +52,8 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
   const [busy, setBusy] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('全部')
   const [computedAt, setComputedAt] = useState('')
+  const [latestDate, setLatestDate] = useState('')
+  const [staleDays, setStaleDays] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [err, setErr] = useState('')
@@ -71,6 +73,8 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
       if (!res.ok) throw new Error(data.error ?? '讀取失敗')
       setRecords(data.records ?? [])
       setComputedAt(data.computedAt ?? '')
+      setLatestDate(data.latestAnnouncementDate ?? '')
+      setStaleDays(data.staleDays ?? 0)
     } catch (e: any) {
       setErr(e?.message ?? '讀取失敗')
     } finally { setLoading(false); setRefreshing(false) }
@@ -133,7 +137,14 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
         </div>
         {computedAt && (
           <p className="mt-1 text-[11px] text-stone-400">
-            資料更新：{new Date(computedAt).toLocaleString('zh-TW', { hour12: false })}　·　每日自動更新
+            資料更新：{new Date(computedAt).toLocaleString('zh-TW', { hour12: false })}
+            {latestDate && `　·　最新公告日：${latestDate}`}
+            　·　每兩小時自動更新（08–20 時）
+          </p>
+        )}
+        {staleDays > 3 && (
+          <p className="mt-1 rounded-xl bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
+            ⚠️ 最新公告已是 {staleDays} 天前——可能上游來源未更新或抓取被擋，請按「立即重抓」確認。
           </p>
         )}
 

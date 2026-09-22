@@ -2,10 +2,10 @@ name: 標案機會 — 每日抓取政府採購網牙科標案
 
 on:
   schedule:
-    # 台灣時間 07:10、12:10、17:10（UTC 23:10 / 04:10 / 09:10）——增量掃描，當天新公告最多等 5 小時
+    # 台灣時間 08:10 起每兩小時到 20:10（UTC 00:10,02:10,…,12:10）——新公告最多等 2 小時
+    - cron: '10 0,2,4,6,8,10,12 * * *'
+    # 台灣時間 07:10（UTC 23:10）：每天第一輪，順便在每月 6 號補寫官方開放資料
     - cron: '10 23 * * *'
-    - cron: '10 4 * * *'
-    - cron: '10 9 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,8 @@ jobs:
             -H "x-cron-secret: ${{ secrets.DAILY_REPORT_SECRET }}")
           cat /tmp/out.json
           echo ""
-          if [ "$code" != "200" ]; then echo "HTTP $code"; exit 1; fi
+          # 503＝掃不到公告或最新公告超過三天，視為失敗（GitHub 會寄通知）
+          if [ "$code" != "200" ]; then echo "HTTP $code：標案抓取異常"; exit 1; fi
 
       - name: 每月 6 號補寫官方開放資料（可商用來源；落後約兩個月）
         if: ${{ github.event.schedule == '10 23 * * *' }}

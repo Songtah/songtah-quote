@@ -25,6 +25,10 @@ export type TenderSnapshot = {
   lastScannedDate: string
   scannedDays: number
   scannedRecords: number
+  /** 上游最新公告日（掃到的最大日期）——用來判斷資料是否卡住 */
+  latestAnnouncementDate: string
+  /** 距今幾天沒有任何新公告；>2 代表上游或排程出問題 */
+  staleDays: number
 }
 
 const KEY = 'tenders-v2'
@@ -66,17 +70,20 @@ async function buildCustomerMatcher(): Promise<Matcher> {
   }
 }
 
+/** 每次都重掃最近這幾天：公告當天會陸續補登、也會有更正公告，只掃「新的一天」會漏 */
+const RESCAN_DAYS = 3
+
 /**
  * 抓取並寫入 DB。
  * - full=true：回補 days 天（預設 120），初次建立或補資料用
- * - 否則：從上次掃到的日期＋1 開始（重疊一天避免當日公告尚未齊全）
+ * - 否則：從「上次掃到的日期 − RESCAN_DAYS」開始重掃，確保當天稍晚才登錄的公告不會漏
  */
 export async function refreshTenders(options?: { days?: number; full?: boolean }): Promise<TenderSnapshot> {
   const today = new Date().toISOString().slice(0, 10)
   const cursor = options?.full ? null : await getRedisValue<string>(CURSOR_KEY).catch(() => null)
   const from = options?.full || !cursor
     ? new Date(Date.now() - (options?.days ?? 120) * 86400_000).toISOString().slice(0, 10)
-    : new Date(new Date(cursor).getTime() - 86400_000).toISOString().slice(0, 10)   // 重疊一天
+    : new Date(new Date(cursor).getTime() - RESCAN_DAYS * 86400_000).toISOString().slice(0, 10)
 
   const [{ records, scannedDays, scannedRecords }, ourBids, match] = await Promise.all([
     fetchTendersByDateRange({ from, to: today, withDetail: true }),
@@ -100,22 +107,36 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
   await upsertTenders(upsertInput)
   await setRedisValue(CURSOR_KEY, today, 400 * 24 * 3600_000)
 
-  return await rebuildSnapshot({ scannedDays, scannedRecords, lastScannedDate: today })
+  // 上游有沒有把今天的公告放上來？沒抓到任何公告＝上游或排程出事，要讓人看得見
+  const latestScanned = records.map((r) => r.date).sort().pop() ?? ''
+  return await rebuildSnapshot({
+    scannedDays, scannedRecords, lastScannedDate: today,
+    latestAnnouncementDate: latestScanned,
+  })
 }
 
 /** 從 DB 讀回全部標案並快取（頁面讀這份，不直接打 Notion） */
-export async function rebuildSnapshot(meta?: { scannedDays?: number; scannedRecords?: number; lastScannedDate?: string }): Promise<TenderSnapshot> {
+export async function rebuildSnapshot(meta?: {
+  scannedDays?: number; scannedRecords?: number; lastScannedDate?: string; latestAnnouncementDate?: string
+}): Promise<TenderSnapshot> {
   const [rows, match] = await Promise.all([listTenderRows(), buildCustomerMatcher()])
   const records: TenderOpportunity[] = rows.map((r) => {
     const m = match({ unitName: r.unitName, city: r.city })
     return { ...r, customerName: m.customerName, matchNote: m.note, customerId: r.customerId || m.customerId }
   })
+  // 最新公告日取「這次掃到的」與「DB 既有的」較大者
+  const latest = [meta?.latestAnnouncementDate ?? '', ...records.map((r) => r.date)].filter(Boolean).sort().pop() ?? ''
+  const staleDays = latest
+    ? Math.floor((Date.now() - new Date(latest).getTime()) / 86400_000)
+    : 999
   const snapshot: TenderSnapshot = {
     records,
     computedAt: new Date().toISOString(),
     lastScannedDate: meta?.lastScannedDate ?? '',
     scannedDays: meta?.scannedDays ?? 0,
     scannedRecords: meta?.scannedRecords ?? 0,
+    latestAnnouncementDate: latest,
+    staleDays,
   }
   await setRedisValue(KEY, snapshot, TTL_MS)
   return snapshot

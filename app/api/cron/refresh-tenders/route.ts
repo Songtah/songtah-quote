@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, mode: 'official', ...res })
     }
     const snap = await refreshTenders({ full })
+    // 掃完卻連一則公告都沒有、或最新公告已經是 3 天前 → 上游或排程有問題，回 503 讓排程亮紅燈
+    const unhealthy = snap.scannedRecords === 0 || snap.staleDays > 3
     return NextResponse.json({
       ok: true,
       records: snap.records.length,
