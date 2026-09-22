@@ -36,8 +36,13 @@ export async function POST(req: NextRequest) {
       matched: snap.records.filter((r) => r.customerId).length,
       scannedDays: snap.scannedDays,
       scannedRecords: snap.scannedRecords,
+      failedDays: snap.failedDays,
+      firstError: snap.firstError,
+      latestAnnouncementDate: snap.latestAnnouncementDate,
+      staleDays: snap.staleDays,
       elapsedMs: Date.now() - started,
-    })
+      ...(unhealthy ? { warning: '掃描結果異常：上游可能未更新或請求被擋' } : {}),
+    }, { status: unhealthy ? 503 : 200 })
   } catch (error: any) {
     console.error('refresh-tenders error:', error)
     return NextResponse.json({ error: error?.message ?? '重抓失敗' }, { status: 500 })

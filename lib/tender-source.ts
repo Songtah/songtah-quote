@@ -121,12 +121,16 @@ export function matchKeywords(input: { title: string; unitName: string; category
   return null
 }
 
-/** 取某一天的全部公告（完整，不受標題關鍵字限制） */
-async function listByDate(yyyymmdd: string): Promise<RawRecord[]> {
-  const res = await fetch(`${API}/listbydate?date=${yyyymmdd}`, { signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) return []
-  const json: any = await res.json()
-  return json?.records ?? []
+/** 取某一天的全部公告（完整，不受標題關鍵字限制）。失敗時回錯誤訊息，不吞掉 */
+async function listByDate(yyyymmdd: string): Promise<{ records: RawRecord[]; error?: string }> {
+  try {
+    const res = await fetch(`${API}/listbydate?date=${yyyymmdd}`, { signal: AbortSignal.timeout(30_000) })
+    if (!res.ok) return { records: [], error: `HTTP ${res.status}` }
+    const json: any = await res.json()
+    return { records: json?.records ?? [] }
+  } catch (e: any) {
+    return { records: [], error: e?.message ?? String(e) }
+  }
 }
 
 async function searchKeyword(keyword: string, maxPages: number, sinceDate: string): Promise<RawRecord[]> {
@@ -178,16 +182,17 @@ export async function fetchTendersByDateRange(options?: {
   days?: number
   withDetail?: boolean
   detailLimit?: number
-}): Promise<{ records: TenderRecord[]; scannedDays: number; scannedRecords: number }> {
+}): Promise<{ records: TenderRecord[]; scannedDays: number; scannedRecords: number; failedDays: number; firstError: string }> {
   const to = options?.to ?? new Date().toISOString().slice(0, 10)
   const from = options?.from
     ?? new Date(Date.now() - (options?.days ?? 120) * 86400_000).toISOString().slice(0, 10)
 
   const byId = new Map<string, TenderRecord>()
-  let scannedDays = 0, scannedRecords = 0
+  let scannedDays = 0, scannedRecords = 0, failedDays = 0, firstError = ''
   for (let d = new Date(from); d.toISOString().slice(0, 10) <= to; d.setUTCDate(d.getUTCDate() + 1)) {
     const ymd = d.toISOString().slice(0, 10).replace(/-/g, '')
-    const rows = await listByDate(ymd).catch(() => [])
+    const { records: rows, error } = await listByDate(ymd)
+    if (error) { failedDays++; if (!firstError) firstError = `${ymd}: ${error}` }
     scannedDays++; scannedRecords += rows.length
     for (const r of rows) {
       const title = r.brief?.title ?? ''
@@ -217,7 +222,7 @@ export async function fetchTendersByDateRange(options?: {
 
   const records = Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1))
   if (options?.withDetail !== false) await enrichDetails(records, options?.detailLimit ?? 300)
-  return { records, scannedDays, scannedRecords }
+  return { records, scannedDays, scannedRecords, failedDays, firstError }
 }
 
 /** 我們自己投過的標（依廠商名稱查）——得標與落標都算，供回填與戰況分析 */

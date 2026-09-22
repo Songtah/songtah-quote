@@ -29,6 +29,9 @@ export type TenderSnapshot = {
   latestAnnouncementDate: string
   /** 距今幾天沒有任何新公告；>2 代表上游或排程出問題 */
   staleDays: number
+  /** 抓取失敗的天數與第一個錯誤，用來判斷是上游沒資料還是我們被擋 */
+  failedDays: number
+  firstError: string
 }
 
 const KEY = 'tenders-v2'
@@ -85,7 +88,7 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
     ? new Date(Date.now() - (options?.days ?? 120) * 86400_000).toISOString().slice(0, 10)
     : new Date(new Date(cursor).getTime() - RESCAN_DAYS * 86400_000).toISOString().slice(0, 10)
 
-  const [{ records, scannedDays, scannedRecords }, ourBids, match] = await Promise.all([
+  const [{ records, scannedDays, scannedRecords, failedDays, firstError }, ourBids, match] = await Promise.all([
     fetchTendersByDateRange({ from, to: today, withDetail: true }),
     fetchOurBids('崧達'),
     buildCustomerMatcher(),
@@ -111,13 +114,14 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
   const latestScanned = records.map((r) => r.date).sort().pop() ?? ''
   return await rebuildSnapshot({
     scannedDays, scannedRecords, lastScannedDate: today,
-    latestAnnouncementDate: latestScanned,
+    latestAnnouncementDate: latestScanned, failedDays, firstError,
   })
 }
 
 /** 從 DB 讀回全部標案並快取（頁面讀這份，不直接打 Notion） */
 export async function rebuildSnapshot(meta?: {
   scannedDays?: number; scannedRecords?: number; lastScannedDate?: string; latestAnnouncementDate?: string
+  failedDays?: number; firstError?: string
 }): Promise<TenderSnapshot> {
   const [rows, match] = await Promise.all([listTenderRows(), buildCustomerMatcher()])
   const records: TenderOpportunity[] = rows.map((r) => {
@@ -137,6 +141,8 @@ export async function rebuildSnapshot(meta?: {
     scannedRecords: meta?.scannedRecords ?? 0,
     latestAnnouncementDate: latest,
     staleDays,
+    failedDays: meta?.failedDays ?? 0,
+    firstError: meta?.firstError ?? '',
   }
   await setRedisValue(KEY, snapshot, TTL_MS)
   return snapshot
