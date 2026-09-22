@@ -42,7 +42,12 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     // form: closure(6 真歇業) / recode(7 換照換碼) / unknown(8 查無) / status_mismatch(5) / ok
     let form: 'closure' | 'recode' | 'unknown' | 'status_mismatch' | 'ok'
     let suggestion: string
-    if (!r.found && r.outOfCity) {
+    if (!r.found && (r as any).partialOnly) {
+      // 只有「名稱包含」的相似機構（例：查「雅德思牙醫診所」回到「左營雅德思牙醫診所」）→ 不採用
+      form = 'unknown'
+      const near = ((r as any).partialCandidates ?? []).map((c: any) => `${c.name}（${c.address}）`).slice(0, 3).join('、')
+      suggestion = `衛福部沒有名稱完全相同的機構${near ? `；相似名稱：${near}，屬不同家、不採用` : ''}。可能已更名或歇業，建議人工確認。`
+    } else if (!r.found && r.outOfCity) {
       // 同縣市查無，只有外縣市有同名 → 不採用（跨縣市同名多為不同家）
       form = 'unknown'
       const others = (r.outOfCityCandidates ?? []).map((c: any) => `${c.name}（${c.address}）`).slice(0, 3).join('、')
@@ -53,6 +58,10 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     } else if (isClosedStatus(r.status)) {
       form = 'closure'
       suggestion = `衛福部開業狀態為「${r.status}」→ 建議將客戶機構狀態更新為「歇業／停業」。`
+    } else if ((r as any).ambiguous) {
+      // 同縣市有多家名稱完全相同 → 無法判斷是哪一家，不給換碼建議
+      form = 'unknown'
+      suggestion = `${city} 有多家名稱完全相同的機構，無法判斷是哪一家，請人工至衛福部確認。`
     } else if (code && r.code && code !== r.code) {
       form = 'recode'
       suggestion = `機構仍開業但代碼不同（衛福部 ${r.code} ／系統 ${code}）→ 可能換照換碼，建議更新機構代碼為 ${r.code}。`
@@ -77,6 +86,9 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
       mohwName:  r.name,
       address:   r.address,
       candidates: r.candidates,
+      partialOnly: (r as any).partialOnly ?? false,
+      partialCandidates: (r as any).partialCandidates ?? [],
+      ambiguous: (r as any).ambiguous ?? false,
       outOfCity: r.outOfCity ?? false,
       outOfCityCandidates: r.outOfCityCandidates ?? [],
       searchedCity: city,

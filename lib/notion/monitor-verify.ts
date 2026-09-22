@@ -33,6 +33,10 @@ export type VerifyResult = {
   closed: boolean
   /** 同縣市查無、但外縣市有同名（不採用，僅供人工判讀） */
   outOfCity: boolean
+  /** 衛福部只有「名稱包含」的相似機構（左營雅德思 vs 雅德思），不是同一家 */
+  partialOnly: boolean
+  /** 同縣市有多家名稱完全相同，無法判斷 */
+  ambiguous: boolean
   crmStatus: string
   /** 衛福部狀態換算成客戶主檔用語；與 crmStatus 不同才需要人工確認 */
   suggestedStatus: string
@@ -60,7 +64,7 @@ export type VerifyBatchSummary = {
   finishedAt: string
 }
 
-const KEY = 'medical-monitor:verify-v2'   // v2＝逐欄比對
+const KEY = 'medical-monitor:verify-v3'   // v3＝名稱需完全相同
 const TTL_MS = 30 * 24 * 3600_000
 /** 對 WAF 禮貌：逐筆送、間隔 400ms；127 筆約 1 分鐘 */
 const GAP_MS = 400
@@ -117,7 +121,9 @@ export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
         const f = str(from), v = str(to)
         if (v && v !== f) { diffs.push({ field, label, from: f, to: v }); patch[field] = v }
       }
-      if (r?.found) {
+      // 名稱完全相同、且同縣市只有一家，才允許產生可寫回的差異——
+      // BAS 是包含比對，「雅德思牙醫診所」會撈到「左營雅德思牙醫診所」，套用等於改到別人家。
+      if (r?.found && !r?.ambiguous) {
         const sug = basToCrmStatus(basStatus)
         if (sug && sug !== str(t.crmStatus)) {
           diffs.push({ field: 'status', label: '機構狀態', from: str(t.crmStatus) || '（未填）', to: sug })
@@ -161,14 +167,17 @@ export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
         closed: isClosedStatus(basStatus),
         outOfCity: Boolean(r?.outOfCity),
         suggestedStatus: r?.found ? basToCrmStatus(basStatus) : '',
-        codeMismatch: Boolean(r?.found && basCode && crmCode && basCode !== crmCode),
+        partialOnly: Boolean(r?.partialOnly),
+        ambiguous: Boolean(r?.ambiguous),
+        codeMismatch: Boolean(r?.found && !r?.ambiguous && basCode && crmCode && basCode !== crmCode),
         diffs,
         patch,
       })
     } catch (e: any) {
       results.push({
         ...base, found: false, basStatus: '', basCode: '', closed: false,
-        outOfCity: false, suggestedStatus: '', codeMismatch: false, diffs: [], patch: {},
+        outOfCity: false, partialOnly: false, ambiguous: false,
+        suggestedStatus: '', codeMismatch: false, diffs: [], patch: {},
         error: e?.message ?? '查詢失敗',
       })
     }

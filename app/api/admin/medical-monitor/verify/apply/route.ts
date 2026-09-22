@@ -8,7 +8,8 @@
  *
  * **客戶名稱**例外：它是客情紀錄比對的依據，改名會影響既有關聯，
  * 只有呼叫端明確帶 includeName 才寫入。
- * 查無、查詢失敗、同縣市查不到（outOfCity）一律跳過——沒有證據就不改主檔。
+ * 查無、查詢失敗、同縣市查不到（outOfCity）、名稱只是包含關係（partialOnly）、
+ * 同縣市多家同名（ambiguous）一律跳過——沒有百分之百對得上的證據就不改主檔。
  *
  * body: { customerIds?: string[] }  不給＝套用全部符合條件者
  *       { dryRun?: boolean }        先看會改哪些
@@ -48,7 +49,7 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     }
 
     const targets = results.filter((r) =>
-      r.found && !r.error && !r.outOfCity &&
+      r.found && !r.error && !r.outOfCity && !(r as any).partialOnly && !(r as any).ambiguous &&
       Object.keys(patchOf(r)).length > 0 &&
       (!only || only.includes(r.customerId))
     )

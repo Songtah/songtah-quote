@@ -174,7 +174,18 @@ function MohwLookupButton({ name, code, kind, customerStatus, city, customerId, 
             </span>
           )}
           {result.searchedCity && (
-            <p className="text-[11px] text-stone-400">查詢範圍：{result.searchedCity}（不跨縣市）</p>
+            <p className="text-[11px] text-stone-400">查詢範圍：{result.searchedCity}（不跨縣市）· 名稱需完全相同</p>
+          )}
+          {result.partialOnly && (result.partialCandidates?.length ?? 0) > 0 && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-[11px] text-amber-700">
+              <span className="font-medium">衛福部沒有名稱完全相同的機構；相似名稱（不同家，不採用）：</span>
+              {result.partialCandidates.slice(0, 3).map((c: any) => `${c.name}（${c.address}）`).join('、')}
+            </div>
+          )}
+          {result.ambiguous && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-[11px] text-amber-700">
+              同縣市有多家名稱完全相同的機構，無法判斷是哪一家 → 不提供自動套用，請人工確認。
+            </div>
           )}
           {result.outOfCity && (result.outOfCityCandidates?.length ?? 0) > 0 && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-[11px] text-amber-700">
@@ -1322,6 +1333,9 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
         下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
         衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
+        比對條件：<strong className="text-stone-500">名稱完全相同 ＋ 同一縣市 ＋ 只有一家符合</strong>——
+        衛福部是包含比對，「雅德思牙醫診所」會一併撈到「左營雅德思牙醫診所」，那是不同家，
+        只要不是完全相同就不採用、也不會產生任何自動變更。
         查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值
         （<strong className="text-stone-500">所有有異動的欄位一起對帳</strong>：機構狀態、機構代碼、地址、電話、
         健保特約、牙醫師數／牙體技術師數／牙體技術生數、三個衛福部連結——
