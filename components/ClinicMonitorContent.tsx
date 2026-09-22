@@ -1152,6 +1152,9 @@ interface KindTrendPoint {
   month: string; baseline: boolean
   kinds: Record<string, { added: number; removed: number }>
 }
+/** 該月沒有任何異動紀錄（監控是 2026-06 才開始跑，之前的月份本來就沒有資料） */
+const isEmptyMonth = (p: KindTrendPoint) =>
+  !p.baseline && Object.values(p.kinds ?? {}).every(k => (k?.added ?? 0) === 0 && (k?.removed ?? 0) === 0)
 interface KindTrend { points: KindTrendPoint[]; codeNotFoundStock: number; codeNotFoundByKind?: Record<string, number>; computedAt: string }
 const TREND_KINDS = ['牙醫診所', '牙體技術所', '醫院'] as const
 
@@ -1201,9 +1204,18 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
                     {points.map((p, i) => (
                       <div
                         key={p.month}
-                        className="group flex flex-1 flex-col items-center justify-center rounded-md transition-colors hover:bg-stone-50"
-                        title={`${p.month}　新增 ${added[i]}　減少 ${removed[i]}${p.baseline ? '（基準月，不計入）' : ''}`}
+                        className="group relative flex flex-1 flex-col items-center justify-center rounded-md transition-colors hover:bg-stone-50"
+                        title={p.baseline
+                          ? `${p.month}　首次建立快照的基準月：沒有上個月可比，整批被記成異動（實測 7,905 筆），不計入`
+                          : isEmptyMonth(p)
+                            ? `${p.month}　尚無監控資料（醫事監控自 2026-06 起）`
+                            : `${p.month}　新增 ${added[i]}　減少 ${removed[i]}`}
                       >
+                        {(p.baseline || isEmptyMonth(p)) && (
+                          <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[9px] leading-tight text-stone-300">
+                            {p.baseline ? '基準月' : '無資料'}
+                          </span>
+                        )}
                         <div className="flex w-full flex-1 flex-col items-center justify-end">
                           {added[i] > 0 && (
                             <>
@@ -1248,7 +1260,12 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
             <p>
               <span className="mr-2"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" /> 新增</span>
               <span><span className="inline-block h-2 w-2 rounded-sm bg-red-300 align-middle" /> 減少</span>
-              {points.some((p) => p.baseline) && <span className="ml-3">* 基準月（首次建立快照、無上月可比），不計入</span>}
+              {points.some((p) => p.baseline) && (
+                <span className="ml-3">
+                  * 基準月：2026-06 是第一次建立快照，沒有上個月可比，整批 7,905 筆被記成異動（其中 7,839 筆是「恢復開業」），
+                  那不是真實增減，故不計入
+                </span>
+              )}
             </p>
             <p>
               本圖是<strong className="text-stone-500">衛福部名冊</strong>的月對月變化（本月有上月沒有＝新增、上月有本月沒有＝減少），
