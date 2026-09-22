@@ -1173,25 +1173,36 @@ interface VerifySummary {
   startedAt: string; finishedAt: string
 }
 
+const SYNC_FIELD_LABEL: Record<string, string> = {
+  status: '機構狀態', institutionCode: '機構代碼', address: '地址', phone: '電話',
+  nhi: '健保特約', dentistCount: '牙醫師數', technicianCount: '牙體技術師數',
+  technicianTraineeCount: '牙體技術生數', infoUrl: '機構資料連結',
+  personnelUrl: '醫事人員連結', deptUrl: '診療科別連結', name: '客戶名稱',
+}
+
 function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; onDone?: () => void }) {
   const [running, setRunning] = useState(false)
   const [summary, setSummary] = useState<VerifySummary | null>(null)
   const [err, setErr] = useState('')
   // 一鍵同步：把查證結果寫回客戶資料庫（只寫有衛福部實證者）
-  const [preview, setPreview] = useState<{ willUpdate: number; items: any[] } | null>(null)
+  const [preview, setPreview] = useState<{ willUpdate: number; fieldCount: Record<string, number>; nameDiffs: number; items: any[] } | null>(null)
+  const [includeName, setIncludeName] = useState(false)
   const [applying, setApplying] = useState(false)
   const [appliedMsg, setAppliedMsg] = useState('')
 
-  async function loadPreview() {
+  async function loadPreview(withName = includeName) {
     setErr(''); setAppliedMsg('')
     try {
       const res = await fetch('/api/admin/medical-monitor/verify/apply', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dryRun: true }),
+        body: JSON.stringify({ dryRun: true, includeName: withName }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '讀取失敗'); return }
-      setPreview({ willUpdate: data.willUpdate, items: data.items ?? [] })
+      setPreview({
+        willUpdate: data.willUpdate, fieldCount: data.fieldCount ?? {},
+        nameDiffs: data.nameDiffs ?? 0, items: data.items ?? [],
+      })
     } catch (e: any) { setErr(e?.message ?? '讀取失敗') }
   }
 
@@ -1203,7 +1214,7 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '套用失敗'); return }
-      setAppliedMsg(`✓ 已更新 ${data.updated} 筆${data.failures?.length ? `，失敗 ${data.failures.length} 筆` : ''}`)
+      setAppliedMsg(`✓ 已更新 ${data.updated} 筆（狀態 ${data.statusUpdated ?? 0}、代碼 ${data.codeUpdated ?? 0}）${data.failures?.length ? `，失敗 ${data.failures.length} 筆` : ''}`)
       setPreview(null)
       onDone?.()
     } catch (e: any) { setErr(e?.message ?? '套用失敗') }
@@ -1262,7 +1273,10 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         <div className="mt-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-stone-700">
-              有 {preview.willUpdate} 筆的衛福部狀態與客戶主檔不同，可一鍵同步
+              有 {preview.willUpdate} 家客戶的資料與衛福部不同，可一鍵同步
+              <span className="ml-1 text-[11px] font-normal text-stone-500">
+                （{Object.entries(preview.fieldCount).map(([k, v]) => `${SYNC_FIELD_LABEL[k] ?? k} ${v}`).join('、') || '—'}）
+              </span>
             </span>
             <button
               onClick={applyAll}
@@ -1270,13 +1284,29 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
               className="ml-auto rounded-full bg-brand-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
             >{applying ? '更新中…' : `一鍵更新客戶資料庫（${preview.willUpdate} 筆）`}</button>
           </div>
-          <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+          {preview.nameDiffs > 0 && (
+            <label className="mt-2 flex items-center gap-2 text-[11px] text-stone-500">
+              <input
+                type="checkbox"
+                checked={includeName}
+                onChange={(e) => { setIncludeName(e.target.checked); loadPreview(e.target.checked) }}
+              />
+              一併更正客戶名稱（{preview.nameDiffs} 筆與衛福部不同；名稱是客情比對的依據，改名會影響既有關聯）
+            </label>
+          )}
+          <div className="mt-2 max-h-40 space-y-1.5 overflow-y-auto">
             {preview.items.slice(0, 50).map((it: any) => (
-              <div key={it.customerId} className="flex flex-wrap items-center gap-2 text-[11px] text-stone-500">
+              <div key={it.customerId} className="text-[11px] text-stone-500">
                 <span className="text-stone-700">{it.customerName}</span>
-                <span className="text-stone-400">{it.from}</span>
-                <span className="text-brand-600">→ {it.to}</span>
-                <span className="text-stone-300">衛福部「{it.basStatus}」</span>
+                <span className="ml-1 text-stone-300">衛福部「{it.basStatus}」</span>
+                <div className="ml-3 flex flex-wrap gap-x-3">
+                  {(it.diffs ?? []).map((d: any) => (
+                    <span key={d.field}>
+                      <span className="text-stone-400">{d.label}：{d.from || '（未填）'}</span>
+                      <span className="text-brand-600"> → {d.to}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             ))}
             {preview.items.length > 50 && <div className="text-[11px] text-stone-400">…共 {preview.items.length} 筆</div>}
@@ -1292,7 +1322,10 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
         下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
         衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
-        查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值，
+        查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值
+        （<strong className="text-stone-500">所有有異動的欄位一起對帳</strong>：機構狀態、機構代碼、地址、電話、
+        健保特約、牙醫師數／牙體技術師數／牙體技術生數、三個衛福部連結——
+        代碼換照不一起更正的話，舊碼下個月依然查不到、同一家會再變成候選），
         由你按「一鍵更新客戶資料庫」才寫入（只寫有衛福部實證者——查無、查詢失敗、
         同縣市查不到一律跳過），也可以到各分類逐筆套用。
         全台逐筆即時查約需 40 分鐘且可能被衛福部阻擋，故只對候選批次查證。

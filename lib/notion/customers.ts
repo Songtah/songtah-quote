@@ -917,6 +917,79 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
   deleteRedisValue('customers-with-codes-v3')
 }
 
+/**
+ * 更新客戶「機構代碼」——與 updateCustomerStatus 同樣的防線：
+ * 限定目標頁面屬於客戶主檔、寫後清客戶快取。
+ * 供狀態對帳使用：衛福部回的代碼與主檔不同（換照換碼）時，狀態與代碼要一起更正，
+ * 否則下個月又會因為舊碼查不到而重新變成候選。
+ */
+export async function updateCustomerInstitutionCode(id: string, code: string): Promise<void> {
+  const clean = (code ?? '').trim()
+  if (!/^[A-Za-z0-9]{4,20}$/.test(clean)) throw new Error('機構代碼格式不正確')
+  const page = await notionCallWithRetry('updateCustomerInstitutionCode:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  ) as any
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const customersDb = (DB.customers ?? '').replace(/-/g, '')
+  if (!targetDb || targetDb !== customersDb) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+  await notionCallWithRetry('updateCustomerInstitutionCode', () =>
+    notion.pages.update({ page_id: id, properties: { '機構代碼': { rich_text: [{ text: { content: clean } }] } } as any })
+  )
+  deleteRedisValue('customers-with-codes-v3')
+}
+
+/**
+ * 狀態對帳專用：一次寫入所有與衛福部不一致的欄位（使用者 2026-09-22 定調：有異動的都要更）。
+ * 同樣限定目標頁面屬於客戶主檔、寫後清客戶快取。名稱刻意獨立成參數——
+ * 客戶名稱是客情比對的依據，改名會影響既有關聯，必須由使用者明確勾選。
+ */
+export type BasSyncPatch = {
+  status?: string
+  institutionCode?: string
+  name?: string
+  address?: string
+  phone?: string
+  nhi?: boolean
+  dentistCount?: number
+  technicianCount?: number
+  technicianTraineeCount?: number
+  infoUrl?: string
+  personnelUrl?: string
+  deptUrl?: string
+}
+
+export async function updateCustomerBasFields(id: string, patch: BasSyncPatch): Promise<string[]> {
+  const page = await notionCallWithRetry('updateCustomerBasFields:checkOwner', () =>
+    notion.pages.retrieve({ page_id: id })
+  ) as any
+  const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
+  const customersDb = (DB.customers ?? '').replace(/-/g, '')
+  if (!targetDb || targetDb !== customersDb) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+
+  const props: Record<string, any> = {}
+  const changed: string[] = []
+  const text = (v: string) => [{ text: { content: v } }]
+  if (patch.status)          { props['機構狀態'] = { select: { name: patch.status } }; changed.push('機構狀態') }
+  if (patch.institutionCode) { props['機構代碼'] = { rich_text: text(patch.institutionCode) }; changed.push('機構代碼') }
+  if (patch.name)            { props['客戶名稱'] = { title: text(patch.name) }; changed.push('客戶名稱') }
+  if (patch.address)         { props['地址'] = { rich_text: text(patch.address) }; changed.push('地址') }
+  if (patch.phone)           { props['電話'] = { phone_number: patch.phone }; changed.push('電話') }
+  if (typeof patch.nhi === 'boolean')                    { props['健保特約'] = { checkbox: patch.nhi }; changed.push('健保特約') }
+  if (typeof patch.dentistCount === 'number')            { props['牙醫師數'] = { number: patch.dentistCount }; changed.push('牙醫師數') }
+  if (typeof patch.technicianCount === 'number')         { props['牙體技術師數'] = { number: patch.technicianCount }; changed.push('牙體技術師數') }
+  if (typeof patch.technicianTraineeCount === 'number')  { props['牙體技術生數'] = { number: patch.technicianTraineeCount }; changed.push('牙體技術生數') }
+  if (patch.infoUrl)      { props['機構資料'] = { url: patch.infoUrl }; changed.push('機構資料連結') }
+  if (patch.personnelUrl) { props['醫事人員連結'] = { url: patch.personnelUrl }; changed.push('醫事人員連結') }
+  if (patch.deptUrl)      { props['診療科別連結'] = { url: patch.deptUrl }; changed.push('診療科別連結') }
+  if (changed.length === 0) return []
+
+  await notionCallWithRetry('updateCustomerBasFields', () =>
+    notion.pages.update({ page_id: id, properties: props as any })
+  )
+  deleteRedisValue('customers-with-codes-v3')
+  return changed
+}
+
 export async function getCustomerFilterOptions(): Promise<{
   cities: string[]; districtsByCity: Record<string, string[]>; salespersons: string[]; types: string[]
 }> {

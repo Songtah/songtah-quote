@@ -13,6 +13,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { computeMonitor } from '@/lib/medical-monitor-compare'
 import { verifyCandidates, getVerifyResults, type VerifyTarget } from '@/lib/notion/monitor-verify'
 import { getCachedMonitorResult } from '@/lib/notion/medical-monitor'
+import { getSystemCustomerById } from '@/lib/notion/customers'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -31,11 +32,12 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     // 用上次比對結果；沒有才重算（重算很重，不該是常態）
     const result: any = (await getCachedMonitorResult()) ?? (await computeMonitor())
     const targets: VerifyTarget[] = []
-    const push = (list: any[], kind?: string, codeField = 'institutionCode') => {
+    const push = (list: any[], kind?: string, codeField = 'institutionCode', crmField = 'institutionCode') => {
       for (const x of list ?? []) {
         targets.push({
           customerId: x.customerId, customerName: x.customerName,
           city: x.customerCity ?? '', institutionCode: x[codeField] ?? '',
+          crmCode: x[crmField] ?? x[codeField] ?? '',
           crmStatus: x.customerStatus ?? '', kind,
         })
       }
@@ -43,7 +45,8 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     if (want.includes('closure'))    push(result.suspectedClosures)
     if (want.includes('hospital'))   push(result.hospitalUnverified, 'A')
     if (want.includes('invalidcode')) push(result.invalidCodes)
-    if (want.includes('codechange')) push(result.codeChanged, undefined, 'newCode')
+    // 更換代碼：拿新碼去查衛福部，但主檔現在存的是舊碼 → 兩者都帶著，套用時才知道要改代碼
+    if (want.includes('codechange')) push(result.codeChanged, undefined, 'newCode', 'oldCode')
     // 復業方向：主檔標歇業、但代碼仍在名冊上 → 查證後若衛福部確為開業，一鍵同步會把主檔改回開業
     if (want.includes('reopen'))     push(result.suspectedReopens)
 
@@ -51,7 +54,21 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     const seen = new Set<string>()
     const unique = targets.filter((t) => t.customerId && !seen.has(t.customerId) && seen.add(t.customerId))
 
-    const { results, summary } = await verifyCandidates(unique)
+    // 逐筆帶入客戶主檔現值，才能比對地址／電話／人員數／連結等欄位
+    const withCrm = []
+    for (const t of unique) {
+      const detail = await getSystemCustomerById(t.customerId).catch(() => null)
+      withCrm.push({
+        ...t,
+        crm: detail ? {
+          address: detail.address, phone: detail.phone,
+          dentistCount: detail.dentistCount, technicianCount: detail.technicianCount,
+          technicianTraineeCount: detail.technicianTraineeCount,
+        } : undefined,
+      })
+    }
+
+    const { results, summary } = await verifyCandidates(withCrm)
     return NextResponse.json({ ok: true, summary, results })
   } catch (error: any) {
     console.error('monitor verify error:', error)
