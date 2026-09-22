@@ -8,6 +8,7 @@ import VisitSuggestionsContent from './VisitSuggestionsContent'
 import BdTodayContent from '@/components/BdTodayContent'
 import MyTerritoriesPanel from '@/components/MyTerritoriesPanel'
 import TendersContent from '@/components/TendersContent'
+import MyTendersPanel from '@/components/MyTendersPanel'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 import { getBdTodayDashboard } from '@/lib/dashboard-today'
@@ -99,6 +100,7 @@ export default async function BdPage({
       {tab === 'today' && todayData ? (
         <div className="space-y-6">
           <BdTodayContent data={todayData} />
+          <MyTendersPanel currentUser={session?.user?.name ?? ''} />
           <MyTerritoriesPanel />
         </div>
       ) : tab === 'visits' ? (

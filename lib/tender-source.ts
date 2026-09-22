@@ -58,6 +58,11 @@ export type TenderRecord = {
   contact: string
   phone: string
   url: string
+  /** 決標公告才有：得標廠商、決標金額、底價、所有投標廠商（競爭對手情報） */
+  winner: string
+  awardAmount: number | null
+  basePrice: number | null
+  bidders: string[]
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -113,7 +118,9 @@ async function searchKeyword(keyword: string, maxPages: number, sinceDate: strin
   return out.filter((r) => toDate(r.date) >= sinceDate)
 }
 
-async function fetchDetail(unitId: string, jobNumber: string): Promise<Record<string, string> | null> {
+type DetailBundle = { detail: Record<string, string>; bidders: string[] } | null
+
+async function fetchDetail(unitId: string, jobNumber: string): Promise<DetailBundle> {
   try {
     const res = await fetch(`${API}/tender?unit_id=${encodeURIComponent(unitId)}&job_number=${encodeURIComponent(jobNumber)}`, {
       signal: AbortSignal.timeout(20_000),
@@ -122,8 +129,11 @@ async function fetchDetail(unitId: string, jobNumber: string): Promise<Record<st
     const json: any = await res.json()
     // 同一案號可能有多則公告（招標→更正→決標），取最新一則的明細
     const recs: any[] = json?.records ?? []
-    const latest = recs.sort((a, b) => (b.date ?? 0) - (a.date ?? 0))[0]
-    return latest?.detail ?? null
+    // 決標公告優先（有得標廠商與金額）；沒有就取最新一則
+    const sorted = recs.sort((a, b) => (b.date ?? 0) - (a.date ?? 0))
+    const picked = sorted.find((r) => /^決標公告/.test(r?.brief?.type ?? '')) ?? sorted[0]
+    if (!picked) return null
+    return { detail: picked.detail ?? {}, bidders: picked?.brief?.companies?.names ?? [] }
   } catch {
     return null
   }
@@ -169,6 +179,7 @@ export async function fetchDentalTenders(options?: {
         matched: [keyword], tier,
         budget: null, budgetText: '', deadline: '', address: '', city: '', district: '',
         contact: '', phone: '', url: '',
+        winner: '', awardAmount: null, basePrice: null, bidders: [],
       })
       kept++
     }
@@ -183,10 +194,20 @@ export async function fetchDentalTenders(options?: {
   if (options?.withDetail !== false) {
     const limit = options?.detailLimit ?? 200
     for (const rec of records.slice(0, limit)) {
-      const d = await fetchDetail(rec.unitId, rec.jobNumber)
+      const bundle = await fetchDetail(rec.unitId, rec.jobNumber)
       await sleep(250)
-      if (!d) continue
-      rec.budgetText = d['採購資料:預算金額'] ?? ''
+      if (!bundle) continue
+      const d = bundle.detail
+      // 決標資料：欄位名稱依公告型態不同，取第一個對得上的
+      const pick = (re: RegExp) => {
+        const hit = Object.entries(d).find(([k]) => re.test(k))
+        return hit ? hit[1] : ''
+      }
+      rec.winner = pick(/決標品項:.*得標廠商1:得標廠商$/) || pick(/得標廠商$/)
+      rec.awardAmount = parseMoney(pick(/決標品項:.*決標金額$/) || pick(/投標廠商:投標廠商1:決標金額$/))
+      rec.basePrice = parseMoney(pick(/底價金額$/))
+      rec.bidders = bundle.bidders
+      rec.budgetText = d['採購資料:預算金額'] ?? d['已公告資料:預算金額'] ?? ''
       rec.budget = parseMoney(rec.budgetText)
       rec.deadline = (d['領投開標:截止投標'] ?? d['領投開標:截止投標時間'] ?? '').slice(0, 16)
       rec.address = d['機關資料:機關地址'] ?? ''

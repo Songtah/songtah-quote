@@ -11,6 +11,7 @@ import { getRedisValue, setRedisValue } from './shared'
 import { getAllSystemCustomers } from './customers'
 import { customerNameStem } from '@/lib/customer-name-match'
 import { fetchDentalTenders, type TenderRecord } from '@/lib/tender-source'
+import { listTracks, saveTrack } from './tender-track'
 
 export type TenderOpportunity = TenderRecord & {
   /** 比對到的客戶（機關本身就是我們的客戶時） */
@@ -73,6 +74,26 @@ export async function refreshTenders(options?: { days?: number; maxPagesPerKeywo
     }
     return { ...base, matchNote: `名稱相符 ${cands.length} 家，未配對` }
   })
+
+  // 決標結果回填：公告已決標時，把追蹤中的案子自動結案（狀態要能自己關閉，不靠人回頭改）
+  try {
+    const tracks = await listTracks()
+    for (const r of out) {
+      if (!/^決標公告/.test(r.type) || !r.winner) continue
+      const t = tracks[r.id]
+      const weWon = /崧達/.test(r.winner)
+      if (!t && !weWon) continue
+      if (t && !['投標中', '已投標'].includes(t.status)) continue
+      const status = weWon ? '得標' : '未得標'
+      if (t?.status === status) continue
+      await saveTrack({
+        tenderId: r.id,
+        status,
+        note: `${t?.note ? t.note + '｜' : ''}決標：${r.winner}${r.awardAmount ? ` ${r.awardAmount.toLocaleString()} 元` : ''}`,
+        actor: '系統（決標公告）',
+      }).catch(() => null)
+    }
+  } catch { /* 回填失敗不影響清單 */ }
 
   const snapshot: TenderSnapshot = {
     records: out, stats, computedAt: new Date().toISOString(), days: options?.days ?? 120,

@@ -16,6 +16,7 @@ type Tender = {
   category: string; matched: string[]; tier: 1 | 2
   budget: number | null; budgetText: string; deadline: string
   address: string; city: string; district: string; contact: string; phone: string; url: string
+  winner: string; awardAmount: number | null; basePrice: number | null; bidders: string[]
   customerId: string; customerName: string; customerSalesperson: string; matchNote: string
 }
 
@@ -196,6 +197,18 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                 })()}
                 {r.contact && <span className="text-stone-400">{r.contact} {r.phone}</span>}
               </div>
+              {/* 決標結果：得標廠商、決標金額、底價、其他投標廠商（競爭對手情報） */}
+              {r.winner && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-stone-50 px-3 py-1.5 text-xs">
+                  <span className="text-stone-500">得標：<strong className="text-stone-700">{r.winner}</strong></span>
+                  {r.awardAmount && <span className="text-stone-500">決標 <span className="tabular-nums text-stone-700">{money(r.awardAmount, '')}</span></span>}
+                  {r.basePrice && <span className="text-stone-400">底價 <span className="tabular-nums">{money(r.basePrice, '')}</span></span>}
+                  {r.bidders.length > 1 && (
+                    <span className="text-stone-400">同場競標：{r.bidders.filter((b) => b !== r.winner).join('、')}</span>
+                  )}
+                </div>
+              )}
+
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                 {r.customerId ? (
                   <>
