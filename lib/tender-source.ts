@@ -23,6 +23,17 @@
 
 const API = 'https://pcc-api.openfun.app/api'
 
+/**
+ * 上游會擋沒有瀏覽器特徵的請求：實測本機可用、Vercel 伺服器端一律 403（121 天全數失敗）。
+ * 帶上一般瀏覽器標頭後再試；若仍被擋（IP 層阻擋），改由 GitHub Action 端抓取後回送。
+ */
+const UPSTREAM_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+  'Referer': 'https://pcc-api.openfun.app/',
+}
+
 /** 第一級：詞本身就代表牙科，直接收 */
 export const TENDER_KEYWORDS_PRIMARY = [
   '牙科', '牙醫', '口腔', '齒模', '義齒', '假牙', '牙體技術', '植牙', '根管', '口掃', '贋復',
@@ -124,7 +135,7 @@ export function matchKeywords(input: { title: string; unitName: string; category
 /** 取某一天的全部公告（完整，不受標題關鍵字限制）。失敗時回錯誤訊息，不吞掉 */
 async function listByDate(yyyymmdd: string): Promise<{ records: RawRecord[]; error?: string }> {
   try {
-    const res = await fetch(`${API}/listbydate?date=${yyyymmdd}`, { signal: AbortSignal.timeout(30_000) })
+    const res = await fetch(`${API}/listbydate?date=${yyyymmdd}`, { headers: UPSTREAM_HEADERS, signal: AbortSignal.timeout(30_000) })
     if (!res.ok) return { records: [], error: `HTTP ${res.status}` }
     const json: any = await res.json()
     return { records: json?.records ?? [] }
@@ -137,7 +148,7 @@ async function searchKeyword(keyword: string, maxPages: number, sinceDate: strin
   const out: RawRecord[] = []
   for (let page = 1; page <= maxPages; page++) {
     const res = await fetch(`${API}/searchbytitle?query=${encodeURIComponent(keyword)}&page=${page}`, {
-      signal: AbortSignal.timeout(20_000),
+      headers: UPSTREAM_HEADERS, signal: AbortSignal.timeout(20_000),
     })
     if (!res.ok) break
     const json: any = await res.json()
@@ -156,7 +167,7 @@ type DetailBundle = { detail: Record<string, string>; bidders: string[] } | null
 async function fetchDetail(unitId: string, jobNumber: string): Promise<DetailBundle> {
   try {
     const res = await fetch(`${API}/tender?unit_id=${encodeURIComponent(unitId)}&job_number=${encodeURIComponent(jobNumber)}`, {
-      signal: AbortSignal.timeout(20_000),
+      headers: UPSTREAM_HEADERS, signal: AbortSignal.timeout(20_000),
     })
     if (!res.ok) return null
     const json: any = await res.json()
@@ -231,7 +242,7 @@ export async function fetchOurBids(companyName = '崧達'): Promise<Set<string>>
   try {
     for (let page = 1; page <= 5; page++) {
       const res = await fetch(`${API}/searchbycompanyname?query=${encodeURIComponent(companyName)}&page=${page}`,
-        { signal: AbortSignal.timeout(20_000) })
+        { headers: UPSTREAM_HEADERS, signal: AbortSignal.timeout(20_000) })
       if (!res.ok) break
       const json: any = await res.json()
       const recs: any[] = json?.records ?? []
