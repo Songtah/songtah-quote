@@ -1,0 +1,5 @@
+const { refreshTenders } = await import('../lib/notion/tenders.ts')
+const t0=Date.now()
+const snap = await refreshTenders({ days: 7, full: true })
+console.log(`掃 ${snap.scannedDays} 天 / ${snap.scannedRecords} 則｜DB ${snap.records.length} 案｜最新公告日 ${snap.latestAnnouncementDate}（落後 ${snap.staleDays} 天）｜${((Date.now()-t0)/1000).toFixed(0)}秒`)
+for (const r of snap.records.slice(0,6)) console.log(` ${r.date} [${r.type}] ${r.unitName}｜${r.title}｜${r.dataSource||'—'}`)

@@ -1,0 +1,13 @@
+import { readFileSync } from 'fs'
+const { getCodeNotFoundList } = await import('../lib/notion/medical-monitor.ts')
+const snap = JSON.parse(readFileSync('data/clinic-snapshot.json','utf8'))
+const codes = new Set(Object.keys(snap.codes ?? {}))
+const { rows } = await getCodeNotFoundList()
+const still = rows.filter(r => !codes.has(r.code))
+const back  = rows.filter(r => codes.has(r.code))
+const by = (list) => list.reduce((m,r)=>((m[r.kind]=(m[r.kind]??0)+1),m),{})
+console.log('紀錄中的查無代碼（去重）', rows.length, by(rows))
+console.log('→ 目前快照仍查無', still.length, by(still))
+console.log('→ 目前快照其實查得到（舊紀錄已過時）', back.length, by(back))
+const byMonth = rows.reduce((m,r)=>((m[r.recordedAt.slice(0,7)]=(m[r.recordedAt.slice(0,7)]??0)+1),m),{})
+console.log('這些紀錄的產生月份', byMonth)

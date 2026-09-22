@@ -1,0 +1,7 @@
+const { fetchTendersByDateRange, fetchOurBids } = await import('../lib/tender-source.ts')
+const t0=Date.now()
+const { records, scannedDays, scannedRecords } = await fetchTendersByDateRange({ days: 14, withDetail: false })
+console.log(`掃 ${scannedDays} 天、${scannedRecords} 則公告 → 牙科相關 ${records.length} 案，耗時 ${((Date.now()-t0)/1000).toFixed(0)} 秒`)
+for (const r of records.slice(0,10)) console.log(` ${r.date} [${r.type}] ${r.unitName}｜${r.title}（${r.matched.join(',')}／tier${r.tier}）`)
+const bids = await fetchOurBids('崧達')
+console.log('\n崧達投過的標案數：', bids.size)

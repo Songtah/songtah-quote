@@ -118,6 +118,38 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
   })
 }
 
+/**
+ * 接收外部（GitHub Action）抓好的標案：比對客戶 → upsert Notion → 重建快取。
+ * 與 refreshTenders 共用同一套比對與寫入邏輯，差別只在資料是別人抓的。
+ */
+export async function ingestTenders(
+  records: TenderRecord[],
+  options?: { ourBidIds?: string[]; meta?: { scannedDays?: number; scannedRecords?: number; failedDays?: number; firstError?: string } },
+): Promise<TenderSnapshot> {
+  const ourBids = new Set(options?.ourBidIds ?? [])
+  const match = await buildCustomerMatcher()
+  const upsertInput = records.map((r) => {
+    const m = match({ unitName: r.unitName, city: r.city })
+    const awarded = /^決標公告/.test(r.type) && Boolean(r.winner)
+    return {
+      ...r,
+      customerId: m.customerId || undefined,
+      weBid: ourBids.has(r.id),
+      dataSource: '即時API' as const,
+      autoStatus: awarded ? (/崧達/.test(r.winner) ? '得標' as const : '未得標' as const) : undefined,
+    }
+  })
+  await upsertTenders(upsertInput)
+  const today = new Date().toISOString().slice(0, 10)
+  await setRedisValue(CURSOR_KEY, today, 400 * 24 * 3600_000)
+  const latestScanned = records.map((r) => r.date).sort().pop() ?? ''
+  return await rebuildSnapshot({
+    ...(options?.meta ?? {}),
+    lastScannedDate: today,
+    latestAnnouncementDate: latestScanned,
+  })
+}
+
 /** 從 DB 讀回全部標案並快取（頁面讀這份，不直接打 Notion） */
 export async function rebuildSnapshot(meta?: {
   scannedDays?: number; scannedRecords?: number; lastScannedDate?: string; latestAnnouncementDate?: string

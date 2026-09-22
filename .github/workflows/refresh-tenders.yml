@@ -1,5 +1,8 @@
 name: 標案機會 — 每日抓取政府採購網牙科標案
 
+# 抓取為什麼在這裡而不在 Vercel：上游對雲端伺服器 IP 一律回 403（補瀏覽器標頭無效），
+# 但 Action runner 的 IP 正常。所以由 runner 抓 → POST 回 /api/cron/ingest-tenders 寫入系統。
+
 on:
   schedule:
     # 台灣時間 08:10 起每兩小時到 20:10（UTC 00:10,02:10,…,12:10）——新公告最多等 2 小時
@@ -7,21 +10,28 @@ on:
     # 台灣時間 07:10（UTC 23:10）：每天第一輪，順便在每月 6 號補寫官方開放資料
     - cron: '10 23 * * *'
   workflow_dispatch:
+    inputs:
+      days:
+        description: '回補天數（預設 5）'
+        required: false
+        default: '5'
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: 重抓標案
-        run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" -X POST \
-            "https://songtah-quote.vercel.app/api/cron/refresh-tenders" \
-            -H "x-cron-secret: ${{ secrets.DAILY_REPORT_SECRET }}")
-          cat /tmp/out.json
-          echo ""
-          # 503＝掃不到公告或最新公告超過三天，視為失敗（GitHub 會寄通知）
-          if [ "$code" != "200" ]; then echo "HTTP $code：標案抓取異常"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 抓取並回送標案
+        env:
+          APP_URL: https://songtah-quote.vercel.app
+          DAILY_REPORT_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+          DAYS: ${{ github.event.inputs.days || '5' }}
+        run: npx -y tsx scripts/fetch-tenders.mjs
 
       - name: 每月 6 號補寫官方開放資料（可商用來源；落後約兩個月）
         if: ${{ github.event.schedule == '10 23 * * *' }}

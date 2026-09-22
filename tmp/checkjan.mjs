@@ -1,0 +1,5 @@
+const { listVisits } = await import('../lib/notion/visits.ts')
+const r = await listVisits({ dateFrom: '2026-01-01', dateTo: '2026-01-31', fetchAll: true })
+const bad = r.items.filter(v => /^[.。．、,，·•\s]/.test(v.customerName) || v.customerName.startsWith('與'))
+console.log('1月紀錄', r.items.length, '｜可疑', bad.length)
+for (const v of bad) console.log(v.id, v.date, v.salesperson, JSON.stringify(v.customerName), JSON.stringify((v.content||'').slice(0,40)))
