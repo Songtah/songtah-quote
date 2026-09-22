@@ -5,7 +5,7 @@ import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
-  AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry, UnregisteredInstitution,
+  AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry, UnregisteredInstitution, SuspectedReopen,
 } from '@/app/api/admin/medical-monitor/route'
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ function StatusEditor({ customerId, current, onResolved }: {
 // 人已確認不是問題的候選，按一下就不再出現。排除鍵含當下機構代碼，
 // 代碼一變（換照、補正）該筆會自動重新出現——排除不是永久埋葬。
 function DismissButton({ category, customerId, customerName, institutionCode, onDismissed }: {
-  category: 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity' | 'unregistered'
+  category: 'closure' | 'reopen' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity' | 'unregistered'
   customerId: string; customerName: string; institutionCode?: string
   onDismissed?: (customerId: string) => void
 }) {
@@ -340,7 +340,7 @@ function useHidden() {
 const DISMISS_CATEGORY_LABEL: Record<string, string> = {
   closure: '疑似歇業', codechange: '更換代碼', hospital: '醫院待確認',
   inconsistent: '資料不一致', invalidcode: '代碼待補正', samecity: '同縣市同名',
-  unregistered: '未在衛福部登錄',
+  unregistered: '未在衛福部登錄', reopen: '疑似復業',
 }
 
 function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onRestored?: (key: string) => void }) {
@@ -390,9 +390,9 @@ function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onR
 }
 
 // ── 類別彈窗（摘要卡點擊 → 卡片視窗顯示該類清單）──────────────────────────────────
-type CategoryKey = 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode' | 'dismissed'
+type CategoryKey = 'closure' | 'reopen' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode' | 'dismissed'
 const CATEGORY_TITLE: Record<CategoryKey, string> = {
-  closure: '⛔ 疑似歇業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
+  closure: '⛔ 疑似歇業', reopen: '🔄 疑似復業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
   inconsistent: '🔄 資料不一致', selfmanaged: '👤 公司自建',
   academic: '🎓 學術機構', invalidcode: '⚠️ 代碼待補正', dismissed: '🚫 已排除',
 }
@@ -416,6 +416,7 @@ function CategoryModal({ category, closureItems, hospitalItems, result, onClose,
         <div className="p-5 overflow-y-auto">
           {category === 'closure'      && <SuspectedClosuresTab items={closureItems} onResolved={onResolved} />}
           {category === 'hospital'     && <HospitalUnverifiedTab items={hospitalItems} onResolved={onResolved} />}
+          {category === 'reopen'       && <SuspectedReopensTab items={result.suspectedReopens ?? []} onResolved={onResolved} />}
           {category === 'codechange'   && <CodeChangedTab items={result.codeChanged ?? []} onResolved={onResolved} />}
           {category === 'inconsistent' && <InconsistentDataTab items={result.inconsistentData} />}
           {category === 'selfmanaged'  && <SelfManagedTab items={result.selfManagedCustomers} />}
@@ -639,6 +640,54 @@ function SuspectedClosuresTab({ items, onResolved }: {
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
               <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
               <DismissButton category="closure" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
+// ── 狀態 11：疑似復業 Tab ──────────────────────────────────────────────────────
+// 歇業與復業是同一件事的兩個方向，共用查衛福部與一鍵同步（使用者 2026-09-22 定調）。
+function SuspectedReopensTab({ items, onResolved }: {
+  items: SuspectedReopen[]
+  onResolved?: (id: string, status: string) => void
+}) {
+  const { visible, hide } = useHidden()
+  if (items.length === 0) return (
+    <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">✅</div><p>沒有疑似復業的客戶</p></div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+        🔄 這些客戶在系統裡標成已歇業／停業／撤銷，但機構代碼<strong>仍在衛福部開業名冊上</strong>——
+        可能是當初誤標，也可能真的復業了。
+        <span className="text-blue-600">確認後把狀態改回開業，它們就會重新回到統計與業務清單。</span>
+      </div>
+      <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
+        {visible(items).map(item => (
+          <div key={item.customerId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
+                  <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">主檔：{item.customerStatus}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">衛福部：在開業名冊</span>
+                </div>
+                <div className="text-xs text-stone-400 mt-0.5">
+                  {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
+                  {item.snapshotName && <span className="ml-2">名冊：{item.snapshotName}{item.snapshotAddress && `（${item.snapshotAddress}）`}</span>}
+                </div>
+              </div>
+              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
+              <MohwLookupButton name={item.customerName} code={item.institutionCode} customerStatus={item.customerStatus} city={item.customerCity} customerId={item.customerId} onResolved={onResolved} />
+              <DismissButton category="reopen" customerId={item.customerId} customerName={item.customerName} institutionCode={item.institutionCode} onDismissed={hide} />
             </div>
           </div>
         ))}
@@ -1180,9 +1229,10 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-semibold text-stone-700">🔎 異常候選批次查證</span>
+        <span className="text-sm font-semibold text-stone-700">🔎 狀態對帳（批次查證）</span>
         <span className="text-[11px] text-stone-400">
-          對疑似歇業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，逐筆即時查衛福部（限同縣市）
+          疑似歇業／疑似復業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，
+          逐筆即時查衛福部（限同縣市）—— <strong className="text-stone-500">歇業與復業雙向同時對帳</strong>
         </span>
         <button
           onClick={run}
@@ -1446,6 +1496,7 @@ function parseMonitorStats(value: unknown): MonitorStats | null {
     suspectedClosures: readNumber(value.suspectedClosures),
     sameCityCandidates: readNumber(value.sameCityCandidates),
     unregistered: readNumber(value.unregistered),
+    suspectedReopens: readNumber(value.suspectedReopens),
     dismissed: readNumber(value.dismissed),
     inactiveExcluded: readNumber(value.inactiveExcluded),
     codeNotFound: readNumber(value.codeNotFound),
@@ -1479,6 +1530,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
   const sameCityCandidates = isArray(value.sameCityCandidates) ? (value.sameCityCandidates as SameCityCandidate[]) : []
   const dismissed = isArray(value.dismissed) ? (value.dismissed as MonitorDismissEntry[]) : []
   const unregistered = isArray(value.unregistered) ? (value.unregistered as UnregisteredInstitution[]) : []
+  const suspectedReopens = isArray(value.suspectedReopens) ? (value.suspectedReopens as SuspectedReopen[]) : []
 
   const stats = value.stats == null ? null : parseMonitorStats(value.stats)
   if (readBoolean(value.hasSnapshot) && !stats) return null
@@ -1494,6 +1546,7 @@ function parseMonitorResult(value: unknown): MonitorResultPayload | null {
     suspectedClosures: value.suspectedClosures as SuspectedClosure[],
     sameCityCandidates,
     unregistered,
+    suspectedReopens,
     dismissed,
     codeNotFound: value.codeNotFound as CodeNotFound[],
     selfManagedCustomers: value.selfManagedCustomers as SelfManagedCustomer[],
@@ -1813,6 +1866,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
               <StatCard label="⛔ 疑似歇業"    value={closureItems.length} sub="點擊編輯開業狀態" accent="text-red-600" onClick={() => setActiveCategory('closure')} />
+              <StatCard label="🔄 疑似復業"    value={stats.suspectedReopens ?? 0} sub="主檔標歇業、名冊仍在" accent="text-blue-600" onClick={() => setActiveCategory('reopen')} />
               <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
               <StatCard label="🏥 醫院待確認"  value={hospitalItems.length} sub="醫院在營業、牙科未登記" accent="text-orange-600" onClick={() => setActiveCategory('hospital')} />
               <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" onClick={() => setActiveCategory('inconsistent')} />
@@ -1838,7 +1892,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
       {stats && (
         <VerifyBatchBlock
-          candidateCount={(stats.suspectedClosures ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
+          candidateCount={(stats.suspectedClosures ?? 0) + (stats.suspectedReopens ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
         />
       )}
 

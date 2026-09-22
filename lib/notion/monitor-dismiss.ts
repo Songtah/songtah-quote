@@ -14,7 +14,7 @@
 import { getRedisValue, setRedisValue } from './shared'
 
 export type MonitorDismissCategory =
-  | 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity' | 'unregistered'
+  | 'closure' | 'codechange' | 'hospital' | 'inconsistent' | 'invalidcode' | 'samecity' | 'unregistered' | 'reopen'
 
 export type MonitorDismissEntry = {
   key: string

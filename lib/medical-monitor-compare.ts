@@ -137,6 +137,26 @@ export interface SameCityCandidate {
 }
 
 /**
+ * 狀態 11：疑似復業（2026-09-22 新增）
+ *
+ * 客戶主檔標成已歇業／停業／撤銷，但機構代碼**仍在衛福部開業名冊上**。
+ * 可能是當初誤標、也可能真的復業了。原本全頁統計把這些客戶整批排除，
+ * 於是這個方向的錯誤永遠不會被發現——歇業與復業是同一件事的兩個方向，
+ * 必須放在同一套對帳流程裡（使用者 2026-09-22 定調）。
+ */
+export interface SuspectedReopen {
+  customerId:       string
+  customerName:     string
+  customerCity:     string
+  customerDistrict: string
+  customerType:     string
+  customerStatus:   string
+  institutionCode:  string
+  snapshotName:     string
+  snapshotAddress:  string
+}
+
+/**
  * 狀態 10：未在衛福部登錄（2026-09-21 新增，取代原本由監控日誌推導的「查無代碼」）
  *
  * 客戶有填機構代碼，但該代碼**從來沒有**在 BAS 出現過（不在目前快照、也不在歷次抓取的代碼快取）。
@@ -212,6 +232,7 @@ export interface MonitorStats {
   suspectedClosures:   number
   sameCityCandidates:  number
   unregistered:        number   // 代碼從未在 BAS 出現過（未立案），不納入歇業判定
+  suspectedReopens:    number   // 主檔標歇業、但代碼仍在 BAS 開業名冊
   dismissed:           number   // 人工排除、不再列出的筆數
   inactiveExcluded:    number   // 已歇業／停業／撤銷而未納入任何統計的客戶數
   codeNotFound:        number
@@ -254,6 +275,7 @@ export interface MonitorResult {
   suspectedClosures:     SuspectedClosure[]
   sameCityCandidates:    SameCityCandidate[]
   unregistered:          UnregisteredInstitution[]
+  suspectedReopens:      SuspectedReopen[]
   /** 人工排除清單（可復原）；排除只影響顯示與統計，不改客戶主檔 */
   dismissed:             MonitorDismissEntry[]
   codeNotFound:          CodeNotFound[]
@@ -404,7 +426,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
       hasSnapshot: false,
       stats: null as any,
       newOpenings: { clinics: [], labs: [], hospitals: [] },
-      suspectedClosures: [], sameCityCandidates: [], unregistered: [], dismissed: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
+      suspectedClosures: [], sameCityCandidates: [], unregistered: [], suspectedReopens: [], dismissed: [], codeNotFound: [], academicInstitutions: [], invalidCodes: [],
       selfManagedCustomers: [], inconsistentData: [], codeChanged: [], hospitalUnverified: [],
       snapshotMonth: '', snapshotFetched: '', computedAt: new Date().toISOString(),
     }
@@ -728,6 +750,24 @@ export async function computeMonitor(): Promise<MonitorResult> {
     })
   }
 
+  // ── 疑似復業：主檔標歇業／停業／撤銷，但代碼仍在開業名冊上 ────────────────
+  // 這批客戶被全頁統計排除，若不另外掃一次，誤標或真復業永遠不會浮現。
+  const suspectedReopens: SuspectedReopen[] = []
+  for (const c of allCustomersRaw) {
+    if (!isInactiveCustomer(c.status)) continue
+    const code = c.institutionCode.trim()
+    if (!code || !isValidCode(code)) continue
+    const entry = snapshotByCode.get(code)
+    if (!entry || isExpired(entry.termDate)) continue
+    suspectedReopens.push({
+      customerId: c.id, customerName: c.name,
+      customerCity: c.city, customerDistrict: c.district,
+      customerType: c.type, customerStatus: c.status,
+      institutionCode: code,
+      snapshotName: entry.name, snapshotAddress: entry.address,
+    })
+  }
+
   // ── 套用人工排除（略過）──────────────────────────────────────────────────
   // 排除鍵含當下代碼，代碼一變就自動失效、該筆會重新出現（見 lib/notion/monitor-dismiss）。
   const dismissedList = await listDismissedSafe()
@@ -743,6 +783,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
   const invalidKept           = keep('invalidcode', invalidCodes, (x) => x.institutionCode)
   const sameCityKept          = keep('samecity', sameCityCandidates, (x) => x.institutionCode)
   const unregisteredKept      = keep('unregistered', unregistered, (x) => x.institutionCode)
+  const reopensKept           = keep('reopen', suspectedReopens, (x) => x.institutionCode)
   const dismissedActive = dismissedList.length
 
   // ── 分類統計 ───────────────────────────────────────────────────────────────
@@ -775,6 +816,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     suspectedClosures:   suspectedClosuresKept.length,
     sameCityCandidates:  sameCityKept.length,
     unregistered:        unregisteredKept.length,
+    suspectedReopens:    reopensKept.length,
     dismissed:           dismissedActive,
     inactiveExcluded,
     academicInstitutions: academicInstitutions.length,
@@ -796,6 +838,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     suspectedClosures:    suspectedClosuresKept,
     sameCityCandidates:   sameCityKept,
     unregistered:         unregisteredKept,
+    suspectedReopens:     reopensKept,
     dismissed:            dismissedList,
     academicInstitutions,
     invalidCodes:         invalidKept,

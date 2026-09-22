@@ -21,7 +21,7 @@ import { invalidateMonitorResultCache } from '@/lib/notion/medical-monitor'
 export const dynamic = 'force-dynamic'
 
 const CATEGORIES: MonitorDismissCategory[] = [
-  'closure', 'codechange', 'hospital', 'inconsistent', 'invalidcode', 'samecity', 'unregistered',
+  'closure', 'codechange', 'hospital', 'inconsistent', 'invalidcode', 'samecity', 'unregistered', 'reopen',
 ]
 
 export const GET = withApiAuth('admin', async () => {
