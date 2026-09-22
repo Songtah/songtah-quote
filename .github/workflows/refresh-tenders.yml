@@ -1,0 +1,21 @@
+name: 標案機會 — 每日抓取政府採購網牙科標案
+
+on:
+  schedule:
+    # 每天台灣時間 07:10（UTC 23:10）——業務出門前就看得到今天的新標案
+    - cron: '10 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 重抓標案
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" -X POST \
+            "https://songtah-quote.vercel.app/api/cron/refresh-tenders" \
+            -H "x-cron-secret: ${{ secrets.DAILY_REPORT_SECRET }}")
+          cat /tmp/out.json
+          echo ""
+          if [ "$code" != "200" ]; then echo "HTTP $code"; exit 1; fi

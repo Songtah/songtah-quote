@@ -7,6 +7,7 @@ import CampaignsContent from '@/components/CampaignsContent'
 import VisitSuggestionsContent from './VisitSuggestionsContent'
 import BdTodayContent from '@/components/BdTodayContent'
 import MyTerritoriesPanel from '@/components/MyTerritoriesPanel'
+import TendersContent from '@/components/TendersContent'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 import { getBdTodayDashboard } from '@/lib/dashboard-today'
@@ -26,7 +27,9 @@ export default async function BdPage({
 
   // 'pipeline'（客戶跟進／開發漏斗）已於 2026-09-09 移除，待重新規劃。
   // 舊書籤與外部連結會落回「今日工作」，不另做導向。
-  const tab = searchParams.tab === 'report'
+  const tab = searchParams.tab === 'tender'
+    ? 'tender'
+    : searchParams.tab === 'report'
     ? 'report'
     : searchParams.tab === 'campaigns'
         ? 'campaigns'
@@ -45,13 +48,14 @@ export default async function BdPage({
     { id: 'visits',   href: '/bd?tab=visits',   label: '客情紀錄', hint: '查看與新增互動' },
     { id: 'report',   href: '/bd?tab=report',   label: '紀錄匯入', hint: 'LINE 與日報轉紀錄' },
     { id: 'suggest',  href: '/bd?tab=suggest',  label: '拜訪建議', hint: '今天該跑誰' },
+    { id: 'tender',   href: '/bd?tab=tender',   label: '標案機會', hint: '政府採購牙科標案' },
   ] as const
 
   const isLegacyTool = tab === 'campaigns'
 
   return (
     <AppShell
-      title={tab === 'report' ? '紀錄匯入' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : '業務開發'}
+      title={tab === 'report' ? '紀錄匯入' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : tab === 'tender' ? '標案機會' : '業務開發'}
       description={
         tab === 'report'
           ? '將業務日報文字或 LINE 聊天記錄批次匯入客情紀錄。'
@@ -59,6 +63,8 @@ export default async function BdPage({
               ? '商品潛在購買清單派工追蹤：匯入名單、業務逐一聯絡、訂單自動判定成交。'
               : tab === 'suggest'
                 ? '出門前的彈藥清單。系統依追蹤逾期、客戶反應、拜訪間隔與新開業排出今天該跑誰，每筆都寫明理由。'
+              : tab === 'tender'
+                ? '政府電子採購網的牙科相關標案：誰在買、買什麼、多少預算、什麼時候截止。機關是既有客戶時直接帶出負責業務。'
               : tab === 'visits'
                 ? '記錄每次客戶互動，留下明確的下一步。'
                 : '先看今天該處理誰，再記錄結果或安排下一步。'
@@ -101,6 +107,8 @@ export default async function BdPage({
           initialCustomerName={searchParams.customer}
           canManageAll={canImportForOthers}
         />
+      ) : tab === 'tender' ? (
+        <TendersContent canManageAll={canImportForOthers} currentUser={session?.user?.name ?? ''} />
       ) : tab === 'campaigns' ? (
         <CampaignsContent canManageAll={canImportForOthers} />
       ) : tab === 'suggest' ? (
