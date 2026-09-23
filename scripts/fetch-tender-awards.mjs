@@ -29,6 +29,7 @@ const parseArea = (addr) => ({
 })
 
 const started = Date.now()
+const BLOCK_WAIT = Number(process.env.BLOCK_WAIT_MS) || 240_000
 const res = await fetch(`${APP_URL}/api/cron/ingest-tenders?mode=award&limit=${LIMIT}&shard=${SHARD}&of=${OF}`,
   { headers: { 'x-cron-secret': SECRET } })
 if (!res.ok) { console.error(`取待補清單失敗 ${res.status}`); process.exit(1) }
@@ -38,9 +39,10 @@ if (pending.length === 0) process.exit(0)
 
 const records = []
 const checkedPageIds = []
-let blocked = false, noAward = 0
+let blocks = 0, noAward = 0
 
 for (const row of pending) {
+  if (blocks >= 3) break   // 連續被擋三次就收工，剩下的留給下一輪
   const roc = Number(row.date.slice(0, 4)) - 1911
   let award = null
   try {
@@ -50,8 +52,15 @@ for (const row of pending) {
   await sleep(500)
   if (!award) { noAward++; checkedPageIds.push(row.pageId); continue }
 
-  const detail = await fetchDetail(award.path, award.pk).catch(() => null)
-  if (detail === null) { blocked = true; console.log('  明細頁被機器人驗證擋下，本輪停手'); break }
+  let detail = await fetchDetail(award.path, award.pk).catch(() => null)
+  // 明細頁是額度制：被擋之後等一段時間額度會回來，等比直接收工划算
+  while (detail === null && blocks < 3) {
+    blocks++
+    console.log(`  被機器人驗證擋下（第 ${blocks} 次），等 ${BLOCK_WAIT / 1000} 秒再試`)
+    await sleep(BLOCK_WAIT)
+    detail = await fetchDetail(award.path, award.pk).catch(() => null)
+  }
+  if (detail === null) break
   await sleep(4_000)
 
   const unitId = one(detail, '機關代碼')
@@ -79,7 +88,11 @@ for (const row of pending) {
   checkedPageIds.push(row.pageId)
 }
 
-console.log(`補到決標 ${records.length} 案、查無決標 ${noAward} 案${blocked ? '（中途被擋）' : ''}`)
+console.log(`補到決標 ${records.length} 案、查無決標 ${noAward} 案${blocks ? `（被擋 ${blocks} 次）` : ''}`)
+if (records.length === 0 && checkedPageIds.length === 0) {
+  console.log('本輪沒有任何進展（額度被鎖），不回送')
+  process.exit(0)
+}
 const post = await fetch(`${APP_URL}/api/cron/ingest-tenders`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-cron-secret': SECRET },

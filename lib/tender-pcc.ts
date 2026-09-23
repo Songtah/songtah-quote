@@ -125,9 +125,11 @@ export async function searchKeyword(keyword: string, kind: '招標' | '決標', 
  * 且會鎖住該 IP 一段時間）——遇到就整批停手，不要硬打。
  */
 export async function fetchDetail(path: string, pk: string): Promise<Map<string, string[]> | null> {
-  const res = await fetch(`${BASE}/prkms/urlSelector/common/${path}?pk=${pk}`, {
-    headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(60_000),
-  })
+  // 直接打最終網址，省掉 /prkms/urlSelector 這一次轉址（它只是 303 到下面這些位址）
+  const url = path === 'atm' ? `${BASE}/tps/atm/AtmAwardWithoutSso/QueryAtmAwardDetail?pkAtmMain=${pk}`
+    : path === 'nonAtm' ? `${BASE}/tps/atm/AtmNonAwardWithoutSso/QueryAtmNonAwardDetail?pkAtmMain=${pk}`
+      : `${BASE}/tps/QueryTender/query/searchTenderDetail?pkPmsMain=${pk}`
+  const res = await fetch(url, { headers: HEADERS, redirect: 'follow', signal: AbortSignal.timeout(60_000) })
   const map = new Map<string, string[]>()
   if (!res.ok) return map
   const html = (await res.text()).replace(/<script[\s\S]*?<\/script>/g, '')

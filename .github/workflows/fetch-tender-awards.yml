@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       limit:
-        description: '每個分片處理幾案（預設 25）'
+        description: '每個分片處理幾案（預設 20）'
         required: false
-        default: '25'
+        default: '20'
 
 jobs:
   awards:
@@ -20,9 +20,9 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 12
       matrix:
-        shard: [0, 1, 2, 3, 4, 5]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +32,7 @@ jobs:
         env:
           APP_URL: https://songtah-quote.vercel.app
           DAILY_REPORT_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
-          LIMIT: ${{ github.event.inputs.limit || '25' }}
+          LIMIT: ${{ github.event.inputs.limit || '20' }}
           SHARD: ${{ matrix.shard }}
-          OF: '6'
+          OF: '12'
         run: npx -y tsx scripts/fetch-tender-awards.mjs
