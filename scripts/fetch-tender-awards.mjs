@@ -29,7 +29,8 @@ const parseArea = (addr) => ({
 })
 
 const started = Date.now()
-const BLOCK_WAIT = Number(process.env.BLOCK_WAIT_MS) || 900_000
+/** 0＝被擋就收工（預設）。實測每台 runner 每輪就是 5 頁，等 15 分鐘也解不開，等於佔著工作不做事 */
+const BLOCK_WAIT = Number(process.env.BLOCK_WAIT_MS ?? 0)
 const res = await fetch(`${APP_URL}/api/cron/ingest-tenders?mode=award&limit=${LIMIT}&shard=${SHARD}&of=${OF}`,
   { headers: { 'x-cron-secret': SECRET } })
 if (!res.ok) { console.error(`取待補清單失敗 ${res.status}`); process.exit(1) }
@@ -54,12 +55,13 @@ for (const row of pending) {
 
   let detail = await fetchDetail(award.path, award.pk).catch(() => null)
   // 明細頁是額度制：被擋之後等一段時間額度會回來，等比直接收工划算
-  while (detail === null && blocks < 2) {
+  while (detail === null && blocks < 2 && BLOCK_WAIT > 0) {
     blocks++
     console.log(`  被機器人驗證擋下（第 ${blocks} 次），等 ${BLOCK_WAIT / 1000} 秒再試`)
     await sleep(BLOCK_WAIT)
     detail = await fetchDetail(award.path, award.pk).catch(() => null)
   }
+  if (detail === null) { blocks++; console.log('  額度用完，本輪收工') }
   if (detail === null) break
   await sleep(4_000)
 

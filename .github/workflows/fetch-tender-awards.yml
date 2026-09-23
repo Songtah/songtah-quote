@@ -1,12 +1,13 @@
 name: 標案決標結果回補（分片平行）
 
-# 決標金額與得標廠商只在明細頁，而明細頁有機器人驗證、會鎖 IP，
-# 所以拆成多個平行 job（每個 job 是不同 runner／不同 IP），各抓一小段、被擋就停手等下一輪。
+# 決標金額與得標廠商只在明細頁，而明細頁是「每個 IP 每段時間只准看約 5 頁」的額度制。
+# 所以拆成 20 個平行 job（各自不同 runner／IP），每台抓到額度用完就收工，每小時換一批新 IP 再來。
+# 實測一輪約補 50 案；這個 repo 是公開的，Action 分鐘數不計費。
 
 on:
   schedule:
     # 台灣時間 07:40 起每三小時（UTC 23:40, 02:40, 05:40, 08:40, 11:40）
-    - cron: '40 1,3,5,7,9,11,13,23 * * *'
+    - cron: '40 * * * *'
   workflow_dispatch:
     inputs:
       limit:
@@ -17,7 +18,7 @@ on:
 jobs:
   awards:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -34,7 +35,7 @@ jobs:
           DAILY_REPORT_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
           LIMIT: ${{ github.event.inputs.limit || '20' }}
           SHARD: ${{ matrix.shard }}
-          # 明細頁的額度冷卻是十幾分鐘等級，等 4 分鐘等於白等
-          BLOCK_WAIT_MS: '900000'
+          # 0＝被擋就收工：每台 runner 每輪固定就是 5 頁，等下去也解不開，不如讓下一輪換新 IP
+          BLOCK_WAIT_MS: '0'
           OF: '20'
         run: npx -y tsx scripts/fetch-tender-awards.mjs
