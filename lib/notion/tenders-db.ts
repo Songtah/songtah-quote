@@ -161,7 +161,9 @@ export async function upsertTenders(records: UpsertInput[]): Promise<{ created: 
       await notionCallWithRetry('upsertTenders:create', () =>
         notion.pages.create({
           parent: { database_id: normalizeDatabaseId(dbId()) },
-          properties: { ...props, '狀態': { select: { name: r.autoStatus ?? '待評估' } } } as any,
+          // 新列只有在「我們真的投過標」時才直接標得標／未得標；
+          // 其餘決標案只是市場情報，標成「未得標」會讓人誤以為我們投了卻輸掉
+          properties: { ...props, '狀態': { select: { name: (r.weBid && r.autoStatus) ? r.autoStatus : '待評估' } } } as any,
         })
       )
       created++

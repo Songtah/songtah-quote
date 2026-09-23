@@ -103,7 +103,11 @@ export async function searchKeyword(keyword: string, kind: '招標' | '決標', 
     const date = rocToISO(kind === '招標' ? (cells[4] ?? '') : (cells[5] ?? ''))
     hits.push({
       key: `${link[1]}|${link[2]}`, path: link[1], pk: link[2], kind,
-      type: cells[1] || (kind === '招標' ? '招標公告' : '決標公告'),
+      // 公告類型以連結路徑為準：nonAtm＝無法決標、atm＝決標、tpam＝招標，
+      // 比讀表格欄位可靠（欄位裡的「(無法決標)」標記位置會隨公告類型變動）
+      type: link[1] === 'nonAtm' ? '無法決標公告'
+        : link[1] === 'atm' ? '決標公告'
+          : (cells[1] || '招標公告'),
       unitName: cells[2] ?? '', jobNumber, title, date,
       deadline: rocToISO(cells[6] ?? ''),
     })
