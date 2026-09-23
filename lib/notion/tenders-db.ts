@@ -25,6 +25,8 @@ export type TenderRow = TenderRecord & {
   customerName: string
   weBid: boolean
   dataSource: string
+  /** 上次去查決標結果的日期；空白＝還沒查過 */
+  awardCheckedAt: string
 }
 
 const dbId = () => process.env.NOTION_TENDERS_DB ?? '3e3dcdaafb2a81288561f750924ea729'
@@ -66,6 +68,7 @@ function mapRow(page: any): TenderRow {
     customerName: '',
     weBid: p?.['崧達有投標']?.checkbox ?? false,
     dataSource: getSelect(page, '資料來源'),
+    awardCheckedAt: getDate(page, '決標查核日'),
   }
 }
 
@@ -105,6 +108,31 @@ async function indexByTenderId(): Promise<{ byId: Map<string, IndexEntry>; byUni
   return { byId, byUnitJob }
 }
 
+/**
+ * 還缺決標結果的列（得標廠商空白），交給抓取端慢慢補。
+ * 只挑公告滿 30 天的案子（太新的還沒決標），且 30 天內查過的先跳過——
+ * 有些案子永遠不會決標（流標、改採其他方式），不設冷卻會每輪都白查一次。
+ * shard／of 讓多個平行工作各抓一段，彼此不重複（每個 Action job 有自己的 IP）。
+ */
+export async function listTendersNeedingAward(options?: { limit?: number; shard?: number; of?: number }): Promise<TenderRow[]> {
+  const limit = options?.limit ?? 30
+  const of = Math.max(options?.of ?? 1, 1)
+  const shard = Math.min(Math.max(options?.shard ?? 0, 0), of - 1)
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10)
+  const rows = (await listTenderRows()).filter((r) =>
+    !r.winner && r.date && r.date < monthAgo && (!r.awardCheckedAt || r.awardCheckedAt < monthAgo))
+  // 舊案優先（資料最不完整的先補），再依分片取自己那一段
+  rows.sort((a, b) => (a.date < b.date ? -1 : 1))
+  return rows.filter((_, i) => i % of === shard).slice(0, limit)
+}
+
+/** 記錄「這筆查過決標了」，避免永遠決標不了的案子每輪重查 */
+export async function markAwardChecked(pageId: string): Promise<void> {
+  await notionCallWithRetry('markAwardChecked', () =>
+    notion.pages.update({ page_id: pageId, properties: { '決標查核日': { date: { start: new Date().toISOString().slice(0, 10) } } } as any })
+  )
+}
+
 /** 還沒補到明細（機關代碼空白）的列，交給抓取端慢慢補 */
 export async function listTendersNeedingDetail(limit = 5): Promise<TenderRow[]> {
   const rows = await listTenderRows()
@@ -115,7 +143,7 @@ export type UpsertInput = TenderRecord & {
   customerId?: string
   weBid?: boolean
   /** 官方開放資料（可商用）或即時API（近兩個月、授權為合理使用範圍） */
-  dataSource?: '官方開放資料' | '即時API'
+  dataSource?: '官方開放資料' | '即時API' | '歷史回補'
   /** 決標後系統自動結案用；只有在使用者尚未手動改狀態時才套用 */
   autoStatus?: TenderStatus
 }

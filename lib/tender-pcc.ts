@@ -25,6 +25,8 @@ import {
 
 const BASE = 'https://web.pcc.gov.tw'
 const SEARCH = `${BASE}/prkms/tender/common/bulletion/readBulletion`
+/** 基本查詢：可用「標案名稱關鍵字＋公告日期區間」，是唯一能按月切片、不受每頁 100 筆上限的入口 */
+const BASIC = `${BASE}/prkms/tender/common/basic/readTenderBasic`
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
@@ -64,6 +66,8 @@ export type PccHit = {
   title: string
   date: string         // 這則公告的日期（招標＝公告日、決標＝決標公告日）
   deadline: string     // 截止投標日（清單上就有）
+  budget?: number | null   // 基本查詢的清單就有預算金額，不必進明細頁
+  category?: string        // 採購性質（工程類／財物類／勞務類）
 }
 
 /**
@@ -297,4 +301,78 @@ export function hitToRecord(hit: {
     contact: '', phone: '', url: hit.url,
     winner: '', awardAmount: null, basePrice: null, bidders: [],
   }
+}
+
+/**
+ * 依「標案名稱關鍵字＋公告日期區間」查招標公告（基本查詢）。
+ *
+ * 為什麼要有這支：公告查詢（readBulletion）只能選年度，且每個關鍵字每年只給第一頁 100 筆
+ * ——牙科 111 年有 313 筆，會被截掉六成，而它的分頁需要網站 session，curl 取不到。
+ * 基本查詢支援日期區間（西元 yyyy/MM/dd），按月切片後每片遠少於 100 筆，等於可以完整回補。
+ * 附帶好處：這張清單本身就有**預算金額與採購性質**，不必進受限流的明細頁。
+ */
+export async function searchTenderMonth(keyword: string, ym: string): Promise<PccHit[]> {
+  const [y, m] = ym.split('-').map(Number)
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const params = new URLSearchParams({
+    pageSize: '100', firstSearch: 'true', searchType: 'basic', isBinding: 'N', isLogIn: 'N',
+    level_1: 'on', orgName: '', orgId: '', tenderName: keyword, tenderId: '',
+    tenderType: 'TENDER_DECLARATION', tenderWay: 'TENDER_WAY_ALL_DECLARATION',
+    dateType: 'isDate',
+    tenderStartDate: `${y}/${String(m).padStart(2, '0')}/01`,
+    tenderEndDate: `${y}/${String(m).padStart(2, '0')}/${last}`,
+    radProctrgCate: '', policyAdvocacy: '',
+  })
+  const res = await fetch(`${BASIC}?${params}`, { headers: HEADERS, signal: AbortSignal.timeout(90_000) })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const html = await res.text()
+
+  const hits: PccHit[] = []
+  for (const row of html.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) ?? []) {
+    const link = row.match(/\/prkms\/urlSelector\/common\/(tpam|atm|nonAtm)\?pk=([^"&]+)/)
+    if (!link) continue
+    const title = row.match(/pageCode2Img\("([^"]*)"\)/)?.[1]
+      || row.match(/title="檢視\s*標案(?:名稱|案號):\s*([^"]+)"/)?.[1] || ''
+    const cells = (row.replace(/<script[\s\S]*?<\/script>/g, '').match(/<td[^>]*>[\s\S]*?<\/td>/g) ?? []).map(strip)
+    // 項次 | 機關名稱 | 案號＋名稱 | 傳輸次數 | 招標方式 | 採購性質 | 公告日 | 截止投標 | 預算金額 | 功能
+    const budget = Number((cells[8] ?? '').replace(/[^0-9]/g, '')) || null
+    hits.push({
+      key: `${link[1]}|${link[2]}`, path: link[1], pk: link[2], kind: '招標',
+      type: /更正公告/.test(cells[2] ?? '') ? '更正公告' : (cells[4] || '招標公告'),
+      unitName: cells[1] ?? '',
+      jobNumber: (cells[2] ?? '').replace(title, '').replace(/\(更正公告\)/, '').trim(),
+      title, date: rocToISO(cells[6] ?? ''), deadline: rocToISO(cells[7] ?? ''),
+      budget, category: cells[5] ?? '',
+    })
+  }
+  return hits
+}
+
+/** 依標案案號查它的決標公告（清單層級，不進明細頁）——回傳明細頁位址供後續抓金額 */
+export async function findAwardByJobNumber(jobNumber: string, rocYear: number): Promise<{ path: string; pk: string; type: string; date: string } | null> {
+  const hits = await searchKeyword(jobNumber, '決標', rocYear)
+  const exact = hits.filter((h) => h.jobNumber === jobNumber || h.jobNumber.startsWith(jobNumber))
+  const pick = exact.sort((a, b) => (a.date < b.date ? 1 : -1))[0]
+  return pick ? { path: pick.path, pk: pick.pk, type: pick.type, date: pick.date } : null
+}
+
+/** 把查詢結果（清單層級）轉成可寫入的紀錄 */
+export function hitsToRecords(hits: PccHit[]): TenderRecord[] {
+  const out: TenderRecord[] = []
+  for (const hit of hits) {
+    const kw = matchKeywords({ title: hit.title, unitName: hit.unitName, category: hit.category })
+    if (!kw) continue
+    const area = parseArea(hit.unitName)
+    out.push({
+      id: `pcc|${hit.unitName}|${hit.jobNumber}`,
+      unitId: '', jobNumber: hit.jobNumber, unitName: hit.unitName, title: hit.title,
+      type: hit.type, date: hit.date, category: hit.category ?? '',
+      matched: kw.matched, tier: kw.tier,
+      budget: hit.budget ?? null, budgetText: '', deadline: hit.deadline,
+      address: '', city: area.city, district: area.district,
+      contact: '', phone: '', url: `${BASE}/prkms/urlSelector/common/${hit.path}?pk=${hit.pk}`,
+      winner: '', awardAmount: null, basePrice: null, bidders: [],
+    })
+  }
+  return out
 }

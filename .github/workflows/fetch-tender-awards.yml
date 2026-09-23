@@ -1,0 +1,38 @@
+name: 標案決標結果回補（分片平行）
+
+# 決標金額與得標廠商只在明細頁，而明細頁有機器人驗證、會鎖 IP，
+# 所以拆成多個平行 job（每個 job 是不同 runner／不同 IP），各抓一小段、被擋就停手等下一輪。
+
+on:
+  schedule:
+    # 台灣時間 07:40 起每三小時（UTC 23:40, 02:40, 05:40, 08:40, 11:40）
+    - cron: '40 23,2,5,8,11 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: '每個分片處理幾案（預設 25）'
+        required: false
+        default: '25'
+
+jobs:
+  awards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 補決標結果（分片 ${{ matrix.shard }}）
+        env:
+          APP_URL: https://songtah-quote.vercel.app
+          DAILY_REPORT_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+          LIMIT: ${{ github.event.inputs.limit || '25' }}
+          SHARD: ${{ matrix.shard }}
+          OF: '6'
+        run: npx -y tsx scripts/fetch-tender-awards.mjs

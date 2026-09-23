@@ -21,7 +21,14 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       return NextResponse.json(await refreshTenders())
     }
     const snapshot = await getTenders()
-    return NextResponse.json({ ...(snapshot ?? { records: [], computedAt: '' }), ready: Boolean(snapshot) })
+    if (!snapshot) return NextResponse.json({ records: [], computedAt: '', ready: false })
+    // ?mine=1：今日工作的小面板只要自己的案子，不必把上千列歷史標案整包送到前端
+    if (req.nextUrl.searchParams.get('mine') === '1') {
+      const me = session?.user?.name ?? ''
+      const mine = snapshot.records.filter((r) => r.owner === me || (r.customerId && r.customerSalesperson === me))
+      return NextResponse.json({ ...snapshot, records: mine, ready: true })
+    }
+    return NextResponse.json({ ...snapshot, ready: true })
   } catch (error: any) {
     console.error('tenders error:', error)
     return NextResponse.json({ error: error?.message ?? '讀取失敗' }, { status: 500 })

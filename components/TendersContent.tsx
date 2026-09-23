@@ -77,6 +77,8 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
   const [err, setErr] = useState('')
 
   const [stage, setStage] = useState<'open' | 'awarded' | 'all'>('open')
+  const [year, setYear] = useState('全部')
+  const [limit, setLimit] = useState(150)
   const [statusFilter, setStatusFilter] = useState<string>('全部')
   const [onlyCustomer, setOnlyCustomer] = useState(false)
   const [onlyMine, setOnlyMine] = useState(false)
@@ -125,20 +127,43 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
     () => ['全部', ...Array.from(new Set(records.map((r) => r.city).filter(Boolean))).sort()],
     [records])
 
+  const years = useMemo(
+    () => ['全部', ...Array.from(new Set(records.map((r) => r.date.slice(0, 4)).filter(Boolean))).sort().reverse()],
+    [records])
+
+  const today = new Date().toISOString().slice(0, 10)
   const shown = useMemo(() => records.filter((r) => {
     const awarded = /決標/.test(r.type)
-    if (stage === 'open' && awarded) return false
+    // 「進行中」＝還沒決標、而且還來得及投（沒寫截止日的就看公告日是不是近 30 天）
+    const live = !awarded && (r.deadline ? r.deadline >= today : r.date >= new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10))
+    if (stage === 'open' && !live) return false
     if (stage === 'awarded' && !awarded) return false
+    if (year !== '全部' && !r.date.startsWith(year)) return false
     if (onlyCustomer && !r.customerId) return false
     if (statusFilter !== '全部' && (r.status || '待評估') !== statusFilter) return false
     if (onlyMine && r.customerSalesperson !== currentUser && r.owner !== currentUser) return false
     if (city !== '全部' && r.city !== city) return false
-    if (q && !(r.title.includes(q) || r.unitName.includes(q) || r.jobNumber.includes(q) || r.customerName.includes(q))) return false
+    if (q && !(r.title.includes(q) || r.unitName.includes(q) || r.jobNumber.includes(q)
+      || r.customerName.includes(q) || r.winner.includes(q) || r.bidders.some((b) => b.includes(q)))) return false
     return true
-  }), [records, stage, onlyCustomer, onlyMine, statusFilter, city, q, currentUser])
+  }), [records, stage, year, onlyCustomer, onlyMine, statusFilter, city, q, currentUser, today])
+
+  /** 已決標檢視的廠商排行：這是我們唯一能看到競爭對手實績的地方 */
+  const winnerRank = useMemo(() => {
+    if (stage !== 'awarded') return []
+    const map = new Map<string, { count: number; amount: number }>()
+    for (const r of shown) {
+      if (!r.winner) continue
+      const cur = map.get(r.winner) ?? { count: 0, amount: 0 }
+      cur.count++; cur.amount += r.awardAmount ?? 0
+      map.set(r.winner, cur)
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count || b[1].amount - a[1].amount).slice(0, 10)
+  }, [shown, stage])
 
   const matchedCount = records.filter((r) => r.customerId).length
-  const openCount = records.filter((r) => !/決標/.test(r.type)).length
+  const liveCount = records.filter((r) => !/決標/.test(r.type)
+    && (r.deadline ? r.deadline >= today : r.date >= new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10))).length
 
   return (
     <div className="space-y-4">
@@ -147,7 +172,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h3 className="text-base font-semibold text-stone-800">🏛️ 標案機會</h3>
           <span className="text-xs text-stone-400">
-            政府電子採購網的牙科相關標案　共 {records.length} 案（招標中 {openCount}）·　{matchedCount} 案的機關是我們的客戶
+            政府電子採購網的牙科相關標案　共 {records.length} 案（進行中 {liveCount}）·　{matchedCount} 案的機關是我們的客戶
           </span>
           {canManageAll && view === 'list' && (
             <button
@@ -184,7 +209,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
           {/* ── 篩選 ───────────────────────────── */}
           <div className="card-soft p-4">
             <div className="flex flex-wrap items-center gap-2">
-              {([['open', '招標中'], ['awarded', '已決標'], ['all', '全部']] as const).map(([v, label]) => (
+              {([['open', '進行中'], ['awarded', '已決標'], ['all', '全部']] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setStage(v)} className={chip(stage === v)}>{label}</button>
               ))}
               <span className="mx-1 h-5 w-px bg-stone-200" />
@@ -200,11 +225,34 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                 className="select-soft rounded-full px-3 py-1.5 text-sm">
                 {cities.map((c) => <option key={c} value={c}>{c === '全部' ? '全部縣市' : c}</option>)}
               </select>
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋標案、機關或案號"
+              <select value={year} onChange={(e) => setYear(e.target.value)}
+                className="select-soft rounded-full px-3 py-1.5 text-sm">
+                {years.map((y) => <option key={y} value={y}>{y === '全部' ? '全部年度' : `${y} 年`}</option>)}
+              </select>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋標案、機關、案號或廠商"
                 className="input-soft ml-auto min-w-[200px] flex-1 rounded-full px-4 py-1.5 text-sm" />
             </div>
-            <p className="mt-2 text-[11px] text-stone-400">顯示 {shown.length} / {records.length} 案</p>
+            <p className="mt-2 text-[11px] text-stone-400">
+              符合 {shown.length} 案 / 全部 {records.length} 案{shown.length > limit && `（先顯示前 ${limit} 案）`}
+            </p>
           </div>
+
+          {/* 得標廠商排行：看同業在這些標案拿走多少，是唯一能量化競爭對手的地方 */}
+          {winnerRank.length > 0 && (
+            <div className="card-soft p-4">
+              <h4 className="text-sm font-semibold text-stone-800">得標廠商排行（符合篩選的 {shown.filter((r) => r.winner).length} 件決標案）</h4>
+              <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                {winnerRank.map(([name, v], i) => (
+                  <li key={name} className="flex items-baseline gap-2 text-xs">
+                    <span className="w-5 tabular-nums text-stone-400">{i + 1}.</span>
+                    <button onClick={() => setQ(name)} className="truncate text-stone-700 underline decoration-stone-300 hover:text-brand-700">{name}</button>
+                    <span className="ml-auto shrink-0 tabular-nums text-stone-500">{v.count} 件</span>
+                    {v.amount > 0 && <span className="w-20 shrink-0 text-right tabular-nums text-stone-400">{(v.amount / 10000).toLocaleString(undefined, { maximumFractionDigits: 0 })} 萬</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {loading ? (
             <p className="py-12 text-center text-sm text-stone-400">載入中…</p>
@@ -218,7 +266,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
             <p className="py-12 text-center text-sm text-stone-400">沒有符合篩選的標案</p>
           ) : (
             <ul className="space-y-2">
-              {shown.map((r) => (
+              {shown.slice(0, limit).map((r) => (
                 <li key={r.id} className="card-soft p-4">
                   {/* 標題列 */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -318,6 +366,12 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                 </li>
               ))}
             </ul>
+          )}
+          {shown.length > limit && (
+            <button onClick={() => setLimit((v) => v + 300)}
+              className="mx-auto block rounded-full bg-stone-50 px-5 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
+              顯示更多（還有 {shown.length - limit} 案）
+            </button>
           )}
         </>
       )}

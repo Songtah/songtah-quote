@@ -29,7 +29,7 @@ export default function MyTendersPanel({ currentUser = '' }: { currentUser?: str
   useEffect(() => {
     ;(async () => {
       try {
-        const res = await fetch('/api/bd/tenders')
+        const res = await fetch('/api/bd/tenders?mine=1')
         const data = await res.json()
         if (res.ok) setRows(data.records ?? [])
       } catch { /* 靜默：標案失敗不影響今日工作 */ }

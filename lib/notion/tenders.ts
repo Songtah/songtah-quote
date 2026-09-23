@@ -18,7 +18,7 @@ import { fetchDentalTendersFromPcc } from '@/lib/tender-pcc'
 import { fetchOfficialRecent } from '@/lib/tender-official'
 import { upsertTenders, listTenderRows, type TenderRow } from './tenders-db'
 
-export type TenderOpportunity = TenderRow & { matchNote: string }
+export type TenderOpportunity = TenderRow & { matchNote: string; customerSalesperson: string }
 
 export type TenderSnapshot = {
   records: TenderOpportunity[]
@@ -107,7 +107,12 @@ export async function refreshTenders(options?: { days?: number; full?: boolean }
  */
 export async function ingestTenders(
   records: TenderRecord[],
-  options?: { ourBidIds?: string[]; meta?: { scannedDays?: number; scannedRecords?: number; failedDays?: number; firstError?: string } },
+  options?: {
+    ourBidIds?: string[]
+    /** 標記這批資料怎麼來的；歷史回補標成「歷史回補」，方便日後稽核 */
+    dataSource?: '官方開放資料' | '即時API' | '歷史回補'
+    meta?: { scannedDays?: number; scannedRecords?: number; failedDays?: number; firstError?: string }
+  },
 ): Promise<TenderSnapshot> {
   const ourBids = new Set(options?.ourBidIds ?? [])
   const match = await buildCustomerMatcher()
@@ -118,7 +123,7 @@ export async function ingestTenders(
       ...r,
       customerId: m.customerId || undefined,
       weBid: ourBids.has(r.id) || r.bidders.some((b) => b.includes('崧達')),
-      dataSource: '即時API' as const,
+      dataSource: options?.dataSource ?? ('即時API' as const),
       autoStatus: awarded ? (/崧達/.test(r.winner) ? '得標' as const : '未得標' as const) : undefined,
     }
   })
@@ -141,7 +146,16 @@ export async function rebuildSnapshot(meta?: {
   const [rows, match] = await Promise.all([listTenderRows(), buildCustomerMatcher()])
   const records: TenderOpportunity[] = rows.map((r) => {
     const m = match({ unitName: r.unitName, city: r.city })
-    return { ...r, customerName: m.customerName, matchNote: m.note, customerId: r.customerId || m.customerId }
+    return {
+      ...r,
+      // 機關地址在畫面上用不到（縣市／行政區已另存），歷史資料上千列時省下來的快取空間很可觀
+      address: '',
+      bidders: r.bidders.slice(0, 30),
+      customerName: m.customerName,
+      customerSalesperson: m.salesperson,
+      matchNote: m.note,
+      customerId: r.customerId || m.customerId,
+    }
   })
   // 最新公告日取「這次掃到的」與「DB 既有的」較大者
   const latest = [meta?.latestAnnouncementDate ?? '', ...records.map((r) => r.date)].filter(Boolean).sort().pop() ?? ''
