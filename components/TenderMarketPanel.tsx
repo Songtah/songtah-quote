@@ -134,6 +134,19 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
   const withPrice = awarded.filter((r) => r.awardAmount && r.budget)
   const avgRatio = withPrice.length
     ? withPrice.reduce((a, r) => a + (r.awardAmount! / r.budget!), 0) / withPrice.length : null
+  const soloRate = awarded.length ? awarded.filter((r) => r.bidders.length <= 1).length / awarded.length : null
+  const custRate = awarded.length ? awarded.filter((r) => r.customerId).length / awarded.length : null
+  // 補齊度：這個區間的案子裡，有多少已經查到得標廠商（決標明細是逐案慢慢補的）
+  const inWindow = records.filter((r) => r.date >= since).length
+  const fillRate = inWindow ? awarded.length / inWindow : 0
+
+  const tiles: [string, string, string][] = [
+    ['決標總額', totalAmount ? wan(totalAmount) : '—', `${awarded.length} 件已查到得標廠商`],
+    ['平均成交÷預算', avgRatio ? pct(avgRatio) : '—', '越低代表殺價越兇'],
+    ['單一廠商投標', soloRate === null ? '—' : pct(soloRate), '只有一家投標的比例'],
+    ['買主是既有客戶', custRate === null ? '—' : pct(custRate), '採購機關已在客戶庫'],
+    ['資料補齊度', pct(fillRate), `近 ${years} 年共 ${inWindow} 案`],
+  ]
 
   const chip = (on: boolean) =>
     `rounded-full px-3.5 py-1.5 text-sm font-medium transition-all active:scale-95 ${
