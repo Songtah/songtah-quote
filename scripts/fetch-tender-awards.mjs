@@ -29,7 +29,7 @@ const parseArea = (addr) => ({
 })
 
 const started = Date.now()
-const BLOCK_WAIT = Number(process.env.BLOCK_WAIT_MS) || 240_000
+const BLOCK_WAIT = Number(process.env.BLOCK_WAIT_MS) || 900_000
 const res = await fetch(`${APP_URL}/api/cron/ingest-tenders?mode=award&limit=${LIMIT}&shard=${SHARD}&of=${OF}`,
   { headers: { 'x-cron-secret': SECRET } })
 if (!res.ok) { console.error(`取待補清單失敗 ${res.status}`); process.exit(1) }
@@ -42,7 +42,7 @@ const checkedPageIds = []
 let blocks = 0, noAward = 0
 
 for (const row of pending) {
-  if (blocks >= 3) break   // 連續被擋三次就收工，剩下的留給下一輪
+  if (blocks >= 2) break   // 被擋兩次就收工，剩下的留給下一輪
   const roc = Number(row.date.slice(0, 4)) - 1911
   let award = null
   try {
@@ -54,7 +54,7 @@ for (const row of pending) {
 
   let detail = await fetchDetail(award.path, award.pk).catch(() => null)
   // 明細頁是額度制：被擋之後等一段時間額度會回來，等比直接收工划算
-  while (detail === null && blocks < 3) {
+  while (detail === null && blocks < 2) {
     blocks++
     console.log(`  被機器人驗證擋下（第 ${blocks} 次），等 ${BLOCK_WAIT / 1000} 秒再試`)
     await sleep(BLOCK_WAIT)
