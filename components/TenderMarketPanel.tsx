@@ -53,6 +53,7 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
       count: number; amount: number; cities: Map<string, number>; buyers: Map<string, number>
       cats: Map<string, number>; rivals: Map<string, number>; ratios: number[]; last: string
     }
+
     const map = new Map<string, V>()
     for (const r of awarded) {
       const v: V = map.get(r.winner) ?? {
@@ -66,8 +67,10 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
       bump(v.buyers, classifyBuyer(r.unitName))
       bump(v.cats, classifyTender(r.title))
       for (const b of r.bidders) if (b && b !== r.winner) bump(v.rivals, b)
-      // 決標金額／底價：越接近 1 代表越貼底價成交，越低代表殺價越兇
-      if (r.awardAmount && r.basePrice) v.ratios.push(r.awardAmount / r.basePrice)
+      // 成交價÷預算：越低代表殺價越兇。
+      // 不用底價當分母——單價開口契約的底價是「單一品項」的，決標金額卻是全案總額，
+      // 兩者不同基準，相除會出現 13 倍這種假數字；預算與決標金額才是同一個層級。
+      if (r.awardAmount && r.budget) v.ratios.push(r.awardAmount / r.budget)
       map.set(r.winner, v)
     }
     return Array.from(map.entries())
@@ -128,9 +131,9 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
   }, [awarded])
 
   const totalAmount = awarded.reduce((a, r) => a + (r.awardAmount ?? 0), 0)
-  const withPrice = awarded.filter((r) => r.awardAmount && r.basePrice)
+  const withPrice = awarded.filter((r) => r.awardAmount && r.budget)
   const avgRatio = withPrice.length
-    ? withPrice.reduce((a, r) => a + (r.awardAmount! / r.basePrice!), 0) / withPrice.length : null
+    ? withPrice.reduce((a, r) => a + (r.awardAmount! / r.budget!), 0) / withPrice.length : null
 
   const chip = (on: boolean) =>
     `rounded-full px-3.5 py-1.5 text-sm font-medium transition-all active:scale-95 ${
@@ -150,7 +153,7 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
         </div>
         <p className="mt-2 text-[11px] text-stone-400">
           母體：近 {years} 年已決標且查得到得標廠商的 {awarded.length} 案，決標總額 {wan(totalAmount)}
-          {avgRatio && `　·　平均決標金額／底價 ${pct(avgRatio)}（越低代表殺價越兇）`}
+          {avgRatio && ``}
           　·　決標資料仍在逐案補齊中，數字會隨補齊而變動
         </p>
       </div>
@@ -165,7 +168,7 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
                 <th className="pb-2 font-medium">得標廠商</th>
                 <th className="pb-2 text-right font-medium">件數</th>
                 <th className="pb-2 text-right font-medium">決標總額</th>
-                <th className="pb-2 text-right font-medium">決標／底價</th>
+                <th className="pb-2 text-right font-medium">成交÷預算</th>
                 <th className="pb-2 font-medium">主攻機關</th>
                 <th className="pb-2 font-medium">主攻品類</th>
                 <th className="pb-2 font-medium">主要地區</th>
