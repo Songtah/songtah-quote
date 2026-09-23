@@ -13,6 +13,7 @@
  * 狀態轉為「投標中」且機關是既有客戶時，系統自動把開發階段推到「報價中」。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import TenderMarketPanel from './TenderMarketPanel'
 
 type Tender = {
   id: string; pageId: string; status: string; owner: string; note: string; weBid: boolean
@@ -65,7 +66,7 @@ const chip = (on: boolean) =>
 export default function TendersContent({ canManageAll = false, currentUser = '' }: {
   canManageAll?: boolean; currentUser?: string
 }) {
-  const [view, setView] = useState<'list' | 'search'>('list')
+  const [view, setView] = useState<'list' | 'market' | 'search'>('list')
 
   const [records, setRecords] = useState<Tender[]>([])
   const [busy, setBusy] = useState<string | null>(null)
@@ -196,6 +197,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button onClick={() => setView('list')} className={chip(view === 'list')}>機會清單</button>
+          <button onClick={() => setView('market')} className={chip(view === 'market')}>市場分析</button>
           <button onClick={() => setView('search')} className={chip(view === 'search')}>歷史查詢</button>
         </div>
       </div>
@@ -204,6 +206,11 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
 
       {view === 'search' ? (
         <TenderSearch canEdit={Boolean(currentUser)} onImported={() => load()} />
+      ) : view === 'market' ? (
+        <TenderMarketPanel
+          records={records}
+          onPick={(name) => { setQ(name); setStage('all'); setView('list') }}
+        />
       ) : (
         <>
           {/* ── 篩選 ───────────────────────────── */}

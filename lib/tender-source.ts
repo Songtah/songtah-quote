@@ -90,3 +90,37 @@ export function matchKeywords(input: { title: string; unitName: string; category
   if (secondary.length && isDentalContext(input)) return { matched: secondary, tier: 2 }
   return null
 }
+
+/**
+ * 標案品類：從標案名稱判斷這是在買什麼。
+ * 用途是看市場結構（誰在賣什麼、我們有沒有在那個品類裡），不是精準分類，
+ * 所以採「先命中先算」的順序：越具體的品類排越前面。
+ */
+export const TENDER_CATEGORIES = [
+  ['數位設備', /口掃|口內掃描|掃描|3D列印|列印機|切削|燒結|CAD|CAM|數位化|模型掃描/i],
+  ['影像設備', /X光|X-?ray|全景|環口|斷層|CT|影像|攝影/i],
+  ['診療設備', /治療椅|治療台|診療台|牙科椅|沖牙|吸唾|壓縮機|純水機|滅菌|高壓蒸氣/],
+  ['義齒技工', /義齒|假牙|贋復|牙體技術|技工|活動假牙|全口重建|矯正器|隱形矯正/],
+  ['牙材耗材', /牙材|耗材|器械|車針|印模|材料|根管|植體|填補|複合樹脂|手機/],
+  ['資訊軟體', /軟體|系統|資訊|平台|EXOCAD|雲端|管理系統/i],
+  ['維護保養', /維護|保養|維修|全責|檢測校正/],
+  ['醫療服務', /駐診|醫療合作|巡迴|外展|照護|篩檢|衛教|教育訓練|研習/],
+] as const
+
+export function classifyTender(title: string): string {
+  for (const [name, re] of TENDER_CATEGORIES) if (re.test(title)) return name
+  return '其他'
+}
+
+/** 機關類型：看採購來源的結構（醫學中心？衛生所？學校？） */
+export function classifyBuyer(unitName: string): string {
+  if (/榮民總醫院|大學.*醫院|醫學院.*醫院|醫學大學/.test(unitName)) return '醫學中心／大學醫院'
+  if (/衛生所/.test(unitName)) return '衛生所'
+  if (/衛生局|縣政府|市政府|鄉公所|鎮公所/.test(unitName)) return '地方政府'
+  if (/醫院/.test(unitName)) return '醫院'
+  if (/大學|學校|專科|高中|高工|科技大學/.test(unitName)) return '學校'
+  if (/監獄|矯正|看守所|戒治所/.test(unitName)) return '矯正機關'
+  if (/國軍|軍醫|國防/.test(unitName)) return '軍方'
+  if (/衛生福利部|健保署|國家衛生研究院|疾病管制署/.test(unitName)) return '中央機關'
+  return '其他'
+}
