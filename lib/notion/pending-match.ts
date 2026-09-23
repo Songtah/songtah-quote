@@ -140,8 +140,9 @@ export async function computePendingMatches(options?: { autoLink?: boolean }): P
   return out
 }
 
-/** 最近一次重算自動補上的筆數（供排程回報） */
-export let lastAutoLinked = 0
+/** 最近一次重算自動補上的筆數（供排程回報）。用函式取值：直接匯出可變變數在部分打包下不是即時值 */
+let lastAutoLinked = 0
+export function getLastAutoLinked(): number { return lastAutoLinked }
 
 /**
  * 把客情紀錄關聯到客戶。overwriteName＝true 時把單位名稱補齊為主檔全名（人工確認用，
