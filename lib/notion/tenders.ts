@@ -205,6 +205,12 @@ export async function refreshFromOfficial(periods = 4): Promise<{ scanned: numbe
   return { scanned: records.length, dental: dental.length, upserted: list.length }
 }
 
+/**
+ * 頁面讀這支。快取沒了（TTL 到期或被清）就直接用 DB 重建一份——
+ * 標案是長期累積的資料，畫面不該因為快取消失就變成空的、也不該因此去打外部網站。
+ */
 export async function getTenders(): Promise<TenderSnapshot | null> {
-  return await getRedisValue<TenderSnapshot>(KEY).catch(() => null)
+  const cached = await getRedisValue<TenderSnapshot>(KEY).catch(() => null)
+  if (cached) return cached
+  return await rebuildSnapshot().catch(() => null)
 }

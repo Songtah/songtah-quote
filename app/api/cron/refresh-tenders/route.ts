@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { refreshTenders, refreshFromOfficial } from '@/lib/notion/tenders'
+import { searchKeyword } from '@/lib/tender-pcc'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     const started = Date.now()
+    // ?probe=1：只測「正式站能不能連到官網」——頁面上的手動抓取與歷史查詢都走這條路
+    if (req.nextUrl.searchParams.get('probe') === '1') {
+      const roc = new Date().getFullYear() - 1911
+      try {
+        const hits = await searchKeyword('牙科', '招標', roc)
+        return NextResponse.json({ ok: true, mode: 'probe', hits: hits.length, sample: hits[0]?.title ?? '' })
+      } catch (e: any) {
+        return NextResponse.json({ ok: false, mode: 'probe', error: e?.message ?? String(e) }, { status: 503 })
+      }
+    }
     const full = req.nextUrl.searchParams.get('full') === '1'
     // ?official=1：改跑官方開放資料補寫（每月一次即可，資料落後兩個月但授權可商用）
     if (req.nextUrl.searchParams.get('official') === '1') {

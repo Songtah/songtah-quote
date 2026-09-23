@@ -33,6 +33,13 @@ jobs:
           DAYS: ${{ github.event.inputs.days || '5' }}
         run: npx -y tsx scripts/fetch-tenders.mjs
 
+      - name: 檢查正式站能否直連官網（頁面的手動抓取與歷史查詢走這條）
+        continue-on-error: true
+        run: |
+          curl -s "https://songtah-quote.vercel.app/api/cron/refresh-tenders?probe=1" \
+            -X POST -H "x-cron-secret: ${{ secrets.DAILY_REPORT_SECRET }}" | head -c 300
+          echo ""
+
       - name: 每月 6 號補寫官方開放資料（可商用來源；落後約兩個月）
         if: ${{ github.event.schedule == '10 23 * * *' }}
         run: |

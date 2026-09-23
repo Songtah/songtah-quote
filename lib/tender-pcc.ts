@@ -53,7 +53,7 @@ function parseArea(addr: string): { city: string; district: string } {
   return { city: city.replace(/台/, '臺'), district }
 }
 
-type PccHit = {
+export type PccHit = {
   key: string          // 明細頁路徑＋pk，用來抓明細
   path: string         // tpam（招標）／atm（決標）／nonAtm（無法決標）
   pk: string
@@ -70,7 +70,7 @@ type PccHit = {
  * 查一個關鍵字。官網會把標案名稱畫成圖片防爬，但 JS 參數裡仍有原文
  * （`pageCode2Img("標案名稱")`），檢視連結的 title 屬性也有，兩者互為備援。
  */
-async function searchKeyword(keyword: string, kind: '招標' | '決標', rocYear: number): Promise<PccHit[]> {
+export async function searchKeyword(keyword: string, kind: '招標' | '決標', rocYear: number): Promise<PccHit[]> {
   const body = new URLSearchParams({
     querySentence: keyword,
     tenderStatusType: kind,
@@ -91,9 +91,12 @@ async function searchKeyword(keyword: string, kind: '招標' | '決標', rocYear
   for (const row of html.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) ?? []) {
     const link = row.match(/\/prkms\/urlSelector\/common\/(tpam|atm|nonAtm)\?pk=([^"&]+)/)
     if (!link) continue
-    const cells = (row.match(/<td[^>]*>[\s\S]*?<\/td>/g) ?? []).map(strip)
-    const title = row.match(/pageCode2Img\("([^"]+)"\)/)?.[1]
-      ?? row.match(/title="檢視\s*標案(?:名稱|案號):\s*([^"]+)"/)?.[1] ?? ''
+    // 標案名稱被畫成圖片防爬，原文只在 <script> 參數或檢視連結的 title 屬性裡；
+    // 取完原文一定要把 <script> 整段拿掉再讀欄位，否則 JS 原始碼會被當成案號的一部分
+    const title = row.match(/pageCode2Img\("([^"]*)"\)/)?.[1]
+      || row.match(/title="檢視\s*標案(?:名稱|案號):\s*([^"]+)"/)?.[1] || ''
+    const clean = row.replace(/<script[\s\S]*?<\/script>/g, '')
+    const cells = (clean.match(/<td[^>]*>[\s\S]*?<\/td>/g) ?? []).map(strip)
     // 公告查詢的結果表格招標／決標共用同一組欄位：
     // 項次 | 種類 | 機關名稱 | 案號＋標案名稱 | 招標公告日期 | 決標或無法決標公告 | 截止投標 | 公開閱覽 | 預告
     const jobNumber = (cells[3] ?? '').replace(title, '').replace(/\(更正公告\)/, '').trim()
@@ -220,7 +223,16 @@ export async function fetchDentalTendersFromPcc(options: {
     })
   }
 
-  return { records, candidates: candidates.length, enriched, detailBlocked, queries, failedQueries, firstError }
+  // 同一案的招標與決標公告會收斂成同一個標案ID：決標是最終結果，優先保留
+  const byId = new Map<string, TenderRecord>()
+  for (const r of records) {
+    const prev = byId.get(r.id)
+    if (!prev) { byId.set(r.id, r); continue }
+    const rank = (x: TenderRecord) => (/決標/.test(x.type) ? 2 : 1)
+    if (rank(r) > rank(prev) || (rank(r) === rank(prev) && r.date > prev.date)) byId.set(r.id, r)
+  }
+
+  return { records: Array.from(byId.values()), candidates: candidates.length, enriched, detailBlocked, queries, failedQueries, firstError }
 }
 
 /**
@@ -263,4 +275,22 @@ export async function enrichPendingTenders(
     await sleep(4_000)
   }
   return { records, blocked: false }
+}
+
+/** 由查詢結果（沒有明細）組出可寫入的紀錄：歷史查詢的「加入追蹤」用 */
+export function hitToRecord(hit: {
+  url: string; unitName: string; jobNumber: string; title: string; type: string; date: string; deadline: string
+}): TenderRecord {
+  const area = parseArea(hit.unitName)
+  const kw = matchKeywords({ title: hit.title, unitName: hit.unitName })
+  return {
+    id: `pcc|${hit.unitName}|${hit.jobNumber}`,
+    unitId: '', jobNumber: hit.jobNumber, unitName: hit.unitName, title: hit.title,
+    type: hit.type, date: hit.date, category: '',
+    matched: kw?.matched ?? [], tier: kw?.tier ?? 1,
+    budget: null, budgetText: '', deadline: hit.deadline,
+    address: '', city: area.city, district: area.district,
+    contact: '', phone: '', url: hit.url,
+    winner: '', awardAmount: null, basePrice: null, bidders: [],
+  }
 }
