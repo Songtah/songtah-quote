@@ -313,7 +313,10 @@ export function hitToRecord(hit: {
  */
 export async function searchTenderMonth(keyword: string, ym: string): Promise<PccHit[]> {
   const [y, m] = ym.split('-').map(Number)
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  // 結束日不能超過今天：實測帶未來日期查詢會回 0 筆（官網不接受未來的公告日區間）
+  const monthEnd = new Date(Date.UTC(y, m, 0))
+  const now = new Date()
+  const last = (monthEnd > now ? now : monthEnd).getUTCDate()
   const params = new URLSearchParams({
     pageSize: '100', firstSearch: 'true', searchType: 'basic', isBinding: 'N', isLogIn: 'N',
     level_1: 'on', orgName: '', orgId: '', tenderName: keyword, tenderId: '',
