@@ -77,6 +77,7 @@
    人工結案率實測 0.0%，故結案不可依賴業務打勾。待追蹤清單以**客戶**為單位去重（同業務同客戶只留最新一筆），
    且同時收 checkbox 與 `狀態=追蹤中` 兩種來源。可逆（取消勾選即復原）。
 4. **待追蹤＝跨月未結案，禁止改回只看本月**：待追蹤定義為「是否需追蹤=true 且 追蹤已結案=false」，不限月份（`listOpenFollowUps`、ceo-stats `fetchOpenFollowUps`）。結案唯一路徑＝勾 `追蹤已結案` checkbox（`closeFollowUp`／PATCH `/api/visits/follow-ups`，可逆）。舊版只算本月導致月初整批消失（曾累積 397 筆黑數），不可回退。
+5. **客情配對客戶只有一個入口 `matchVisitCustomer`**（建檔、夜間補關聯、auto-link、待確認清單共用）：慣用稱呼記憶 → 名稱字根＋業務脈絡，縮到唯一才配；夜間判得出唯一就直接補、系統補的不覆寫單位名稱、人工確認先記住叫法再覆寫。規則與回測數字見 `docs/rules/visit-customer-matching.md`，禁止另寫一套比對。
 
 ## 業務開發漏斗鐵則
 

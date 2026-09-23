@@ -209,6 +209,8 @@ function extractNameAndContent(raw: string): { name: string; inlineContent: stri
 const NON_VISIT_KEYWORDS = [
   '業務會議', '內部會議', '公司會議', '培訓', '教育訓練', '開會', '進公司',
   '例行會議', '週一會議', '週一例行', '局寄貨', '銀行',
+  // 2026-09-23 盤點未關聯客情時發現仍會混進來的內部事項
+  '週會', '例行性會議', '更新客戶資料', 'notion資料', 'NOTION資料', 'Notion資料',
 ]
 
 // 明顯的任務描述動詞開頭（不是客戶名稱）

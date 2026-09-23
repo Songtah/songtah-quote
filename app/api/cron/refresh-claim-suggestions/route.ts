@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { computeClaimSuggestions } from '@/lib/notion/visit-claim'
 import { rebuildMatchContext } from '@/lib/notion/match-context'
-import { computePendingMatches } from '@/lib/notion/pending-match'
+import { computePendingMatches, lastAutoLinked } from '@/lib/notion/pending-match'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       suggestions: items.length,
-      pendingMatch: pending ? { 組數: pending.length, 筆數: pending.reduce((n, g) => n + g.count, 0) } : 'skipped',
+      pendingMatch: pending ? { 自動補上關聯: lastAutoLinked, 組數: pending.length, 筆數: pending.reduce((n, g) => n + g.count, 0) } : 'skipped',
       matchContext: ctx ? { 業務數: ctx.visitedBy.size, 有轄區: ctx.territoriesBy.size } : 'failed',
       looksDeveloping: items.filter((i) => i.looksDeveloping).length,
       contested: items.filter((i) => i.contested).length,

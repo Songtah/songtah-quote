@@ -15,8 +15,9 @@
  */
 import { getRedisValue, setRedisValue, deleteRedisValue, notionCallWithRetry, notion, DB, normalizeDatabaseId, getTitle, getSelect, getDate, getText } from './shared'
 import { searchSystemCustomers } from './customers'
-import { customerNameStem, pickCustomerMatch, type MatchCandidate } from '@/lib/customer-name-match'
-import { loadMatchContext, narrowingFor } from './match-context'
+import { type MatchCandidate } from '@/lib/customer-name-match'
+import { loadMatchContext, matchVisitCustomer } from './match-context'
+import { loadAliases, rememberAlias } from './visit-alias'
 
 export type PendingMatchCandidate = MatchCandidate & { type?: string; salesperson?: string }
 
@@ -52,7 +53,8 @@ async function saveIgnored(set: Set<string>) {
 }
 
 /** 全掃未關聯的客情紀錄並分組（不含忽略清單） */
-export async function computePendingMatches(): Promise<PendingMatchGroup[]> {
+export async function computePendingMatches(options?: { autoLink?: boolean }): Promise<PendingMatchGroup[]> {
+  const autoLink = options?.autoLink ?? true
   if (!DB.visits) return []
   type Row = { id: string; name: string; sp: string; date: string }
   const rows: Row[] = []
@@ -96,16 +98,29 @@ export async function computePendingMatches(): Promise<PendingMatchGroup[]> {
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, MAX_NAMES)
 
+  const aliases = await loadAliases().catch(() => ({ manual: {}, learned: {} }))
   const out: PendingMatchGroup[] = []
+  lastAutoLinked = 0
   for (const [key, list] of keys) {
     const { name, sp } = { name: list[0].name, sp: list[0].sp }
-    let candidates = await searchSystemCustomers(name).catch(() => [])
-    const stem = customerNameStem(name)
-    if (candidates.length === 0 && stem && stem !== name) {
-      candidates = await searchSystemCustomers(stem).catch(() => [])
+    const res = await matchVisitCustomer({
+      name, salesperson: sp, ctx, aliases,
+      search: (q) => searchSystemCustomers(q),
+    })
+    // 系統判得出來的就直接補上——建檔當下可能剛好快取失效、脈絡不全而沒配上，
+    // 夜間脈絡是完整的，同一套規則判得出唯一就不該再丟給人（實測 760 筆裡 451 筆屬這類）
+    if (res.id && autoLink) {
+      try {
+        // 系統自動補的不覆寫單位名稱：業務原本的叫法要留著，夜間才學得到他的慣用稱呼
+        await linkVisits(list.map((r) => r.id), res.id, { overwriteName: false })
+        lastAutoLinked += list.length
+        continue
+      } catch (e) {
+        console.error(`自動補關聯失敗 ${key}:`, e)
+      }
     }
-    const picked = pickCustomerMatch(name, candidates, narrowingFor(ctx, sp))
     const dates = list.map((r) => r.date).filter(Boolean).sort()
+    const suggestion = res.id ? (res.candidates.find((c) => c.id.replace(/-/g, '') === res.id!.replace(/-/g, '')) ?? { id: res.id, name: '' }) : null
     out.push({
       key,
       name,
@@ -114,15 +129,46 @@ export async function computePendingMatches(): Promise<PendingMatchGroup[]> {
       firstDate: dates[0] ?? '',
       lastDate: dates[dates.length - 1] ?? '',
       visitIds: list.map((r) => r.id),
-      suggestion: picked.match ?? null,
-      reason: picked.reason,
-      candidates: picked.candidates.slice(0, 8),
-      kind: picked.candidates.length > 0 ? 'ambiguous' : 'not-found',
+      suggestion,
+      reason: res.reason,
+      candidates: res.candidates.slice(0, 8),
+      kind: res.candidates.length > 0 ? 'ambiguous' : 'not-found',
     })
   }
 
   await setRedisValue(KEY, out, TTL_MS)
   return out
+}
+
+/** 最近一次重算自動補上的筆數（供排程回報） */
+export let lastAutoLinked = 0
+
+/**
+ * 把客情紀錄關聯到客戶。overwriteName＝true 時把單位名稱補齊為主檔全名（人工確認用，
+ * 叫法已先存進記憶）；系統自動補的保留業務原本的寫法，讓夜間記憶學得到。
+ */
+async function linkVisits(visitIds: string[], customerId: string, opts: { overwriteName: boolean }): Promise<{ fullName: string; city: string }> {
+  const page: any = await notionCallWithRetry('linkVisits:customer', () =>
+    notion.pages.retrieve({ page_id: customerId })
+  )
+  const customersDb = normalizeDatabaseId(DB.customers!).replace(/-/g, '')
+  if ((page?.parent?.database_id ?? '').replace(/-/g, '') !== customersDb) {
+    throw new Error('指定的不是客戶主檔頁面')
+  }
+  const fullName = getTitle(page, '客戶名稱') || getText(page, '客戶名稱')
+  const city = getSelect(page, '縣市')
+  for (const id of visitIds) {
+    await notionCallWithRetry('linkVisits:visit', () =>
+      notion.pages.update({
+        page_id: id,
+        properties: {
+          '🏥 牙科單位資料': { relation: [{ id: customerId }] },
+          ...(opts.overwriteName && fullName ? { '單位名稱': { title: [{ text: { content: fullName } }] } } : {}),
+        } as any,
+      })
+    )
+  }
+  return { fullName, city }
 }
 
 /** 讀快取；沒有快取時回 null（讓 UI 顯示「尚未產生，請重算」而不是卡住） */
@@ -134,36 +180,25 @@ export async function invalidatePendingMatches() {
   try { deleteRedisValue(KEY) } catch { /* 失效失敗下次仍會過期 */ }
 }
 
-/** 確認配對：把該組所有客情紀錄關聯到指定客戶，並把單位名稱補齊為主檔全名 */
+/**
+ * 確認配對：把該組所有客情紀錄關聯到指定客戶，並把單位名稱補齊為主檔全名。
+ * **覆寫名稱前先記住業務的叫法**——舊版直接覆寫，業務原本寫的「雲啓」就此消失，
+ * 下次同樣寫「雲啓」又配不到，同一組要人確認一次又一次。
+ */
 export async function confirmPendingMatch(input: { visitIds: string[]; customerId: string }): Promise<{ updated: number }> {
-  const page: any = await notionCallWithRetry('confirmPendingMatch:customer', () =>
-    notion.pages.retrieve({ page_id: input.customerId })
-  )
-  const customersDb = normalizeDatabaseId(DB.customers!).replace(/-/g, '')
-  if ((page?.parent?.database_id ?? '').replace(/-/g, '') !== customersDb) {
-    throw new Error('指定的不是客戶主檔頁面')
-  }
-  const fullName = getTitle(page, '客戶名稱') || getText(page, '客戶名稱')
-  let updated = 0
-  for (const id of input.visitIds) {
-    await notionCallWithRetry('confirmPendingMatch:visit', () =>
-      notion.pages.update({
-        page_id: id,
-        properties: {
-          '🏥 牙科單位資料': { relation: [{ id: input.customerId }] },
-          ...(fullName ? { '單位名稱': { title: [{ text: { content: fullName } }] } } : {}),
-        } as any,
-      })
-    )
-    updated++
+  const cached = await getPendingMatches()
+  const group = cached?.find((g) => g.visitIds.some((v) => input.visitIds.includes(v)))
+  const { city, fullName } = await linkVisits(input.visitIds, input.customerId, { overwriteName: true })
+  if (group) {
+    await rememberAlias(group.salesperson, group.name, { id: input.customerId, city, name: fullName })
+      .catch((e) => console.error('rememberAlias error:', e))
   }
   // 清掉快取裡這一組，下次讀取就不會再出現
-  const cached = await getPendingMatches()
   if (cached) {
     const left = cached.filter((g) => !g.visitIds.some((v) => input.visitIds.includes(v)))
     await setRedisValue(KEY, left, TTL_MS)
   }
-  return { updated }
+  return { updated: input.visitIds.length }
 }
 
 /** 忽略：這組確定不該配對（例：公司內部事項、已歇業），下次重算也不再列出 */

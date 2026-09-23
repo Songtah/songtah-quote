@@ -21,7 +21,8 @@ import { getRedisValue, setRedisValue, getCachedValue, setCachedValue } from './
 import { getAllSystemCustomers } from './customers'
 import { scanVisitClaimSignals } from './visits'
 import { loadClaimContext } from './visit-claim'
-import type { MatchNarrowing } from '@/lib/customer-name-match'
+import { pickCustomerMatch, searchVariants, institutionKind, type MatchNarrowing, type MatchCandidate } from '@/lib/customer-name-match'
+import { loadAliases, lookupAlias, rebuildLearnedAliases } from './visit-alias'
 
 export type MatchContext = {
   /** 業務 → 轄區鍵「縣市|行政區」 */
@@ -129,7 +130,57 @@ export async function rebuildMatchContext(): Promise<MatchContext> {
   }
   setCachedValue(KEY, payload, MEM_TTL)
   await setRedisValue(KEY, payload, TTL_MS).catch(() => { /* 沒有 Redis（本機）不影響本次 */ })
+  // 業務慣用稱呼記憶也在這裡一起重推——同樣需要全掃拜訪庫，且要用到客戶所在縣市
+  const nameById = new Map(customers.map((c) => [c.id.replace(/-/g, ''), c.name]))
+  await rebuildLearnedAliases(cityById, nameById).catch((e) => console.error('rebuildLearnedAliases error:', e))
   return hydrate(payload)
+}
+
+const tw = (s: string) => (s ?? '').replace(/臺/g, '台')
+
+/**
+ * 客情紀錄 → 客戶主檔的唯一比對入口（建檔、夜間自動補關聯、待確認清單都走這支）。
+ *
+ * 規則由 5,704 筆已關聯紀錄時間序回測反推（docs/rules/visit-customer-matching.md）：
+ *   ① 業務慣用稱呼記憶（同業務 97.5% 正確）——人工確認過的永遠優先
+ *   ② 名稱字根＋業務脈絡（轄區 → 轄區縣市 → 活動縣市 → 歷史往來），縮到唯一才配
+ * 夜間推導的記憶有兩種情況不採用（交給名稱比對或待確認，不沿用）：
+ *   - 記憶的客戶落在該業務完全沒在跑的縣市——實測有舊關聯被接到外縣市同名店
+ *     （Duncan「惠生」接到臺南歸仁、「永吉」接到屏東萬丹，他只跑台北），錯的記憶不能繼續傳下去
+ *   - 名稱看得出的機構類型與記憶的客戶不同（「佳欣牙體技術所」記成佳欣牙醫診所）
+ * 人工確認過的記憶一律採用。
+ */
+export async function matchVisitCustomer<T extends MatchCandidate>(input: {
+  name: string
+  salesperson: string
+  ctx: MatchContext
+  search: (q: string) => Promise<T[]>
+  aliases?: Awaited<ReturnType<typeof loadAliases>>
+}): Promise<{ id: string | null; reason: string; candidates: T[]; via: 'alias' | 'name' | 'none' }> {
+  const aliases = input.aliases ?? await loadAliases().catch(() => ({ manual: {}, learned: {} }))
+  const mem = lookupAlias(aliases, input.salesperson, input.name)
+
+  const areas = new Set<string>([
+    ...Array.from(input.ctx.territoryCitiesBy.get(input.salesperson) ?? []),
+    ...Array.from(input.ctx.activeCitiesBy.get(input.salesperson) ?? []),
+  ].map(tw))
+  const kindOk = !mem?.name || !institutionKind(input.name) || !institutionKind(mem.name)
+    || institutionKind(input.name) === institutionKind(mem.name)
+  const memInArea = !!mem && (mem.source === 'manual'
+    || (kindOk && (areas.size === 0 || !mem.city || areas.has(tw(mem.city)))))
+  const memLabel = mem ? (mem.scope === 'self' ? '業務慣用稱呼' : '其他業務的慣用稱呼') + (mem.source === 'manual' ? '（人工確認過）' : '') : ''
+  if (mem && memInArea) return { id: mem.id, reason: memLabel, candidates: [], via: 'alias' }
+
+  // 依序換寫法搜尋，直到撈到「名稱驗證得過」的候選為止（撈到但驗不過的不算，繼續換寫法）
+  let picked = pickCustomerMatch<T>(input.name, [], narrowingFor(input.ctx, input.salesperson))
+  for (const q of searchVariants(input.name)) {
+    const found = await input.search(q).catch(() => [] as T[])
+    picked = pickCustomerMatch(input.name, found, narrowingFor(input.ctx, input.salesperson))
+    if (picked.candidates.length) break
+  }
+  if (picked.match) return { id: picked.match.id, reason: picked.reason, candidates: picked.candidates, via: 'name' }
+  const reason = mem ? `${picked.reason}；另有${memLabel}指向${mem.name || '某客戶'}（${mem.city || '縣市不明'}），但不在該業務常跑的縣市或類型不符，未採用` : picked.reason
+  return { id: null, reason, candidates: picked.candidates, via: 'none' }
 }
 
 /** 取某業務的消歧義條件；業務為空或沒有任何脈絡時回 undefined（＝回到舊規則）。 */

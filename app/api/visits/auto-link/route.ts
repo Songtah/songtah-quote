@@ -19,8 +19,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
-import { customerNameStem, pickCustomerMatch } from '@/lib/customer-name-match'
-import { loadMatchContext, narrowingFor } from '@/lib/notion/match-context'
+import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
+import { loadAliases } from '@/lib/notion/visit-alias'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -52,6 +52,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     const pages = response.results ?? []
     // 消歧義脈絡：同一批次共用一份（快取），避免逐筆重算
     const matchCtx = await loadMatchContext()
+    const aliases = await loadAliases().catch(() => ({ manual: {}, learned: {} }))
     const hasMore: boolean = response.has_more ?? false
     const nextCursor: string | null = response.next_cursor ?? null
 
@@ -69,20 +70,15 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
       if (!rawName) continue
 
-      // 先用整串簡稱查；查不到再用字根重查一次（「誠鴻牙科」→「誠鴻」）。
-      // searchSystemCustomers 連地址／行政區都比對，回傳的候選可能與名稱無關，
-      // 因此**不論候選幾筆**都必須通過名稱字根驗證才可關聯（見 lib/customer-name-match）。
-      let customers = await searchSystemCustomers(rawName)
-      const stem = customerNameStem(rawName)
-      if (customers.length === 0 && stem && stem !== rawName) {
-        customers = await searchSystemCustomers(stem)
-      }
-
+      // 與建檔、夜間補關聯同一套規則（慣用稱呼記憶 → 名稱字根＋業務脈絡），見 matchVisitCustomer
       const salesperson: string = page.properties?.['業務人員']?.select?.name ?? ''
-      const picked = pickCustomerMatch(rawName, customers, narrowingFor(matchCtx, salesperson))
-      const match = picked.match
+      const res = await matchVisitCustomer({
+        name: rawName, salesperson, ctx: matchCtx, aliases,
+        search: (q) => searchSystemCustomers(q),
+      })
+      const match = res.id ? { id: res.id, name: res.candidates.find((c) => c.id.replace(/-/g, '') === res.id!.replace(/-/g, ''))?.name ?? '' } : null
       if (!match) {
-        if (customers.length === 0) {
+        if (res.candidates.length === 0) {
           noMatchCount++
           if (noMatchNames.length < 5) noMatchNames.push(rawName)
         } else {
@@ -97,9 +93,8 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
         await notion.pages.update({
           page_id: page.id,
           properties: {
+            // 只補關聯、不覆寫單位名稱：業務原本的叫法要留著，夜間「慣用稱呼記憶」才學得到
             '🏥 牙科單位資料': { relation: [{ id: match.id }] },
-            // 同時把簡稱補齊為主檔的完整名稱
-            '單位名稱': { title: [{ text: { content: match.name } }] },
           } as any,
         })
       }
