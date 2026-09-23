@@ -15,7 +15,7 @@ import { parseDailyReport, devStageForReaction } from '@/lib/line-daily-report'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/notion/visits'
 import { searchSystemCustomers, advanceCustomerDevStage } from '@/lib/notion/customers'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
-import { customerNameStem } from '@/lib/customer-name-match'
+import { customerNameStem, isSameCustomerName } from '@/lib/customer-name-match'
 import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
 import { loadAliases } from '@/lib/notion/visit-alias'
 import { detectCompetitors } from '@/lib/competitor-detector'
@@ -64,8 +64,12 @@ export async function ingestDailyReport(input: {
   const unlinkedNames = new Set(existing.items.filter((v) => !v.customerId).map((v) => stemKey(v.customerName)))
   // 第三道：拜訪內容完全相同＝同一筆（日報是原文照抄）。名稱是簡稱、主檔是全名、又比對不到唯一客戶時
   // （實例：「新竹台大」vs「國立臺灣大學醫學院附設醫院新竹臺大分院生醫醫院」），只有內容能認出是同一筆。
-  const contentKey = (s: string) => (s ?? '').replace(/\s/g, '')
+  // 內容比前 40 個有效字：同一段日報被重貼時常多一個空白或標點，整串比會漏
+  const contentKey = (s: string) => (s ?? '').replace(/[\s。·•\-－]/g, '').slice(0, 40)
   const existingContents = new Set(existing.items.map((v) => contentKey(v.content)).filter((c) => c.length >= 10))
+  // 第四道：同業務同日、名稱指同一家（「聯合醫院陽明院區」vs 手打「聯合醫院」）也算重複——
+  // 既有紀錄的名稱多半已是主檔全名，簡稱比不到字根完全相同
+  const existingNames = existing.items.map((v) => v.customerName).filter(Boolean)
   const existingIds = new Set(existing.items.map((v) => v.customerId.replace(/-/g, '')).filter(Boolean))
   const batchPrefix = `${input.salesperson}|${report.date}|`
   const isDup = (key: string) => input.batchKeys?.has(batchPrefix + key)
@@ -73,7 +77,8 @@ export async function ingestDailyReport(input: {
 
   const byName = report.visits.filter((v) => {
     const k = stemKey(v.customerName)
-    if (isDup(k) || unlinkedNames.has(k) || existingContents.has(contentKey(v.content))) {
+    if (isDup(k) || unlinkedNames.has(k) || existingContents.has(contentKey(v.content))
+      || existingNames.some((n) => isSameCustomerName(v.customerName, n))) {
       result.skippedExisting++
       return false
     }
