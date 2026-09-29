@@ -21,7 +21,7 @@ import { getRedisValue, setRedisValue, getCachedValue, setCachedValue } from './
 import { getAllSystemCustomers } from './customers'
 import { scanVisitClaimSignals } from './visits'
 import { loadClaimContext } from './visit-claim'
-import { pickCustomerMatch, searchVariants, institutionKind, type MatchNarrowing, type MatchCandidate } from '@/lib/customer-name-match'
+import { pickCustomerMatch, searchVariants, institutionKind, expandHospitalAlias, customerNameStem, type MatchNarrowing, type MatchCandidate } from '@/lib/customer-name-match'
 import { loadAliases, lookupAlias, rebuildLearnedAliases } from './visit-alias'
 
 export type MatchContext = {
@@ -171,12 +171,36 @@ export async function matchVisitCustomer<T extends MatchCandidate>(input: {
   const memLabel = mem ? (mem.scope === 'self' ? '業務慣用稱呼' : '其他業務的慣用稱呼') + (mem.source === 'manual' ? '（人工確認過）' : '') : ''
   if (mem && memInArea) return { id: mem.id, reason: memLabel, candidates: [], via: 'alias' }
 
+  // 醫院簡稱（北醫、彰基、三總內湖）：名稱規則推不出來，查表展開後要求主檔名稱完全一致
+  const hospital = expandHospitalAlias(input.name)
+  if (hospital) {
+    const hit = (await input.search(hospital).catch(() => [] as T[])).find((c) => c.name === hospital)
+    if (hit) return { id: hit.id, reason: `醫院簡稱：${hospital}`, candidates: [hit], via: 'name' }
+  }
+
   // 依序換寫法搜尋，直到撈到「名稱驗證得過」的候選為止（撈到但驗不過的不算，繼續換寫法）
   let picked = pickCustomerMatch<T>(input.name, [], narrowingFor(input.ctx, input.salesperson))
+  const seen = new Map<string, T>()
   for (const q of searchVariants(input.name)) {
     const found = await input.search(q).catch(() => [] as T[])
+    for (const c of found) seen.set(c.id, c)
     picked = pickCustomerMatch(input.name, found, narrowingFor(input.ctx, input.salesperson))
     if (picked.candidates.length) break
+  }
+
+  // 只寫了名稱開頭（「立悦牙醫」＝立悅美學牙醫診所、「鈦ㄧ」＝鈦一雅緻牙體技術所）：
+  // 客戶名稱以業務寫的字根「開頭」、機構類型相符，而且在該業務常跑的縣市裡只有一家才採用。
+  // 只認開頭、不認包含——「科維」不會變成德科維、「濟新」不會變成慈濟新店
+  if (!picked.match && picked.candidates.length === 0) {
+    const stem = customerNameStem(input.name)
+    const kind = institutionKind(input.name)
+    let pool = Array.from(seen.values()).filter((c) => {
+      const cs = customerNameStem(c.name)
+      return stem.length >= 2 && cs !== stem && cs.startsWith(stem)
+        && (!kind || !institutionKind(c.name) || institutionKind(c.name) === kind)
+    })
+    if (areas.size) pool = pool.filter((c) => c.city && areas.has(tw(c.city)))
+    if (pool.length === 1) return { id: pool[0].id, reason: `名稱開頭相符（${areas.size ? '業務常跑縣市內' : '全台'}唯一）`, candidates: pool, via: 'name' }
   }
   if (picked.match) return { id: picked.match.id, reason: picked.reason, candidates: picked.candidates, via: 'name' }
   const reason = mem ? `${picked.reason}；另有${memLabel}指向${mem.name || '某客戶'}（${mem.city || '縣市不明'}），但不在該業務常跑的縣市或類型不符，未採用` : picked.reason
