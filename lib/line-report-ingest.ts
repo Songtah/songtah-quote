@@ -11,11 +11,12 @@
  *
  * 冪等：同業務、同日期、同客戶（名稱字根）已有紀錄就略過——同一則日報重送、重試、補匯都不會重複。
  */
-import { parseDailyReport, devStageForReaction } from '@/lib/line-daily-report'
+import { parseDailyReport, devStageForReaction, reportDateOf, resultLineCount } from '@/lib/line-daily-report'
+import { businessDayOf } from '@/lib/line-report-window'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/notion/visits'
 import { searchSystemCustomers, advanceCustomerDevStage } from '@/lib/notion/customers'
 import { applyAutoClaimForVisit } from '@/lib/notion/visit-claim'
-import { customerNameStem, isSameCustomerName } from '@/lib/customer-name-match'
+import { customerNameStem, isSameVisitName } from '@/lib/customer-name-match'
 import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
 import { loadAliases } from '@/lib/notion/visit-alias'
 import { detectCompetitors } from '@/lib/competitor-detector'
@@ -49,14 +50,29 @@ export async function ingestDailyReport(input: {
    * （與 visit-claim 的 retroactive 規則一致）。
    */
   skipClaim?: boolean
+  /** 訊息發送的台北日期與時間：有給才能判斷「標頭沿用前一天」與「隔天計畫忘了改日期」 */
+  sentAt?: { date: string; time: string }
 }): Promise<IngestResult> {
-  const report = parseDailyReport(input.text, input.fallbackDate)
+  const report = parseDailyReport(input.text, input.fallbackDate, input.sentAt)
   const result: IngestResult = { date: report?.date ?? input.fallbackDate, total: 0, created: 0, skippedExisting: 0, failures: [] }
   if (!report || report.visits.length === 0) return result
   result.total = report.visits.length
 
   // 既有紀錄（同業務同日）→ 去重
   const existing = await listVisits({ salesperson: input.salesperson, dateFrom: report.date, dateTo: report.date, fetchAll: true })
+
+  // 隔天早上的計畫忘了改日期：標頭是前一天、早上發、條目下沒有任何結果，而前一天已經有回報進來
+  // → 這是今天的計畫，不是前一天的補回報（實測 Hank 2/3 早上的計畫還寫 2/2，曾被當成 2/2 的拜訪匯入）
+  if (input.sentAt) {
+    const bday = businessDayOf(input.sentAt.date, input.sentAt.time)
+    const header = reportDateOf(input.text)
+    const hour = Number(input.sentAt.time.split(':')[0])
+    if (header && header < bday && hour < 12 && resultLineCount(input.text) === 0 && existing.items.length > 0) {
+      console.log(`[LINE ingest] ${input.salesperson} ${input.sentAt.date} ${input.sentAt.time} 標頭 ${header} 已有回報，視為當天計畫，不匯入`)
+      result.total = 0
+      return result
+    }
+  }
   // 既有紀錄在列表上顯示的是「客戶主檔正式名稱」（林口長庚 → 長庚醫療財團法人林口長庚紀念醫院），
   // 只比名稱字根會認不出是同一家而重複建立，所以同時比：名稱相符、或配對到的客戶 id 相同。
   // 有關聯客戶的用 id 比；沒關聯的（手打名稱）才用名稱字根「完全相同」比——
@@ -78,7 +94,7 @@ export async function ingestDailyReport(input: {
   const byName = report.visits.filter((v) => {
     const k = stemKey(v.customerName)
     if (isDup(k) || unlinkedNames.has(k) || existingContents.has(contentKey(v.content))
-      || existingNames.some((n) => isSameCustomerName(v.customerName, n))) {
+      || existingNames.some((n) => isSameVisitName(v.customerName, n))) {
       result.skippedExisting++
       return false
     }
@@ -204,7 +220,12 @@ export async function runQueuedReport(record: QueuedReport): Promise<QueuedRepor
   // 先記下「嘗試中」，即使這次被砍，下次重試也知道已試過幾次
   if (redis) await redis.set(recordKey(record.id), next, { ex: RECORD_TTL_SEC })
   try {
-    const res = await ingestDailyReport({ text: record.text, salesperson: record.salesperson, fallbackDate: record.fallbackDate })
+    // receivedAt＝webhook 收到的時間（≈業務發送時間），換成台北日期時間供日期判斷
+    const tw = new Date(Date.parse(record.receivedAt) + 8 * 3600_000).toISOString()
+    const res = await ingestDailyReport({
+      text: record.text, salesperson: record.salesperson, fallbackDate: record.fallbackDate,
+      sentAt: { date: tw.slice(0, 10), time: tw.slice(11, 16) },
+    })
     const { planned: _p, ...lastResult } = res
     next.lastResult = lastResult
     next.status = res.failures.length === 0 ? 'done' : next.attempts >= MAX_ATTEMPTS ? 'failed' : 'pending'

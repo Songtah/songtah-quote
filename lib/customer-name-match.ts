@@ -96,6 +96,22 @@ export function isSameCustomerName(a: string, b: string): boolean {
 }
 
 /**
+ * 去重用的寬鬆比對：同一位業務、同一天的兩筆紀錄，名稱是不是指同一家。
+ * 範圍已經縮到「同人同日」，同一天去兩家同字根的店機率極低，所以只擋機構類型不同，
+ * 包含關係不限地名——「威登」＝威登數位牙體技術所、「啟信」＝啟信牙科器材有限公司。
+ * （isSameCustomerName 是拿來在全台客戶庫裡配對的，太嚴格，用在去重會漏掉而重複建檔）
+ */
+export function isSameVisitName(a: string, b: string): boolean {
+  const ka = institutionKind(a), kb = institutionKind(b)
+  if (ka && kb && ka !== kb) return false
+  const x = customerNameStem(a), y = customerNameStem(b)
+  if (!x || !y) return false
+  if (x === y) return true
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x]
+  return short.length >= 2 && long.includes(short)
+}
+
+/**
  * 從候選中挑出唯一相符者；不唯一（0 個或多個）一律回 null——寧可漏，不可錯掛。
  */
 export function pickUniqueCustomerMatch<T extends { name: string }>(

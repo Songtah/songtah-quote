@@ -83,7 +83,7 @@ export const POST = withApiAuth({ module: 'bd', action: 'edit' }, async (req: Ne
     }
     // 業務日 03:00 換日：凌晨發的日報屬前一天。日報若沒寫「日期：」就用這個值，
     // 不可退回「今天」——否則匯入歷史檔案會把全部紀錄標成匯入當日。
-    const report = parseDailyReport(msg.text, businessDayOf(msg.date, msg.time))
+    const report = parseDailyReport(msg.text, businessDayOf(msg.date, msg.time), { date: msg.date, time: msg.time })
     if (!report || report.visits.length === 0) continue
     // 起始日期篩選：只補抓指定日期之後的報表
     if (dateFrom && report.date < dateFrom) continue

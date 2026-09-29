@@ -11,6 +11,8 @@
  *   1.客戶，內容               ← 名稱與內容用 ， 分隔
  */
 
+import { businessDayOf } from './line-report-window'
+
 export type DailyReportVisit = {
   customerName: string
   notes: string[]
@@ -51,6 +53,33 @@ export function reportDateOf(text: string): string {
   return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : ''
 }
 
+/** 條目底下補上的結果行數（「。」「-」「→」開頭）：有＝做完之後的回報，沒有＝多半只是計畫 */
+export function resultLineCount(text: string): number {
+  return (text ?? '').split('\n').filter((l) => /^\s*[。\-－→•・]/.test(l) && l.replace(/[\s。\-－→•・]/g, '').length >= 4).length
+}
+
+/**
+ * 這則日報實際屬於哪一天（2026-09-29 由 2025-12～2026-09 全體業務日報比對得出）。
+ *
+ * 標頭「日期：」不可全信——業務常複製前一天的日報來改，忘了改日期：
+ *   Amy 57 次、Sam 11 次、James 10 次、Duncan 3 次，晚上 18 點後發的回報標頭還是前一天，
+ *   系統照標頭記到前一天，當天真正的拜訪就「不見」、前一天則被灌進別天的紀錄。
+ * 判斷：標頭比發送的業務日早，而且是下午（12 點）以後才發 → 標頭沿用前一天，以發送的業務日為準。
+ * 早上發、標頭是前一天的仍視為補回報（Eason 固定隔天早上補前一天，不能動）。
+ * 內文明講「補」「昨天」的一律照標頭。標頭與發送日相差超過 7 天（年份打錯，實測 Amy 寫成 2024）也以發送日為準。
+ */
+export function resolveReportDate(text: string, sent: { date: string; time: string }): { date: string; staleHeader: boolean } {
+  const bday = businessDayOf(sent.date, sent.time)
+  const header = reportDateOf(text)
+  if (!header || !bday) return { date: header || bday, staleHeader: false }
+  const diffDays = (Date.parse(header) - Date.parse(bday)) / 86400_000
+  if (!(diffDays >= -7 && diffDays <= 7)) return { date: bday, staleHeader: true }
+  const hour = Number((sent.time ?? '').split(':')[0])
+  const head = text.split('\n').slice(0, 8).join('')
+  if (header < bday && hour >= 12 && !/補|昨天|昨日/.test(head)) return { date: bday, staleHeader: true }
+  return { date: header, staleHeader: false }
+}
+
 export function decideDailyReportIngest(input: {
   text: string
   /** 發送時的台北小時 */
@@ -78,7 +107,11 @@ export function isDailyReport(text: string): boolean {
 
 // ── 解析報表 ──────────────────────────────────────────────────────────────────
 
-export function parseDailyReport(text: string, fallbackDate?: string): DailyReport | null {
+export function parseDailyReport(
+  text: string, fallbackDate?: string,
+  /** 給發送時間時，日期改用 resolveReportDate 判斷（處理標頭沿用前一天） */
+  sent?: { date: string; time: string },
+): DailyReport | null {
   if (!isDailyReport(text)) return null
 
   const lines = text.split('\n')
@@ -93,7 +126,9 @@ export function parseDailyReport(text: string, fallbackDate?: string): DailyRepo
   let date = fallbackDate
     || new Date(Date.now() + 8 * 3600_000 - 3 * 3600_000).toISOString().split('T')[0]
   const dateLine = lines.find((l) => /日期[：:]/.test(l))
-  if (dateLine) {
+  if (sent?.date) {
+    date = resolveReportDate(text, sent).date || date
+  } else if (dateLine) {
     const m = dateLine.match(/(\d{4})\s*\/\s*(\d{1,2})\s*\/\s*(\d{1,2})/)
     if (m) date = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
   }
@@ -182,6 +217,10 @@ function extractNameAndContent(raw: string): { name: string; inlineContent: stri
   // 多帶了一個點（實測 Sam 常態），不處理會建出名為「.啟信」的客戶而永遠配對不到。
   const rest = raw.replace(/^[.。．、,，·•:：\-\s]+/, '')
 
+  // 機構全名後面空一格接動作（Hank 常態：「旭暉牙體技術所 送貨」「振興醫院 交貨資料整理」）
+  const spaced = rest.match(/^(.{2,16}?(?:牙體技術所|牙醫診所|技工所|診所|醫院|牙醫|牙科))\s+(.+)$/)
+  if (spaced) return { name: spaced[1].trim(), inlineContent: spaced[2].trim() }
+
   // 先試 -（Dash）分隔：名稱通常 ≤ 8 字
   const dashIdx = rest.indexOf('-')
   if (dashIdx > 0 && dashIdx <= 10) {
@@ -213,6 +252,7 @@ const NON_VISIT_KEYWORDS = [
   '週會', '例行性會議', '更新客戶資料', 'notion資料', 'NOTION資料', 'Notion資料',
   // 2026-09-23 比對 Duncan 2～9 月日報時發現的內部作業（出貨、備品、內訓、行政）
   '周會', '品相', '內訓', '問卷', '展會', '報價確認', '合約內容', '聯絡追蹤', '更新notion', '更新Notion',
+  '晨會', '潛在名單',
 ]
 
 // 明顯的任務描述動詞開頭（不是客戶名稱）
@@ -221,7 +261,7 @@ const NON_VISIT_KEYWORDS = [
 const TASK_VERB_PREFIXES = [
   '致電', '通知', '整理', '前往', '協助', '遠端', '預約', '邀約',
   '推薦客戶', '整理公司', '與',
-  '準備', '確認', '處理', '開車', '包石膏', '下貨', '上貨', '上午', '下午',
+  '準備', '確認', '處理', '開車', '包石膏', '下貨', '上貨', '上午', '下午', '統計', '詢問客戶',
   '9:', '19:', '08:', '10:', '11:', '12:', '13:', '14:', '15:', '16:', '17:', '18:',
 ]
 
@@ -230,6 +270,8 @@ function isNonVisitEntry(name: string): boolean {
   if (NON_VISIT_KEYWORDS.some((kw) => name.includes(kw))) return true
   // 任務動詞開頭
   if (TASK_VERB_PREFIXES.some((p) => name.startsWith(p))) return true
+  // Notion 資料維護（Key notion、更新 NOTION…）大小寫寫法很多，一律排除
+  if (/notion/i.test(name)) return true
   // 名稱含 & 代表是多任務描述，不是客戶
   if (name.includes('&')) return true
   // 名稱超長（>15字）且不含任何分隔符 → 可能是整段任務描述
