@@ -35,6 +35,8 @@ export type PendingMatchGroup = {
   reason: string
   candidates: PendingMatchCandidate[]
   kind: 'ambiguous' | 'not-found'
+  /** 上次實際比對的時間；查無的組 3 天內不重查，排程才跑得完 */
+  checkedAt?: string
 }
 
 const KEY = 'pending-match-v1'
@@ -53,8 +55,13 @@ async function saveIgnored(set: Set<string>) {
 }
 
 /** 全掃未關聯的客情紀錄並分組（不含忽略清單） */
-export async function computePendingMatches(options?: { autoLink?: boolean }): Promise<PendingMatchGroup[]> {
+export async function computePendingMatches(options?: { autoLink?: boolean; budgetMs?: number }): Promise<PendingMatchGroup[]> {
   const autoLink = options?.autoLink ?? true
+  // 排程上限 300 秒：每組最多要搜 5 種寫法，400 多組會超時（2026-09-29 實測逾時，清單與自動補關聯都沒完成）。
+  // 所以設時間預算，時間到就把還沒輪到的組沿用上次結果；查無的組 3 天內也不重查。
+  const deadline = Date.now() + (options?.budgetMs ?? 220_000)
+  const previous = new Map((await getPendingMatches().catch(() => null) ?? []).map((g) => [g.key, g]))
+  const RECHECK_MS = 3 * 86400_000
   if (!DB.visits) return []
   type Row = { id: string; name: string; sp: string; date: string }
   const rows: Row[] = []
@@ -93,9 +100,14 @@ export async function computePendingMatches(options?: { autoLink?: boolean }): P
   const ctx = await loadMatchContext({ allowRebuild: true })
   const ignored = await loadIgnored()
   // 筆數多的先處理：排程若被時限砍掉，至少先解決影響最大的
+  const fresh = (key: string) => {
+    const p = previous.get(key)
+    return !!p?.checkedAt && p.kind === 'not-found' && Date.now() - Date.parse(p.checkedAt) < RECHECK_MS
+  }
+  // 沒查過或該重查的先做，筆數多的優先
   const keys = Array.from(grouped.entries())
     .filter(([key]) => !ignored.has(key))
-    .sort((a, b) => b[1].length - a[1].length)
+    .sort((a, b) => Number(fresh(a[0])) - Number(fresh(b[0])) || b[1].length - a[1].length)
     .slice(0, MAX_NAMES)
 
   const aliases = await loadAliases().catch(() => ({ manual: {}, learned: {} }))
@@ -103,6 +115,14 @@ export async function computePendingMatches(options?: { autoLink?: boolean }): P
   lastAutoLinked = 0
   for (const [key, list] of keys) {
     const { name, sp } = { name: list[0].name, sp: list[0].sp }
+    const prev = previous.get(key)
+    if (prev && (fresh(key) || Date.now() > deadline)) {
+      // 沿用上次結果，但紀錄清單用這次的（可能有新增）
+      const dates = list.map((r) => r.date).filter(Boolean).sort()
+      out.push({ ...prev, count: list.length, visitIds: list.map((r) => r.id), firstDate: dates[0] ?? '', lastDate: dates[dates.length - 1] ?? '' })
+      continue
+    }
+    if (Date.now() > deadline) continue
     const res = await matchVisitCustomer({
       name, salesperson: sp, ctx, aliases,
       search: (q) => searchSystemCustomers(q),
@@ -133,6 +153,7 @@ export async function computePendingMatches(options?: { autoLink?: boolean }): P
       reason: res.reason,
       candidates: res.candidates.slice(0, 8),
       kind: res.candidates.length > 0 ? 'ambiguous' : 'not-found',
+      checkedAt: new Date().toISOString(),
     })
   }
 

@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
       return null
     })
     // 待確認配對清單：脈絡重算完才算，順序不能顛倒（清單要用新脈絡判斷）
-    const pending = ctx ? await computePendingMatches().catch((e) => {
+    // 前兩步都是全掃，剩多少時間就給待確認清單多少（留 30 秒寫回與回應），不讓整支逾時
+    const budgetMs = Math.max(30_000, 270_000 - (Date.now() - started))
+    const pending = ctx ? await computePendingMatches({ budgetMs }).catch((e) => {
       console.error('computePendingMatches error:', e)
       return null
     }) : null
