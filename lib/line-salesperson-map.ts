@@ -11,6 +11,7 @@ const MAP: Record<string, string> = {
   'Hsuan':         'James',
   '傅':            'Duncan',
   '孫猴子Eason':   'Eason',
+  'Otis':          'Otis',   // 2026-09-21 到職，北區技工所
   '郭思賢SAM崧達': 'Sam',
   // ── 離職業務（歷史資料匯入用，不出現在選單）──
   '巧 ADA':                 'Ada',
