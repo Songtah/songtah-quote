@@ -38,7 +38,10 @@ export function canAcceptNewBusiness(user: Pick<SystemUser, 'accountType' | 'sta
 
 // 中央管理者可能仍保留既有客戶組合；這類帳號要能出現在業務總表，
 // 但不改變帳號角色，也不因此取得新轄區或新客戶承接資格。
-const RETAINED_CUSTOMER_PORTFOLIO_ACCOUNT_IDS = new Set(['349dcdaa-fb2a-81cf-b5a6-f15536fa1629'])
+const RETAINED_CUSTOMER_PORTFOLIO_ACCOUNT_IDS = new Set([
+  '349dcdaa-fb2a-81cf-b5a6-f15536fa1629', // Gus
+  '344dcdaa-fb2a-81ef-8f01-c2235dea274e', // Edward（中央管理，名下仍有客戶）
+])
 
 export function canAppearInSalesReports(user: Pick<SystemUser, 'id' | 'accountType' | 'status'>): boolean {
   return user.status !== '停用'
