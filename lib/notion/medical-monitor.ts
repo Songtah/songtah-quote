@@ -359,6 +359,41 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
   return out
 }
 
+/**
+ * 趨勢圖點長條 → 該月該類別的逐筆異動（與 getMonitorKindTrend 同一套過濾與分類，數字對得上）。
+ * dir='added'：新開業＋恢復開業；dir='removed'：停業＋新增停業。基準月不提供明細。
+ */
+export async function getMonitorKindTrendRecords(
+  month: string, kind: MonitorTrendKind, dir: 'added' | 'removed',
+): Promise<ClinicMonitorRecord[]> {
+  const dbId = process.env.NOTION_CLINIC_MONITOR_DB
+  if (!dbId || !/^\d{4}-\d{2}$/.test(month)) return []
+  const types = dir === 'added' ? ['新開業', '恢復開業'] : ['停業', '新增停業']
+  const out: ClinicMonitorRecord[] = []
+  let cursor: string | undefined
+  do {
+    const res: any = await notionCallWithRetry('getMonitorKindTrendRecords', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(dbId),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+        filter: {
+          and: [
+            { property: '月份', date: { equals: `${month}-01` } },
+            { or: types.map((t) => ({ property: '異動類型', select: { equals: t } })) },
+          ],
+        },
+      })
+    )
+    for (const page of res.results ?? []) {
+      const r = mapClinicRecord(page)
+      if (guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName) === kind) out.push(r)
+    }
+    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  return out
+}
+
 // ─── 未在衛福部登錄（查無代碼）清單 ────────────────────────────────────────────
 //
 // 客戶主檔有機構代碼，但比對 BAS 查不到。實測 1,532 家，其中牙體技術所 1,109 家——

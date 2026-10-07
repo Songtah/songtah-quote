@@ -1159,10 +1159,118 @@ const isEmptyMonth = (p: KindTrendPoint) =>
 interface KindTrend { points: KindTrendPoint[]; codeNotFoundStock: number; codeNotFoundByKind?: Record<string, number>; computedAt: string }
 const TREND_KINDS = ['牙醫診所', '牙體技術所', '醫院'] as const
 
+type TrendPick = { month: string; kind: string; dir: 'added' | 'removed' }
+type TrendDetailItem = {
+  code: string; name: string; address: string; specialty: string
+  changeType: string; termDate: string
+  basStatus: string; basVerdict?: BasVerdictKey; basDetailUrl: string
+  customer: { id: string; name: string; salesperson: string; status: string } | null
+}
+const TREND_VERDICT_LABEL: Record<BasVerdictKey, string> = {
+  closed: '歇業', suspended: '停業', open: '仍開業（科別／類別異動）', unverified: '待查證',
+}
+
+/** 趨勢圖長條 → 該月該類別名單（綠＝新增、紅＝減少） */
+function TrendDetailModal({ pick, onClose }: { pick: TrendPick; onClose: () => void }) {
+  const [items, setItems] = useState<TrendDetailItem[] | null>(null)
+  const [err, setErr] = useState('')
+  const [filter, setFilter] = useState<string>('all')
+  useEffect(() => {
+    let cancelled = false
+    const qs = new URLSearchParams({ month: pick.month, kind: pick.kind, dir: pick.dir })
+    fetch('/api/admin/medical-monitor/kind-trend/detail?' + qs.toString())
+      .then(async (res) => {
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok) setErr(data.error ?? '讀取失敗')
+        else setItems(Array.isArray(data.items) ? data.items : [])
+      })
+      .catch((e) => { if (!cancelled) setErr(e?.message ?? '讀取失敗') })
+    return () => { cancelled = true }
+  }, [pick.month, pick.kind, pick.dir])
+
+  const added = pick.dir === 'added'
+  const groupOf = (x: TrendDetailItem) => added
+    ? (x.changeType === '恢復開業' ? 'restored' : 'new')
+    : (x.basVerdict ?? 'unverified')
+  const groups: [string, string][] = added
+    ? [['new', '新開業'], ['restored', '恢復開業（客戶代碼重新出現）']]
+    : (['closed', 'suspended', 'open', 'unverified'] as BasVerdictKey[]).map((v) => [v, TREND_VERDICT_LABEL[v]])
+  const cnt = (g: string) => (items ?? []).filter((x) => groupOf(x) === g).length
+  const shown = (items ?? []).filter((x) => filter === 'all' || groupOf(x) === filter)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={onClose}>
+      <div className="bg-[#fdfdfb] rounded-3xl shadow-2xl ring-1 ring-stone-900/[0.06] w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-stone-900/[0.06] flex items-center justify-between shrink-0">
+          <h2 className="font-bold text-stone-800 text-lg">
+            {added ? '🟢' : '🔴'} {pick.month.replace('-', ' 年 ')} 月 · {pick.kind} · {added ? '新增' : '減少'}
+            {items && <span className="ml-2 text-sm font-medium text-stone-400">{items.length} 家</span>}
+          </h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 flex items-center justify-center text-stone-400">✕</button>
+        </div>
+        <div className="p-5 overflow-y-auto space-y-3">
+          <div className={`text-xs rounded-xl px-4 py-2.5 border ${added ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+            {added
+              ? <>本月出現在衛福部開業名冊、上月沒有的機構。<b>新開業</b>＝原本不是客戶；<b>恢復開業</b>＝客戶的代碼重新出現在名冊。</>
+              : <>上月在衛福部開業名冊、本月消失的機構。狀態依機構代碼直開衛福部詳細頁查得：<b>歇業</b>、<b>停業</b>（暫停、可能復業）、<b>仍開業</b>（不是關門，多為科別或類別異動）、<b>待查證</b>（尚未補查）。</>}
+          </div>
+          {err && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{err}</div>}
+          {!items && !err && <div className="py-12 text-center text-sm text-stone-400">讀取中…</div>}
+          {items && items.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {[['all', `全部 ${items.length}`] as [string, string], ...groups.filter(([g]) => cnt(g) > 0).map(([g, l]) => [g, `${l} ${cnt(g)}`] as [string, string])]
+                .map(([g, label]) => (
+                  <button key={g} onClick={() => setFilter(g)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
+                      filter === g ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'text-stone-500 hover:bg-stone-100'
+                    }`}>{label}</button>
+                ))}
+            </div>
+          )}
+          {items && items.length === 0 && <div className="py-12 text-center text-sm text-stone-400">這個月沒有紀錄</div>}
+          {shown.length > 0 && (
+            <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
+              {shown.map((x) => (
+                <div key={x.code + x.changeType} className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-stone-900">{x.name || '（未取得名稱）'}</span>
+                      <span className="text-[10px] font-mono text-stone-400">{x.code}</span>
+                      {added
+                        ? <span className={`text-[10px] px-2 py-0.5 rounded-full ${x.changeType === '恢復開業' ? 'bg-brand-50 text-brand-700' : 'bg-emerald-50 text-emerald-700'}`}>{x.changeType}</span>
+                        : <span className={`text-[10px] px-2 py-0.5 rounded-full ${VERDICT_BADGE[x.basVerdict ?? 'unverified'].cls}`}>{TREND_VERDICT_LABEL[x.basVerdict ?? 'unverified']}</span>}
+                    </div>
+                    <div className="text-xs text-stone-400 mt-0.5">
+                      {x.address}{x.specialty && ` · ${x.specialty}`}{!added && x.termDate && ` · 終止 ${x.termDate.slice(0, 10)}`}
+                    </div>
+                    <div className="text-xs mt-0.5">
+                      {x.customer
+                        ? <span className="text-stone-500">客戶主檔：<a href={`/customers/${x.customer.id}`} target="_blank" rel="noreferrer" className="text-brand-700 hover:underline">{x.customer.name}</a>
+                            {x.customer.salesperson ? ` · 負責 ${x.customer.salesperson}` : ' · 未分派'}{x.customer.status && ` · ${x.customer.status}`}</span>
+                        : <span className="text-stone-400">客戶主檔未建檔</span>}
+                    </div>
+                  </div>
+                  {x.basDetailUrl && (
+                    <a href={x.basDetailUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">衛福部頁面↗</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null; loading: boolean; onRefresh: () => void }) {
   const points = trend?.points ?? []
+  const [pick, setPick] = useState<TrendPick | null>(null)
   return (
     <div>
+      {pick && <TrendDetailModal pick={pick} onClose={() => setPick(null)} />}
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">📈 近半年新增／減少（依機構類別）</p>
         <span className="text-[11px] text-stone-400">
@@ -1219,25 +1327,35 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
                         )}
                         <div className="flex w-full flex-1 flex-col items-center justify-end">
                           {added[i] > 0 && (
-                            <>
+                            <button
+                              type="button"
+                              onClick={() => setPick({ month: p.month, kind, dir: 'added' })}
+                              title={`看 ${p.month} ${kind} 新增 ${added[i]} 家名單`}
+                              className="flex h-full w-full flex-col items-center justify-end active:scale-95 transition-all"
+                            >
                               <span className="mb-0.5 text-[10px] font-semibold tabular-nums text-emerald-700">{added[i]}</span>
                               <div
-                                className="w-full max-w-[20px] rounded-t-sm bg-emerald-400 transition-colors group-hover:bg-emerald-500"
+                                className="w-full max-w-[20px] rounded-t-sm bg-emerald-400 transition-colors hover:bg-emerald-500"
                                 style={{ height: `${Math.max(4, (added[i] / max) * 82)}%` }}
                               />
-                            </>
+                            </button>
                           )}
                         </div>
                         <div className="h-px w-full bg-stone-200" />
                         <div className="flex w-full flex-1 flex-col items-center justify-start">
                           {removed[i] > 0 && (
-                            <>
+                            <button
+                              type="button"
+                              onClick={() => setPick({ month: p.month, kind, dir: 'removed' })}
+                              title={`看 ${p.month} ${kind} 減少 ${removed[i]} 家名單`}
+                              className="flex h-full w-full flex-col items-center justify-start active:scale-95 transition-all"
+                            >
                               <div
-                                className="w-full max-w-[20px] rounded-b-sm bg-red-300 transition-colors group-hover:bg-red-400"
+                                className="w-full max-w-[20px] rounded-b-sm bg-red-300 transition-colors hover:bg-red-400"
                                 style={{ height: `${Math.max(4, (removed[i] / max) * 82)}%` }}
                               />
                               <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-red-600">{removed[i]}</span>
-                            </>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -1261,6 +1379,7 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
             <p>
               <span className="mr-2"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-400 align-middle" /> 新增</span>
               <span><span className="inline-block h-2 w-2 rounded-sm bg-red-300 align-middle" /> 減少</span>
+              <span className="ml-2 text-stone-300">點長條看名單</span>
               {points.some((p) => p.baseline) && (
                 <span className="ml-3">
                   * 基準月：2026-06 是第一次建立快照，沒有上個月可比，整批 7,905 筆被記成異動（其中 7,839 筆是「恢復開業」），
