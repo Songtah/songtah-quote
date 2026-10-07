@@ -262,7 +262,7 @@ export type MonitorKindTrend = {
 /** 由機構代碼與名稱判斷類別（實測 8,534 筆客戶代碼對照，命中率 99.2%） */
 export function guessInstitutionKind(code: string, name: string): MonitorTrendKind | '其他' {
   const n = name ?? ''
-  if (n.includes('鑲牙所')) return '牙體技術所'
+  if (n.includes('鑲牙所') || n.includes('牙體技術')) return '牙體技術所'   // 備用鍵（名稱__縣市__區）沒有 2 開頭代碼可判
   if ((code ?? '').startsWith('2')) return '牙體技術所'
   if (n.includes('醫院')) return '醫院'
   if (n.includes('衛生所') || n.includes('大學') || n.includes('學系')) return '其他'
@@ -274,7 +274,42 @@ const emptyKinds = () => Object.fromEntries(
   TREND_KINDS.map((k) => [k, { added: 0, removed: 0 }])
 ) as MonitorKindTrendPoint['kinds']
 
-const KIND_TREND_KEY = 'medical-monitor:kind-trend-v2'   // v2＝存量改以目前快照複驗
+const KIND_TREND_KEY = 'medical-monitor:kind-trend-v3'   // v3＝排除備用鍵假異動對；v2＝存量改以目前快照複驗
+
+/**
+ * 排除「備用鍵 ↔ 代碼」造成的假異動對。
+ * 快照解析不到代碼時暫存為「名稱__縣市__區」；下個月解析到代碼後，舊版月排程（2026-09-22 前）
+ * 會同月寫一筆減少（備用鍵消失）＋一筆新增（代碼出現），其實是同一家、一直開業。
+ * 月排程已修（scripts/clinic-monitor.mjs identityKeysOf），這裡在讀取端把歷史紀錄裡的成對假異動濾掉，
+ * 不刪 Notion 原始紀錄。實測 07–09 月共 11 對。
+ */
+const normArea = (s: string) => (s ?? '').replace(/\s/g, '').replace(/台/g, '臺')
+function dropPhantomPairs(records: ClinicMonitorRecord[]): ClinicMonitorRecord[] {
+  const isAdded = (r: ClinicMonitorRecord) => r.type === '新開業' || r.type === '恢復開業'
+  const identity = (r: ClinicMonitorRecord) => {
+    const code = r.institutionCode.trim()
+    if (code.includes('__')) {
+      const [name, city, dist] = code.split('__')
+      return { temp: true, name: normArea(name), area: normArea(city + dist) }
+    }
+    return { temp: false, name: normArea(r.nhiName || r.customerName), area: normArea(r.address) }
+  }
+  const drop = new Set<string>()
+  const added = records.filter(isAdded), removed = records.filter((r) => !isAdded(r))
+  for (const rm of removed) {
+    const a = identity(rm)
+    for (const ad of added) {
+      if (drop.has(ad.id)) continue
+      const b = identity(ad)
+      if (!a.temp && !b.temp) continue          // 兩邊都是正式代碼＝真的不同機構
+      if (a.name !== b.name) continue
+      const [tempSide, other] = a.temp ? [a, b] : [b, a]
+      if (!other.area.startsWith(tempSide.area) && !tempSide.area.startsWith(other.area)) continue
+      drop.add(rm.id); drop.add(ad.id); break
+    }
+  }
+  return records.filter((r) => !drop.has(r.id))
+}
 
 export async function getMonitorKindTrend(months = 6, options?: { refresh?: boolean }): Promise<MonitorKindTrend> {
   const dbId = process.env.NOTION_CLINIC_MONITOR_DB
@@ -301,6 +336,7 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
   let stock = 0
   for (const month of monthKeys) {
     const kinds = emptyKinds()
+    const monthRecords: ClinicMonitorRecord[] = []
     let cursor: string | undefined
     let total = 0
     do {
@@ -322,18 +358,15 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
           },
         })
       )
-      for (const page of res.results ?? []) {
-        total++
-        const type = page.properties?.['異動類型']?.select?.name ?? ''
-        const code = getText(page, '機構代碼')
-        const name = getText(page, '健保名稱') || getText(page, '客戶名稱')
-        const kind = guessInstitutionKind(code, name)
-        if (kind === '其他') continue
-        if (type === '新開業' || type === '恢復開業') kinds[kind].added++
-        else kinds[kind].removed++          // 停業 / 新增停業
-      }
+      for (const page of res.results ?? []) { total++; monthRecords.push(mapClinicRecord(page)) }
       cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
     } while (cursor)
+    for (const r of dropPhantomPairs(monthRecords)) {
+      const kind = guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName)
+      if (kind === '其他') continue
+      if (r.type === '新開業' || r.type === '恢復開業') kinds[kind].added++
+      else kinds[kind].removed++          // 停業 / 新增停業
+    }
     // 首次建立快照的月份沒有「上月」可比，整批被標成恢復開業（實測 2026-06 有 7,905 筆）。
     // 那不是真實異動，連同數值一起歸零，只保留標記——否則長條圖被它撐爆，其餘月份全看不見。
     const isBaseline = total > 500
@@ -368,7 +401,9 @@ export async function getMonitorKindTrendRecords(
 ): Promise<ClinicMonitorRecord[]> {
   const dbId = process.env.NOTION_CLINIC_MONITOR_DB
   if (!dbId || !/^\d{4}-\d{2}$/.test(month)) return []
-  const types = dir === 'added' ? ['新開業', '恢復開業'] : ['停業', '新增停業']
+  // 四種都撈：判斷假異動對需要同月的另一半
+  const types = ['新開業', '恢復開業', '停業', '新增停業']
+  const want = dir === 'added' ? ['新開業', '恢復開業'] : ['停業', '新增停業']
   const out: ClinicMonitorRecord[] = []
   let cursor: string | undefined
   do {
@@ -386,12 +421,12 @@ export async function getMonitorKindTrendRecords(
       })
     )
     for (const page of res.results ?? []) {
-      const r = mapClinicRecord(page)
-      if (guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName) === kind) out.push(r)
+      out.push(mapClinicRecord(page))
     }
     cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
   } while (cursor)
-  return out
+  return dropPhantomPairs(out).filter((r) =>
+    want.includes(r.type) && guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName) === kind)
 }
 
 // ─── 未在衛福部登錄（查無代碼）清單 ────────────────────────────────────────────
