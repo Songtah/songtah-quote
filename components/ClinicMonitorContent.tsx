@@ -1111,76 +1111,6 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
   )
 }
 
-// ── 比對紀錄（每月趨勢，伺服器端持久）────────────────────────────────────────────
-interface HistoryEntry {
-  month: string; computedAt: string
-  totalClinics: number; totalLabs: number; totalHospitals: number; totalSchools: number
-  custClinics: number; custLabs: number; custHospitals: number; custSchools: number
-  custClinicsInBas?: number; custLabsInBas?: number; custHospitalsInBas?: number
-  customerWithCode: number; inBasOpen: number; toDevelop: number
-  suspectedClosures: number; hospitalUnverified: number; codeChanged: number; inconsistentData: number
-}
-
-const DELTA = (cur: number, prev?: number) =>
-  typeof prev === 'number' && prev !== cur
-    ? <span className={`ml-1 text-[10px] ${cur > prev ? 'text-emerald-600' : 'text-red-500'}`}>{cur > prev ? '▲' : '▼'}{Math.abs(cur - prev)}</span>
-    : null
-
-// 📊 數量儀表板：四類別(全台+客戶) + 近 6 個月 mini 長條
-function Dashboard({ history }: { history: HistoryEntry[] }) {
-  if (history.length === 0) return null
-  const cur = history[0], prev = history[1]
-  const series = history.slice(0, 6).reverse()   // 舊→新
-  // 「全台」＝ BAS 開業清單數；「客戶」必須用同口徑（客戶中代碼命中 BAS 開業者），
-  // 否則會出現客戶數大於全台總數的矛盾（實測診所 7,281 > 全台 7,149，因為客戶端混入
-  // 已歇業、無代碼、未立案者）。inBas 為舊紀錄沒有的欄位，缺值時退回全部數並標註。
-  const CATS: { label: string; total: keyof HistoryEntry; cust: keyof HistoryEntry; inBas?: keyof HistoryEntry; note?: string }[] = [
-    { label: '牙醫診所',   total: 'totalClinics',   cust: 'custClinics',   inBas: 'custClinicsInBas' },
-    { label: '牙體技術所', total: 'totalLabs',      cust: 'custLabs',      inBas: 'custLabsInBas' },
-    { label: '醫院',       total: 'totalHospitals', cust: 'custHospitals', inBas: 'custHospitalsInBas' },
-    { label: '學校',       total: 'totalSchools',   cust: 'custSchools',   note: '全台為教育部各級學校名錄，與客戶數非同口徑' },
-  ]
-  const N = (h: HistoryEntry, k: keyof HistoryEntry) => Number(h[k]) || 0
-  return (
-    <div>
-      <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">📊 數量儀表板（全台 vs 崧達客戶 · 近 6 個月）<span className="normal-case font-normal text-stone-300">— 伺服器保存，刷新不消失；客戶數已排除已歇業／停業／撤銷</span></p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {CATS.map(cat => {
-          const vals = series.map(h => N(h, cat.total))
-          const max = Math.max(1, ...vals)
-          const hasInBas = cat.inBas ? typeof cur[cat.inBas] === 'number' : false
-          const custValue = hasInBas ? N(cur, cat.inBas!) : N(cur, cat.cust)
-          const custPrev = prev ? (hasInBas ? N(prev, cat.inBas!) : N(prev, cat.cust)) : undefined
-          const others = hasInBas ? N(cur, cat.cust) - custValue : 0
-          return (
-            <div key={cat.label} className="bg-white rounded-2xl border border-stone-200 p-3">
-              <div className="text-xs text-stone-400 font-medium">{cat.label}</div>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-xl font-bold tabular-nums text-stone-800">{N(cur, cat.total).toLocaleString()}</span>
-                <span className="text-[10px] text-stone-400">全台</span>{DELTA(N(cur, cat.total), prev && N(prev, cat.total))}
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-brand-600">{custValue.toLocaleString()}</span>
-                <span className="text-[10px] text-stone-400">{hasInBas ? '客戶（在 BAS 開業）' : '客戶'}</span>{DELTA(custValue, custPrev)}
-              </div>
-              {hasInBas && others > 0 && (
-                <div className="text-[10px] text-stone-400">另有 {others.toLocaleString()} 家未登錄／已歇業</div>
-              )}
-              {cat.note && <div className="text-[10px] text-stone-400">{cat.note}</div>}
-              <div className="mt-2 flex items-end gap-0.5 h-8">
-                {series.map((h, i) => (
-                  <div key={i} title={`${h.month}：全台 ${N(h, cat.total)}`} className="flex-1 bg-brand-200 rounded-sm" style={{ height: `${Math.max(6, (N(h, cat.total) / max) * 100)}%` }} />
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-
 // ── 📈 近半年新增／減少（依機構類別）──────────────────────────────────────────
 // 新增＝比對後新出現（異動類型「新開業」）；減少＝原有機構代碼但查不到（「新增停業」「查無代碼」）。
 // 「恢復開業」不計入——首次建立快照那個月整批 7,839 筆都是它，是基準月產物不是真實異動。
@@ -1744,8 +1674,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [triggering, setTriggering] = useState(false)
   const [triggerMsg, setTriggerMsg] = useState('')
 
-  // 比對紀錄（每月趨勢）
-  const [history, setHistory] = useState<HistoryEntry[]>([])
   // 近半年新增／減少（依機構類別）
   const [kindTrend, setKindTrend] = useState<KindTrend | null>(null)
   const [kindTrendLoading, setKindTrendLoading] = useState(false)
@@ -1776,7 +1704,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // ── 開頁：先取伺服器端「最近一次比對結果」（共用、不受清快取影響）；無則 localStorage 備援 ──
   useEffect(() => {
     let cancelled = false
-    loadHistory()
     loadKindTrend()
     ;(async () => {
       try {
@@ -1811,7 +1738,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       const data = parseMonitorResult(payload)
       if (!data) { setError('比對資料格式錯誤，請重新執行'); return }
       applyResult(data, readString(payload.computedAt) || new Date().toISOString())
-      loadHistory()   // 比對後刷新趨勢紀錄
     } catch (e: any) {
       setError(e.message ?? '比對失敗，請重試')
     } finally {
@@ -1833,15 +1759,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
     finally { setKindTrendLoading(false) }
   }
 
-  async function loadHistory() {
-    try {
-      const res = await fetch('/api/admin/medical-monitor/history')
-      if (!res.ok) return
-      const data = await res.json()
-      if (Array.isArray(data.history)) setHistory(data.history as HistoryEntry[])
-    } catch {}
-  }
-
   async function saveRecord() {
     setSaving(true); setSaveMsg('')
     try {
@@ -1849,7 +1766,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       const data = await res.json()
       if (!res.ok) { setSaveMsg(`❌ ${data.error ?? '儲存失敗'}`); return }
       setSaveMsg(`✅ 已儲存 ${data.month} 紀錄至 Notion`)
-      loadHistory()
     } catch (e: any) { setSaveMsg(`❌ ${e.message}`) }
     finally { setSaving(false) }
   }
@@ -2080,9 +1996,8 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         </>
       )}
 
-      {/* 比對紀錄（每月趨勢，伺服器持久）*/}
+      {/* 儲存比對紀錄的結果訊息 */}
       {saveMsg && <div className="text-sm px-4 py-2 rounded-xl bg-stone-50 border border-stone-200 text-stone-700">{saveMsg}</div>}
-      {history.length > 0 && <Dashboard history={history} />}
 
       <KindTrendChart trend={kindTrend} loading={kindTrendLoading} onRefresh={() => loadKindTrend(true)} />
 
