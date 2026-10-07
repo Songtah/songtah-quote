@@ -775,17 +775,9 @@ export async function computeMonitor(): Promise<MonitorResult> {
   // 兩種實證任一成立即算：①主檔開發狀態標「公司既有客戶」 ②客情紀錄裡出現過。
   // 客情紀錄集合由夜間排程算好放快取（全掃拜訪庫，不能在請求路徑做）；
   // 拿不到快取時退回只用①，並在 stats 標明。
-  const markedExisting = new Set(
-    allCustomers.filter((c) => (c.devStatus ?? []).includes('公司既有客戶')).map((c) => c.id.replace(/-/g, ''))
-  )
-  let visitedSet = new Set<string>()
-  try {
-    const { loadMatchContext } = await import('@/lib/notion/match-context')
-    const ctx = await loadMatchContext()
-    const activeIds = new Set(allCustomers.map((c) => c.id.replace(/-/g, '')))
-    visitedSet = new Set(Array.from(ctx.visitedCustomers).filter((id) => activeIds.has(id)))
-  } catch { /* 沒快取就只用標記 */ }
-  const engaged = new Set<string>([...Array.from(markedExisting), ...Array.from(visitedSet)])
+  // 定義集中在 lib/notion/uncontacted.ts，與業務開發頁「未往來名單」共用
+  const { computeEngagement } = await import('@/lib/notion/uncontacted')
+  const { markedExisting, visited: visitedSet, engaged } = await computeEngagement(allCustomers)
 
   // ── 疑似復業：主檔標歇業／停業／撤銷，但代碼仍在開業名冊上 ────────────────
   // 這批客戶被全頁統計排除，若不另外掃一次，誤標或真復業永遠不會浮現。

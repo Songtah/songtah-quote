@@ -9,6 +9,7 @@ import BdTodayContent from '@/components/BdTodayContent'
 import MyTerritoriesPanel from '@/components/MyTerritoriesPanel'
 import TendersContent from '@/components/TendersContent'
 import MyTendersPanel from '@/components/MyTendersPanel'
+import UncontactedContent from '@/components/UncontactedContent'
 import { requireViewPermission } from '@/lib/permissions'
 import { authOptions } from '@/lib/auth'
 import { getBdTodayDashboard } from '@/lib/dashboard-today'
@@ -28,7 +29,9 @@ export default async function BdPage({
 
   // 'pipeline'（客戶跟進／開發漏斗）已於 2026-09-09 移除，待重新規劃。
   // 舊書籤與外部連結會落回「今日工作」，不另做導向。
-  const tab = searchParams.tab === 'tender'
+  const tab = searchParams.tab === 'uncontacted'
+    ? 'uncontacted'
+    : searchParams.tab === 'tender'
     ? 'tender'
     : searchParams.tab === 'report'
     ? 'report'
@@ -50,15 +53,18 @@ export default async function BdPage({
     { id: 'report',   href: '/bd?tab=report',   label: '紀錄匯入', hint: 'LINE 與日報轉紀錄' },
     { id: 'suggest',  href: '/bd?tab=suggest',  label: '拜訪建議', hint: '今天該跑誰' },
     { id: 'tender',   href: '/bd?tab=tender',   label: '標案機會', hint: '政府採購牙科標案' },
+    { id: 'uncontacted', href: '/bd?tab=uncontacted', label: '未往來名單', hint: '已建檔、從未往來' },
   ] as const
 
   const isLegacyTool = tab === 'campaigns'
 
   return (
     <AppShell
-      title={tab === 'report' ? '紀錄匯入' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : tab === 'tender' ? '標案機會' : '業務開發'}
+      title={tab === 'uncontacted' ? '未往來名單' : tab === 'report' ? '紀錄匯入' : tab === 'campaigns' ? '追蹤名單' : tab === 'suggest' ? '拜訪建議' : tab === 'visits' ? '客情紀錄' : tab === 'tender' ? '標案機會' : '業務開發'}
       description={
-        tab === 'report'
+        tab === 'uncontacted'
+          ? '客戶主檔已建檔、但公司從未往來的機構。依類型、地區、規模篩選，主管可把未分派者指派給業務做陌生開發。'
+          : tab === 'report'
           ? '將業務日報文字或 LINE 聊天記錄批次匯入客情紀錄。'
           : tab === 'campaigns'
               ? '商品潛在購買清單派工追蹤：匯入名單、業務逐一聯絡、訂單自動判定成交。'
@@ -109,6 +115,8 @@ export default async function BdPage({
           initialCustomerName={searchParams.customer}
           canManageAll={canImportForOthers}
         />
+      ) : tab === 'uncontacted' ? (
+        <UncontactedContent />
       ) : tab === 'tender' ? (
         <TendersContent canManageAll={canImportForOthers} currentUser={session?.user?.name ?? ''} />
       ) : tab === 'campaigns' ? (
