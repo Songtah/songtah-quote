@@ -725,7 +725,7 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
   return (
     <div className="space-y-3">
       {items.length > 0 && (
-        <VerifyBatchBlock compact candidateCount={items.length} categories={['closure']}
+        <VerifyBatchBlock candidateCount={items.length} categories={['closure']}
           customerIds={items.map((i: any) => i.customerId)} onResolved={onResolved} />
       )}
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
@@ -800,7 +800,7 @@ function SuspectedReopensTab({ items, onResolved }: {
   )
   return (
     <div className="space-y-3">
-      <VerifyBatchBlock compact candidateCount={items.length} categories={['reopen']}
+      <VerifyBatchBlock candidateCount={items.length} categories={['reopen']}
         customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-brand-700 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
         ↩️ 這些客戶在系統裡標成已歇業／停業／撤銷，但機構代碼<strong>仍在衛福部開業名冊上</strong>——
@@ -885,7 +885,7 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
   )
   return (
     <div className="space-y-3">
-      <VerifyBatchBlock compact candidateCount={items.length} categories={['invalidcode']}
+      <VerifyBatchBlock candidateCount={items.length} categories={['invalidcode']}
         customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
         ⚠️ 這些客戶的「機構代碼」欄填的不是代碼（例如「未立案」），無法與衛福部比對。
@@ -1052,7 +1052,7 @@ function CodeChangedTab({ items, onResolved }: {
   )
   return (
     <div className="space-y-3">
-      <VerifyBatchBlock compact candidateCount={items.length} categories={['codechange']}
+      <VerifyBatchBlock candidateCount={items.length} categories={['codechange']}
         customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
         🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。
@@ -1112,7 +1112,7 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
   )
   return (
     <div className="space-y-3">
-      <VerifyBatchBlock compact candidateCount={items.length} categories={['hospital']}
+      <VerifyBatchBlock candidateCount={items.length} categories={['hospital']}
         customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
         🏥 以下醫院客戶的機構代碼不在衛福部「牙醫一般科」開業清單中。醫院多半仍在營業，只是牙科未登記為牙醫一般科，故不列入歇業候選。請逐筆「查衛福部」確認牙科現況。
@@ -1421,16 +1421,14 @@ const SYNC_FIELD_LABEL: Record<string, string> = {
 }
 
 /**
- * 狀態對帳 + 一鍵處理。主頁用全部候選；歇業清單彈窗內嵌同一元件、限定只處理該清單
- * （categories／customerIds），使用者不必關彈窗回主頁找按鈕。
+ * 一鍵處理本清單：嵌在各待處理清單彈窗內，限定只查證、寫回該清單（categories／customerIds）。
+ * 主頁的全部候選「狀態對帳」已於 2026-10-07 依使用者要求移除——各清單已能自行處理。
+ * 查證只用有衛福部實證者寫回：有代碼直開詳細頁；無代碼才用名稱搜尋（需名稱完全相同＋同縣市＋唯一）。
  */
-function VerifyBatchBlock({ candidateCount, onDone, onApplied, categories, customerIds, onResolved, compact = false }: {
+function VerifyBatchBlock({ candidateCount, onDone, categories, customerIds, onResolved }: {
   candidateCount: number; onDone?: () => void
-  /** 一鍵同步寫回成功後（例：主頁自動重新比對） */
-  onApplied?: () => void
   categories?: string[]; customerIds?: string[]
   onResolved?: (id: string, status: string) => void
-  compact?: boolean
 }) {
   const [running, setRunning] = useState(false)
   const [summary, setSummary] = useState<VerifySummary | null>(null)
@@ -1471,7 +1469,6 @@ function VerifyBatchBlock({ candidateCount, onDone, onApplied, categories, custo
       setAppliedMsg(`✓ ${parts.join('、')}${data.failures?.length ? `；失敗 ${data.failures.length} 筆：${data.failures.slice(0, 3).map((f: any) => f.customerName).join('、')}` : ''}`)
       for (const r of data.resolved ?? []) onResolved?.(r.customerId, r.status)
       setPreview(null)
-      onApplied?.()
     } catch (e: any) { setErr(e?.message ?? '套用失敗') }
     finally { setApplying(false) }
   }
@@ -1495,12 +1492,9 @@ function VerifyBatchBlock({ candidateCount, onDone, onApplied, categories, custo
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-semibold text-stone-700">{compact ? '⚡ 一鍵處理本清單' : '🔎 狀態對帳（批次查證）'}</span>
+        <span className="text-sm font-semibold text-stone-700">⚡ 一鍵處理本清單</span>
         <span className="text-[11px] text-stone-400">
-          {compact
-            ? <>共 {candidateCount} 筆：先逐筆查衛福部（有代碼者直開詳細頁），再預覽變更、確認後一次寫回</>
-            : <>疑似歇業／疑似復業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，
-              逐筆即時查衛福部（有代碼者直開詳細頁）—— <strong className="text-stone-500">歇業與復業雙向同時對帳</strong></>}
+          共 {candidateCount} 筆：先逐筆查衛福部（有代碼者直開詳細頁），再預覽變更、確認後一次寫回
         </span>
         <button
           onClick={run}
@@ -1586,21 +1580,6 @@ function VerifyBatchBlock({ candidateCount, onDone, onApplied, categories, custo
         <p className="mt-2 text-xs text-stone-500">所有查證結果都與客戶主檔一致，不需同步。</p>
       )}
 
-      {!compact && <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
-        <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
-        下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
-        衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
-        查詢方式：<strong className="text-stone-500">有機構代碼者直開衛福部詳細頁</strong>（同一家機構，歇業／停業也查得到）；
-        沒有代碼或查不到才用名稱搜尋，此時要求<strong className="text-stone-500">名稱完全相同 ＋ 同一縣市 ＋ 只有一家符合</strong>——
-        衛福部名稱搜尋是包含比對，「雅德思牙醫診所」會一併撈到「左營雅德思牙醫診所」，不完全相同就不採用。
-        查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值
-        （<strong className="text-stone-500">所有有異動的欄位一起對帳</strong>：機構狀態、機構代碼、地址、電話、
-        健保特約、牙醫師數／牙體技術師數／牙體技術生數、三個衛福部連結——
-        代碼換照不一起更正的話，舊碼下個月依然查不到、同一家會再變成候選），
-        由你按「一鍵更新客戶資料庫」才寫入（只寫有衛福部實證者——查無、查詢失敗、
-        同縣市查不到一律跳過），也可以到各分類逐筆套用。
-        全台逐筆即時查約需 40 分鐘且可能被衛福部阻擋，故只對候選批次查證。
-      </p>}
     </div>
   )
 }
@@ -2127,7 +2106,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">待處理</p>
               <span className="text-xs font-semibold text-brand-700 bg-brand-50 rounded-full px-2 py-0.5 tabular-nums">共 {pendingTotal.toLocaleString()} 筆</span>
-              <span className="text-[11px] text-stone-300">點卡片看清單；每張清單內也有一鍵處理</span>
+              <span className="text-[11px] text-stone-300">點卡片看清單，清單內可一鍵處理</span>
               {restoredKeys.size > 0 && (
                 <span className="text-[11px] text-brand-700">已復原 {restoredKeys.size} 筆，按「執行比對」後回到清單</span>
               )}
@@ -2155,10 +2134,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard label="🔀 資料不一致"  value={view?.inconsistentData.length ?? 0} sub="代碼符但名稱/地址有落差" accent="text-gold-700" onClick={() => setActiveCategory('inconsistent')} />
             </div>
 
-            <VerifyBatchBlock
-              candidateCount={closureItems.length + hospitalItems.length + (view?.suspectedReopens.length ?? 0) + (view?.invalidCodes.length ?? 0) + (view?.codeChanged.length ?? 0)}
-              onApplied={loadComparison}
-            />
 
             <details className="group text-[11px] text-stone-400 leading-relaxed">
               <summary className="cursor-pointer select-none text-stone-400 hover:text-stone-600 list-none flex items-center gap-1">
@@ -2172,7 +2147,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
                   判定依序排除：<b>學術機構</b>（大學牙醫系等，本來就不在 BAS）、<b>代碼待補正</b>（欄位填「未立案」之類無法比對）、代碼命中、同名同區、換照新碼、已人工結案、醫院待確認，全都不中才列為代碼查無。
                   醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，故另列「醫院待確認」。
                 </p>
-                <p>一鍵處理只寫回有衛福部實證的欄位；寫回後會自動重新比對，數字即時更新。</p>
+                <p>每張清單內的「⚡ 一鍵處理本清單」只寫回有衛福部實證的欄位，處理完的項目會立即從清單與數字中移除。</p>
               </div>
             </details>
           </div>
