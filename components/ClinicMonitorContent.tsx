@@ -2135,21 +2135,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             </div>
 
 
-            <details className="group text-[11px] text-stone-400 leading-relaxed">
-              <summary className="cursor-pointer select-none text-stone-400 hover:text-stone-600 list-none flex items-center gap-1">
-                <span className="transition-transform group-open:rotate-90">›</span> 判定方式
-              </summary>
-              <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-cream-300">
-                <p>
-                  衛福部 BAS 列表只含「開業」機構，停業／歇業者會從清單消失。「代碼查無」＝代碼不在 BAS 開業清單；曾登錄過的會再依機構代碼直開衛福部詳細頁，標出真實狀態（歇業／停業／仍開業）。點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。
-                </p>
-                <p>
-                  判定依序排除：<b>學術機構</b>（大學牙醫系等，本來就不在 BAS）、<b>代碼待補正</b>（欄位填「未立案」之類無法比對）、代碼命中、同名同區、換照新碼、已人工結案、醫院待確認，全都不中才列為代碼查無。
-                  醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，故另列「醫院待確認」。
-                </p>
-                <p>每張清單內的「⚡ 一鍵處理本清單」只寫回有衛福部實證的欄位，處理完的項目會立即從清單與數字中移除。</p>
-              </div>
-            </details>
           </div>
 
           <div>
