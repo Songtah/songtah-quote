@@ -32,23 +32,23 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
     // 用上次比對結果；沒有才重算（重算很重，不該是常態）
     const result: any = (await getCachedMonitorResult()) ?? (await computeMonitor())
     const targets: VerifyTarget[] = []
-    const push = (list: any[], kind?: string, codeField = 'institutionCode', crmField = 'institutionCode') => {
+    const push = (list: any[], category: string, kind?: string, codeField = 'institutionCode', crmField = 'institutionCode') => {
       for (const x of list ?? []) {
         targets.push({
           customerId: x.customerId, customerName: x.customerName,
           city: x.customerCity ?? '', institutionCode: x[codeField] ?? '',
           crmCode: x[crmField] ?? x[codeField] ?? '',
-          crmStatus: x.customerStatus ?? '', kind,
+          crmStatus: x.customerStatus ?? '', kind, category,
         })
       }
     }
-    if (want.includes('closure'))    push(result.suspectedClosures)
-    if (want.includes('hospital'))   push(result.hospitalUnverified, 'A')
-    if (want.includes('invalidcode')) push(result.invalidCodes)
+    if (want.includes('closure'))    push(result.suspectedClosures, 'closure')
+    if (want.includes('hospital'))   push(result.hospitalUnverified, 'hospital', 'A')
+    if (want.includes('invalidcode')) push(result.invalidCodes, 'invalidcode')
     // 更換代碼：拿新碼去查衛福部，但主檔現在存的是舊碼 → 兩者都帶著，套用時才知道要改代碼
-    if (want.includes('codechange')) push(result.codeChanged, undefined, 'newCode', 'oldCode')
+    if (want.includes('codechange')) push(result.codeChanged, 'codechange', undefined, 'newCode', 'oldCode')
     // 復業方向：主檔標歇業、但代碼仍在名冊上 → 查證後若衛福部確為開業，一鍵同步會把主檔改回開業
-    if (want.includes('reopen'))     push(result.suspectedReopens)
+    if (want.includes('reopen'))     push(result.suspectedReopens, 'reopen')
 
     // 同一客戶只查一次
     const seen = new Set<string>()

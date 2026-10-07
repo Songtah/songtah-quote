@@ -697,6 +697,10 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
 
   return (
     <div className="space-y-3">
+      {items.length > 0 && (
+        <VerifyBatchBlock compact candidateCount={items.length} categories={['closure']}
+          customerIds={items.map((i: any) => i.customerId)} onResolved={onResolved} />
+      )}
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
         ⛔ 以下客戶有機構代碼，但不在衛福部牙科開業列表中。
         <strong>曾登錄後消失</strong>者系統已依機構代碼直開衛福部詳細頁，標出真實狀態：
@@ -1329,12 +1333,21 @@ const SYNC_FIELD_LABEL: Record<string, string> = {
   personnelUrl: '醫事人員連結', deptUrl: '診療科別連結', name: '客戶名稱',
 }
 
-function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; onDone?: () => void }) {
+/**
+ * 狀態對帳 + 一鍵處理。主頁用全部候選；歇業清單彈窗內嵌同一元件、限定只處理該清單
+ * （categories／customerIds），使用者不必關彈窗回主頁找按鈕。
+ */
+function VerifyBatchBlock({ candidateCount, onDone, categories, customerIds, onResolved, compact = false }: {
+  candidateCount: number; onDone?: () => void
+  categories?: string[]; customerIds?: string[]
+  onResolved?: (id: string, status: string) => void
+  compact?: boolean
+}) {
   const [running, setRunning] = useState(false)
   const [summary, setSummary] = useState<VerifySummary | null>(null)
   const [err, setErr] = useState('')
   // 一鍵同步：把查證結果寫回客戶資料庫（只寫有衛福部實證者）
-  const [preview, setPreview] = useState<{ willUpdate: number; fieldCount: Record<string, number>; nameDiffs: number; items: any[] } | null>(null)
+  const [preview, setPreview] = useState<{ willUpdate: number; fieldCount: Record<string, number>; nameDiffs: number; items: any[]; willDismiss: number; dismissItems: any[] } | null>(null)
   const [includeName, setIncludeName] = useState(false)
   const [applying, setApplying] = useState(false)
   const [appliedMsg, setAppliedMsg] = useState('')
@@ -1344,13 +1357,14 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
     try {
       const res = await fetch('/api/admin/medical-monitor/verify/apply', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dryRun: true, includeName: withName }),
+        body: JSON.stringify({ dryRun: true, includeName: withName, customerIds }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '讀取失敗'); return }
       setPreview({
         willUpdate: data.willUpdate, fieldCount: data.fieldCount ?? {},
         nameDiffs: data.nameDiffs ?? 0, items: data.items ?? [],
+        willDismiss: data.willDismiss ?? 0, dismissItems: data.dismissItems ?? [],
       })
     } catch (e: any) { setErr(e?.message ?? '讀取失敗') }
   }
@@ -1359,11 +1373,14 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
     setApplying(true); setErr('')
     try {
       const res = await fetch('/api/admin/medical-monitor/verify/apply', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ includeName, customerIds }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '套用失敗'); return }
-      setAppliedMsg(`✓ 已更新 ${data.updated} 筆（狀態 ${data.statusUpdated ?? 0}、代碼 ${data.codeUpdated ?? 0}）${data.failures?.length ? `，失敗 ${data.failures.length} 筆` : ''}`)
+      const parts = [`更新 ${data.updated} 筆（狀態 ${data.statusUpdated ?? 0}、代碼 ${data.codeUpdated ?? 0}）`]
+      if (data.dismissed) parts.push(`移出清單 ${data.dismissed} 筆`)
+      setAppliedMsg(`✓ ${parts.join('、')}${data.failures?.length ? `；失敗 ${data.failures.length} 筆：${data.failures.slice(0, 3).map((f: any) => f.customerName).join('、')}` : ''}`)
+      for (const r of data.resolved ?? []) onResolved?.(r.customerId, r.status)
       setPreview(null)
       onDone?.()
     } catch (e: any) { setErr(e?.message ?? '套用失敗') }
@@ -1374,12 +1391,12 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
     setRunning(true); setErr(''); setSummary(null)
     try {
       const res = await fetch('/api/admin/medical-monitor/verify', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categories }),
       })
       const data = await res.json()
       if (!res.ok) { setErr(data.error ?? '查證失敗'); return }
       setSummary(data.summary as VerifySummary)
-      if ((data.summary?.mismatched ?? 0) > 0) await loadPreview()
+      await loadPreview()
       onDone?.()
     } catch (e: any) {
       setErr(e?.message ?? '查證失敗')
@@ -1389,10 +1406,12 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-semibold text-stone-700">🔎 狀態對帳（批次查證）</span>
+        <span className="text-sm font-semibold text-stone-700">{compact ? '⚡ 一鍵處理本清單' : '🔎 狀態對帳（批次查證）'}</span>
         <span className="text-[11px] text-stone-400">
-          疑似歇業／疑似復業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，
-          逐筆即時查衛福部（限同縣市）—— <strong className="text-stone-500">歇業與復業雙向同時對帳</strong>
+          {compact
+            ? <>共 {candidateCount} 筆：先逐筆查衛福部（有代碼者直開詳細頁），再預覽變更、確認後一次寫回</>
+            : <>疑似歇業／疑似復業／醫院待確認／代碼待補正／更換代碼共 {candidateCount} 筆，
+              逐筆即時查衛福部（有代碼者直開詳細頁）—— <strong className="text-stone-500">歇業與復業雙向同時對帳</strong></>}
         </span>
         <button
           onClick={run}
@@ -1418,11 +1437,13 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         </div>
       )}
       {/* 一鍵同步到客戶資料庫 */}
-      {preview && preview.willUpdate > 0 && (
+      {preview && (preview.willUpdate > 0 || preview.willDismiss > 0) && (
         <div className="mt-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-stone-700">
-              有 {preview.willUpdate} 家客戶的資料與衛福部不同，可一鍵同步
+              {preview.willUpdate > 0 && <>有 {preview.willUpdate} 家客戶的資料與衛福部不同</>}
+              {preview.willUpdate > 0 && preview.willDismiss > 0 && '；'}
+              {preview.willDismiss > 0 && <>{preview.willDismiss} 家衛福部仍開業，將移出歇業清單</>}
               <span className="ml-1 text-[11px] font-normal text-stone-500">
                 （{Object.entries(preview.fieldCount).map(([k, v]) => `${SYNC_FIELD_LABEL[k] ?? k} ${v}`).join('、') || '—'}）
               </span>
@@ -1431,7 +1452,7 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
               onClick={applyAll}
               disabled={applying}
               className="ml-auto rounded-full bg-brand-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
-            >{applying ? '更新中…' : `一鍵更新客戶資料庫（${preview.willUpdate} 筆）`}</button>
+            >{applying ? '處理中…' : `確認執行（${[preview.willUpdate && `更新 ${preview.willUpdate}`, preview.willDismiss && `移出 ${preview.willDismiss}`].filter(Boolean).join('、')} 筆）`}</button>
           </div>
           {preview.nameDiffs > 0 && (
             <label className="mt-2 flex items-center gap-2 text-[11px] text-stone-500">
@@ -1459,21 +1480,30 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
               </div>
             ))}
             {preview.items.length > 50 && <div className="text-[11px] text-stone-400">…共 {preview.items.length} 筆</div>}
+            {preview.dismissItems.map((it: any) => (
+              <div key={`d-${it.customerId}`} className="text-[11px] text-stone-500">
+                <span className="text-stone-700">{it.customerName}</span>
+                <span className="ml-1 text-emerald-700">衛福部「{it.basStatus}」→ 移出歇業清單（不改主檔，可在已排除復原）</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
       {appliedMsg && <p className="mt-2 text-xs text-emerald-700 bg-brand-50 rounded-xl px-3 py-2">{appliedMsg}</p>}
+      {summary && preview && preview.willUpdate === 0 && preview.willDismiss === 0 && !appliedMsg && (
+        <p className="mt-2 text-xs text-stone-500">查證完成，沒有需要變更的項目。</p>
+      )}
       {summary && !preview && summary.mismatched === 0 && (
         <p className="mt-2 text-xs text-stone-500">所有查證結果都與客戶主檔一致，不需同步。</p>
       )}
 
-      <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+      {!compact && <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
         <strong className="text-stone-500">與下方「未在衛福部登錄」的分工</strong>：本區查的是「曾經登錄、現在查不到」的候選（可能歇業，要追）；
         下方那區是「代碼從未在衛福部出現過」的未立案機構（查了也不會有，不用追）。
         衛福部即時查詢是開業狀態的唯一權威來源（快照每月一次、主檔是人工值）。
-        比對條件：<strong className="text-stone-500">名稱完全相同 ＋ 同一縣市 ＋ 只有一家符合</strong>——
-        衛福部是包含比對，「雅德思牙醫診所」會一併撈到「左營雅德思牙醫診所」，那是不同家，
-        只要不是完全相同就不採用、也不會產生任何自動變更。
+        查詢方式：<strong className="text-stone-500">有機構代碼者直開衛福部詳細頁</strong>（同一家機構，歇業／停業也查得到）；
+        沒有代碼或查不到才用名稱搜尋，此時要求<strong className="text-stone-500">名稱完全相同 ＋ 同一縣市 ＋ 只有一家符合</strong>——
+        衛福部名稱搜尋是包含比對，「雅德思牙醫診所」會一併撈到「左營雅德思牙醫診所」，不完全相同就不採用。
         查證<strong className="text-stone-500">不會自動改主檔</strong>：查完會列出不符的筆數與逐筆前後值
         （<strong className="text-stone-500">所有有異動的欄位一起對帳</strong>：機構狀態、機構代碼、地址、電話、
         健保特約、牙醫師數／牙體技術師數／牙體技術生數、三個衛福部連結——
@@ -1481,7 +1511,7 @@ function VerifyBatchBlock({ candidateCount, onDone }: { candidateCount: number; 
         由你按「一鍵更新客戶資料庫」才寫入（只寫有衛福部實證者——查無、查詢失敗、
         同縣市查不到一律跳過），也可以到各分類逐筆套用。
         全台逐筆即時查約需 40 分鐘且可能被衛福部阻擋，故只對候選批次查證。
-      </p>
+      </p>}
     </div>
   )
 }

@@ -14,6 +14,9 @@
  * body: { customerIds?: string[] }  不給＝套用全部符合條件者
  *       { dryRun?: boolean }        先看會改哪些
  *
+ * 歇業候選經代碼直查仍為「開業」者（只是不在牙科開業列表）→ 沒有主檔欄位要改，
+ * 但留著會永遠卡在歇業清單；一併「移出清單」（寫排除紀錄，不動主檔，可在已排除清單復原）。
+ *
  * 這是本頁唯一的批次寫入路徑：機構狀態會連動全頁統計與業務看到的客戶清單，
  * 所以逐筆都要有衛福部實證，且畫面上一律先顯示筆數再由人按下確認。
  */
@@ -22,6 +25,9 @@ import { withApiAuth } from '@/lib/api-auth'
 import { updateCustomerBasFields, type BasSyncPatch } from '@/lib/notion/customers'
 import { getVerifyResults } from '@/lib/notion/monitor-verify'
 import { invalidateMonitorResultCache } from '@/lib/notion/medical-monitor'
+import { dismissMonitorItem } from '@/lib/notion/monitor-dismiss'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -54,6 +60,12 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
       (!only || only.includes(r.customerId))
     )
 
+    // 歇業候選、依代碼直查（確定是同一家）衛福部仍為開業 → 移出歇業清單
+    const stillOpen = results.filter((r) =>
+      r.category === 'closure' && r.lookupBy === 'code' && r.found && !r.error &&
+      /開業/.test(r.basStatus) && (!only || only.includes(r.customerId))
+    )
+
     if (dryRun) {
       const fieldCount: Record<string, number> = {}
       for (const t of targets) {
@@ -63,6 +75,8 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
         ok: true, dryRun: true, willUpdate: targets.length,
         fieldCount,
         nameDiffs: results.filter((r) => (r.diffs ?? []).some((d: any) => d.field === 'name')).length,
+        willDismiss: stillOpen.length,
+        dismissItems: stillOpen.map((t) => ({ customerId: t.customerId, customerName: t.customerName, basStatus: t.basStatus })),
         items: targets.map((t) => ({
           customerId: t.customerId, customerName: t.customerName,
           basStatus: t.basStatus, checkedAt: t.checkedAt,
@@ -71,20 +85,37 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
       })
     }
 
-    let updated = 0, fieldsUpdated = 0
+    let updated = 0, fieldsUpdated = 0, statusUpdated = 0, codeUpdated = 0, dismissed = 0
     const failures: { customerName: string; message: string }[] = []
+    const resolved: { customerId: string; status: string }[] = []
     for (const t of targets) {
       try {
         const changed = await updateCustomerBasFields(t.customerId, patchOf(t))
         if (changed.length) { updated++; fieldsUpdated += changed.length }
+        if (changed.includes('機構狀態')) { statusUpdated++; resolved.push({ customerId: t.customerId, status: patchOf(t).status as string }) }
+        if (changed.includes('機構代碼')) codeUpdated++
       } catch (e: any) {
         failures.push({ customerName: t.customerName, message: e?.message ?? '寫入失敗' })
       }
     }
-    if (updated > 0) await invalidateMonitorResultCache()
+    const session = await getServerSession(authOptions)
+    for (const t of stillOpen) {
+      try {
+        await dismissMonitorItem({
+          category: 'closure', customerId: t.customerId, customerName: t.customerName,
+          institutionCode: t.institutionCode,
+          reason: `衛福部依代碼直查仍為「${t.basStatus}」（不在牙科開業列表），一鍵同步移出歇業清單`,
+          by: session?.user?.name ?? '一鍵同步',
+        })
+        dismissed++; resolved.push({ customerId: t.customerId, status: '移出清單' })
+      } catch (e: any) {
+        failures.push({ customerName: t.customerName, message: `移出清單失敗：${e?.message ?? ''}` })
+      }
+    }
+    if (updated > 0 || dismissed > 0) await invalidateMonitorResultCache()
 
     return NextResponse.json({
-      ok: true, updated, fieldsUpdated,
+      ok: true, updated, fieldsUpdated, statusUpdated, codeUpdated, dismissed, resolved,
       skipped: results.length - targets.length, failures,
     })
   } catch (error: any) {

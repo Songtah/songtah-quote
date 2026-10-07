@@ -11,11 +11,16 @@
  * 超過函式時限、失敗率 6.6% 會產生數百筆假訊號，且量放大 7 倍很可能觸發 WAF 封鎖。
  * 候選只有一百多筆，卻涵蓋所有真正需要確認的對象——投報率最高的一層。
  *
+ * 查詢順序（2026-10-07）：代碼在 bas-cache 有 BAS_SEQ → 直開詳細頁；否則才名稱搜尋。
+ * 名稱搜尋只回開業機構，歇業候選用名稱永遠「查無」→ 被一鍵同步跳過，等於批次查證對歇業清單無效。
+ * 代碼直查是同一家機構、沒有同名不同家的風險，可安全產生寫回值。
+ *
  * 本層只**查證與記錄**，不自動改客戶主檔：機構狀態會影響全頁統計與業務看到的清單，
  * 一律由人按「套用衛福部狀態」確認（比照既有的狀態回寫流程）。
  */
 import { getRedisValue, setRedisValue } from './shared'
-import { lookupInstitution, isClosedStatus } from '@/lib/mohw-bas.mjs'
+import { lookupInstitution, isClosedStatus, fetchBasFull } from '@/lib/mohw-bas.mjs'
+import { loadBasCacheIndex } from '@/lib/bas-cache-index'
 
 export type FieldDiff = { field: string; label: string; from: string; to: string }
 
@@ -47,6 +52,10 @@ export type VerifyResult = {
   /** 可直接寫回的值（apply 用；名稱另由使用者勾選才寫） */
   patch: Record<string, unknown>
   checkedAt: string
+  /** code＝依機構代碼直開衛福部詳細頁；name＝名稱搜尋（只找得到開業機構） */
+  lookupBy: 'code' | 'name'
+  /** 來源候選類別（closure／hospital／codechange…），供套用端判斷要改狀態還是移出清單 */
+  category?: string
   error?: string
 }
 
@@ -94,6 +103,7 @@ export type VerifyTarget = {
   /** 客戶主檔目前的代碼；不給就視同 institutionCode */
   crmCode?: string
   crmStatus: string; kind?: string
+  category?: string
 }
 
 export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
@@ -101,15 +111,28 @@ export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
 }> {
   const startedAt = new Date().toISOString()
   const results: VerifyResult[] = []
+  let basIndex: ReturnType<typeof loadBasCacheIndex> = new Map()
+  try { basIndex = loadBasCacheIndex() } catch { /* 無快取 → 全部走名稱搜尋 */ }
   for (const t of targets.slice(0, MAX_ITEMS)) {
     const crmCode = (t.crmCode ?? t.institutionCode ?? '').trim()
     const base = {
       customerId: t.customerId, customerName: t.customerName, city: t.city,
       institutionCode: t.institutionCode, crmCode, crmStatus: t.crmStatus,
-      checkedAt: new Date().toISOString(),
+      checkedAt: new Date().toISOString(), category: t.category,
     }
     try {
-      const r: any = await lookupInstitution({ name: t.customerName, kind: t.kind, city: t.city })
+      // 1. 代碼直查詳細頁（歇業／停業者也查得到）；抓取失敗才退回名稱搜尋
+      let r: any = null, lookupBy: 'code' | 'name' = 'name'
+      const row = t.institutionCode ? basIndex.get(t.institutionCode.trim()) : undefined
+      if (row) {
+        const full = await fetchBasFull({ basSeq: row.basSeq, zoneSeq: row.zoneSeq }).catch(() => null)
+        if (full?.status) {
+          r = { found: true, ambiguous: false, outOfCity: false, partialOnly: false,
+                status: full.status, code: full.code ?? t.institutionCode.trim(), full }
+          lookupBy = 'code'
+        }
+      }
+      if (!r) r = await lookupInstitution({ name: t.customerName, kind: t.kind, city: t.city })
       const basStatus = r?.status ?? ''
       const basCode = r?.code ?? ''
       const full = r?.full ?? null
@@ -161,6 +184,7 @@ export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
       }
       results.push({
         ...base,
+        lookupBy,
         found: Boolean(r?.found),
         basStatus,
         basCode,
@@ -175,7 +199,7 @@ export async function verifyCandidates(targets: VerifyTarget[]): Promise<{
       })
     } catch (e: any) {
       results.push({
-        ...base, found: false, basStatus: '', basCode: '', closed: false,
+        ...base, lookupBy: 'name', found: false, basStatus: '', basCode: '', closed: false,
         outOfCity: false, partialOnly: false, ambiguous: false,
         suggestedStatus: '', codeMismatch: false, diffs: [], patch: {},
         error: e?.message ?? '查詢失敗',
