@@ -92,6 +92,15 @@ function ChevronRight() {
 
 // ── 逐筆即時查衛福部（開業狀態 / 機構代碼 + 建議）──────────────────────────────
 // 變更形態徽章樣式
+type BasVerdictKey = 'closed' | 'suspended' | 'open' | 'unverified'
+/** 歇業候選依衛福部詳細頁真實狀態的徽章（見 lib/bas-cache-index.ts basVerdict） */
+const VERDICT_BADGE: Record<BasVerdictKey, { cls: string }> = {
+  closed:     { cls: 'bg-red-50 text-red-700' },
+  suspended:  { cls: 'bg-amber-50 text-amber-700' },
+  open:       { cls: 'bg-emerald-50 text-emerald-700' },
+  unverified: { cls: 'bg-stone-100 text-stone-500' },
+}
+
 const FORM_BADGE: Record<string, { label: string; cls: string }> = {
   closure:         { label: '真歇業/停業', cls: 'bg-red-50 text-red-700 border border-red-200' },
   recode:          { label: '換照換碼',     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
@@ -173,8 +182,10 @@ function MohwLookupButton({ name, code, kind, customerStatus, city, customerId, 
               {FORM_BADGE[result.form].label}
             </span>
           )}
-          {result.searchedCity && (
-            <p className="text-[11px] text-stone-400">查詢範圍：{result.searchedCity}（不跨縣市）· 名稱需完全相同</p>
+          {result.lookupBy === 'code' ? (
+            <p className="text-[11px] text-stone-400">查詢方式：依機構代碼直開衛福部詳細頁（已歇業／停業者也查得到）</p>
+          ) : result.searchedCity && (
+            <p className="text-[11px] text-stone-400">查詢方式：名稱搜尋（只找得到開業中的機構）· 範圍：{result.searchedCity}（不跨縣市）· 名稱需完全相同</p>
           )}
           {result.partialOnly && (result.partialCandidates?.length ?? 0) > 0 && (
             <div className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-[11px] text-amber-700">
@@ -199,7 +210,12 @@ function MohwLookupButton({ name, code, kind, customerStatus, city, customerId, 
                 <span>衛福部代碼：<code className="font-mono bg-white border border-stone-200 px-1.5 py-0.5 rounded">{result.mohwCode ?? '—'}</code></span>
                 <span>開業狀態：<span className={result.closed ? 'text-red-600 font-semibold' : 'text-emerald-600 font-semibold'}>{result.status || '—'}</span></span>
               </div>
-              {result.mohwName && <div className="text-stone-500">{result.mohwName}　{result.address}</div>}
+              {result.mohwName && (
+                <div className="text-stone-500">
+                  {result.mohwName}　{result.address}
+                  {result.detailUrl && <a href={result.detailUrl} target="_blank" rel="noreferrer" className="ml-2 underline hover:text-stone-700">衛福部頁面 ↗</a>}
+                </div>
+              )}
             </>
           ) : (
             <div className="text-stone-500">衛福部查無此名稱</div>
@@ -662,13 +678,15 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
 }) {
   const { visible, hide } = useHidden()
   // 兩者都是「代碼在衛福部查不到」，差別只在曾不曾登錄過 → 同一張清單、用標籤區分
-  const [reasonFilter, setReasonFilter] = useState<'all' | 'vanished' | 'never'>('all')
+  // 篩選依衛福部真實狀態（曾登錄後消失者已依 BAS_SEQ 直查詳細頁）；從未登錄者無 BAS_SEQ 可查
+  const [reasonFilter, setReasonFilter] = useState<'all' | BasVerdictKey | 'never'>('all')
   const merged = [
     ...items.map((x) => ({ ...x, _never: false })),
     ...unregistered.map((x) => ({ ...x, reason: 'never_registered', _never: true })),
   ]
   const shown = visible(merged).filter((x: any) =>
-    reasonFilter === 'all' ? true : reasonFilter === 'never' ? x._never : !x._never)
+    reasonFilter === 'all' ? true : reasonFilter === 'never' ? x._never : !x._never && (x.basVerdict ?? 'unverified') === reasonFilter)
+  const cnt = (v: BasVerdictKey) => items.filter((x: any) => (x.basVerdict ?? 'unverified') === v).length
 
   if (merged.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm">
@@ -680,12 +698,17 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
   return (
     <div className="space-y-3">
       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-        ⛔ 以下客戶有機構代碼，但不在衛福部開業清單中。兩種原因放在同一張清單，用標籤區分：
-        <strong>曾登錄後消失</strong>＝可能歇業，要追；<strong>從未登錄</strong>＝多為未立案自編號碼，查了也不會有。
-        可「查衛福部」確認，並直接編輯開業狀態（寫回 Notion 機構狀態；標停業／已歇業／撤銷後此筆即結案移除）。
+        ⛔ 以下客戶有機構代碼，但不在衛福部牙科開業列表中。
+        <strong>曾登錄後消失</strong>者系統已依機構代碼直開衛福部詳細頁，標出真實狀態：
+        <strong>歇業</strong>、<strong>停業</strong>（暫停，可能復業）、<strong>仍開業</strong>（不是歇業，多為科別或類別異動）；
+        <strong>從未登錄</strong>＝多為未立案自編號碼，衛福部沒有紀錄可查。
+        確認後可直接編輯開業狀態（寫回 Notion；標停業／已歇業／撤銷後此筆即結案移除）。
       </div>
       <div className="flex flex-wrap gap-2">
-        {([['all', `全部 ${merged.length}`], ['vanished', `曾登錄後消失 ${items.length}`], ['never', `從未登錄 ${unregistered.length}`]] as const).map(([v, label]) => (
+        {([['all', `全部 ${merged.length}`], ['closed', `歇業 ${cnt('closed')}`], ['suspended', `停業 ${cnt('suspended')}`],
+           ['open', `仍開業 ${cnt('open')}`], ['unverified', `待查證 ${cnt('unverified')}`], ['never', `從未登錄 ${unregistered.length}`]] as const)
+          .filter(([v]) => v === 'all' || v === 'never' || cnt(v as BasVerdictKey) > 0)
+          .map(([v, label]) => (
           <button key={v} onClick={() => setReasonFilter(v)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 ${
               reasonFilter === v ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'text-stone-500 hover:bg-stone-100'
@@ -700,17 +723,26 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold text-stone-900">{item.customerName}</span>
                   <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${item._never ? 'bg-stone-100 text-stone-500' : 'bg-red-50 text-red-600'}`}>
-                    {item._never ? '從未登錄（未立案）' : '曾登錄後消失'}
-                  </span>
+                  {item._never ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">從未登錄（未立案）</span>
+                  ) : (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${VERDICT_BADGE[(item.basVerdict ?? 'unverified') as BasVerdictKey].cls}`}>
+                      {item.basVerdict && item.basVerdict !== 'unverified' ? `衛福部：${item.basStatus}` : '尚未查證'}
+                      {item.basVerdict === 'open' && '（非歇業）'}
+                    </span>
+                  )}
                   {item.customerType && <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{item.customerType}</span>}
                 </div>
                 <div className="text-xs text-stone-400 mt-0.5">
                   {item.customerCity}{item.customerDistrict && ` ${item.customerDistrict}`}
-                  {item.customerStatus && ` · 目前：${item.customerStatus}`}
+                  {item.customerStatus && ` · 主檔：${item.customerStatus}`}
+                  {item.basStatusCheckedAt && ` · 衛福部查證於 ${item.basStatusCheckedAt.slice(0, 10)}`}
                 </div>
               </div>
-              <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+              <div className="shrink-0 flex items-center gap-3">
+                {item.basDetailUrl && <a href={item.basDetailUrl} target="_blank" rel="noreferrer" className="text-xs text-stone-400 hover:text-stone-600 underline">衛福部頁面 ↗</a>}
+                <a href={`/customers/${item.customerId}`} target="_blank" rel="noreferrer" className="text-xs text-stone-400 hover:text-stone-600 underline">客戶頁</a>
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <StatusEditor customerId={item.customerId} current={item.customerStatus} onResolved={onResolved} />
@@ -1988,7 +2020,15 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <StatCard
                 label="⛔ 代碼查無"
                 value={closureItems.length + (result?.unregistered?.length ?? 0)}
-                sub={`歇業候選 ${closureItems.length}／未立案 ${result?.unregistered?.length ?? 0}`}
+                sub={(() => {
+                  // 依衛福部詳細頁直查的真實狀態拆分（basVerdict）；舊快取結果沒有此欄位時退回舊寫法
+                  if (!closureItems.some((i: any) => i.basVerdict)) return `歇業候選 ${closureItems.length}／未立案 ${result?.unregistered?.length ?? 0}`
+                  const n = (v: string) => closureItems.filter((i: any) => i.basVerdict === v).length
+                  const parts = [`歇業 ${n('closed')}`, `停業 ${n('suspended')}`]
+                  if (n('open')) parts.push(`仍開業 ${n('open')}`)
+                  if (n('unverified')) parts.push(`待查證 ${n('unverified')}`)
+                  return `${parts.join('／')}／未立案 ${result?.unregistered?.length ?? 0}`
+                })()}
                 accent="text-red-600"
                 onClick={() => setActiveCategory('closure')}
               />

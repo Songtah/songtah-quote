@@ -25,7 +25,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
-import { parseStatus } from '../lib/mohw-bas.mjs'
+import { parseStatus, refreshGoneStatuses } from '../lib/mohw-bas.mjs'
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +57,7 @@ const CONCURRENCY     = 6             // 詳細頁並行數（對 WAF 禮貌）
 // 改為輪流回抓：超過 STALE_DAYS 沒更新的，每次跑補抓一批（受時間預算約束）。
 const STALE_DAYS      = +process.env.BAS_STALE_DAYS || 90
 const REFRESH_LIMIT   = +process.env.BAS_REFRESH_LIMIT || 1200   // 每次最多回抓幾筆舊快取
+const GONE_LIMIT      = +process.env.BAS_GONE_LIMIT || 400       // 每次最多補查幾筆「已消失」機構的真實狀態
 
 // ── Logging ─────────────────────────────────────────────────────────────────
 
@@ -545,6 +546,24 @@ async function main() {
     if (i + CONCURRENCY < pending.length) await sleep(300)
   }
   log(`詳細頁完成：本次解析 ${resolved} 筆${timedOut ? '（時間預算到，未完整）' : ''}`)
+
+  // 3b. 補查「已從開業列表消失」機構的真實狀態（歇業／停業／其實仍開業）。
+  //     列表只回開業者，消失者的快取 status 會永遠停在「開業」，比對端只能標「疑似」。
+  //     用 BAS_SEQ 直開詳細頁寫回快取；不影響快照（快照只收本次列表中的開業者）。
+  //     本次列表抓取失敗的類別不得視為消失，否則整類會被誤補查。
+  const listedCodes = new Set()
+  for (const cfg of KIND_CONFIGS) {
+    const r = lists[cfg.label]; if (!r) continue
+    for (const row of r.rows) { const c = cache[cacheKeyOf(row.basSeq, row.zoneSeq)]?.code; if (c) listedCodes.add(c) }
+  }
+  const okCfgs = KIND_CONFIGS.filter((cfg) => lists[cfg.label])
+  try {
+    const gs = await refreshGoneStatuses(cache, {
+      isGone: (e) => !listedCodes.has(e.code) && okCfgs.some((cfg) => categoryLabelMatches(e.kind, cfg)),
+      priorityCodes: customerCodes, deadline, limit: GONE_LIMIT, log,
+    })
+    log(`補查消失機構狀態：候選 ${gs.candidates}、本次查 ${gs.checked}、狀態變更 ${gs.changed}、失敗 ${gs.failed}`)
+  } catch (e) { warn('補查消失機構狀態失敗（不影響快照）：', e.message) }
 
   // 4. 建快照：以「本次列表集合」為準，從 cache 取 code；只收開業者。
   //    列表失敗的類別 → 沿用上月該類別 codes。未解析者 → fallback key 保留。

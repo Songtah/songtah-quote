@@ -921,11 +921,12 @@
  },
  "OrteGiLY9yRKGc1M0HwgwQ%253D%253D__OrteGiLY9yRKGc1M0HwgwQ%253D%253D": {
   "code": "3731062528",
-  "status": "開業",
+  "status": "歇業",
   "name": "四維牙醫診所",
   "address": "新北市新莊區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:29.579Z"
  },
  "IoGbwBjpVbsXirgoSh0LAQ%253D%253D__IoGbwBjpVbsXirgoSh0LAQ%253D%253D": {
   "code": "3731062608",
@@ -2933,7 +2934,8 @@
   "name": "曾牙醫診所",
   "address": "高雄市楠梓區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:29.580Z"
  },
  "H03RY48j6qjz7Ot66AwCQw%253D%253D__H03RY48j6qjz7Ot66AwCQw%253D%253D": {
   "code": "3702040134",
@@ -3569,11 +3571,12 @@
  },
  "t0V1YfHyP3hE4Nj0ToAcAw%253D%253D__t0V1YfHyP3hE4Nj0ToAcAw%253D%253D": {
   "code": "3702094534",
-  "status": "開業",
+  "status": "停業",
   "name": "賢明牙醫診所",
   "address": "高雄市前鎮區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:29.580Z"
  },
  "RJGj84U%252FwJkwgx1OQCsq%252Fw%253D%253D__RJGj84U%252FwJkwgx1OQCsq%252Fw%253D%253D": {
   "code": "3701090630",
@@ -4441,11 +4444,12 @@
  },
  "SyeIFSB9ZzOs%252FYqmbrvovg%253D%253D__uIwYV1%252F4786ncVsvESuwRg%253D%253D": {
   "code": "3701112748",
-  "status": "開業",
+  "status": "歇業",
   "name": "優生活牙醫診所",
   "address": "臺北市內湖區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.011Z"
  },
  "34wCUqaSJkWoDW%252FYgI37ZA%253D%253D__kNdnwt7PUSnc7nHz%252B42LTw%253D%253D": {
   "code": "3731052648",
@@ -4673,11 +4677,12 @@
  },
  "B2bm1djRMk0FINfTYdumBQ%253D%253D__5Iz9A%252FLu4glFbIAJckSIVg%253D%253D": {
   "code": "3731014782",
-  "status": "開業",
+  "status": "歇業",
   "name": "康祐臻品牙醫診所",
   "address": "新北市板橋區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.011Z"
  },
  "DotpgIbc8OOF61B5yEwKew%253D%253D__V%252FE1da9snNeItikeAS%252Fv4w%253D%253D": {
   "code": "3735041203",
@@ -6753,11 +6758,12 @@
  },
  "n8aFBnldip%252FcYTp%252FTWm1PA%253D%253D__J2dTrjyggbTs4AH%252BaSmPfg%253D%253D": {
   "code": "3731033876",
-  "status": "開業",
+  "status": "停業",
   "name": "永和雅德思牙醫診所",
   "address": "新北市永和區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.011Z"
  },
  "C3r5avRK9gPIBZEUiRtzjw%253D%253D__84xFVpWyXKz1clHPbZ5J5Q%253D%253D": {
   "code": "3738011485",
@@ -7353,11 +7359,12 @@
  },
  "u04cdxkS19rc2nh%252FRPGV0g%253D%253D__u04cdxkS19rc2nh%252FRPGV0g%253D%253D": {
   "code": "3717050400",
-  "status": "開業",
+  "status": "歇業",
   "name": "華大牙醫診所",
   "address": "臺中市北區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.447Z"
  },
  "ejEV%252BUvNjcREuAwLaWtLFw%253D%253D__ejEV%252BUvNjcREuAwLaWtLFw%253D%253D": {
   "code": "3717050580",
@@ -8049,11 +8056,12 @@
  },
  "85ik%252BdAkE0PryggsAELANg%253D%253D__85ik%252BdAkE0PryggsAELANg%253D%253D": {
   "code": "3731012251",
-  "status": "開業",
+  "status": "歇業",
   "name": "喜樂牙醫診所",
   "address": "新北市板橋區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.447Z"
  },
  "8XyI%252FRaydYEP69x8U0AS1Q%253D%253D__8XyI%252FRaydYEP69x8U0AS1Q%253D%253D": {
   "code": "3731011852",
@@ -8553,11 +8561,12 @@
  },
  "NZDoNNgQfE6%252F%252FgA2aJG50A%253D%253D__NZDoNNgQfE6%252F%252FgA2aJG50A%253D%253D": {
   "code": "3737051609",
-  "status": "開業",
+  "status": "歇業",
   "name": "源浦牙醫診所",
   "address": "彰化縣員林市",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.447Z"
  },
  "B6bW19Aqi94f8V586NtNdg%253D%253D__B6bW19Aqi94f8V586NtNdg%253D%253D": {
   "code": "3737051690",
@@ -10009,11 +10018,12 @@
  },
  "bLAyRnRG8rNeGdfU29Xqzg%253D%253D__bLAyRnRG8rNeGdfU29Xqzg%253D%253D": {
   "code": "3731050493",
-  "status": "開業",
+  "status": "歇業",
   "name": "親親牙醫診所",
   "address": "新北市新店區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.872Z"
  },
  "JsaC1PEF1BhCt4ZJ6sv4cQ%253D%253D__JsaC1PEF1BhCt4ZJ6sv4cQ%253D%253D": {
   "code": "3732012817",
@@ -10617,11 +10627,12 @@
  },
  "6WB0ynmc0HH53a3C%252BbMRfA%253D%253D__6WB0ynmc0HH53a3C%252BbMRfA%253D%253D": {
   "code": "3701020610",
-  "status": "開業",
+  "status": "歇業",
   "name": "聖心牙醫診所",
   "address": "臺北市大安區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.872Z"
  },
  "iCAOiZzyd1n00saBUbWWZQ%253D%253D__iCAOiZzyd1n00saBUbWWZQ%253D%253D": {
   "code": "3701020727",
@@ -12353,11 +12364,12 @@
  },
  "27FsbUfuA2Iao8LrTPXNZQ%253D%253D__27FsbUfuA2Iao8LrTPXNZQ%253D%253D": {
   "code": "1542020129",
-  "status": "開業",
+  "status": "歇業",
   "name": "樂安醫院",
   "address": "高雄市岡山區",
   "kind": "醫院",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:30.872Z"
  },
  "%252FvDL15FvgmR5QJ387DYw2A%253D%253D__%252FvDL15FvgmR5QJ387DYw2A%253D%253D": {
   "code": "2346110014",
@@ -14185,11 +14197,12 @@
  },
  "lCg0FUSOxLflwOaGx39xAQ%253D%253D__aq6k%252BYXSUK2hhLbQ13xCyQ%253D%253D": {
   "code": "3735051441",
-  "status": "開業",
+  "status": "歇業",
   "name": "艾美微笑牙醫診所",
   "address": "苗栗縣頭份市",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.353Z"
  },
  "sTiyvnrBXotSWkTjlB5dPQ%253D%253D__6z7I2Gwy14VKwb52tme88A%253D%253D": {
   "code": "3731171415",
@@ -14633,11 +14646,12 @@
  },
  "s4QA1PRhp9VDvXE6OTS66Q%253D%253D__n6mhGzVDyFVzppD%252FevCywA%253D%253D": {
   "code": "3701121943",
-  "status": "開業",
+  "status": "歇業",
   "name": "寰星牙醫診所",
   "address": "臺北市南港區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.353Z"
  },
  "68pxODmS1P0tTYM5kmN7zQ%253D%253D__tjSkn4fzKTU6lJL7e%252BOqCg%253D%253D": {
   "code": "3701174015",
@@ -14977,11 +14991,12 @@
  },
  "h8b%252BKPvP8Rok5w9sp9kJfg%253D%253D__WsITGNIPLCdJaN7OxohMEQ%253D%253D": {
   "code": "3703280650",
-  "status": "開業",
+  "status": "歇業",
   "name": "曜玥美學牙醫診所",
   "address": "臺中市南屯區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.353Z"
  },
  "xrHP%252BSK%252FnqHTKF%252FaSAESxQ%253D%253D__3a3b5mbpz5WCrtzip%252FYpyw%253D%253D": {
   "code": "3701106151",
@@ -16577,11 +16592,12 @@
  },
  "Nq0uCZ0RVseMK4p42%252FfUww%253D%253D__Nq0uCZ0RVseMK4p42%252FfUww%253D%253D": {
   "code": "3736010248",
-  "status": "開業",
+  "status": "歇業",
   "name": "肇洲牙醫診所",
   "address": "臺中市豐原區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.867Z"
  },
  "42d2saCtsBXb%252Btu7dUUXlQ%253D%253D__42d2saCtsBXb%252Btu7dUUXlQ%253D%253D": {
   "code": "3737051627",
@@ -17361,11 +17377,12 @@
  },
  "nxKwt8CcRujVCQX%252BLbb6iw%253D%253D__nxKwt8CcRujVCQX%252BLbb6iw%253D%253D": {
   "code": "3731130183",
-  "status": "開業",
+  "status": "歇業",
   "name": "振興牙醫診所",
   "address": "新北市土城區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.867Z"
  },
  "akdNRTyUlBzCFEgC3llKrg%253D%253D__akdNRTyUlBzCFEgC3llKrg%253D%253D": {
   "code": "3731130272",
@@ -17721,11 +17738,12 @@
  },
  "2FenX9yS8U%252FOrJJXngVeoQ%253D%253D__2FenX9yS8U%252FOrJJXngVeoQ%253D%253D": {
   "code": "3732010395",
-  "status": "開業",
+  "status": "歇業",
   "name": "四維牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:31.867Z"
  },
  "kONKZ86XwhBMjyZLcduDZA%253D%253D__kONKZ86XwhBMjyZLcduDZA%253D%253D": {
   "code": "3732010519",
@@ -17937,11 +17955,12 @@
  },
  "9O5Tl7LpF0mwDmbixoRFZw%253D%253D__9O5Tl7LpF0mwDmbixoRFZw%253D%253D": {
   "code": "3732013001",
-  "status": "開業",
+  "status": "歇業",
   "name": "益皓牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.374Z"
  },
  "sc%252F85ez7xg6xdEaHPgURhA%253D%253D__sc%252F85ez7xg6xdEaHPgURhA%253D%253D": {
   "code": "3732010699",
@@ -18073,11 +18092,12 @@
  },
  "XnvBY8APkrQvLBnvAtpABA%253D%253D__XnvBY8APkrQvLBnvAtpABA%253D%253D": {
   "code": "3731061325",
-  "status": "開業",
+  "status": "歇業",
   "name": "安心牙醫診所",
   "address": "新北市新莊區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.374Z"
  },
  "6Kovv7kKaVNEaeLIOkr7Kg%253D%253D__6Kovv7kKaVNEaeLIOkr7Kg%253D%253D": {
   "code": "3731060711",
@@ -19113,11 +19133,12 @@
  },
  "7VUcRtc%252BEuwHT%252BmZc3wYiw%253D%253D__7VUcRtc%252BEuwHT%252BmZc3wYiw%253D%253D": {
   "code": "3712040388",
-  "status": "開業",
+  "status": "歇業",
   "name": "如意牙醫診所",
   "address": "新竹市北區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.374Z"
  },
  "Q7DwWH1tfP9V3EzWXURC0A%253D%253D__Q7DwWH1tfP9V3EzWXURC0A%253D%253D": {
   "code": "3701090612",
@@ -19385,11 +19406,12 @@
  },
  "oYu1PrDSEjajJoIg5ByeYQ%253D%253D__oYu1PrDSEjajJoIg5ByeYQ%253D%253D": {
   "code": "3702030227",
-  "status": "開業",
+  "status": "停業",
   "name": "慧安牙醫診所",
   "address": "高雄市左營區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.795Z"
  },
  "g63i5G5k0kklLT36ClB93A%253D%253D__g63i5G5k0kklLT36ClB93A%253D%253D": {
   "code": "3702030325",
@@ -21281,11 +21303,12 @@
  },
  "9CdMMpspn52kbVb1m5KN0g%253D%253D__Z4squgb6pIz2ABWMymJOLA%253D%253D": {
   "code": "3732014302",
-  "status": "開業",
+  "status": "歇業",
   "name": "雅德思牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.795Z"
  },
  "KWLF9whnIzeuye6i6JSeyQ%253D%253D__H5OBMe6e%252FH3W5KrCkKdrxA%253D%253D": {
   "code": "3703010112",
@@ -21321,11 +21344,12 @@
  },
  "4eNvU%252Fe4vKhwBC%252BG4irD3w%253D%253D__N%252BGbCti7TGpHEkRqn3copg%253D%253D": {
   "code": "3703280418",
-  "status": "開業",
+  "status": "歇業",
   "name": "誠悅美學牙醫診所",
   "address": "臺中市南屯區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:32.796Z"
  },
  "3wIanYSW6dSD0NoPOyPaNg%253D%253D__vXOQWAShpknJWgSQzJZpYw%253D%253D": {
   "code": "3712012857",
@@ -25425,11 +25449,12 @@
  },
  "vIEt5X5CzwbsYV5ZfutS%252Bw%253D%253D__vIEt5X5CzwbsYV5ZfutS%252Bw%253D%253D": {
   "code": "3734020335",
-  "status": "開業",
+  "status": "歇業",
   "name": "徐牙醫診所",
   "address": "宜蘭縣羅東鎮",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.225Z"
  },
  "Tc2u5CEN%252FpMBKIeJvez8rw%253D%253D__Tc2u5CEN%252FpMBKIeJvez8rw%253D%253D": {
   "code": "3734010213",
@@ -25857,11 +25882,12 @@
  },
  "GKX0GVKGwYqsC8tk2lnZTQ%253D%253D__GKX0GVKGwYqsC8tk2lnZTQ%253D%253D": {
   "code": "3701021359",
-  "status": "開業",
+  "status": "停業",
   "name": "偉成牙醫診所",
   "address": "臺北市大安區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.225Z"
  },
  "HlFO9i%252F9k%252Bi8ezR4cYuatw%253D%253D__HlFO9i%252F9k%252Bi8ezR4cYuatw%253D%253D": {
   "code": "3701021046",
@@ -29505,11 +29531,12 @@
  },
  "0CfVhA9wAdeZf8dqWyeHbw%253D%253D__Luo0%252B1FlftbJGV%252BvyV6TRw%253D%253D": {
   "code": "3731171540",
-  "status": "開業",
+  "status": "歇業",
   "name": "波音牙醫診所",
   "address": "新北市林口區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.225Z"
  },
  "0IHzbg1jgOeemq8XPFbHiQ%253D%253D__DW9q0qrN6dB2dE7I%252BGQ9uQ%253D%253D": {
   "code": "3705320451",
@@ -29929,11 +29956,12 @@
  },
  "ML4N71PAX%252FB0lojtbc0LFA%253D%253D__ML4N71PAX%252FB0lojtbc0LFA%253D%253D": {
   "code": "3717032671",
-  "status": "開業",
+  "status": "歇業",
   "name": "大方牙醫診所",
   "address": "臺中市西區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.648Z"
  },
  "XG%252FJQlCjlmD8Ylu8Xu3o2A%253D%253D__XG%252FJQlCjlmD8Ylu8Xu3o2A%253D%253D": {
   "code": "3731030455",
@@ -30833,11 +30861,12 @@
  },
  "JEivd5%252B%252FE6NmL1hasc2Aqw%253D%253D__JEivd5%252B%252FE6NmL1hasc2Aqw%253D%253D": {
   "code": "3732021352",
-  "status": "開業",
+  "status": "停業",
   "name": "華大牙醫診所",
   "address": "桃園市中壢區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.648Z"
  },
  "4kXYdsbmLS6nQYoNbtARuA%253D%253D__4kXYdsbmLS6nQYoNbtARuA%253D%253D": {
   "code": "3732020720",
@@ -31161,11 +31190,12 @@
  },
  "%252F7EwBVxY88ZNaCJGZWwYPQ%253D%253D__%252F7EwBVxY88ZNaCJGZWwYPQ%253D%253D": {
   "code": "3737050317",
-  "status": "開業",
+  "status": "歇業",
   "name": "鴻德牙醫診所",
   "address": "彰化縣員林市",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:33.648Z"
  },
  "9%252FRsOKKLhTj35uD5NiK4zw%253D%253D__9%252FRsOKKLhTj35uD5NiK4zw%253D%253D": {
   "code": "3737050406",
@@ -31729,11 +31759,12 @@
  },
  "%252BxEgeYECBiThE5afPSEW4A%253D%253D__%252BxEgeYECBiThE5afPSEW4A%253D%253D": {
   "code": "3742050025",
-  "status": "開業",
+  "status": "歇業",
   "name": "林園吳牙醫診所",
   "address": "高雄市林園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.074Z"
  },
  "09HWIDnuPFW0MjvX09xqZw%253D%253D__09HWIDnuPFW0MjvX09xqZw%253D%253D": {
   "code": "3743010696",
@@ -31809,11 +31840,12 @@
  },
  "6bg%252Bv%252BsKziu920lK0BabfA%253D%253D__6bg%252Bv%252BsKziu920lK0BabfA%253D%253D": {
   "code": "3743170017",
-  "status": "開業",
+  "status": "歇業",
   "name": "清雲牙醫診所",
   "address": "屏東縣新園鄉",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.074Z"
  },
  "e0rk5BiVZuj%252BoWfA39LW0w%253D%253D__e0rk5BiVZuj%252BoWfA39LW0w%253D%253D": {
   "code": "3743220512",
@@ -32145,11 +32177,12 @@
  },
  "VCHe9Bn%252FYoqO616o5ii24A%253D%253D__VCHe9Bn%252FYoqO616o5ii24A%253D%253D": {
   "code": "3736150041",
-  "status": "開業",
+  "status": "歇業",
   "name": "烏日高牙醫診所",
   "address": "臺中市烏日區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.074Z"
  },
  "1I6tofleuojqxEfe8T4pqA%253D%253D__1I6tofleuojqxEfe8T4pqA%253D%253D": {
   "code": "3736100167",
@@ -34093,7 +34126,8 @@
   "name": "國軍高雄門診中心附設民眾診療服務處",
   "address": "高雄市前鎮區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.503Z"
  },
  "bKYxH6UjCenY%252F6%252BZiAV9FQ%253D%253D__bKYxH6UjCenY%252F6%252BZiAV9FQ%253D%253D": {
   "code": "3701173312",
@@ -34457,11 +34491,12 @@
  },
  "hpt8WtzsnsyHv3OVhnU52Q%253D%253D__ct7WgjLIox%252FMMRI5J7CG7A%253D%253D": {
   "code": "3703280187",
-  "status": "開業",
+  "status": "歇業",
   "name": "大觀國際牙醫診所",
   "address": "臺中市南屯區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.503Z"
  },
  "4iFTXlxo0DjlIGtqNOrx1Q%253D%253D__w4E%252F23sLQEortcLhl4ptbQ%253D%253D": {
   "code": "3732013458",
@@ -36537,11 +36572,12 @@
  },
  "osI%252FwHZMRkci1Wxqbh0WeQ%253D%253D__WO3fNUW%252FYx%252BsiPz5vtojYA%253D%253D": {
   "code": "3732014366",
-  "status": "開業",
+  "status": "歇業",
   "name": "海棠牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:34.504Z"
  },
  "xRllTO7JXfaj71MtRHZTSQ%253D%253D__7g3EyxDrkxkjSUON0QnDhA%253D%253D": {
   "code": "3731171371",
@@ -37105,11 +37141,12 @@
  },
  "XnfemzU%252BuMu70Ep0%252F39HGw%253D%253D__zRYopXWCTl%252FB4Rijhj9wZQ%253D%253D": {
   "code": "3737051869",
-  "status": "開業",
+  "status": "歇業",
   "name": "真安牙醫診所",
   "address": "彰化縣員林市",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.009Z"
  },
  "mnzg4rah%252FhkO%252B4r8VkNAfQ%253D%253D__6GFVQUMGxPOpRvH2odr8Mg%253D%253D": {
   "code": "3703060032",
@@ -39225,11 +39262,12 @@
  },
  "gOsX26MFsOEY4HRE1xNMBQ%253D%253D__gOsX26MFsOEY4HRE1xNMBQ%253D%253D": {
   "code": "3743010258",
-  "status": "開業",
+  "status": "停業",
   "name": "仁友牙醫診所",
   "address": "屏東縣屏東市",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.009Z"
  },
  "pcwWMOBmExsX%252Ft6Y%252Bw94tw%253D%253D__pcwWMOBmExsX%252Ft6Y%252Bw94tw%253D%253D": {
   "code": "3742170031",
@@ -39497,11 +39535,12 @@
  },
  "e7rweI71YTOLFBHVjJM%252F3A%253D%253D__e7rweI71YTOLFBHVjJM%252F3A%253D%253D": {
   "code": "3732040142",
-  "status": "開業",
+  "status": "停業",
   "name": "自然牙醫診所",
   "address": "桃園市楊梅區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.009Z"
  },
  "Rr%252FtVuUxnjApxNsXI5DZGw%253D%253D__Rr%252FtVuUxnjApxNsXI5DZGw%253D%253D": {
   "code": "3736080080",
@@ -39537,11 +39576,12 @@
  },
  "YJmVHE4KqGkGWexmdE8j0A%253D%253D__YJmVHE4KqGkGWexmdE8j0A%253D%253D": {
   "code": "3731040737",
-  "status": "開業",
+  "status": "歇業",
   "name": "林承德牙醫診所",
   "address": "新北市中和區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.522Z"
  },
  "MyxMsst7QcCePks9CtWJYQ%253D%253D__MyxMsst7QcCePks9CtWJYQ%253D%253D": {
   "code": "3731040433",
@@ -40833,11 +40873,12 @@
  },
  "aVQjZaLAFXeyCmyTy7Snww%253D%253D__aVQjZaLAFXeyCmyTy7Snww%253D%253D": {
   "code": "3701173189",
-  "status": "開業",
+  "status": "歇業",
   "name": "豐荷牙醫診所",
   "address": "臺北市信義區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.522Z"
  },
  "zmBuYN5%252FH9V2sQ%252Bu1rzcjA%253D%253D__zmBuYN5%252FH9V2sQ%252Bu1rzcjA%253D%253D": {
   "code": "3701172913",
@@ -41417,11 +41458,12 @@
  },
  "hggLkSC4J4pFPVs2p2DsOg%253D%253D__yKCRAPKKP8wthQTeAIQMLg%253D%253D": {
   "code": "3712012419",
-  "status": "開業",
+  "status": "歇業",
   "name": "新美學牙醫診所",
   "address": "新竹市東區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:35.522Z"
  },
  "9Y7YvhcEtcjydYFLB29gBQ%253D%253D__%252FXihKhfi9%252FvwWFJ6lFQaVw%253D%253D": {
   "code": "3737061178",
@@ -42121,11 +42163,12 @@
  },
  "tLPrqmxCyPkThvc%252Fvs4qMg%253D%253D__QU0JnE781w2w%252FoYNvnOloA%253D%253D": {
   "code": "3701027235",
-  "status": "開業",
+  "status": "歇業",
   "name": "瑞誠牙醫診所",
   "address": "臺北市大安區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.043Z"
  },
  "Da2ik0b7mlT70USTURlP1g%253D%253D__q7GhX7ZmUcamYt5lhefpzg%253D%253D": {
   "code": "3734021501",
@@ -43449,11 +43492,12 @@
  },
  "SSOzR1%252FvHLv7UVgFGbTzxg%253D%253D__ksb%252FTTez%252F5%252BvjxNPwLinDA%253D%253D": {
   "code": "3701183970",
-  "status": "開業",
+  "status": "歇業",
   "name": "沐康美學牙醫診所",
   "address": "臺北市中正區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.043Z"
  },
  "84lXbva8iBJPCrEh3XdxYg%253D%253D__cw8y8znUpZpR40C58gL0Jw%253D%253D": {
   "code": "3731091449",
@@ -46053,7 +46097,8 @@
   "name": "今日牙醫診所",
   "address": "臺南市新營區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.043Z"
  },
  "blFad2%252FMjfPv4ySacSTeUw%253D%253D__blFad2%252FMjfPv4ySacSTeUw%253D%253D": {
   "code": "3740041180",
@@ -49049,11 +49094,12 @@
  },
  "tw7WeEcayvsjEBVe8YEuuw%253D%253D__o2B7Hqm1MuDiGaib8A6Y5A%253D%253D": {
   "code": "3732013583",
-  "status": "開業",
+  "status": "歇業",
   "name": "藝文君品牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.567Z"
  },
  "0IGVW0Eph%252Ba2FGaYkkireA%253D%253D__v%252FymqnAkcFvbaN6bDfTGig%253D%253D": {
   "code": "3703270065",
@@ -49793,11 +49839,12 @@
  },
  "qdqkPjjgIubsxUvHgnOBtg%253D%253D__BWehx3CYmcqJMIL2AryQEg%253D%253D": {
   "code": "3703260121",
-  "status": "開業",
+  "status": "歇業",
   "name": "康舒美牙醫診所",
   "address": "臺中市北區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.567Z"
  },
  "KOni%252Fraz3mQuobZB0ubgiQ%253D%253D__SXzoeIkRPwXvtVT8IS3ACA%253D%253D": {
   "code": "3732013850",
@@ -52321,11 +52368,12 @@
  },
  "IA2S0bbYI0NGqnll%252FGdmvw%253D%253D__IA2S0bbYI0NGqnll%252FGdmvw%253D%253D": {
   "code": "3731011469",
-  "status": "開業",
+  "status": "歇業",
   "name": "玉林牙醫診所",
   "address": "新北市板橋區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:36.567Z"
  },
  "TSYmZih8uth3alRyKd4X5Q%253D%253D__TSYmZih8uth3alRyKd4X5Q%253D%253D": {
   "code": "3731011067",
@@ -52873,19 +52921,21 @@
  },
  "PuiAGRnewshMFzTxC0Bxqw%253D%253D__PuiAGRnewshMFzTxC0Bxqw%253D%253D": {
   "code": "3737190049",
-  "status": "開業",
+  "status": "歇業",
   "name": "建堂牙醫診所",
   "address": "彰化縣社頭鄉",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.094Z"
  },
  "7wZYp3ZwkOdd7fowF%252F208Q%253D%253D__7wZYp3ZwkOdd7fowF%252F208Q%253D%253D": {
   "code": "3737190067",
-  "status": "開業",
+  "status": "歇業",
   "name": "劉俊男牙醫診所",
   "address": "彰化縣社頭鄉",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.094Z"
  },
  "n0S8AI7h07UOXD02ubNU%252Fw%253D%253D__n0S8AI7h07UOXD02ubNU%252Fw%253D%253D": {
   "code": "3738030346",
@@ -54505,11 +54555,12 @@
  },
  "2StTW11UwuvaTE8%252BnvmXyw%253D%253D__2StTW11UwuvaTE8%252BnvmXyw%253D%253D": {
   "code": "3701022294",
-  "status": "開業",
+  "status": "歇業",
   "name": "明泰牙醫診所",
   "address": "臺北市大安區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.095Z"
  },
  "amnfbwFMhRJaCxlIzi8kJQ%253D%253D__amnfbwFMhRJaCxlIzi8kJQ%253D%253D": {
   "code": "3701021108",
@@ -54649,11 +54700,12 @@
  },
  "54N4Ih3L430XAW4CV5jgow%253D%253D__54N4Ih3L430XAW4CV5jgow%253D%253D": {
   "code": "3701160315",
-  "status": "開業",
+  "status": "歇業",
   "name": "慶全牙醫診所",
   "address": "臺北市北投區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.611Z"
  },
  "0yGQviG5MrqfEGZ49KkhdA%253D%253D__0yGQviG5MrqfEGZ49KkhdA%253D%253D": {
   "code": "3701157023",
@@ -55321,11 +55373,12 @@
  },
  "eDf5tSKbmhxHkM9lgAr4uw%253D%253D__eDf5tSKbmhxHkM9lgAr4uw%253D%253D": {
   "code": "3717030766",
-  "status": "開業",
+  "status": "歇業",
   "name": "柯達牙醫診所",
   "address": "臺中市西區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.611Z"
  },
  "z4m2ct0x8iaz3sYj9OZGpQ%253D%253D__z4m2ct0x8iaz3sYj9OZGpQ%253D%253D": {
   "code": "3717030319",
@@ -56385,11 +56438,12 @@
  },
  "MJWs%252FYFdk6ACnblxXCvICg%253D%253D__P%252BRN%252FLRMS0KVRgoHdQJ3CQ%253D%253D": {
   "code": "3732091354",
-  "status": "開業",
+  "status": "歇業",
   "name": "瑞龍牙醫診所",
   "address": "桃園市龍潭區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:37.611Z"
  },
  "p0yz8Q6ilKBsBAz%252Fqq1iwg%253D%253D__S6NNgsDVKlgOgCuFe7ql5g%253D%253D": {
   "code": "3705010049",
@@ -57185,11 +57239,12 @@
  },
  "fSwQuJIhKi7vBTLfUUp5rQ%253D%253D__5KjbcG7dx6lhpVUyXSenpQ%253D%253D": {
   "code": "3703240209",
-  "status": "開業",
+  "status": "歇業",
   "name": "昕展牙醫診所",
   "address": "臺中市西區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.138Z"
  },
  "GF0bfPx78Uv9V3WmqS5N%252Bg%253D%253D__b2rHyXG4eSBJ6r6WHphsIA%253D%253D": {
   "code": "3731015109",
@@ -57993,11 +58048,12 @@
  },
  "R%252F4QaUgMBPqCuYy9TJx9%252Fg%253D%253D__R5dKuTFzFMbz424xJWZBDg%253D%253D": {
   "code": "3703150068",
-  "status": "開業",
+  "status": "歇業",
   "name": "方舟牙醫診所",
   "address": "臺中市烏日區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.138Z"
  },
  "a7yGMuBqwR6zP2NqNOZBRg%253D%253D__i7KlrxRvrebnpWptg32ViQ%253D%253D": {
   "code": "3707310140",
@@ -58025,11 +58081,12 @@
  },
  "%252F31fODUAkqQWBZlZ3ICmPg%253D%253D__cnPx4vNJGv7FbXPXSe7AQQ%253D%253D": {
   "code": "3732023427",
-  "status": "開業",
+  "status": "歇業",
   "name": "新隆豐牙醫診所",
   "address": "桃園市中壢區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.138Z"
  },
  "RcIP58ZJLILPKAWQ7bOaCw%253D%253D__ifGToVtVAi7f9AyHL08T%252Bg%253D%253D": {
   "code": "3703010096",
@@ -58289,11 +58346,12 @@
  },
  "NYa7TssTk4P1Uhvh2uwrag%253D%253D__9rTIeVSJp9%252FmhiGo5jdyzw%253D%253D": {
   "code": "3705320460",
-  "status": "開業",
+  "status": "停業",
   "name": "雅德思牙醫診所",
   "address": "臺南市東區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.564Z"
  },
  "MmpjYUKTQLYP22IbZcyD2g%253D%253D__GJZfp3V3fB3YaQHxKiFFFQ%253D%253D": {
   "code": "3731142469",
@@ -58561,11 +58619,12 @@
  },
  "Orw3IbCjNs4k8%252FqW7z6Xow%253D%253D__om%252Bj6Pxh2lpNfNyaF%252B8nGw%253D%253D": {
   "code": "3732014455",
-  "status": "開業",
+  "status": "歇業",
   "name": "春日雅德思牙醫診所",
   "address": "桃園市桃園區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.564Z"
  },
  "Ov2jkDP1csbVAB%252BaCjOZTQ%253D%253D__j7ke%252BFJlo9QSlx7PqzHdrQ%253D%253D": {
   "code": "3732101855",
@@ -59049,11 +59108,12 @@
  },
  "jK8RRr9fRx2Rth3eT3e4UA%253D%253D__VPpV96FN09SwXS8bpf3MOw%253D%253D": {
   "code": "2Y37130055",
-  "status": "開業",
+  "status": "歇業",
   "name": "凱隆牙體技術所",
   "address": "彰化縣花壇鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:38.564Z"
  },
  "nZw86M0oCghpwE1Zhy%252BXtA%253D%253D__HKFV6aqkKer8gwV8GtavOg%253D%253D": {
   "code": "2Y03090195",
@@ -59305,11 +59365,12 @@
  },
  "EpI8fBx6eHvwqOZptzjl8A%253D%253D__WDiw0uH2coK3ctAMNlG3AA%253D%253D": {
   "code": "2Y05370178",
-  "status": "開業",
+  "status": "歇業",
   "name": "毅遠牙體技術所",
   "address": "臺南市安南區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.009Z"
  },
  "jIfNRI29TT0kIOY3WMeJDA%253D%253D__KLih36%252BoqnaSBd%252FqYTJt0g%253D%253D": {
   "code": "2Y07010200",
@@ -60161,11 +60222,12 @@
  },
  "fdRLfi3M6Sh6O3sg4%252FPEjg%253D%253D__2AgytgQbffRaNpXtTU70zw%253D%253D": {
   "code": "2Y03190136",
-  "status": "開業",
+  "status": "歇業",
   "name": "式裕牙體技術所",
   "address": "臺中市太平區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.009Z"
  },
  "X%252FSitV2OYF42IU16RPDpFA%253D%253D__6Sed6DpDsUAm2u5O8%252BN0sg%253D%253D": {
   "code": "2Y33020021",
@@ -61457,11 +61519,12 @@
  },
  "%252BXlUVytHG%252BC%252BbZ6y9nAhMQ%253D%253D__Ch1Dmnnx%252F%252ByUL6HcVthgzw%253D%253D": {
   "code": "2Y32070054",
-  "status": "開業",
+  "status": "歇業",
   "name": "高登牙體技術所",
   "address": "桃園市龜山區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.009Z"
  },
  "pZqbAggy1CJ3M1Zaq%252Bf03Q%253D%253D__rIFrF0kOBhK6dswboZN79g%253D%253D": {
   "code": "2Y03240024",
@@ -61745,11 +61808,12 @@
  },
  "JKJL%252FKYr9brXUU%252Fv0p59mg%253D%253D__%252Fw9vWPmL0TfHFqFfHSo3ag%253D%253D": {
   "code": "2Y01010135",
-  "status": "開業",
+  "status": "歇業",
   "name": "鈺宬數位牙體技術所",
   "address": "臺北市松山區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.438Z"
  },
  "cnqJzHJqpGY4SfvQEtknsg%253D%253D__hKHTq4daxkJSKMxBanMDhQ%253D%253D": {
   "code": "2Y31140299",
@@ -61921,11 +61985,12 @@
  },
  "8yMhUWO99m264zJu6O9jtw%253D%253D__njUybdvdH0zJh9oX79LDtA%253D%253D": {
   "code": "2Y07290048",
-  "status": "開業",
+  "status": "歇業",
   "name": "三二牙體技術所",
   "address": "高雄市鼓山區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.438Z"
  },
  "NiMNcTlRC9flnICInZG%252BBw%253D%253D__3mEFxbovtDUUFoIeX1fuEg%253D%253D": {
   "code": "2Y03290220",
@@ -65553,11 +65618,12 @@
  },
  "lX13btV4bnq77vUF254aDQ%253D%253D__zV2JigMjHU9%252FIRFbZYjw%252Bg%253D%253D": {
   "code": "2Y45050100",
-  "status": "開業",
+  "status": "歇業",
   "name": "品信牙體技術所",
   "address": "花蓮縣吉安鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-06-21T05:23:14.766Z",
+  "statusCheckedAt": "2026-10-07T03:43:39.438Z"
  },
  "B%252BfZeW1fr15463kAkvN%252F7g%253D%253D__MGkBR8R7lry7n1aQLGNu%252Fg%253D%253D": {
   "code": "2Y03230046",

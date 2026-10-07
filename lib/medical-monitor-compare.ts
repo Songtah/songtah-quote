@@ -24,6 +24,7 @@ import path from 'path'
 import { isInactiveCustomer } from '@/lib/customer-status'
 import { classifyInstitutionCode } from '@/lib/institution-code'
 import { dismissKeyOf, type MonitorDismissEntry } from '@/lib/notion/monitor-dismiss'
+import { loadBasCacheIndex, basVerdict, type BasVerdict, type BasCacheRow } from '@/lib/bas-cache-index'
 export type { MonitorDismissEntry } from '@/lib/notion/monitor-dismiss'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -91,6 +92,15 @@ export interface SuspectedClosure {
   customerStatus:   string
   institutionCode:  string
   reason:           'code_vanished'
+  /**
+   * 衛福部詳細頁的真實開業狀態（依 BAS_SEQ 直查，非名稱搜尋）。
+   * closed＝歇業/撤銷/註銷/廢止、suspended＝停業、open＝其實仍開業（只是不在牙科開業列表）、
+   * unverified＝尚未補查（快取裡只有當初的「開業」，不可採信）。
+   */
+  basVerdict:       BasVerdict
+  basStatus:        string
+  basStatusCheckedAt: string
+  basDetailUrl:     string
 }
 
 /** 更換代碼：客戶持舊碼，同名+縣市+行政區 有不同的現行代碼（換照）→ 建議更新代碼 */
@@ -239,6 +249,8 @@ export interface MonitorStats {
   newThisMonthHospitals: number
   newOpeningExcludedExisting: number   // 名稱＋地區已是現有客戶而被排除的「新開業」數
   suspectedClosures:   number
+  /** 歇業候選依衛福部真實狀態拆分（見 SuspectedClosure.basVerdict） */
+  closureByVerdict?:   Record<BasVerdict, number>
   sameCityCandidates:  number
   unregistered:        number   // 代碼從未在 BAS 出現過（未立案），不納入歇業判定
   suspectedReopens:    number   // 主檔標歇業、但代碼仍在 BAS 開業名冊
@@ -462,14 +474,10 @@ export async function computeMonitor(): Promise<MonitorResult> {
   } catch { /* 無學校參照不影響其他比對 */ }
 
   // 1c. 歷次 BAS 代碼快取：用來分辨「曾登錄後消失（歇業候選）」與「從未登錄（未立案）」
-  const everKnownCodes = new Set<string>()
-  try {
-    const cp = path.join(process.cwd(), 'data', 'bas-cache.json')
-    if (existsSync(cp)) {
-      const cacheJson = JSON.parse(readFileSync(cp, 'utf8')) as Record<string, { code?: string }>
-      for (const v of Object.values(cacheJson)) if (v?.code) everKnownCodes.add(v.code)
-    }
-  } catch { /* 沒有快取就退回原行為：一律當歇業候選 */ }
+  //     同一份快取也帶 BAS_SEQ 與補查過的真實狀態，供歇業候選標出「確認歇業／停業／其實仍開業」。
+  let basIndex: Map<string, BasCacheRow> = new Map()
+  try { basIndex = loadBasCacheIndex() } catch { /* 沒有快取就退回原行為：一律當歇業候選 */ }
+  const everKnownCodes = new Set<string>(basIndex.keys())
 
   // 2. 載入崧達客戶（全部，含無代碼）
   const allCustomersRaw = await getCustomersWithCodes()
@@ -705,6 +713,10 @@ export async function computeMonitor(): Promise<MonitorResult> {
         customerCity: c.city, customerDistrict: c.district,
         customerType: c.type, customerStatus: c.status,
         institutionCode: code, reason: 'code_vanished',
+        basVerdict: basVerdict(basIndex.get(code)),
+        basStatus: basIndex.get(code)?.statusCheckedAt ? basIndex.get(code)!.status : '',
+        basStatusCheckedAt: basIndex.get(code)?.statusCheckedAt ?? '',
+        basDetailUrl: basIndex.get(code)?.detailUrl ?? '',
       })
     }
   }
@@ -801,7 +813,12 @@ export async function computeMonitor(): Promise<MonitorResult> {
     category: Parameters<typeof dismissKeyOf>[0], list: T[], codeOf: (x: T) => string,
   ) => list.filter((x) => !dismissedKeys.has(dismissKeyOf(category, x.customerId, codeOf(x))))
 
+  // 確認歇業 → 停業 → 待查證 → 其實仍開業（誤報）排最後
+  const VERDICT_ORDER: Record<BasVerdict, number> = { closed: 0, suspended: 1, unverified: 2, open: 3 }
   const suspectedClosuresKept = keep('closure', suspectedClosures, (x) => x.institutionCode)
+    .sort((a, b) => VERDICT_ORDER[a.basVerdict] - VERDICT_ORDER[b.basVerdict])
+  const closureByVerdict: Record<BasVerdict, number> = { closed: 0, suspended: 0, open: 0, unverified: 0 }
+  for (const x of suspectedClosuresKept) closureByVerdict[x.basVerdict]++
   const codeChangedKept       = keep('codechange', codeChanged, (x) => x.oldCode)
   const hospitalKept          = keep('hospital', hospitalUnverified, (x) => x.institutionCode)
   const inconsistentKept      = keep('inconsistent', inconsistentData, (x) => x.institutionCode)
@@ -841,6 +858,7 @@ export async function computeMonitor(): Promise<MonitorResult> {
     newThisMonthHospitals: newHospital.filter(n => n.isNewThisMonth).length,
     newOpeningExcludedExisting: excludedExisting,
     suspectedClosures:   suspectedClosuresKept.length,
+    closureByVerdict,
     sameCityCandidates:  sameCityKept.length,
     unregistered:        unregisteredKept.length,
     suspectedReopens:    reopensKept.length,

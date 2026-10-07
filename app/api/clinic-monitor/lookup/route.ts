@@ -4,6 +4,11 @@
  * 逐筆即時查衛福部醫事查詢系統（BAS），回機構代碼與開業狀態，並給建議。
  * 用於「資料不一致」「歇業候選」的人工確認（只標示建議，不自動改 CRM）。
  *
+ * 查詢順序（2026-10-07）：
+ *   1. 有機構代碼且 bas-cache 有該代碼的 BAS_SEQ → **直開衛福部詳細頁**讀真實開業狀態。
+ *      名稱搜尋只回開業機構，已歇業／停業者用名稱永遠查不到；詳細頁則仍保留、讀得到狀態。
+ *   2. 沒有代碼、快取查無、或詳細頁抓取失敗 → 退回原本的名稱搜尋。
+ *
  * Body: { name: string, code?: string, kind?: string }
  *   name  客戶/機構名稱（查詢用）
  *   code  系統現有機構代碼（用於比對建議）
@@ -16,7 +21,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { lookupInstitution, isClosedStatus } from '@/lib/mohw-bas.mjs'
+import { lookupInstitution, isClosedStatus, fetchStatusBySeq } from '@/lib/mohw-bas.mjs'
+import { loadBasCacheIndex } from '@/lib/bas-cache-index'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -35,6 +41,40 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
   }
   if (!name) return NextResponse.json({ error: '缺少機構名稱' }, { status: 400 })
 
+  // 1. 依機構代碼直查詳細頁
+  const row = code ? loadBasCacheIndex().get(code) : undefined
+  if (row) {
+    const d = await fetchStatusBySeq({ basSeq: row.basSeq, zoneSeq: row.zoneSeq })
+    if (d?.status) {
+      const status = d.status
+      let form: 'closure' | 'status_mismatch' | 'ok'
+      let suggestion: string
+      if (/歇業|撤銷|註銷|廢止/.test(status)) {
+        form = 'closure'
+        suggestion = `依機構代碼直查衛福部：開業狀態「${status}」→ 建議將客戶機構狀態更新為「${/撤銷|註銷|廢止/.test(status) ? '撤銷' : '已歇業'}」。`
+      } else if (/停業/.test(status)) {
+        form = 'closure'
+        suggestion = '依機構代碼直查衛福部：開業狀態「停業」（暫停營業，日後可能復業）→ 建議將客戶機構狀態更新為「停業」，不要標成已歇業。'
+      } else if (customerStatus && isClosedStatus(customerStatus)) {
+        form = 'status_mismatch'
+        suggestion = `狀態不符：系統「${customerStatus}」、衛福部「${status}」→ 機構實際仍開業，建議更新客戶機構狀態。`
+      } else {
+        form = 'ok'
+        suggestion = `依機構代碼直查衛福部：仍為「${status}」，不是歇業。此代碼不在本月牙科開業列表，可能是登記科別或機構類別異動，可視情況略過此筆。`
+      }
+      return NextResponse.json({
+        found: true, lookupBy: 'code', form,
+        mohwCode: d.code ?? code, status, closed: isClosedStatus(status),
+        mohwName: d.name || row.name, address: row.address, detailUrl: row.detailUrl,
+        candidates: [], partialOnly: false, partialCandidates: [], ambiguous: false,
+        outOfCity: false, outOfCityCandidates: [], searchedCity: '',
+        suggestion,
+      })
+    }
+    // 詳細頁抓取失敗（逾時／WAF）→ 往下退回名稱搜尋
+  }
+
+  // 2. 名稱搜尋（只找得到開業中的機構）
   try {
     const r = await lookupInstitution({ name, kind, city })
 
@@ -92,6 +132,8 @@ export const POST = withApiAuth('admin', async (req: NextRequest) => {
       outOfCity: r.outOfCity ?? false,
       outOfCityCandidates: r.outOfCityCandidates ?? [],
       searchedCity: city,
+      lookupBy: 'name',
+      detailUrl: (r as any).basSeq ? `https://ma.mohw.gov.tw/Accessibility/BASSearch/BASBasicData?BAS_SEQ=${(r as any).basSeq}&ZONE_SEQ=${(r as any).zoneSeq}` : '',
       suggestion,
     })
   } catch (e: any) {
