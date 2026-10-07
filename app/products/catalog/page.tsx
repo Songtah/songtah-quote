@@ -12,8 +12,10 @@ export default async function ProductCatalogPage() {
 
   return (
     <AppShell
-      title="產品目錄"
-      description="從分類卡片快速瀏覽產品；同系列規格集中顯示，可維護照片、介紹、售價與技術文件。"
+      title="產品"
+      description={isCentralManagement(session)
+        ? '搜尋產品、查看售價與規格；中央管理可維護照片、介紹、售價與技術文件。'
+        : '搜尋產品、查看售價、照片、規格與技術文件。'}
       hidePhaseNote
     >
       <CatalogManagerContent

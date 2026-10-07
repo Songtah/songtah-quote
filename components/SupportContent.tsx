@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { BookOpen, ExternalLink, LifeBuoy, Send } from 'lucide-react'
 
-const PAGES = ['首頁', '客戶', '業務開發', '報價', '訂貨', '產品與價格', '技術支援', '行銷與活動', '市場監控', '業績總覽', '行政管理', '帳號權限', 'LINE 日報／客情紀錄', '其他']
+const PAGES = ['首頁', '客戶', '業務開發', '報價', '訂貨', '產品', '技術支援', '行銷與活動', '市場監控', '業績總覽', '行政管理', '帳號權限', 'LINE 日報／客情紀錄', '其他']
 
 export function SupportContent({ reporter }: { reporter: string }) {
   const [page, setPage] = useState('')

@@ -1968,37 +1968,32 @@ function FamilyCard({
 
   const representative = items[0]
   return (
-    <div className="card-soft card-soft-hover overflow-hidden" data-testid="series-result-card">
-      {/* Family header */}
-      <div className="group flex w-full items-start gap-3 p-3 sm:items-center sm:px-5 sm:py-4">
-        <SeriesArtwork category={representative.category} mainCategory={representative.mainCategory} label={family.seriesName} />
-        <button type="button"
-          onClick={handleToggle}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95 ${open ? 'rotate-90' : ''}`}
-          aria-label={open ? '收合系列品項' : '展開系列品項'}
-        >
-          ▶
+    <div className="card-soft overflow-hidden" data-testid="series-result-card">
+      {/* Family header：點整列＝展開品項與價格；「詳細資料」＝開系列視窗（照片、規格、文件） */}
+      <div className="flex w-full items-center gap-3 p-3 sm:px-4">
+        <button type="button" onClick={handleToggle} aria-expanded={open}
+          className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left transition-all active:scale-[0.99]">
+          <SeriesArtwork size="sm" category={representative.category} mainCategory={representative.mainCategory} label={family.seriesName} />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[15px] font-semibold text-stone-800 transition-colors group-hover:text-brand-700">{family.seriesName}</span>
+              <span className="text-xs text-stone-400">{family.brand}{family.productType ? ` · ${family.productType}` : ''}</span>
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className={allDiscontinued ? 'text-xs font-medium text-stone-300' : minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
+              <span className="text-xs text-stone-400">{items.length} 個品項</span>
+              {priceSetCount > 0 && priceSetCount < sellableItems.length && <span className="text-[11px] text-amber-600">{sellableItems.length - priceSetCount} 項待定價</span>}
+              {discontinuedCount > 0 && <span className="text-[11px] text-stone-300">{discontinuedCount} 項未販售</span>}
+            </span>
+          </span>
+          <span className={`shrink-0 text-stone-300 transition-transform group-hover:text-stone-500 ${open ? 'rotate-90' : ''}`} aria-hidden="true">›</span>
         </button>
-        <button type="button"
-          onClick={onOpenModal}
-          className="min-w-0 flex-1 rounded-2xl px-1 py-1 text-left transition-all hover:bg-brand-50/50 active:scale-[0.99]"
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[15px] font-bold text-stone-800 group-hover:text-brand-700 transition-colors">{family.seriesName}</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">{family.brand}</span>
-            {family.productType && (
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200/60 font-medium">{family.productType}</span>
-            )}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-stone-400">{items.length} 個品項</span>
-            <span className={allDiscontinued ? 'text-xs font-medium text-stone-300' : minPrice == null ? 'text-xs font-semibold text-amber-600' : 'price-pill'}>{priceSummary}</span>
-            {priceSetCount > 0 && priceSetCount < sellableItems.length && <span className="text-[11px] text-stone-400">{sellableItems.length - priceSetCount} 項待定價</span>}
-            {discontinuedCount > 0 && <span className="text-[11px] font-medium text-stone-300">{discontinuedCount} 項未販售</span>}
-            <span className="text-[11px] font-medium text-brand-600">照片・規格・文件 ›</span>
-          </div>
-        </button>
-        <span className="hidden shrink-0 text-xs text-stone-400 lg:block">{representative.category}</span>
+        {onOpenModal && (
+          <button type="button" onClick={onOpenModal}
+            className="hidden shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200 transition-all hover:bg-brand-50 active:scale-95 sm:block">
+            詳細資料
+          </button>
+        )}
       </div>
 
       {/* Expanded: series overview card */}
@@ -2011,7 +2006,7 @@ function FamilyCard({
             transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-stone-100 px-5 py-4 space-y-5">
+            <div className="space-y-5 border-t border-stone-100 px-4 py-4 sm:px-5">
 
               {/* ── 介紹 ── */}
               {introLoading ? (
@@ -2055,9 +2050,12 @@ function FamilyCard({
 
               {/* ── 品項清單 ── */}
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">
-                  品項（{items.length}）
-                </p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold tracking-widest text-stone-400">品項（{items.length}）</p>
+                  {onOpenModal && (
+                    <button type="button" onClick={onOpenModal} className="rounded-full px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50 active:scale-95 sm:hidden">詳細資料</button>
+                  )}
+                </div>
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => (
                     <div key={item.code} className="group flex min-h-12 flex-col items-stretch gap-2 rounded-2xl px-2 py-2 transition-colors hover:bg-brand-50/40 sm:flex-row sm:items-center sm:gap-3">
@@ -2257,6 +2255,24 @@ function CategoryBrowserModal({
 
 // ── Main Component ────────────────────────────────────────────
 
+type StatusKey = 'unpriced' | 'override' | 'disabled' | 'discontinued' | 'review'
+const STATUS_FILTERS: { key: StatusKey; label: string; manageOnly?: boolean; tone: string }[] = [
+  { key: 'unpriced', label: '待定價', tone: 'text-amber-700' },
+  { key: 'override', label: '後台調價', manageOnly: true, tone: 'text-brand-700' },
+  { key: 'disabled', label: '中央停用', manageOnly: true, tone: 'text-stone-700' },
+  { key: 'discontinued', label: '未販售', manageOnly: true, tone: 'text-stone-500' },
+  { key: 'review', label: '分類待覆核', manageOnly: true, tone: 'text-amber-700' },
+]
+function matchesStatus(item: CatalogItem, key: StatusKey) {
+  switch (key) {
+    case 'unpriced': return !item.discontinued && !item.disabled && item.price == null
+    case 'override': return item.priceSource === 'override'
+    case 'disabled': return !!item.disabled
+    case 'discontinued': return !!item.discontinued
+    case 'review': return !!item.needsReview
+  }
+}
+
 export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
 
   const [families,     setFamilies]     = useState<ProductFamily[]>([])
@@ -2271,6 +2287,8 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   const [mainCategoryFilter, setMainCategoryFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [productTypeFilter, setProductTypeFilter] = useState('')
+  // 狀態篩選（2026-10-07）：讓管理端直接看到「待定價／後台調價／中央停用／未販售／分類待覆核」的工作清單
+  const [statusFilter, setStatusFilter] = useState<'' | StatusKey>('')
   const [browseMode, setBrowseMode] = useState<'categories' | 'products'>('categories')
   const [categorySelection, setCategorySelection] = useState<CategorySelection | null>(null)
   // 產品系列分組收合(依主分類):113 個系列全平鋪會把瀏覽頁撐到近 2 萬 px,
@@ -2300,7 +2318,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       // Dedicated endpoint: returns raw { code, name, brand, … } format,
       // no 200-item cap, 5-min browser cache.
       fetch('/api/products/catalog-raw', { cache: 'no-store' }).then(async (response) => {
-        if (!response.ok) throw new Error(`產品目錄讀取失敗（HTTP ${response.status}）`)
+        if (!response.ok) throw new Error(`產品資料讀取失敗（HTTP ${response.status}）`)
         return response.json()
       }),
     ])
@@ -2317,7 +2335,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           return next
         })
       })
-      .catch((error) => setLoadError(error instanceof Error ? error.message : '產品目錄暫時無法讀取'))
+      .catch((error) => setLoadError(error instanceof Error ? error.message : '產品資料暫時無法讀取'))
       .finally(() => setLoading(false))
   }, [canManageProducts, loadAttempt])
 
@@ -2361,7 +2379,12 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     }
   }, [allItems, mainCategoryFilter])
 
-  const activeFilterCount = [brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter].filter(Boolean).length
+  const activeFilterCount = [brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter].filter(Boolean).length
+  const statusCounts = useMemo(() => {
+    const c = {} as Record<StatusKey, number>
+    for (const f of STATUS_FILTERS) c[f.key] = allItems.filter((item) => matchesStatus(item, f.key)).length
+    return c
+  }, [allItems])
   const hasFilters = activeFilterCount > 0
   const isSearching = Boolean(debouncedQ) || hasFilters
   const searchResults = useMemo(() => {
@@ -2377,9 +2400,10 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         (!brandFilter || item.brand === brandFilter) &&
         (!mainCategoryFilter || item.mainCategory === mainCategoryFilter) &&
         (!categoryFilter || item.category === categoryFilter) &&
-        (!productTypeFilter || item.productType === productTypeFilter)
+        (!productTypeFilter || item.productType === productTypeFilter) &&
+        (!statusFilter || matchesStatus(item, statusFilter))
     })
-  }, [isSearching, allItems, debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter])
+  }, [isSearching, allItems, debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter])
 
   const filteredResultCodes = useMemo(
     () => new Set(searchResults.map((item) => item.code)),
@@ -2402,6 +2426,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     setMainCategoryFilter('')
     setCategoryFilter('')
     setProductTypeFilter('')
+    setStatusFilter('')
   }
 
   // 系列依主分類分組(以第一個成員 SKU 的主分類為準),照總表主分類順序排。
@@ -2496,144 +2521,83 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
 
   return (
     <>
-      {canManageProducts && (
-        <div className="card-soft mb-4 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5" role="status">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xl" aria-hidden="true">✎</span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-stone-800">中央管理編輯模式</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-stone-500">可維護商品內容、照片、規格、文件與系列介紹；貨號及 ERP 品名維持唯讀。</p>
-          </div>
-          <button type="button" onClick={openSeriesAdmin} className="min-h-11 rounded-full bg-brand-500 px-5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 sm:ml-auto">
-            管理系列群組
-          </button>
-        </div>
-      )}
       {seriesAdminError && <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{seriesAdminError}</div>}
-      {/* 搜尋與篩選：手機先顯示精簡工具列，平板以上直接展開條件。 */}
-      <div className="mb-3 flex items-center gap-2">
-        <input
-          type="search"
-          aria-label="搜尋產品目錄"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="搜尋貨號、品名、品牌…"
-          className="input-soft min-w-0 flex-1 rounded-full px-5 sm:max-w-lg"
-        />
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          aria-controls="catalog-filters"
-          className={`relative flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 sm:hidden ${
-            hasFilters
-              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
-              : 'bg-white text-stone-600 ring-1 ring-stone-900/[0.06] shadow-sm'
-          }`}
-        >
-          篩選
-          {activeFilterCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-brand-700">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </div>
 
-      <div id="catalog-filters" className={`${filtersOpen ? 'block' : 'hidden'} card-soft mb-4 p-3 sm:block sm:p-4`}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">篩選商品</p>
-            <p className="mt-0.5 text-xs text-stone-500">品牌、主分類、細分類與商品類型可組合使用</p>
-          </div>
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearSearchAndFilters}
-              className="min-h-11 shrink-0 rounded-full px-3 text-xs font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
-            >
-              清除全部
-            </button>
+      {/* 工具列：搜尋＋瀏覽方式＋篩選＋（管理）系列群組；原本分成編輯橫幅、篩選卡、模式切換、提示列四層 */}
+      <div className="card-soft mb-5 space-y-3 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            aria-label="搜尋產品"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜尋貨號、品名、品牌或系列…"
+            className="input-soft min-w-[200px] flex-1 rounded-full px-5 py-2.5"
+          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            aria-controls="catalog-filters"
+            className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-all active:scale-95 sm:hidden ${
+              hasFilters ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'bg-stone-100 text-stone-600'}`}
+          >
+            篩選{activeFilterCount > 0 && <span className="tabular-nums">{activeFilterCount}</span>}
+          </button>
+          {!isSearching && (
+            <div className="flex rounded-full bg-stone-100 p-1" role="group" aria-label="瀏覽方式">
+            <button type="button" aria-pressed={browseMode === 'categories'} onClick={() => setBrowseMode('categories')}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-95 ${browseMode === 'categories' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>依分類</button>
+            <button type="button" aria-pressed={browseMode === 'products'} onClick={() => setBrowseMode('products')}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-95 ${browseMode === 'products' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>依系列</button>
+            </div>
+          )}
+          {canManageProducts && (
+            <button type="button" onClick={openSeriesAdmin} title="中央管理：維護系列與品項歸屬"
+              className="button-secondary min-h-10 px-4">管理系列</button>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <label className="min-w-0">
-            <span className="sr-only">品牌</span>
-            <select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)} className="select-soft w-full">
-              <option value="">全部品牌</option>
-              {filterOptions.brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className="sr-only">主分類</span>
-            <select
-              value={mainCategoryFilter}
-              onChange={(event) => {
-                setMainCategoryFilter(event.target.value)
-                setCategoryFilter('')
-              }}
-              className="select-soft w-full"
-            >
-              <option value="">全部主分類</option>
-              {filterOptions.mainCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className="sr-only">細分類</span>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="select-soft w-full">
-              <option value="">全部細分類</option>
-              {filterOptions.categories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </label>
-          <label className="min-w-0">
-            <span className="sr-only">商品類型</span>
-            <select value={productTypeFilter} onChange={(event) => setProductTypeFilter(event.target.value)} className="select-soft w-full">
-              <option value="">全部商品類型</option>
-              {filterOptions.productTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-            </select>
-          </label>
+
+        <div id="catalog-filters" className={`${filtersOpen ? 'grid' : 'hidden'} grid-cols-2 gap-2 sm:grid lg:grid-cols-4`}>
+          <select aria-label="品牌" value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)} className="select-soft w-full">
+            <option value="">全部品牌</option>
+            {filterOptions.brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+          </select>
+          <select aria-label="主分類" value={mainCategoryFilter} onChange={(event) => { setMainCategoryFilter(event.target.value); setCategoryFilter('') }} className="select-soft w-full">
+            <option value="">全部主分類</option>
+            {filterOptions.mainCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <select aria-label="細分類" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="select-soft w-full">
+            <option value="">全部細分類</option>
+            {filterOptions.categories.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <select aria-label="商品類型" value={productTypeFilter} onChange={(event) => setProductTypeFilter(event.target.value)} className="select-soft w-full">
+            <option value="">全部商品類型</option>
+            {filterOptions.productTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
         </div>
-        {hasFilters && (
-          <p className="mt-3 text-xs font-medium text-brand-700" role="status">
-            已套用 {activeFilterCount} 個條件，符合 {searchResults.length} 個品項
-          </p>
+
+        {/* 摘要＋狀態快速篩選（管理端的待辦清單） */}
+        {!loading && !loadError && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="mr-1 text-stone-400">
+              {isSearching
+                ? <>符合 <b className="text-stone-700">{searchResults.length.toLocaleString()}</b> 個品項</>
+                : <>共 {allItems.length.toLocaleString()} 個品項 · {families.length} 個系列</>}
+            </span>
+            {STATUS_FILTERS.filter((f) => (canManageProducts || !f.manageOnly) && statusCounts[f.key] > 0).map((f) => (
+              <button key={f.key} type="button" onClick={() => setStatusFilter((v) => (v === f.key ? '' : f.key))}
+                aria-pressed={statusFilter === f.key}
+                className={`rounded-full px-2.5 py-1 transition-all active:scale-95 ${statusFilter === f.key ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : `bg-stone-100 hover:bg-stone-200 ${f.tone}`}`}>
+                {f.label} <span className="tabular-nums">{statusCounts[f.key].toLocaleString()}</span>
+              </button>
+            ))}
+            {(hasFilters || debouncedQ) && (
+              <button type="button" onClick={clearSearchAndFilters} className="ml-auto rounded-full px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-50">清除條件</button>
+            )}
+          </div>
         )}
       </div>
-
-      <div className="mb-6 grid grid-cols-2 gap-1 rounded-full bg-stone-100 p-1 sm:inline-grid sm:min-w-96" role="group" aria-label="選擇產品瀏覽模式">
-        <button
-          type="button"
-          aria-pressed={browseMode === 'categories'}
-          onClick={() => setBrowseMode('categories')}
-          className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 ${
-            browseMode === 'categories'
-              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
-              : 'text-stone-500 hover:bg-white hover:text-brand-700'
-          }`}
-        >
-          商品分類總覽
-        </button>
-        <button
-          type="button"
-          aria-pressed={browseMode === 'products'}
-          onClick={() => setBrowseMode('products')}
-          className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-all active:scale-95 ${
-            browseMode === 'products'
-              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
-              : 'text-stone-500 hover:bg-white hover:text-brand-700'
-          }`}
-        >
-          產品清單
-        </button>
-      </div>
-
-      {/* List guidance: keep the next action obvious for sales users. */}
-      {(isSearching || browseMode === 'products') && (
-        <div className="card-soft mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs text-stone-500">
-          <span className="font-semibold text-stone-700">下一步：點選產品查看完整資料</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-brand-400" />綠點表示已設售價</span>
-          {canManageProducts && <span className="text-stone-400">需要維護照片、規格或文件時再點「編輯」</span>}
-        </div>
-      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -2644,7 +2608,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       ) : loadError ? (
         <div className="card-soft flex flex-col items-center px-5 py-10 text-center" role="alert">
           <span className="text-3xl" aria-hidden="true">⚠️</span>
-          <h3 className="mt-3 text-base font-bold text-stone-800">產品目錄載入失敗</h3>
+          <h3 className="mt-3 text-base font-bold text-stone-800">產品資料載入失敗</h3>
           <p className="mt-1 max-w-md text-sm leading-relaxed text-stone-500">{loadError}</p>
           <button
             type="button"
@@ -2657,21 +2621,12 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       ) : isSearching ? (
         /* ── Search results mode：系列先聚合，未歸屬 SKU 再單列 ── */
         <div className="space-y-4" data-testid="series-search-group">
-          <div className="card-soft flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5">
-            <span className="text-sm font-semibold text-stone-700">
-              找到 {groupedSearchFamilies.length} 個系列、{standaloneSearchResults.length} 個單品
-            </span>
-            <button type="button" onClick={clearSearchAndFilters}
-              className="min-h-11 rounded-full px-3 text-xs font-medium text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">
-              清除搜尋與篩選
-            </button>
-          </div>
 
           {groupedSearchFamilies.length > 0 && (
             <section>
               <div className="mb-2 flex items-baseline gap-2 px-1">
-                <h3 className="text-sm font-bold text-stone-700">產品清單</h3>
-                <span className="text-[11px] text-stone-400">同系列品項已收合</span>
+                <h3 className="text-sm font-bold text-stone-700">系列（{groupedSearchFamilies.length}）</h3>
+                <span className="text-[11px] text-stone-400">同系列品項收在一起，點開看規格與價格</span>
               </div>
               <div className="space-y-3">
                 {groupedSearchFamilies.map((family) => (
@@ -2690,9 +2645,10 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             </section>
           )}
 
+          {(standaloneSearchResults.length > 0 || groupedSearchFamilies.length === 0) && (
           <section className="card-soft overflow-hidden p-0">
             <div className="border-b border-stone-900/[0.06] px-4 py-3 sm:px-5">
-              <h3 className="text-sm font-bold text-stone-700">獨立單品</h3>
+              <h3 className="text-sm font-bold text-stone-700">單品（{standaloneSearchResults.length}）</h3>
             </div>
             <div className="max-h-[56vh] overflow-y-auto px-3 py-2 overscroll-contain sm:px-5">
             {groupedSearchFamilies.length === 0 && standaloneSearchResults.length === 0 && (
@@ -2710,11 +2666,9 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             {standaloneSearchResults.length > 300 && (
               <p className="py-3 text-center text-xs text-stone-400">僅顯示前 300 筆，請輸入更完整的關鍵字縮小範圍（共 {standaloneSearchResults.length} 筆）</p>
             )}
-            {groupedSearchFamilies.length > 0 && standaloneSearchResults.length === 0 && (
-              <p className="py-6 text-center text-xs text-stone-400">符合的品項都已收合在上方系列中。</p>
-            )}
             </div>
           </section>
+          )}
         </div>
       ) : (
         /* ── Browse mode：商品分類總覽／產品清單擇一呈現 ── */
@@ -2722,25 +2676,28 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           {browseMode === 'categories' ? (
             <div>
             <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
-              <h3 className="text-sm font-bold text-stone-700">📂 商品分類總覽</h3>
-              <span className="text-[11px] text-stone-400">11 主分類 × 62 功能分類・點分類直接瀏覽商品(總表 {taxonomy.version})</span>
+              <h3 className="text-sm font-bold text-stone-700">依分類瀏覽</h3>
+              <span className="text-[11px] text-stone-400">{taxonomy.mains.length} 個主分類，點分類名稱或標籤直接看產品</span>
             </div>
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-3">
+            <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {taxonomy.mains.map((m) => (
-                <div key={m.id} className="card-soft min-w-[82vw] snap-center p-3 sm:min-w-0 sm:p-4">
-                  <MainCategoryArtwork categoryId={m.id} />
+                <div key={m.id} className="card-soft p-3 sm:p-4">
                   <button type="button" onClick={() => setCategorySelection({ main: m.name })}
-                          className="group mt-2 flex min-h-11 w-full items-center gap-2 rounded-2xl px-1 text-left transition-all active:scale-[0.99]">
-                    <span className="font-bold text-stone-800 group-hover:text-brand-600 transition-colors">{m.name}</span>
-                    <span className="ml-auto text-xs text-stone-400">{m.count} 項</span>
+                          className="group flex w-full items-center gap-3 rounded-2xl text-left transition-all active:scale-[0.99]">
+                    <MainCategoryArtwork categoryId={m.id} compact />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold text-stone-800 transition-colors group-hover:text-brand-600">{m.name}</span>
+                      <span className="block text-xs text-stone-400">{m.count.toLocaleString()} 個品項</span>
+                    </span>
+                    <span className="text-stone-300 group-hover:text-stone-500" aria-hidden="true">›</span>
                   </button>
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {m.funcs.map((f) => (
                       <button key={f.id}
                               type="button"
                               disabled={f.count === 0}
                               onClick={() => setCategorySelection({ main: m.name, category: f.name })}
-                              className={`min-h-11 rounded-full px-3 py-2 text-[11px] transition-all active:scale-95 ${
+                              className={`min-h-9 rounded-full px-3 py-1.5 text-xs transition-all active:scale-95 ${
                                 f.count > 0
                                   ? 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
                                   : 'cursor-not-allowed bg-stone-50 text-stone-300'
@@ -2760,11 +2717,11 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               {/* Product list:依主分類分組收合，避免大量卡片同時渲染。 */}
               <div>
             <div className="mb-3 flex items-baseline gap-2">
-              <h3 className="text-sm font-bold text-stone-700">🗂 產品清單</h3>
-              <span className="text-[11px] text-stone-400">{families.length} 個系列・依主分類分組,點開瀏覽</span>
+              <h3 className="text-sm font-bold text-stone-700">依系列瀏覽</h3>
+              <span className="text-[11px] text-stone-400">{families.length} 個系列，依主分類分組</span>
             </div>
             {families.length === 0 ? (
-              <p className="text-center py-12 text-sm text-stone-400">目前沒有產品清單</p>
+              <p className="text-center py-12 text-sm text-stone-400">目前沒有系列資料</p>
             ) : (
               <div className="space-y-3">
                 {familyGroups.map(({ main, families: groupFamilies }) => {
@@ -2820,8 +2777,8 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             >
               <span className={`text-stone-400 transition-transform ${standaloneOpen ? 'rotate-90' : ''}`} aria-hidden="true">▶</span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-stone-700">獨立單品</span>
-                <span className="mt-0.5 block text-xs text-stone-400">未歸入系列的 {standaloneBrowseItems.length} 個品項</span>
+                <span className="block text-sm font-bold text-stone-700">未歸入系列的單品</span>
+                <span className="mt-0.5 block text-xs text-stone-400">{standaloneBrowseItems.length} 個品項</span>
               </span>
               <span className="text-xs font-semibold text-brand-600">{standaloneOpen ? '收合' : '瀏覽'}</span>
             </button>

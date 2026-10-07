@@ -47,7 +47,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/bd', label: '業務開發', group: '工作', module: 'bd', icon: BriefcaseBusiness },
   { href: '/quotes', label: '報價', group: '交易', module: 'quote', icon: FileText },
   { href: '/orders', label: '訂貨', group: '交易', module: 'orders', icon: PackageCheck },
-  { href: '/products/catalog', label: '產品與價格', group: '交易', module: 'products', icon: ShoppingBag },
+  { href: '/products/catalog', label: '產品', group: '交易', module: 'products', icon: ShoppingBag },
   { href: '/tickets', label: '技術支援', group: '服務', module: 'rma', icon: Headphones },
   { href: '/marketing', label: '行銷與活動', group: '服務', module: null, icon: BadgeDollarSign },
   { href: '/admin/clinic-monitor', label: '市場監控', group: '服務', module: 'clinic_monitor', icon: Building2 },

@@ -70,8 +70,16 @@ function ArtworkGlyph({ kind }: { kind: VisualKind }) {
   )
 }
 
-export function MainCategoryArtwork({ categoryId }: { categoryId: string }) {
+export function MainCategoryArtwork({ categoryId, compact = false }: { categoryId: string; compact?: boolean }) {
   const visual = MAIN_VISUALS[categoryId] ?? MAIN_VISUALS['other-review']
+
+  if (compact) {
+    return (
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-cream-100 to-brand-50 ring-1 ring-stone-900/[0.05]">
+        <div className="absolute inset-1"><ArtworkGlyph kind={visual.kind} /></div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-cream-100 via-white to-brand-50 ring-1 ring-stone-900/[0.05]">
@@ -98,10 +106,11 @@ export function seriesVisualKind(category: string, mainCategory = ''): VisualKin
   return 'production'
 }
 
-export function SeriesArtwork({ category, mainCategory, label }: { category: string; mainCategory?: string; label: string }) {
+export function SeriesArtwork({ category, mainCategory, label, size = 'lg' }: { category: string; mainCategory?: string; label: string; size?: 'sm' | 'lg' }) {
   const kind = seriesVisualKind(category, mainCategory)
   return (
-    <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-cream-100 to-brand-50 ring-1 ring-stone-900/[0.05] sm:h-28 sm:w-36">
+    <div className={`relative shrink-0 overflow-hidden bg-gradient-to-br from-cream-100 to-brand-50 ring-1 ring-stone-900/[0.05] ${
+      size === 'sm' ? 'h-14 w-14 rounded-xl' : 'h-24 w-28 rounded-2xl sm:h-28 sm:w-36'}`}>
       <div className="absolute inset-1"><ArtworkGlyph kind={kind} /></div>
       <span className="sr-only">{label} 類別圖像</span>
     </div>
