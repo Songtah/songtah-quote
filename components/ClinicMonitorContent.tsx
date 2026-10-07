@@ -1156,11 +1156,12 @@ interface KindTrendPoint {
 /** 該月沒有任何異動紀錄（監控是 2026-06 才開始跑，之前的月份本來就沒有資料） */
 const isEmptyMonth = (p: KindTrendPoint) =>
   !p.baseline && Object.values(p.kinds ?? {}).every(k => (k?.added ?? 0) === 0 && (k?.removed ?? 0) === 0)
-interface KindTrend { points: KindTrendPoint[]; codeNotFoundStock: number; codeNotFoundByKind?: Record<string, number>; computedAt: string }
+interface KindTrend { points: KindTrendPoint[]; codeNotFoundStock: number; codeNotFoundByKind?: Record<string, number>; computedAt: string; items?: TrendDetailItem[] }
 const TREND_KINDS = ['牙醫診所', '牙體技術所', '醫院'] as const
 
 type TrendPick = { month: string; kind: string; dir: 'added' | 'removed' }
 type TrendDetailItem = {
+  month: string; kind: string; dir: 'added' | 'removed'
   code: string; name: string; address: string; specialty: string
   changeType: string; termDate: string
   basStatus: string; basVerdict?: BasVerdictKey; basDetailUrl: string
@@ -1171,23 +1172,15 @@ const TREND_VERDICT_LABEL: Record<BasVerdictKey, string> = {
 }
 
 /** 趨勢圖長條 → 該月該類別名單（綠＝新增、紅＝減少） */
-function TrendDetailModal({ pick, onClose }: { pick: TrendPick; onClose: () => void }) {
-  const [items, setItems] = useState<TrendDetailItem[] | null>(null)
-  const [err, setErr] = useState('')
+function TrendDetailModal({ pick, allItems, computedAt, onClose }: {
+  pick: TrendPick; allItems?: TrendDetailItem[]; computedAt?: string; onClose: () => void
+}) {
   const [filter, setFilter] = useState<string>('all')
-  useEffect(() => {
-    let cancelled = false
-    const qs = new URLSearchParams({ month: pick.month, kind: pick.kind, dir: pick.dir })
-    fetch('/api/admin/medical-monitor/kind-trend/detail?' + qs.toString())
-      .then(async (res) => {
-        const data = await res.json()
-        if (cancelled) return
-        if (!res.ok) setErr(data.error ?? '讀取失敗')
-        else setItems(Array.isArray(data.items) ? data.items : [])
-      })
-      .catch((e) => { if (!cancelled) setErr(e?.message ?? '讀取失敗') })
-    return () => { cancelled = true }
-  }, [pick.month, pick.kind, pick.dir])
+  // 名單隨趨勢圖一起算好、一起存（重新計算／每晚排程才更新），點長條不再另外查詢
+  const items: TrendDetailItem[] | null = allItems
+    ? allItems.filter((x) => x.month === pick.month && x.kind === pick.kind && x.dir === pick.dir)
+    : null
+  const err = allItems ? '' : '這份趨勢資料是舊版、沒有附名單，請按「重新計算」'
 
   const added = pick.dir === 'added'
   const groupOf = (x: TrendDetailItem) => added
@@ -1217,7 +1210,6 @@ function TrendDetailModal({ pick, onClose }: { pick: TrendPick; onClose: () => v
               : <>上月在衛福部開業名冊、本月消失的機構。狀態依機構代碼直開衛福部詳細頁查得：<b>歇業</b>、<b>停業</b>（暫停、可能復業）、<b>仍開業</b>（不是關門，多為科別或類別異動）、<b>待查證</b>（尚未補查）。</>}
           </div>
           {err && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{err}</div>}
-          {!items && !err && <div className="py-12 text-center text-sm text-stone-400">讀取中…</div>}
           {items && items.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {[['all', `全部 ${items.length}`] as [string, string], ...groups.filter(([g]) => cnt(g) > 0).map(([g, l]) => [g, `${l} ${cnt(g)}`] as [string, string])]
@@ -1230,6 +1222,12 @@ function TrendDetailModal({ pick, onClose }: { pick: TrendPick; onClose: () => v
             </div>
           )}
           {items && items.length === 0 && <div className="py-12 text-center text-sm text-stone-400">這個月沒有紀錄</div>}
+          {computedAt && (
+            <p className="text-[11px] text-stone-400">
+              資料時間 {new Date(computedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              （每晚自動更新；「客戶主檔」標記為當時狀態，要最新請按圖上的「重新計算」）
+            </p>
+          )}
           {shown.length > 0 && (
             <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
               {shown.map((x) => (
@@ -1270,16 +1268,21 @@ function KindTrendChart({ trend, loading, onRefresh }: { trend: KindTrend | null
   const [pick, setPick] = useState<TrendPick | null>(null)
   return (
     <div>
-      {pick && <TrendDetailModal pick={pick} onClose={() => setPick(null)} />}
+      {pick && <TrendDetailModal pick={pick} allItems={trend?.items} computedAt={trend?.computedAt} onClose={() => setPick(null)} />}
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">📈 近半年新增／減少（依機構類別）</p>
         <span className="text-[11px] text-stone-400">
           新增＝本月快照有、上月沒有｜減少＝上月有、本月沒有（含客戶與非客戶）
         </span>
+        {trend?.computedAt && (
+          <span className="ml-auto text-[11px] text-stone-300">
+            更新於 {new Date(trend.computedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="ml-auto rounded-full bg-stone-50 px-3 py-1 text-[11px] font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95 disabled:opacity-50"
+          className={`${trend?.computedAt ? '' : 'ml-auto '}rounded-full bg-stone-50 px-3 py-1 text-[11px] font-medium text-stone-500 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95 disabled:opacity-50`}
         >{loading ? '計算中…' : '重新計算'}</button>
       </div>
 

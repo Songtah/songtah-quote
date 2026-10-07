@@ -9,7 +9,7 @@ on:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20   # 7 個步驟、每步最長 5 分鐘
     steps:
       - name: 觸發正式站重算端點
         env:
@@ -85,4 +85,17 @@ jobs:
             -X POST "https://songtah-quote.vercel.app/api/cron/refresh-medical-monitor" \
             -H "x-cron-secret: ${CRON_SECRET}")
           echo "HTTP $code"; cat /tmp/resp6.json
+          test "$code" = "200"
+
+      - name: 市場監控趨勢圖與名單重算(頁面只讀存好的結果)
+        # 放在醫事比對之後：同一批客戶主檔快取已暖，重算較快
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp7.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/refresh-kind-trend" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp7.json
           test "$code" = "200"

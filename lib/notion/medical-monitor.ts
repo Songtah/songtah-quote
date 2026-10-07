@@ -274,7 +274,6 @@ const emptyKinds = () => Object.fromEntries(
   TREND_KINDS.map((k) => [k, { added: 0, removed: 0 }])
 ) as MonitorKindTrendPoint['kinds']
 
-const KIND_TREND_KEY = 'medical-monitor:kind-trend-v3'   // v3＝排除備用鍵假異動對；v2＝存量改以目前快照複驗
 
 /**
  * 排除「備用鍵 ↔ 代碼」造成的假異動對。
@@ -311,18 +310,20 @@ function dropPhantomPairs(records: ClinicMonitorRecord[]): ClinicMonitorRecord[]
   return records.filter((r) => !drop.has(r.id))
 }
 
-export async function getMonitorKindTrend(months = 6, options?: { refresh?: boolean }): Promise<MonitorKindTrend> {
+export type MonitorKindTrendRecord = ClinicMonitorRecord & { kind: MonitorTrendKind; dir: 'added' | 'removed' }
+
+/**
+ * 逐月掃監控紀錄，算出長條數字並保留逐筆名單（已濾假異動對、已分類；基準月不給名單）。
+ * 純計算、不快取——快取與名單加值（衛福部連結、客戶主檔）在組合層 lib/medical-monitor-trend.ts。
+ */
+export async function computeMonitorKindTrend(months = 6): Promise<{ trend: MonitorKindTrend; records: MonitorKindTrendRecord[] }> {
   const dbId = process.env.NOTION_CLINIC_MONITOR_DB
   const empty: MonitorKindTrend = {
     points: [], codeNotFoundStock: 0,
     codeNotFoundByKind: { 牙醫診所: 0, 牙體技術所: 0, 醫院: 0, 其他: 0 },
     computedAt: new Date().toISOString(),
   }
-  if (!dbId) return empty
-  if (!options?.refresh) {
-    const cached = await getRedisValue<MonitorKindTrend>(KIND_TREND_KEY)
-    if (cached) return cached
-  }
+  if (!dbId) return { trend: empty, records: [] }
 
   // 近 N 個月（含本月），舊→新
   const now = new Date()
@@ -333,14 +334,13 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
   }
 
   const points: MonitorKindTrendPoint[] = []
-  let stock = 0
+  const records: MonitorKindTrendRecord[] = []
   for (const month of monthKeys) {
     const kinds = emptyKinds()
     const monthRecords: ClinicMonitorRecord[] = []
     let cursor: string | undefined
-    let total = 0
     do {
-      const res: any = await notionCallWithRetry('getMonitorKindTrend', () =>
+      const res: any = await notionCallWithRetry('computeMonitorKindTrend', () =>
         notion.databases.query({
           database_id: normalizeDatabaseId(dbId),
           page_size: 100,
@@ -348,85 +348,30 @@ export async function getMonitorKindTrend(months = 6, options?: { refresh?: bool
           filter: {
             and: [
               { property: '月份', date: { equals: `${month}-01` } },
-              { or: [
-                { property: '異動類型', select: { equals: '新開業' } },
-                { property: '異動類型', select: { equals: '恢復開業' } },
-                { property: '異動類型', select: { equals: '停業' } },
-                { property: '異動類型', select: { equals: '新增停業' } },
-              ] },
+              { or: ['新開業', '恢復開業', '停業', '新增停業'].map((t) => ({ property: '異動類型', select: { equals: t } })) },
             ],
           },
         })
       )
-      for (const page of res.results ?? []) { total++; monthRecords.push(mapClinicRecord(page)) }
+      for (const page of res.results ?? []) monthRecords.push(mapClinicRecord(page))
       cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
     } while (cursor)
+    // 首次建立快照的月份沒有「上月」可比，整批被標成恢復開業（實測 2026-06 有 7,905 筆）。
+    // 那不是真實異動，連同數值一起歸零，只保留標記——否則長條圖被它撐爆，其餘月份全看不見。
+    if (monthRecords.length > 500) { points.push({ month, baseline: true, kinds: emptyKinds() }); continue }
     for (const r of dropPhantomPairs(monthRecords)) {
       const kind = guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName)
       if (kind === '其他') continue
-      if (r.type === '新開業' || r.type === '恢復開業') kinds[kind].added++
-      else kinds[kind].removed++          // 停業 / 新增停業
+      const dir = r.type === '新開業' || r.type === '恢復開業' ? 'added' : 'removed'   // 停業 / 新增停業 → 減少
+      kinds[kind][dir]++
+      records.push({ ...r, kind, dir })
     }
-    // 首次建立快照的月份沒有「上月」可比，整批被標成恢復開業（實測 2026-06 有 7,905 筆）。
-    // 那不是真實異動，連同數值一起歸零，只保留標記——否則長條圖被它撐爆，其餘月份全看不見。
-    const isBaseline = total > 500
-    points.push({ month, baseline: isBaseline, kinds: isBaseline ? emptyKinds() : kinds })
+    points.push({ month, baseline: false, kinds })
   }
 
   // 未立案（代碼從未在 BAS 出現）已改由比對引擎直接產出（MonitorResult.unregistered），
-  // 由頁面的獨立區塊呈現，這裡不再掃監控日誌推導（省一次全庫掃描）。
-  const stockKindCount: Record<string, number> = {}
-
-  const out: MonitorKindTrend = {
-    points,
-    codeNotFoundStock: stock,
-    codeNotFoundByKind: {
-      牙醫診所: stockKindCount['牙醫診所'] ?? 0,
-      牙體技術所: stockKindCount['牙體技術所'] ?? 0,
-      醫院: stockKindCount['醫院'] ?? 0,
-      其他: stockKindCount['其他'] ?? 0,
-    },
-    computedAt: new Date().toISOString(),
-  }
-  await setRedisValue(KIND_TREND_KEY, out, 6 * 60 * 60_000)   // 6 小時；資料每月才變一次
-  return out
-}
-
-/**
- * 趨勢圖點長條 → 該月該類別的逐筆異動（與 getMonitorKindTrend 同一套過濾與分類，數字對得上）。
- * dir='added'：新開業＋恢復開業；dir='removed'：停業＋新增停業。基準月不提供明細。
- */
-export async function getMonitorKindTrendRecords(
-  month: string, kind: MonitorTrendKind, dir: 'added' | 'removed',
-): Promise<ClinicMonitorRecord[]> {
-  const dbId = process.env.NOTION_CLINIC_MONITOR_DB
-  if (!dbId || !/^\d{4}-\d{2}$/.test(month)) return []
-  // 四種都撈：判斷假異動對需要同月的另一半
-  const types = ['新開業', '恢復開業', '停業', '新增停業']
-  const want = dir === 'added' ? ['新開業', '恢復開業'] : ['停業', '新增停業']
-  const out: ClinicMonitorRecord[] = []
-  let cursor: string | undefined
-  do {
-    const res: any = await notionCallWithRetry('getMonitorKindTrendRecords', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(dbId),
-        page_size: 100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-        filter: {
-          and: [
-            { property: '月份', date: { equals: `${month}-01` } },
-            { or: types.map((t) => ({ property: '異動類型', select: { equals: t } })) },
-          ],
-        },
-      })
-    )
-    for (const page of res.results ?? []) {
-      out.push(mapClinicRecord(page))
-    }
-    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
-  } while (cursor)
-  return dropPhantomPairs(out).filter((r) =>
-    want.includes(r.type) && guessInstitutionKind(r.institutionCode, r.nhiName || r.customerName) === kind)
+  // 由頁面的獨立區塊呈現，這裡不再掃監控日誌推導。
+  return { trend: { ...empty, points, computedAt: new Date().toISOString() }, records }
 }
 
 // ─── 未在衛福部登錄（查無代碼）清單 ────────────────────────────────────────────
