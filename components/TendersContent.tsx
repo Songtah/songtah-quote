@@ -3,9 +3,11 @@
 /**
  * components/TendersContent.tsx — 標案機會（/bd?tab=tender）
  *
- * 兩個分頁：
+ * 三個分頁：
  *   機會清單 — 系統每兩小時自動抓回來的牙科相關標案（含決標結果），列表**常駐**，
  *              開頁只讀已存的結果，不會重跑掃描；要不要手動抓由中央管理自己決定。
+ *              卡片分層（2026-10-07 版面整理）：預設只露判斷要不要追的資訊，細節收在「詳情」。
+ *   市場分析 — 得標廠商／採購機關／品類結構（TenderMarketPanel）
  *   歷史查詢 — 人主動查「以前有沒有這種標案」，直接查政府電子採購網官網，
  *              查到的案子可以一鍵加入追蹤。
  *
@@ -47,7 +49,7 @@ const money = (n: number | null, text: string) =>
 const STATUSES = ['待評估', '投標中', '已投標', '得標', '未得標', '放棄'] as const
 const STATUS_STYLE: Record<string, string> = {
   待評估: 'bg-stone-100 text-stone-600', 投標中: 'bg-amber-50 text-amber-700',
-  已投標: 'bg-blue-50 text-blue-700', 得標: 'bg-emerald-50 text-emerald-700',
+  已投標: 'bg-gold-50 text-gold-700', 得標: 'bg-emerald-50 text-emerald-700',
   未得標: 'bg-stone-100 text-stone-500', 放棄: 'bg-stone-100 text-stone-400',
 }
 
@@ -79,10 +81,11 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
 
   const [stage, setStage] = useState<'open' | 'awarded' | 'all'>('open')
   const [year, setYear] = useState('全部')
-  const [limit, setLimit] = useState(150)
+  const [limit, setLimit] = useState(60)
   const [statusFilter, setStatusFilter] = useState<string>('全部')
   const [onlyCustomer, setOnlyCustomer] = useState(false)
   const [onlyMine, setOnlyMine] = useState(false)
+  const [onlySoon, setOnlySoon] = useState(false)
   const [city, setCity] = useState('全部')
   const [q, setQ] = useState('')
 
@@ -133,21 +136,30 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
     [records])
 
   const today = new Date().toISOString().slice(0, 10)
-  const shown = useMemo(() => records.filter((r) => {
-    const awarded = /決標/.test(r.type)
-    // 「進行中」＝還沒決標、而且還來得及投（沒寫截止日的就看公告日是不是近 30 天）
-    const live = !awarded && (r.deadline ? r.deadline >= today : r.date >= new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10))
-    if (stage === 'open' && !live) return false
-    if (stage === 'awarded' && !awarded) return false
-    if (year !== '全部' && !r.date.startsWith(year)) return false
-    if (onlyCustomer && !r.customerId) return false
-    if (statusFilter !== '全部' && (r.status || '待評估') !== statusFilter) return false
-    if (onlyMine && r.customerSalesperson !== currentUser && r.owner !== currentUser) return false
-    if (city !== '全部' && r.city !== city) return false
-    if (q && !(r.title.includes(q) || r.unitName.includes(q) || r.jobNumber.includes(q)
-      || r.customerName.includes(q) || r.winner.includes(q) || r.bidders.some((b) => b.includes(q)))) return false
-    return true
-  }), [records, stage, year, onlyCustomer, onlyMine, statusFilter, city, q, currentUser, today])
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10)
+  // 「進行中」＝還沒決標、而且還來得及投（沒寫截止日的就看公告日是不是近 30 天）
+  const isLive = useCallback((r: Tender) => !/決標/.test(r.type) && (r.deadline ? r.deadline >= today : r.date >= monthAgo), [today, monthAgo])
+  const isSoon = useCallback((r: Tender) => { const d = daysLeft(r.deadline); return isLive(r) && d !== null && d >= 0 && d <= 7 }, [isLive])
+
+  const shown = useMemo(() => {
+    const list = records.filter((r) => {
+      const awarded = /決標/.test(r.type)
+      if (stage === 'open' && !isLive(r)) return false
+      if (stage === 'awarded' && !awarded) return false
+      if (onlySoon && !isSoon(r)) return false
+      if (year !== '全部' && !r.date.startsWith(year)) return false
+      if (onlyCustomer && !r.customerId) return false
+      if (statusFilter !== '全部' && (r.status || '待評估') !== statusFilter) return false
+      if (onlyMine && r.customerSalesperson !== currentUser && r.owner !== currentUser) return false
+      if (city !== '全部' && r.city !== city) return false
+      if (q && !(r.title.includes(q) || r.unitName.includes(q) || r.jobNumber.includes(q)
+        || r.customerName.includes(q) || r.winner.includes(q) || r.bidders.some((b) => b.includes(q)))) return false
+      return true
+    })
+    // 進行中：最快截止的排最前（要先處理的在上面）；其餘維持公告日新→舊
+    if (stage === 'open') list.sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'))
+    return list
+  }, [records, stage, year, onlyCustomer, onlyMine, onlySoon, statusFilter, city, q, currentUser, isLive, isSoon])
 
   /** 已決標檢視的廠商排行：這是我們唯一能看到競爭對手實績的地方 */
   const winnerRank = useMemo(() => {
@@ -162,46 +174,45 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
     return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count || b[1].amount - a[1].amount).slice(0, 10)
   }, [shown, stage])
 
-  const matchedCount = records.filter((r) => r.customerId).length
-  const liveCount = records.filter((r) => !/決標/.test(r.type)
-    && (r.deadline ? r.deadline >= today : r.date >= new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10))).length
+  const liveCount = records.filter(isLive).length
+  const soonCount = records.filter(isSoon).length
+  const matchedLive = records.filter((r) => isLive(r) && r.customerId).length
+
+  const activeFilters = [year !== '全部', statusFilter !== '全部', onlyCustomer, onlyMine, onlySoon, city !== '全部', !!q].filter(Boolean).length
+  function clearFilters() {
+    setYear('全部'); setStatusFilter('全部'); setOnlyCustomer(false); setOnlyMine(false); setOnlySoon(false); setCity('全部'); setQ('')
+  }
 
   return (
     <div className="space-y-4">
-      {/* ── 頁首：資料狀態與分頁切換 ───────────────────────────── */}
-      <div className="card-soft p-4">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="text-base font-semibold text-stone-800">🏛️ 標案機會</h3>
-          <span className="text-xs text-stone-400">
-            政府電子採購網的牙科相關標案　共 {records.length} 案（進行中 {liveCount}）·　{matchedCount} 案的機關是我們的客戶
-          </span>
-          {canManageAll && view === 'list' && (
-            <button
-              onClick={() => load(true)}
-              disabled={refreshing}
-              title="平常不需要按：系統每兩小時自動抓一次"
-              className="ml-auto rounded-full bg-stone-50 px-4 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95 disabled:opacity-50"
-            >{refreshing ? '抓取中…（約 1 分鐘）' : '手動抓新公告'}</button>
-          )}
+      {/* ── 頁首：分頁切換＋資料狀態（標題已在頁面上方，不重複）──────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-full bg-stone-100 p-1">
+          {([['list', '機會清單'], ['market', '市場分析'], ['search', '歷史查詢']] as const).map(([v, label]) => (
+            <button key={v} onClick={() => setView(v)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all active:scale-95 ${
+                view === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>{label}</button>
+          ))}
         </div>
-        <p className="mt-1 text-[11px] text-stone-400">
-          {computedAt ? `清單更新：${new Date(computedAt).toLocaleString('zh-TW', { hour12: false })}` : '尚未有資料'}
-          {latestDate && `　·　最新公告日：${latestDate}`}
-          　·　每兩小時自動更新（08–20 時），結果常駐，開頁不會重跑
-        </p>
-        {staleDays > 7 && (
-          <p className="mt-1 rounded-xl bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
-            ⚠️ 最新公告已是 {staleDays} 天前——可能來源未更新或抓取被擋，請按「手動抓新公告」確認。
-          </p>
+        <span className="ml-auto text-[11px] text-stone-400"
+          title={`每兩小時自動更新（08–20 時）${latestDate ? `；最新公告日 ${latestDate}` : ''}`}>
+          {computedAt ? `更新於 ${new Date(computedAt).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}` : '尚未有資料'}
+        </span>
+        {canManageAll && view === 'list' && (
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            title="平常不需要按：系統每兩小時自動抓一次"
+            className="rounded-full bg-white px-3.5 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95 disabled:opacity-50"
+          >{refreshing ? '抓取中…' : '抓新公告'}</button>
         )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button onClick={() => setView('list')} className={chip(view === 'list')}>機會清單</button>
-          <button onClick={() => setView('market')} className={chip(view === 'market')}>市場分析</button>
-          <button onClick={() => setView('search')} className={chip(view === 'search')}>歷史查詢</button>
-        </div>
       </div>
 
+      {staleDays > 7 && (
+        <p className="rounded-xl bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          ⚠️ 最新公告已是 {staleDays} 天前——可能來源未更新或抓取被擋{canManageAll ? '，請按「抓新公告」確認' : '，請通知中央管理'}。
+        </p>
+      )}
       {err && <div className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600">{err}</div>}
 
       {view === 'search' ? (
@@ -209,46 +220,72 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
       ) : view === 'market' ? (
         <TenderMarketPanel
           records={records}
-          onPick={(name) => { setQ(name); setStage('all'); setView('list') }}
+          onPick={(name) => { clearFilters(); setQ(name); setStage('all'); setView('list') }}
         />
       ) : (
         <>
-          {/* ── 篩選 ───────────────────────────── */}
-          <div className="card-soft p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {([['open', '進行中'], ['awarded', '已決標'], ['all', '全部']] as const).map(([v, label]) => (
-                <button key={v} onClick={() => setStage(v)} className={chip(stage === v)}>{label}</button>
-              ))}
-              <span className="mx-1 h-5 w-px bg-stone-200" />
-              <button onClick={() => setOnlyCustomer((v) => !v)} className={chip(onlyCustomer)}>只看既有客戶</button>
-              {currentUser && (
-                <button onClick={() => setOnlyMine((v) => !v)} className={chip(onlyMine)}>我的</button>
-              )}
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                className="select-soft rounded-full px-3 py-1.5 text-sm">
-                {['全部', ...STATUSES].map((s) => <option key={s} value={s}>{s === '全部' ? '全部狀態' : s}</option>)}
-              </select>
-              <select value={city} onChange={(e) => setCity(e.target.value)}
-                className="select-soft rounded-full px-3 py-1.5 text-sm">
-                {cities.map((c) => <option key={c} value={c}>{c === '全部' ? '全部縣市' : c}</option>)}
-              </select>
-              <select value={year} onChange={(e) => setYear(e.target.value)}
-                className="select-soft rounded-full px-3 py-1.5 text-sm">
-                {years.map((y) => <option key={y} value={y}>{y === '全部' ? '全部年度' : `${y} 年`}</option>)}
-              </select>
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋標案、機關、案號或廠商"
-                className="input-soft ml-auto min-w-[200px] flex-1 rounded-full px-4 py-1.5 text-sm" />
-            </div>
-            <p className="mt-2 text-[11px] text-stone-400">
-              符合 {shown.length} 案 / 全部 {records.length} 案{shown.length > limit && `（先顯示前 ${limit} 案）`}
-            </p>
+          {/* ── 重點數字（點了直接套用篩選）──────────────────────── */}
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              ['進行中', liveCount, '還來得及投', stage === 'open' && !onlySoon && !onlyCustomer, () => { clearFilters(); setStage('open') }, 'text-stone-800'],
+              ['7 天內截止', soonCount, '要先處理', onlySoon, () => { clearFilters(); setStage('open'); setOnlySoon(true) }, soonCount ? 'text-red-600' : 'text-stone-800'],
+              ['機關是客戶', matchedLive, '進行中且已在客戶庫', onlyCustomer && stage === 'open', () => { clearFilters(); setStage('open'); setOnlyCustomer(true) }, 'text-brand-700'],
+            ] as const).map(([label, n, sub, on, onClick, accent]) => (
+              <button key={label} onClick={onClick}
+                className={`card-soft card-soft-hover p-3 text-left transition-all active:scale-[0.98] ${on ? 'ring-2 ring-brand-300' : ''}`}>
+                <span className="block text-xs text-stone-400">{label}</span>
+                <span className={`block text-2xl font-bold tabular-nums ${accent}`}>{n}</span>
+                <span className="hidden text-[11px] text-stone-400 sm:block">{sub}</span>
+              </button>
+            ))}
           </div>
 
-          {/* 得標廠商排行：看同業在這些標案拿走多少，是唯一能量化競爭對手的地方 */}
+          {/* ── 篩選：第一列階段＋搜尋，第二列細項 ───────────────────── */}
+          <div className="card-soft space-y-3 p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-full bg-stone-100 p-1">
+                {([['open', '進行中'], ['awarded', '已決標'], ['all', '全部']] as const).map(([v, label]) => (
+                  <button key={v} onClick={() => { setStage(v); if (v !== 'open') setOnlySoon(false) }}
+                    className={`rounded-full px-3.5 py-1 text-sm font-medium transition-all active:scale-95 ${
+                      stage === v ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}>{label}</button>
+                ))}
+              </div>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋標案、機關、案號或廠商"
+                className="input-soft min-w-[180px] flex-1 rounded-full px-4 py-1.5 text-sm" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => setOnlyCustomer((v) => !v)} className={chip(onlyCustomer)}>既有客戶</button>
+              {currentUser && <button onClick={() => setOnlyMine((v) => !v)} className={chip(onlyMine)}>我的</button>}
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                className="select-soft rounded-full px-3 py-1 text-sm">
+                {['全部', ...STATUSES].map((s) => <option key={s} value={s}>{s === '全部' ? '追蹤狀態' : s}</option>)}
+              </select>
+              <select value={city} onChange={(e) => setCity(e.target.value)}
+                className="select-soft rounded-full px-3 py-1 text-sm">
+                {cities.map((c) => <option key={c} value={c}>{c === '全部' ? '縣市' : c}</option>)}
+              </select>
+              <select value={year} onChange={(e) => setYear(e.target.value)}
+                className="select-soft rounded-full px-3 py-1 text-sm">
+                {years.map((y) => <option key={y} value={y}>{y === '全部' ? '年度' : `${y} 年`}</option>)}
+              </select>
+              <span className="ml-auto text-xs text-stone-400">
+                {shown.length} 案
+                {activeFilters > 0 && (
+                  <button onClick={clearFilters} className="ml-2 text-brand-700 hover:underline">清除篩選</button>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* 得標廠商排行：預設收合，要看再展開（完整分析在「市場分析」） */}
           {winnerRank.length > 0 && (
-            <div className="card-soft p-4">
-              <h4 className="text-sm font-semibold text-stone-800">得標廠商排行（符合篩選的 {shown.filter((r) => r.winner).length} 件決標案）</h4>
-              <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            <details className="card-soft group p-4">
+              <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-stone-700">
+                <span className="text-stone-400 transition-transform group-open:rotate-90">›</span>
+                得標廠商排行
+                <span className="text-xs font-normal text-stone-400">符合篩選的 {shown.filter((r) => r.winner).length} 件決標案</span>
+              </summary>
+              <ul className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
                 {winnerRank.map(([name, v], i) => (
                   <li key={name} className="flex items-baseline gap-2 text-xs">
                     <span className="w-5 tabular-nums text-stone-400">{i + 1}.</span>
@@ -258,7 +295,7 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           )}
 
           {loading ? (
@@ -270,127 +307,175 @@ export default function TendersContent({ canManageAll = false, currentUser = '' 
               <p className="mt-1 text-xs">排程每兩小時會自動抓一次；也可以用「歷史查詢」先找舊案子</p>
             </div>
           ) : shown.length === 0 ? (
-            <p className="py-12 text-center text-sm text-stone-400">沒有符合篩選的標案</p>
+            <div className="py-12 text-center text-sm text-stone-400">
+              沒有符合篩選的標案
+              {activeFilters > 0 && <button onClick={clearFilters} className="ml-2 text-brand-700 hover:underline">清除篩選</button>}
+            </div>
           ) : (
             <ul className="space-y-2">
               {shown.slice(0, limit).map((r) => (
-                <li key={r.id} className="card-soft p-4">
-                  {/* 標題列 */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_BADGE(r.type)}`}
-                      title={r.type}>{shortType(r.type)}</span>
-                    <span className="font-semibold text-stone-800">{r.title || '（標案名稱未取得）'}</span>
-                    {r.tier === 2 && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500">設備／耗材關鍵字</span>}
-                    {r.weBid && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700">崧達曾投標</span>}
-                    <span className="ml-auto text-sm font-semibold tabular-nums text-brand-700">{money(r.budget, r.budgetText)}</span>
-                  </div>
-
-                  {/* 事實列 */}
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
-                    <span>{r.unitName}</span>
-                    {r.city && <span className="text-stone-400">{r.city}{r.district}</span>}
-                    <span className="text-stone-400 tabular-nums">案號 {r.jobNumber}</span>
-                    <span className="text-stone-400 tabular-nums">公告 {r.date}</span>
-                    {r.deadline && (() => {
-                      const d = daysLeft(r.deadline)
-                      const cls = d === null ? 'text-amber-700' : d < 0 ? 'text-stone-400' : d <= 7 ? 'font-semibold text-red-600' : 'text-amber-700'
-                      return <span className={cls}>截止 {r.deadline}{d !== null && (d < 0 ? '（已過）' : d === 0 ? '（今天）' : `（剩 ${d} 天）`)}</span>
-                    })()}
-                    {r.contact && <span className="text-stone-400">{r.contact} {r.phone}</span>}
-                    {!r.unitId && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-stone-400">明細待補</span>}
-                  </div>
-
-                  {/* 決標結果：得標廠商、決標金額、底價、同場競標（競爭對手情報） */}
-                  {r.winner && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-stone-50 px-3 py-1.5 text-xs">
-                      <span className="text-stone-500">得標：<strong className="text-stone-700">{r.winner}</strong></span>
-                      {r.awardAmount && <span className="text-stone-500">決標 <span className="tabular-nums text-stone-700">{money(r.awardAmount, '')}</span></span>}
-                      {r.basePrice && <span className="text-stone-400">底價 <span className="tabular-nums">{money(r.basePrice, '')}</span></span>}
-                      {r.bidders.length > 1 && (
-                        <span className="text-stone-400">同場競標：{r.bidders.filter((b) => b !== r.winner).join('、')}</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 客戶配對 */}
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    {r.customerId ? (
-                      <>
-                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700">既有客戶</span>
-                        <a href={`/customers/${r.customerId}`} target="_blank" rel="noreferrer"
-                          className="text-stone-500 underline hover:text-stone-700">{r.customerName}</a>
-                        {r.customerSalesperson && <span className="text-stone-400">負責：{r.customerSalesperson}</span>}
-                      </>
-                    ) : (
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{r.matchNote || '未配對客戶'}</span>
-                    )}
-                    {r.category && <span className="text-stone-400">{r.category}</span>}
-                    {r.url && (
-                      <a href={r.url} target="_blank" rel="noreferrer"
-                        className="ml-auto rounded-full bg-stone-50 px-3 py-1 font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
-                        看公告原文
-                      </a>
-                    )}
-                  </div>
-
-                  {/* 追蹤列：狀態、認領、備註 */}
-                  <div className="mt-2 space-y-2 border-t border-stone-100 pt-2 text-xs">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_STYLE[r.status || '待評估'] ?? 'bg-stone-100 text-stone-600'}`}>
-                        {r.status || '待評估'}
-                      </span>
-                      <select
-                        value={r.status || '待評估'}
-                        disabled={busy === r.id}
-                        onChange={(e) => track(r, { status: e.target.value })}
-                        className="select-soft rounded-full px-2.5 py-1 text-xs disabled:opacity-50"
-                      >
-                        {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      {r.owner ? (
-                        <>
-                          <span className="text-stone-500">追蹤：{r.owner}</span>
-                          {r.owner === currentUser && (
-                            <button disabled={busy === r.id} onClick={() => track(r, { owner: null })}
-                              className="text-stone-400 underline hover:text-stone-600 disabled:opacity-50">取消認領</button>
-                          )}
-                        </>
-                      ) : currentUser && (
-                        <button disabled={busy === r.id} onClick={() => track(r, { owner: currentUser })}
-                          className="rounded-full bg-brand-500 px-3 py-1 font-medium text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
-                          認領追蹤
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      key={`${r.id}-note`}
-                      defaultValue={r.note ?? ''}
-                      placeholder="備註（例：已索取規格書）"
-                      onBlur={(e) => { if (e.target.value !== (r.note ?? '')) track(r, { note: e.target.value }) }}
-                      className="input-soft w-full rounded-full px-3 py-1 text-xs"
-                    />
-                  </div>
-                </li>
+                <TenderCard key={r.id} r={r} busy={busy === r.id} currentUser={currentUser} onTrack={(patch) => track(r, patch)} />
               ))}
             </ul>
           )}
           {shown.length > limit && (
-            <button onClick={() => setLimit((v) => v + 300)}
-              className="mx-auto block rounded-full bg-stone-50 px-5 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
+            <button onClick={() => setLimit((v) => v + 100)}
+              className="mx-auto block rounded-full bg-white px-5 py-2 text-sm font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
               顯示更多（還有 {shown.length - limit} 案）
             </button>
           )}
         </>
       )}
 
-      <p className="text-[11px] leading-relaxed text-stone-400">
-        資料來源：行政院公共工程委員會政府電子採購網（web.pcc.gov.tw）公告查詢。
-        自動抓取的關鍵字分兩級：牙科、齒模、義齒等直接收；3D列印機、光固化、樹脂等設備耗材詞
-        必須同時命中牙科情境（標題或機關有牙科字樣／標的分類屬醫療類／機關為醫院、衛生所、牙體技術科系）才收——
-        實測「3D列印機」全站 1,185 案中只有 6% 與牙科有關。官網只能用標案名稱查詢，
-        標題沒寫關鍵字的案子（例如夾在綜合醫材開口合約裡的牙科品項）仍可能漏掉，可用「歷史查詢」自行補查。
-      </p>
+      <details className="group text-[11px] leading-relaxed text-stone-400">
+        <summary className="cursor-pointer list-none hover:text-stone-600">
+          <span className="inline-block transition-transform group-open:rotate-90">›</span> 資料來源與收錄規則
+        </summary>
+        <p className="mt-1 pl-3">
+          資料來源：行政院公共工程委員會政府電子採購網（web.pcc.gov.tw）公告查詢，每兩小時自動更新（08–20 時）。
+          關鍵字分兩級：牙科、齒模、義齒等直接收；3D列印機、光固化、樹脂等設備耗材詞
+          必須同時命中牙科情境（標題或機關有牙科字樣／標的分類屬醫療類／機關為醫院、衛生所、牙體技術科系）才收。
+          官網只能用標案名稱查詢，標題沒寫關鍵字的案子（例如夾在綜合醫材開口合約裡的牙科品項）仍可能漏掉，可用「歷史查詢」自行補查。
+        </p>
+      </details>
     </div>
+  )
+}
+
+/**
+ * 一張標案卡：預設只露出判斷要不要追的資訊（標題、預算、機關、截止倒數、客戶、追蹤狀態），
+ * 案號、聯絡人、決標細節、備註收在「詳情」裡。
+ */
+function TenderCard({ r, busy, currentUser, onTrack }: {
+  r: Tender; busy: boolean; currentUser: string
+  onTrack: (patch: { status?: string; owner?: string | null; note?: string }) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const awarded = /決標/.test(r.type)
+  const d = daysLeft(r.deadline)
+  const status = r.status || '待評估'
+
+  return (
+    <li className="card-soft p-4">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          {/* 第一層：標題 */}
+          <div className="flex items-start gap-2">
+            {shortType(r.type) !== '招標' && (
+              <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_BADGE(r.type)}`} title={r.type}>{shortType(r.type)}</span>
+            )}
+            <button onClick={() => setOpen((v) => !v)} className="line-clamp-2 text-left font-semibold leading-snug text-stone-800 hover:text-brand-700">
+              {r.title || '（標案名稱未取得）'}
+            </button>
+          </div>
+          {/* 第二層：機關、地區、截止／得標 */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
+            <span className="truncate">{r.unitName}</span>
+            {r.city && <span className="text-stone-400">· {r.city}{r.district}</span>}
+            {!awarded && r.deadline && (
+              <span className={`rounded-full px-2 py-0.5 tabular-nums ${
+                d === null ? 'bg-amber-50 text-amber-700'
+                  : d < 0 ? 'bg-stone-100 text-stone-400'
+                    : d <= 7 ? 'bg-red-50 font-semibold text-red-600' : 'bg-amber-50 text-amber-700'}`}>
+                {d === null ? `截止 ${r.deadline}` : d < 0 ? '已截止' : d === 0 ? '今天截止' : `剩 ${d} 天`}
+              </span>
+            )}
+            {awarded && r.winner && (
+              <span className="text-stone-500">· 得標 <strong className="font-medium text-stone-700">{r.winner}</strong></span>
+            )}
+          </div>
+          {/* 第三層：客戶 */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+            {r.customerId ? (
+              <a href={`/customers/${r.customerId}`} target="_blank" rel="noreferrer"
+                className="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700 hover:bg-brand-100">
+                既有客戶{r.customerSalesperson ? ` · ${r.customerSalesperson}` : ''}
+              </a>
+            ) : r.matchNote && r.matchNote !== '尚未建檔' ? (
+              // 「尚未建檔」是多數非客戶的常態，不顯示；同名多家等需要人確認的才標出
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">{r.matchNote}</span>
+            ) : null}
+            {r.weBid && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">崧達曾投標</span>}
+            {r.note && !open && <span className="truncate text-stone-400">📝 {r.note}</span>}
+          </div>
+        </div>
+
+        {/* 右欄：金額＋追蹤 */}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className="text-base font-semibold tabular-nums text-brand-700">
+            {money(awarded && r.awardAmount ? r.awardAmount : r.budget, r.budgetText)}
+          </span>
+          <select
+            value={status}
+            disabled={busy}
+            onChange={(e) => onTrack({ status: e.target.value })}
+            aria-label="追蹤狀態"
+            className={`rounded-full border-0 px-2.5 py-1 text-xs font-medium ring-1 ring-stone-900/[0.06] disabled:opacity-50 ${STATUS_STYLE[status] ?? 'bg-stone-100 text-stone-600'}`}
+          >
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {r.owner ? (
+            <span className="text-[11px] text-stone-400">追蹤：{r.owner}</span>
+          ) : currentUser && !awarded && (
+            <button disabled={busy} onClick={() => onTrack({ owner: currentUser })}
+              className="rounded-full bg-brand-500 px-3 py-1 text-xs font-medium text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
+              認領
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 詳情：要用時才展開 */}
+      <button onClick={() => setOpen((v) => !v)}
+        className="mt-2 text-[11px] text-stone-400 transition-colors hover:text-stone-600">
+        {open ? '收起詳情 ▴' : '詳情 ▾'}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 border-t border-stone-100 pt-3 text-xs">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-stone-500 sm:grid-cols-[auto_1fr_auto_1fr]">
+            <dt className="text-stone-400">案號</dt><dd className="tabular-nums">{r.jobNumber || '—'}</dd>
+            <dt className="text-stone-400">公告日</dt><dd className="tabular-nums">{r.date || '—'}</dd>
+            {r.deadline && <><dt className="text-stone-400">截止日</dt><dd className="tabular-nums">{r.deadline}</dd></>}
+            <dt className="text-stone-400">預算</dt><dd className="tabular-nums">{money(r.budget, r.budgetText)}</dd>
+            {r.contact && <><dt className="text-stone-400">聯絡人</dt><dd>{r.contact} {r.phone}</dd></>}
+            {r.category && <><dt className="text-stone-400">標的分類</dt><dd>{r.category}</dd></>}
+            {r.customerId && <><dt className="text-stone-400">客戶</dt><dd>{r.customerName}</dd></>}
+            {r.tier === 2 && <><dt className="text-stone-400">收錄依據</dt><dd>設備／耗材關鍵字</dd></>}
+            {!r.unitId && <><dt className="text-stone-400">明細</dt><dd>待補</dd></>}
+          </dl>
+
+          {r.winner && (
+            <div className="rounded-xl bg-stone-50 px-3 py-2 text-stone-500">
+              得標 <strong className="text-stone-700">{r.winner}</strong>
+              {r.awardAmount && <> · 決標 <span className="tabular-nums text-stone-700">{money(r.awardAmount, '')}</span></>}
+              {r.basePrice && <> · 底價 <span className="tabular-nums">{money(r.basePrice, '')}</span></>}
+              {r.bidders.length > 1 && <div className="mt-0.5 text-stone-400">同場競標：{r.bidders.filter((b) => b !== r.winner).join('、')}</div>}
+            </div>
+          )}
+
+          <input
+            key={`${r.id}-note`}
+            defaultValue={r.note ?? ''}
+            placeholder="備註（例：已索取規格書）——離開欄位即儲存"
+            onBlur={(e) => { if (e.target.value !== (r.note ?? '')) onTrack({ note: e.target.value }) }}
+            className="input-soft w-full rounded-full px-3 py-1.5 text-xs"
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            {r.url && (
+              <a href={r.url} target="_blank" rel="noreferrer"
+                className="rounded-full bg-white px-3 py-1 font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
+                看公告原文 ↗
+              </a>
+            )}
+            {r.owner === currentUser && currentUser && (
+              <button disabled={busy} onClick={() => onTrack({ owner: null })}
+                className="text-stone-400 underline hover:text-stone-600 disabled:opacity-50">取消認領</button>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -459,7 +544,7 @@ function TenderSearch({ canEdit, onImported }: { canEdit: boolean; onImported: (
           </button>
         </div>
         <p className="mt-2 text-[11px] text-stone-400">
-          直接查官網，依公告日新到舊最多 100 筆／年。查詢結果不會自動進系統——按「加入追蹤」才會存進標案清單。
+          直接查官網（每年最多 100 筆），按「加入追蹤」才會存進機會清單；點標題看公告原文。
         </p>
       </div>
 
@@ -470,24 +555,28 @@ function TenderSearch({ canEdit, onImported }: { canEdit: boolean; onImported: (
       ) : (
         <ul className="space-y-2">
           {rows.map((h) => (
-            <li key={h.url} className="card-soft flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-xs">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_BADGE(h.type)}`} title={h.type}>
-                {shortType(h.type)}
-              </span>
-              <span className="text-sm font-medium text-stone-800">{h.title || '（標案名稱未取得）'}</span>
-              <span className="text-stone-500">{h.unitName}</span>
-              <span className="text-stone-400 tabular-nums">案號 {h.jobNumber}</span>
-              <span className="text-stone-400 tabular-nums">{h.date}</span>
-              {h.deadline && <span className="text-stone-400 tabular-nums">截止 {h.deadline}</span>}
-              <a href={h.url} target="_blank" rel="noreferrer"
-                className="ml-auto rounded-full bg-stone-50 px-3 py-1 font-medium text-stone-600 ring-1 ring-stone-200 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
-                看公告原文
-              </a>
+            <li key={h.url} className="card-soft flex items-start gap-3 p-4 text-xs">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start gap-2">
+                  {shortType(h.type) !== '招標' && (
+                    <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_BADGE(h.type)}`} title={h.type}>{shortType(h.type)}</span>
+                  )}
+                  <a href={h.url} target="_blank" rel="noreferrer" className="line-clamp-2 text-sm font-semibold leading-snug text-stone-800 hover:text-brand-700">
+                    {h.title || '（標案名稱未取得）'}
+                  </a>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-stone-400">
+                  <span className="text-stone-500">{h.unitName}</span>
+                  <span className="tabular-nums">· 公告 {h.date}</span>
+                  {h.deadline && <span className="tabular-nums">· 截止 {h.deadline}</span>}
+                  <span className="tabular-nums">· 案號 {h.jobNumber}</span>
+                </div>
+              </div>
               {h.inDb ? (
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700">已在清單</span>
+                <span className="shrink-0 rounded-full bg-brand-50 px-3 py-1 text-brand-700">已在清單</span>
               ) : canEdit && (
                 <button onClick={() => add(h)} disabled={adding === h.url}
-                  className="rounded-full bg-brand-500 px-3 py-1 font-medium text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
+                  className="shrink-0 rounded-full bg-brand-500 px-3 py-1 font-medium text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
                   {adding === h.url ? '加入中…' : '加入追蹤'}
                 </button>
               )}

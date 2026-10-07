@@ -165,47 +165,52 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
           </select>
         </div>
         <p className="mt-2 text-[11px] text-stone-400">
-          母體：近 {years} 年已決標且查得到得標廠商的 {awarded.length} 案，決標總額 {wan(totalAmount)}
-          {avgRatio && ``}
-          　·　決標資料仍在逐案補齊中，數字會隨補齊而變動
+          只統計近 {years} 年已決標、查得到得標廠商的案子；決標資料逐案補齊中，數字會隨之變動
         </p>
       </div>
+
+      {awarded.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {tiles.map(([label, value, sub]) => (
+            <div key={label} className="card-soft p-3">
+              <span className="block text-xs text-stone-400">{label}</span>
+              <span className="block text-xl font-bold tabular-nums text-stone-800">{value}</span>
+              <span className="block text-[11px] text-stone-400">{sub}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {awarded.length === 0 ? (
         <p className="py-10 text-center text-sm text-stone-400">還沒有決標資料可以分析（系統每三小時會補一批）</p>
       ) : tab === 'vendor' ? (
         <div className="card-soft overflow-x-auto p-4">
-          <table className="w-full min-w-[720px] text-xs">
+          <table className="w-full min-w-[600px] text-xs">
             <thead className="text-stone-400">
               <tr className="text-left">
-                <th className="pb-2 font-medium">得標廠商</th>
+                <th className="pb-2 font-medium">得標廠商（主攻 機關・品類・地區）</th>
                 <th className="pb-2 text-right font-medium">件數</th>
                 <th className="pb-2 text-right font-medium">決標總額</th>
-                <th className="pb-2 text-right font-medium">成交÷預算</th>
-                <th className="pb-2 font-medium">主攻機關</th>
-                <th className="pb-2 font-medium">主攻品類</th>
-                <th className="pb-2 font-medium">主要地區</th>
-                <th className="pb-2 font-medium">最常碰到的對手</th>
+                <th className="pb-2 text-right font-medium" title="越低代表殺價越兇">成交÷預算</th>
+                <th className="pb-2 pl-4 font-medium">常遇對手</th>
                 <th className="pb-2 font-medium">最近得標</th>
               </tr>
             </thead>
             <tbody>
               {vendors.slice(0, 40).map((v) => (
-                <tr key={v.name} className="border-t border-stone-100">
-                  <td className="py-1.5 pr-2">
-                    <button onClick={() => onPick(v.name)} className="text-left font-medium text-stone-700 underline decoration-stone-300 hover:text-brand-700">
+                <tr key={v.name} className="border-t border-stone-100 align-top">
+                  <td className="py-2 pr-2">
+                    <button onClick={() => onPick(v.name)} className="text-left font-medium text-stone-700 hover:text-brand-700">
                       {v.name}
                     </button>
                     {/崧達/.test(v.name) && <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">我們</span>}
+                    <div className="mt-0.5 text-[11px] text-stone-400">{[v.top(v.buyers), v.top(v.cats), v.top(v.cities)].join('・')}</div>
                   </td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-700">{v.count}</td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-600">{wan(v.amount)}</td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-500">{v.ratio ? pct(v.ratio) : '—'}</td>
-                  <td className="py-1.5 text-stone-500">{v.top(v.buyers)}</td>
-                  <td className="py-1.5 text-stone-500">{v.top(v.cats)}</td>
-                  <td className="py-1.5 text-stone-500">{v.top(v.cities)}</td>
-                  <td className="py-1.5 text-stone-400">{v.top(v.rivals)}</td>
-                  <td className="py-1.5 tabular-nums text-stone-400">{v.last}</td>
+                  <td className="py-2 text-right tabular-nums text-stone-700">{v.count}</td>
+                  <td className="py-2 text-right tabular-nums text-stone-600">{wan(v.amount)}</td>
+                  <td className="py-2 text-right tabular-nums text-stone-500">{v.ratio ? pct(v.ratio) : '—'}</td>
+                  <td className="py-2 pl-4 text-stone-400">{v.top(v.rivals)}</td>
+                  <td className="py-2 tabular-nums text-stone-400">{v.last}</td>
                 </tr>
               ))}
             </tbody>
@@ -213,37 +218,35 @@ export default function TenderMarketPanel({ records, onPick }: { records: Rec[];
         </div>
       ) : tab === 'buyer' ? (
         <div className="card-soft overflow-x-auto p-4">
-          <table className="w-full min-w-[760px] text-xs">
+          <table className="w-full min-w-[600px] text-xs">
             <thead className="text-stone-400">
               <tr className="text-left">
-                <th className="pb-2 font-medium">採購機關</th>
-                <th className="pb-2 font-medium">類型</th>
+                <th className="pb-2 font-medium">採購機關（類型・主要品類）</th>
                 <th className="pb-2 text-right font-medium">件數</th>
                 <th className="pb-2 text-right font-medium">決標總額</th>
-                <th className="pb-2 font-medium">最近一次</th>
-                <th className="pb-2 text-right font-medium">平均間隔</th>
-                <th className="pb-2 font-medium">推估下次</th>
-                <th className="pb-2 font-medium">主要品類</th>
+                <th className="pb-2 pl-4 font-medium">最近一次</th>
+                <th className="pb-2 font-medium" title="依平均採購間隔推估">推估下次</th>
                 <th className="pb-2 font-medium">最常得標者</th>
               </tr>
             </thead>
             <tbody>
               {buyers.slice(0, 40).map((b) => (
-                <tr key={b.name} className="border-t border-stone-100">
-                  <td className="py-1.5 pr-2">
-                    <button onClick={() => onPick(b.name)} className="text-left font-medium text-stone-700 underline decoration-stone-300 hover:text-brand-700">
+                <tr key={b.name} className="border-t border-stone-100 align-top">
+                  <td className="py-2 pr-2">
+                    <button onClick={() => onPick(b.name)} className="text-left font-medium text-stone-700 hover:text-brand-700">
                       {b.name}
                     </button>
                     {b.customerId && <span className="ml-1 rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700">既有客戶</span>}
+                    <div className="mt-0.5 text-[11px] text-stone-400">{classifyBuyer(b.name)}・{b.topCat}</div>
                   </td>
-                  <td className="py-1.5 text-stone-500">{classifyBuyer(b.name)}</td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-700">{b.count}</td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-600">{wan(b.amount)}</td>
-                  <td className="py-1.5 tabular-nums text-stone-500">{b.last}</td>
-                  <td className="py-1.5 text-right tabular-nums text-stone-500">{b.gap ? `${b.gap} 天` : '—'}</td>
-                  <td className="py-1.5 tabular-nums text-amber-700">{b.nextGuess || '—'}</td>
-                  <td className="py-1.5 text-stone-500">{b.topCat}</td>
-                  <td className="py-1.5 text-stone-400">
+                  <td className="py-2 text-right tabular-nums text-stone-700">{b.count}</td>
+                  <td className="py-2 text-right tabular-nums text-stone-600">{wan(b.amount)}</td>
+                  <td className="py-2 pl-4 tabular-nums text-stone-500">{b.last}</td>
+                  <td className="py-2 tabular-nums">
+                    <span className="text-amber-700">{b.nextGuess || '—'}</span>
+                    {b.gap && <div className="text-[11px] text-stone-400">約每 {b.gap} 天</div>}
+                  </td>
+                  <td className="py-2 text-stone-400">
                     {b.topWinner ? `${b.topWinner[0]}（${b.topWinner[1]}）` : '—'}
                   </td>
                 </tr>
