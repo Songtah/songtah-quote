@@ -2641,6 +2641,15 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             </div>
           )}
           {canManageProducts && (
+            <button type="button"
+              onClick={() => (isSearching && searchResults.length > 0 ? setBatchImageOpen(true) : undefined)}
+              disabled={!isSearching || searchResults.length === 0}
+              title={isSearching ? '把同一張主圖套用到目前搜尋結果的所有品項' : '先搜尋或篩選出要換圖的品項'}
+              className="button-secondary min-h-10 px-4 disabled:cursor-not-allowed">
+              {isSearching && searchResults.length > 0 ? `批次設定圖片（${searchResults.length.toLocaleString()}）` : '批次設定圖片'}
+            </button>
+          )}
+          {canManageProducts && (
             <button type="button" onClick={openSeriesAdmin} title="中央管理：維護系列與品項歸屬"
               className="button-secondary min-h-10 px-4">管理系列</button>
           )}
@@ -2681,15 +2690,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               </button>
             ))}
             {(hasFilters || debouncedQ) && (
-              <span className="ml-auto flex items-center gap-1.5">
-                {canManageProducts && searchResults.length > 0 && (
-                  <button type="button" onClick={() => setBatchImageOpen(true)} title="把同一張主圖套用到目前搜尋結果的所有品項"
-                    className="rounded-full px-2.5 py-1 font-medium text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50 active:scale-95">
-                    批次設定圖片（{searchResults.length.toLocaleString()}）
-                  </button>
-                )}
-                <button type="button" onClick={clearSearchAndFilters} className="rounded-full px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-50">清除條件</button>
-              </span>
+              <button type="button" onClick={clearSearchAndFilters} className="ml-auto rounded-full px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-50">清除條件</button>
             )}
           </div>
         )}
