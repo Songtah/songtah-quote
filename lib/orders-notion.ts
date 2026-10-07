@@ -53,33 +53,33 @@ const ORDER_ITEMS_DB = process.env.NOTION_ORDER_ITEMS_DB!
 
 let _ensurePromise: Promise<void> | null = null
 
+/**
+ * 只補「不存在」的欄位，既有欄位（含品項類型的選項）一律不動。
+ * 2026-10-07 新增：希望到貨日、付款方式、送貨方式、品項數、總件數；明細「序號」保順序。
+ */
 function ensureOrderFields(): Promise<void> {
   if (!_ensurePromise) {
     _ensurePromise = (async () => {
       try {
-        await Promise.all([
-          notion.databases.update({
-            database_id: ORDERS_DB,
-            properties: {
-              '促銷活動ID':   { rich_text: {} },
-              '促銷活動名稱': { rich_text: {} },
-            } as any,
-          }),
-          ORDER_ITEMS_DB ? notion.databases.update({
-            database_id: ORDER_ITEMS_DB,
-            properties: {
-              '品項類型': {
-                select: {
-                  options: [
-                    { name: '一般', color: 'default' },
-                    { name: '贈品', color: 'green' },
-                    { name: '樣品', color: 'blue' },
-                  ],
-                },
-              },
-            } as any,
-          }) : Promise.resolve(),
-        ])
+        const want: [string, Record<string, any>][] = [
+          [ORDERS_DB, {
+            '促銷活動ID': { rich_text: {} }, '促銷活動名稱': { rich_text: {} },
+            '希望到貨日': { date: {} }, '付款方式': { rich_text: {} }, '送貨方式': { rich_text: {} },
+            '品項數': { number: { format: 'number' } }, '總件數': { number: { format: 'number' } },
+          }],
+          ...(ORDER_ITEMS_DB ? [[ORDER_ITEMS_DB, {
+            '品項類型': { select: { options: [{ name: '一般', color: 'default' }, { name: '贈品', color: 'green' }, { name: '樣品', color: 'blue' }] } },
+            '序號': { number: { format: 'number' } },
+          }] as [string, Record<string, any>]] : []),
+        ]
+        for (const [dbId, props] of want) {
+          const db: any = await notion.databases.retrieve({ database_id: dbId })
+          const missing = Object.fromEntries(Object.entries(props).filter(([k]) => !db.properties?.[k]))
+          if (Object.keys(missing).length) {
+            await notion.databases.update({ database_id: dbId, properties: missing as any })
+            console.info(`[orders-notion] 補上欄位：${Object.keys(missing).join('、')}`)
+          }
+        }
       } catch (e: any) {
         console.warn('[orders-notion] ensureOrderFields warning:', e?.message ?? e)
         setTimeout(() => { _ensurePromise = null }, 60_000)
@@ -194,6 +194,13 @@ export interface Order {
   customerTaxId: string
   promotionId?:   string
   promotionName?: string
+  /** 2026-10-07 新增 */
+  requestedDate?:  string   // 希望到貨日
+  paymentMethod?:  string   // 付款方式
+  deliveryMethod?: string   // 送貨方式
+  /** 清單摘要用（不必載入品項）；舊單沒有時由品項推算 */
+  itemCount?: number
+  totalQty?:  number
 }
 
 /**
@@ -256,7 +263,7 @@ function labelToItemType(label: string): ItemType {
 
 // ── Item helpers ───────────────────────────────────────────────
 
-function parseItemPage(page: any): OrderItem & { orderId: string } {
+function parseItemPage(page: any): OrderItem & { orderId: string; seq: number; created: string } {
   const relations: any[] = page.properties?.['訂購單']?.relation ?? []
   const orderId = (relations[0]?.id ?? '').replace(/-/g, '')
   return {
@@ -271,11 +278,20 @@ function parseItemPage(page: any): OrderItem & { orderId: string } {
     note:       getText(page, '備註'),
     itemType:   labelToItemType(getSelect(page, '品項類型')),
     orderId,
+    seq:        page.properties?.['序號']?.number ?? Number.MAX_SAFE_INTEGER,
+    created:    page.created_time ?? '',
   }
 }
 
+/** 依序號排（2026-10-07 前的明細沒有序號，以建立時間排），去掉內部排序欄位 */
+function sortItems<T extends { seq: number; created: string }>(rows: T[]): Omit<T, 'seq' | 'created'>[] {
+  return [...rows]
+    .sort((a, b) => a.seq - b.seq || a.created.localeCompare(b.created))
+    .map(({ seq: _s, created: _c, ...rest }) => rest)
+}
+
 /** Fetch ALL items across all orders (two API calls: orders list + all items) */
-async function getAllOrderItems(): Promise<Array<OrderItem & { orderId: string }>> {
+async function getAllOrderItems(): Promise<Array<OrderItem & { orderId: string; seq: number; created: string }>> {
   if (!ORDER_ITEMS_DB) return []
   const results: any[] = []
   let cursor: string | undefined
@@ -291,18 +307,27 @@ async function getAllOrderItems(): Promise<Array<OrderItem & { orderId: string }
   return results.map(parseItemPage)
 }
 
-/** Fetch items for a single order (UUID format) */
-async function getItemsByOrderId(formattedId: string): Promise<OrderItem[]> {
+async function listItemPagesByOrder(formattedId: string): Promise<any[]> {
   if (!ORDER_ITEMS_DB) return []
-  const resp: any = await notion.databases.query({
-    database_id: ORDER_ITEMS_DB,
-    filter: { property: '訂購單', relation: { contains: formattedId } },
-    page_size: 100,
-  })
-  return (resp.results ?? []).map((p: any) => {
-    const { orderId: _oid, ...item } = parseItemPage(p)
-    return item
-  })
+  const pages: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDER_ITEMS_DB,
+      filter: { property: '訂購單', relation: { contains: formattedId } },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    pages.push(...(resp.results ?? []))
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return pages
+}
+
+/** Fetch items for a single order (UUID format)；分頁讀完（原本超過 100 項會被截斷）並依序號排 */
+async function getItemsByOrderId(formattedId: string): Promise<OrderItem[]> {
+  const pages = await listItemPagesByOrder(formattedId)
+  return sortItems(pages.map((p: any) => parseItemPage(p))).map(({ orderId: _oid, ...item }) => item)
 }
 
 /** Create item pages in 訂購明細, linked to the order */
@@ -310,7 +335,7 @@ async function createOrderItems(orderId: string, items: OrderItem[]): Promise<vo
   if (items.length === 0) return
   if (!ORDER_ITEMS_DB) throw new Error('NOTION_ORDER_ITEMS_DB 環境變數未設定，訂購明細無法儲存')
   await Promise.all(
-    items.map((item) =>
+    items.map((item, index) =>
       notion.pages.create({
         parent: { database_id: ORDER_ITEMS_DB },
         properties: {
@@ -319,11 +344,12 @@ async function createOrderItems(orderId: string, items: OrderItem[]): Promise<vo
           品牌:     { rich_text: richText(item.brand) },
           系列:     { rich_text: richText(item.seriesName) },
           數量:     { number: item.quantity },
+          序號:     { number: index + 1 },
           單價:     { number: item.itemType === 'gift' || item.itemType === 'sample' ? 0 : item.unitPrice },
           備註:     { rich_text: richText(item.note ?? '') },
           品項類型: { select: { name: itemTypeToLabel(item.itemType) } },
           訂購單:   { relation: [{ id: orderId }] },
-        },
+        } as any,
       })
     )
   )
@@ -331,17 +357,8 @@ async function createOrderItems(orderId: string, items: OrderItem[]): Promise<vo
 
 /** Archive (soft-delete) all item pages for an order */
 async function deleteOrderItems(formattedId: string): Promise<void> {
-  if (!ORDER_ITEMS_DB) return
-  const resp: any = await notion.databases.query({
-    database_id: ORDER_ITEMS_DB,
-    filter: { property: '訂購單', relation: { contains: formattedId } },
-    page_size: 100,
-  })
-  await Promise.all(
-    (resp.results ?? []).map((p: any) =>
-      notion.pages.update({ page_id: p.id, archived: true })
-    )
-  )
+  const pages = await listItemPagesByOrder(formattedId)
+  await Promise.all(pages.map((p: any) => notion.pages.update({ page_id: p.id, archived: true })))
 }
 
 // ── Parse order page ───────────────────────────────────────────
@@ -366,8 +383,18 @@ function parseOrderPage(page: any, items: OrderItem[] = []): Order {
     customerTaxId:   getText(page, '統一編號'),
     promotionId:     getText(page, '促銷活動ID')   || undefined,
     promotionName:   getText(page, '促銷活動名稱') || undefined,
+    requestedDate:   getDate(page, '希望到貨日'),
+    paymentMethod:   getText(page, '付款方式'),
+    deliveryMethod:  getText(page, '送貨方式'),
+    itemCount:       page.properties?.['品項數']?.number ?? (items.length || undefined),
+    totalQty:        page.properties?.['總件數']?.number ?? (items.length ? items.reduce((a, i) => a + i.quantity, 0) : undefined),
   }
 }
+
+const countsOf = (items: OrderItem[]) => ({
+  品項數: { number: items.length },
+  總件數: { number: items.reduce((a, i) => a + (i.quantity || 0), 0) },
+})
 
 // ── CRUD ──────────────────────────────────────────────────────
 
@@ -392,16 +419,43 @@ export async function listOrders(): Promise<Order[]> {
   const [orderPages, allItems] = await Promise.all([orderPagesPromise, getAllOrderItems()])
 
   // Group items by order ID
-  const itemsByOrder: Record<string, OrderItem[]> = {}
+  const grouped: Record<string, Array<OrderItem & { seq: number; created: string }>> = {}
   for (const { orderId, ...item } of allItems) {
-    if (!itemsByOrder[orderId]) itemsByOrder[orderId] = []
-    itemsByOrder[orderId].push(item)
+    if (!grouped[orderId]) grouped[orderId] = []
+    grouped[orderId].push(item)
   }
+  const itemsByOrder: Record<string, OrderItem[]> = Object.fromEntries(
+    Object.entries(grouped).map(([k, rows]) => [k, sortItems(rows) as OrderItem[]]))
 
   return orderPages.map((page) => {
     const orderId = page.id.replace(/-/g, '')
     return parseOrderPage(page, itemsByOrder[orderId] ?? [])
   })
+}
+
+/**
+ * 訂貨單清單頁用：只讀訂單本身（客戶、金額、品項數／總件數欄位），不掃全部明細。
+ * 2026-10-07 前的舊單沒有品項數欄位，才個別補讀該單明細。
+ */
+export async function listOrderSummaries(): Promise<Order[]> {
+  const pages: any[] = []
+  let cursor: string | undefined
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: ORDERS_DB,
+      sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    })
+    pages.push(...resp.results)
+    cursor = resp.has_more ? resp.next_cursor : undefined
+  } while (cursor)
+  return Promise.all(pages.map(async (page) => {
+    if (typeof page.properties?.['品項數']?.number === 'number') return parseOrderPage(page, [])
+    const items = await getItemsByOrderId(formatId(page.id.replace(/-/g, '')))
+    const o = parseOrderPage(page, items)
+    return { ...o, items: [] }
+  }))
 }
 
 /**
@@ -518,6 +572,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
       notion.pages.retrieve({ page_id: formatted }),
       getItemsByOrderId(formatted),
     ])
+    if ((page as any).archived) return null   // 已刪除（封存）的單不再回傳
     return parseOrderPage(page as any, items)
   } catch {
     return null
@@ -539,6 +594,9 @@ export async function createOrder(data: {
   customerTaxId?: string
   promotionId?:   string
   promotionName?: string
+  requestedDate?:  string
+  paymentMethod?:  string
+  deliveryMethod?: string
 }): Promise<Order> {
   await validateOrderItems(data.items)
   await assertPromotionValid(data.promotionId, data.items)
@@ -564,13 +622,17 @@ export async function createOrder(data: {
       統一編號:     { rich_text: richText(data.customerTaxId ?? '') },
       促銷活動ID:   { rich_text: richText(data.promotionId   ?? '') },
       促銷活動名稱: { rich_text: richText(data.promotionName ?? '') },
-    },
+      付款方式:     { rich_text: richText(data.paymentMethod ?? '') },
+      送貨方式:     { rich_text: richText(data.deliveryMethod ?? '') },
+      ...(data.requestedDate ? { 希望到貨日: { date: { start: data.requestedDate } } } : {}),
+      ...countsOf(data.items),
+    } as any,
   })
 
   // Create item pages in 訂購明細, linked to this order
   await createOrderItems(page.id, data.items)
 
-  return parseOrderPage(page, data.items.map((item, idx) => ({ ...item, id: `item-${idx}` })))
+  return (await getOrderById(page.id.replace(/-/g, ''))) ?? parseOrderPage(page, data.items)
 }
 
 export async function archiveOrder(id: string): Promise<void> {
@@ -602,6 +664,9 @@ export async function updateOrder(id: string, data: {
   customerTaxId?: string
   promotionId?:   string
   promotionName?: string
+  requestedDate?:  string
+  paymentMethod?:  string
+  deliveryMethod?: string
 }): Promise<void> {
   const formatted = formatId(id)
   const props: any = {}
@@ -619,6 +684,10 @@ export async function updateOrder(id: string, data: {
   if (data.customerTaxId !== undefined)    props['統一編號']     = { rich_text: richText(data.customerTaxId) }
   if (data.promotionId   !== undefined)    props['促銷活動ID']   = { rich_text: richText(data.promotionId ?? '') }
   if (data.promotionName !== undefined)    props['促銷活動名稱'] = { rich_text: richText(data.promotionName ?? '') }
+  if (data.paymentMethod !== undefined)    props['付款方式']     = { rich_text: richText(data.paymentMethod ?? '') }
+  if (data.deliveryMethod !== undefined)   props['送貨方式']     = { rich_text: richText(data.deliveryMethod ?? '') }
+  if (data.requestedDate !== undefined)    props['希望到貨日']   = data.requestedDate ? { date: { start: data.requestedDate } } : { date: null }
+  if (data.paymentMethod !== undefined || data.deliveryMethod !== undefined || data.requestedDate !== undefined) await ensureOrderFields()
 
   if (data.items) {
     const existingOrder = await getOrderById(id)
@@ -648,10 +717,13 @@ export async function updateOrder(id: string, data: {
         return unchanged
       },
     })
-    // Replace all item pages
-    await deleteOrderItems(formatted)
+    // Replace all item pages：先寫新明細再封存舊的——中途失敗時寧可多出舊明細（看得到、可再存一次），也不要整張變空
+    await ensureOrderFields()
+    const oldPages = await listItemPagesByOrder(formatted)
     await createOrderItems(formatted, data.items)
+    await Promise.all(oldPages.map((p: any) => notion.pages.update({ page_id: p.id, archived: true })))
     props['總金額'] = { number: calcTotal(data.items) }
+    Object.assign(props, countsOf(data.items))
   }
 
   if (Object.keys(props).length > 0) {

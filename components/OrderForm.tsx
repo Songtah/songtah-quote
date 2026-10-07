@@ -8,6 +8,18 @@ import type { OrderItem, ItemType } from '@/lib/orders-notion'
 import type { PromotionItem } from '@/lib/promotion-items-notion'
 import { matchPromoRule, buyNGetMGiftQty, SERIES_CONDITION_TYPES } from '@/lib/order-pricing'
 import { ProductFamily, YMHToothGridPanel, FamilySpecPanel } from '@/components/FamilySpecPicker'
+import { allowedOrderTransitions, ORDER_STATUS_STYLE, PAYMENT_METHOD_PRESETS, DELIVERY_METHOD_PRESETS, type OrderActor } from '@/lib/order-status'
+import { rocDate } from '@/lib/quote-model'
+
+/** 欄位外框（放在元件外：定義在 render 內會每次重建，輸入框打一個字就失去焦點） */
+function Field({ label, children, className = '', hint }: { label: string; children: React.ReactNode; className?: string; hint?: string }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 flex items-baseline gap-1.5 text-xs font-medium text-stone-500">{label}{hint && <span className="font-normal text-stone-400">{hint}</span>}</span>
+      {children}
+    </label>
+  )
+}
 
 interface ActivePromotion { id: string; name: string; type: string; startDate: string; endDate: string }
 
@@ -21,8 +33,8 @@ const calcTotal = (items: OrderItem[]): number =>
 const ITEM_TYPE_LABEL: Record<ItemType, string>  = { normal: '一般', gift: '贈品', sample: '樣品' }
 const ITEM_TYPE_COLOR: Record<ItemType, string>  = {
   normal: 'bg-stone-100 text-stone-600',
-  gift:   'bg-brand-50 text-green-700',
-  sample: 'bg-blue-100 text-blue-700',
+  gift:   'bg-emerald-50 text-emerald-700',
+  sample: 'bg-gold-50 text-gold-700',
 }
 
 // ── 產品目錄型別 (對應 /api/products/search + /api/products/families) ──
@@ -109,19 +121,6 @@ function ManualFamilyItems({
       {members.length === 0 && <p className="py-4 text-center text-sm text-stone-400">此系列尚無品項</p>}
     </div>
   )
-}
-
-// ── 狀態顏色 ──────────────────────────────────────────────────
-
-const STATUS_OPTIONS = ['草稿', '已送出', '確認中', '已到貨', '已取消'] as const
-type StatusType = typeof STATUS_OPTIONS[number]
-
-const STATUS_COLOR: Record<StatusType, string> = {
-  草稿:   'bg-stone-100 text-stone-600',
-  已送出: 'bg-blue-100 text-blue-700',
-  確認中: 'bg-yellow-100 text-yellow-700',
-  已到貨: 'bg-brand-50 text-green-700',
-  已取消: 'bg-red-100 text-red-600',
 }
 
 // ── ProductPicker ─────────────────────────────────────────────
@@ -591,8 +590,8 @@ function ProductPicker({
                 )}
                 {/* 提示：規格系列以外的品項請搜尋 */}
                 {!filterBrand && !filterType && !filterCategory && (
-                <div className="px-4 py-3 bg-blue-50/60 border-t border-blue-100">
-                  <p className="text-xs text-blue-600 leading-relaxed">
+                <div className="px-4 py-3 bg-cream-100 border-t border-cream-300">
+                  <p className="text-xs text-stone-600 leading-relaxed">
                     💡 以上為含規格選項的系列。其餘 <span className="font-semibold">6,037 筆</span> 商品請在上方搜尋欄輸入品名或貨品碼，或選擇品牌 / 類型 / 分類篩選。
                   </p>
                 </div>
@@ -717,7 +716,7 @@ function CustomerNameInput({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 animate-pulse">搜尋中…</span>
         )}
         {!searching && customer.id && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-500">✓ 已連結</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-emerald-600">✓ 已連結</span>
         )}
       </div>
 
@@ -897,8 +896,15 @@ interface OrderFormProps {
     customerTaxId?: string
     promotionId?:   string
     promotionName?: string
+    requestedDate?:  string
+    paymentMethod?:  string
+    deliveryMethod?: string
   }
   canEdit?: boolean
+  /** staff＝行政（可確認、到貨、改非草稿單）；editor＝業務（只能改草稿） */
+  actor?: OrderActor
+  /** 新單預設的業務承辦（登入者） */
+  defaultSalesperson?: string
   /** 鎖定原因說明（傳入時覆蓋預設的「僅限閱覽」文字） */
   lockedNote?: string
   /**
@@ -914,10 +920,14 @@ interface OrderFormProps {
     contactPerson?: string
     customerTaxId?: string
     note?: string
+    paymentMethod?: string
+    deliveryMethod?: string
+    /** 「再訂一次」：已由伺服器套用當下有效售價、排除停售品與贈品 */
+    items?: OrderItem[]
   }
 }
 
-export default function OrderForm({ initialOrder, canEdit = true, lockedNote, prefill }: OrderFormProps) {
+export default function OrderForm({ initialOrder, canEdit = true, lockedNote, prefill, actor = 'editor', defaultSalesperson = '' }: OrderFormProps) {
   const router = useRouter()
   const isEdit = !!initialOrder
 
@@ -930,11 +940,11 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const [salesperson, setSalesperson] = useState(initialOrder?.salesperson ?? '')
+  const [salesperson, setSalesperson] = useState(initialOrder?.salesperson ?? defaultSalesperson)
   const [salespersonOptions, setSalespersonOptions] = useState<string[]>([])
   const [note, setNote] = useState(initialOrder?.note ?? prefill?.note ?? '')
   const [status, setStatus] = useState<string>(initialOrder?.status ?? '草稿')
-  const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? [])
+  const [items, setItems] = useState<OrderItem[]>(initialOrder?.items ?? prefill?.items ?? [])
   const [showPicker, setShowPicker] = useState(false)
   // 跨規格系列買N送M：開啟「選贈品」用的選品器（鎖定該系列）
   const [giftPicker, setGiftPicker] = useState<{ seriesId: string; seriesName: string } | null>(null)
@@ -1120,11 +1130,12 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
   const handleAddItem = useCallback(
     (partial: Omit<OrderItem, 'id' | 'quantity' | 'note'>) => {
       // 已存在：只加數量（buy_n_get_m 的贈品更新由 handleQtyChange 接手）
-      const existingItem = items.find((it) => it.skuCode === partial.skuCode)
+      // 沒有貨號（自訂品項）不合併——否則第二個自訂品項會被加進第一個的數量
+      const existingItem = partial.skuCode ? items.find((it) => it.skuCode === partial.skuCode && it.itemType !== 'gift' && it.itemType !== 'sample') : undefined
       if (existingItem) {
         setItems((prev) =>
           prev.map((it) =>
-            it.skuCode === partial.skuCode ? { ...it, quantity: it.quantity + 1 } : it
+            it.id === existingItem.id ? { ...it, quantity: it.quantity + 1 } : it
           )
         )
         return
@@ -1288,946 +1299,432 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
     [promoItems, giftLinkMap, updateItem]
   )
 
-  // Save
-  const handleSave = async (targetStatus: string) => {
-    if (!salesperson.trim()) {
-      setError('請填寫業務姓名')
-      return
-    }
-    if (items.length === 0) {
-      setError('請至少新增一個品項')
-      return
-    }
+  // ── 存檔 ────────────────────────────────────────────────────────
+  const [requestedDate, setRequestedDate] = useState(initialOrder?.requestedDate ?? '')
+  const [paymentMethod, setPaymentMethod] = useState(initialOrder?.paymentMethod ?? prefill?.paymentMethod ?? '')
+  const [deliveryMethod, setDeliveryMethod] = useState(initialOrder?.deliveryMethod ?? prefill?.deliveryMethod ?? '')
+  const [openDetail, setOpenDetail] = useState<string[]>([])
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
+
+  // 未存檔變更：與載入時的內容比較（離開頁面提醒、狀態轉換前提醒）
+  const snapshot = JSON.stringify({ date, salesperson, note, items, customer, promotionId, requestedDate, paymentMethod, deliveryMethod })
+  const initialSnapshot = useRef<string | null>(null)
+  useEffect(() => { if (initialSnapshot.current === null && date) initialSnapshot.current = snapshot }, [date, snapshot])
+  const dirty = initialSnapshot.current !== null && initialSnapshot.current !== snapshot
+  useEffect(() => {
+    if (!dirty || !canEdit) return
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [dirty, canEdit])
+
+  const itemsChanged = JSON.stringify(items) !== JSON.stringify(initialOrder?.items ?? [])
+
+  function validate(): string {
+    if (!salesperson.trim()) return '請選擇業務承辦'
+    if (items.length === 0) return '請至少新增一個品項'
+    if (items.some((it) => !it.skuName.trim())) return '有品項沒有品名'
     // 跨規格系列買N送M：門檻已達但未加入贈品，不允許儲存
-    for (const [seriesId, s] of Object.entries(seriesBuyNGetMStatus)) {
+    for (const s of Object.entries(seriesBuyNGetMStatus).map(([id, v]) => ({ id, ...v }))) {
       if (s.freeQty <= 0) continue
-      const giftCount = items.filter(
-        it => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample')
-      ).reduce((sum, it) => sum + (it.quantity || 1), 0)
-      if (giftCount < s.freeQty) {
-        setError(
-          `「${s.seriesName}」買${s.n}送${s.m}門檻已達，` +
-          `請加入 ${s.freeQty} 件贈品（目前 ${giftCount} 件）後再儲存`
-        )
-        return
-      }
+      const giftCount = items.filter((it) => it.seriesId === s.id && (it.itemType === 'gift' || it.itemType === 'sample'))
+        .reduce((sum, it) => sum + (it.quantity || 1), 0)
+      if (giftCount < s.freeQty) return `「${s.seriesName}」買${s.n}送${s.m}門檻已達，請加入 ${s.freeQty} 件贈品（目前 ${giftCount} 件）後再儲存`
     }
-    setError('')
-    setSaving(true)
+    return ''
+  }
 
+  const payload = () => ({
+    date, salesperson, note, promotionId, promotionName, requestedDate, paymentMethod, deliveryMethod,
+    customerId: customer.id, customerName: customer.name, companyTitle: customer.companyTitle,
+    customerAddress: customer.address, customerPhone: customer.phone, contactPerson: customer.contactPerson, customerTaxId: customer.taxId,
+  })
+
+  /**
+   * 存檔。targetStatus：新單「草稿／已送出」；草稿編輯可一併送出；行政改非草稿單時不帶狀態（狀態另用轉換按鈕）。
+   * 行政改非草稿單的品項會覆寫已凍結的價格快照：先確認，再帶 confirmNonDraftEdit（伺服器會留稽核）。
+   */
+  const handleSave = async (targetStatus?: '草稿' | '已送出') => {
+    const msg = validate()
+    if (msg) { setError(msg); return }
+    const nonDraftItemEdit = isEdit && status !== '草稿' && itemsChanged
+    if (nonDraftItemEdit && !window.confirm(`這張訂單已${status}，修改品項／價格會覆寫原本的單據內容，並留下稽核紀錄。確定要修改嗎？`)) return
+    setError(''); setSaving(true)
     try {
-      const customerPayload = {
-        customerId: customer.id,
-        customerName: customer.name,
-        companyTitle: customer.companyTitle,
-        customerAddress: customer.address,
-        customerPhone: customer.phone,
-        contactPerson: customer.contactPerson,
-        customerTaxId: customer.taxId,
-      }
-      const body = JSON.stringify({ date, salesperson, note, items, status: targetStatus, ...customerPayload, promotionId, promotionName })
-      const res = isEdit && initialOrder
-        ? await fetch(`/api/orders/${initialOrder.id}`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body,
-          })
-        : await fetch('/api/orders', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
-          })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `伺服器錯誤 (${res.status})`)
-      }
-
+      const body: Record<string, unknown> = { ...payload() }
+      if (!isEdit || status === '草稿' || itemsChanged) body.items = items
+      if (nonDraftItemEdit) body.confirmNonDraftEdit = true
+      if (targetStatus && (!isEdit || targetStatus !== status)) body.status = targetStatus
+      const res = await fetch(isEdit ? `/api/orders/${initialOrder!.id}` : '/api/orders', {
+        method: isEdit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `伺服器錯誤 (${res.status})`)
+      initialSnapshot.current = snapshot
       router.push('/orders')
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '儲存失敗，請重試')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
-  // Print
-  const handlePrint = () => {
-    const html = buildPrintHtml({ orderNumber: initialOrder?.orderNumber ?? '草稿', date, salesperson, note, status, items, customer })
-    const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;'
-    document.body.appendChild(iframe)
-    const doc = iframe.contentDocument || iframe.contentWindow?.document
-    if (doc) { doc.open(); doc.write(html); doc.close() }
-    setTimeout(() => {
-      iframe.contentWindow?.focus()
-      iframe.contentWindow?.print()
-      setTimeout(() => document.body.removeChild(iframe), 2000)
-    }, 500)
+  /** 狀態轉換（確認受理、標記到貨、撤回、取消…），規則見 lib/order-status */
+  const changeStatus = async (to: string, label: string) => {
+    if (!initialOrder) return
+    if (dirty && !window.confirm('有尚未儲存的修改，轉換狀態不會一併儲存。仍要繼續嗎？')) return
+    if (to === '已取消' && !window.confirm('確定要取消這張訂單嗎？之後可由行政恢復為草稿。')) return
+    setStatusBusy(true); setError('')
+    try {
+      const res = await fetch(`/api/orders/${initialOrder.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: to }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `${label}失敗`)
+      router.refresh()
+      setStatus(to)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : `${label}失敗`)
+    } finally { setStatusBusy(false) }
   }
+
+  const previewPdf = async () => {
+    if (isEdit && !dirty) { window.open(`/api/orders/${initialOrder!.id}/pdf`, '_blank'); return }
+    setPreviewing(true); setError('')
+    const win = window.open('', '_blank')
+    try {
+      const res = await fetch('/api/orders/preview-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload(), items, status, orderNumber: initialOrder?.orderNumber ?? '' }),
+      })
+      if (!res.ok) { win?.close(); setError('PDF 預覽失敗'); return }
+      const url = URL.createObjectURL(await res.blob())
+      if (win) win.location.href = url; else window.open(url, '_blank')
+    } catch { win?.close(); setError('PDF 預覽失敗') }
+    finally { setPreviewing(false) }
+  }
+
+  const addCustomItem = () => {
+    const id = `custom-${Date.now()}-${Math.random()}`
+    setItems((prev) => [...prev, { id, skuCode: '', skuName: '', brand: '', seriesName: '', seriesId: '', quantity: 1, unitPrice: 0, note: '', itemType: 'normal' } as OrderItem])
+    setOpenDetail((prev) => [...prev, id])
+  }
+  const toggleDetail = (id: string) => setOpenDetail((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const totalQty = items.reduce((acc, it) => acc + it.quantity, 0)
+  const freeQty = items.filter((it) => it.itemType === 'gift' || it.itemType === 'sample').reduce((a, it) => a + it.quantity, 0)
   const totalAmount = calcTotal(items)
+  const brandStats = Object.entries(items.reduce((acc, it) => {
+    const k = it.brand || '其他'
+    if (!acc[k]) acc[k] = { qty: 0, amt: 0 }
+    acc[k].qty += it.quantity
+    if (it.itemType !== 'gift' && it.itemType !== 'sample') acc[k].amt += it.quantity * (it.unitPrice || 0)
+    return acc
+  }, {} as Record<string, { qty: number; amt: number }>)).sort((a, b) => b[1].amt - a[1].amt || b[1].qty - a[1].qty)
+
+  const transitions = isEdit ? allowedOrderTransitions(status, actor).filter((t) => !(t.action === 'submit' && canEdit)) : []
+  const isDraftLike = !isEdit || status === '草稿'
+
+  const sectionCls = 'card-soft rounded-3xl p-5 sm:p-6'
+  const sectionHead = (step: string, title: string, desc?: string) => (
+    <div>
+      <p className="text-[11px] font-semibold tracking-widest text-stone-400">{step}</p>
+      <h2 className="mt-0.5 text-base font-bold text-stone-800">{title}</h2>
+      {desc && <p className="mt-0.5 text-xs text-stone-400">{desc}</p>}
+    </div>
+  )
+  const inputCls = 'input-soft py-3 disabled:bg-stone-50 disabled:text-stone-500'
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5 pb-24 sm:pb-0">
-      {/* Header info */}
-      <div className="card-soft rounded-3xl p-5 sm:p-7 space-y-5">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第一步</p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">訂單基本資訊</h2>
-          <p className="mt-1 text-sm text-stone-500">確認日期、業務與適用促銷，再選擇客戶。</p>
-        </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-start gap-3">
-          {isEdit && (
-            <div className="col-span-1">
-              <label className="block text-xs text-stone-500 mb-1">訂單編號</label>
-              <span className="font-mono text-sm font-semibold text-stone-700">{initialOrder?.orderNumber}</span>
-            </div>
-          )}
-          <div className="col-span-1">
-            <label className="block text-xs text-stone-500 mb-1">訂貨日期</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-[8.5rem]"
-            />
-          </div>
-          <div className="col-span-1">
-            <label className="block text-xs text-stone-500 mb-1">業務姓名 *</label>
-            {salespersonOptions.length > 0 ? (
-              <select
-                value={salesperson}
-                onChange={(e) => setSalesperson(e.target.value)}
-                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-32"
-              >
-                <option value="">請選擇</option>
-                {salespersonOptions.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={salesperson}
-                onChange={(e) => setSalesperson(e.target.value)}
-                placeholder="輸入姓名"
-                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-32"
-              />
-            )}
-          </div>
-          {isEdit && (
-            <div className="col-span-1">
-              <label className="block text-xs text-stone-500 mb-1">狀態</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="select-soft px-3 py-2 sm:py-2 text-sm w-full sm:w-auto"
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="col-span-2 sm:flex-1 sm:min-w-0">
-            <label className="block text-xs text-stone-500 mb-1">備註</label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="訂單備註（選填）"
-              className="input-soft w-full px-4 py-2.5 text-sm"
-            />
-          </div>
-
-          {/* Promotion selector */}
-          <div className="col-span-2">
-            <label className="block text-xs text-stone-500 mb-1">關聯促銷活動</label>
-            <select
-              value={promotionId}
-              onChange={(e) => {
-                const id = e.target.value
-                const promo = activePromos.find((p) => p.id === id)
-                setPromotionId(id)
-                setPromotionName(promo?.name ?? '')
-                // 自動帶入備註：若備註空白或是上次自動帶入的促銷備註，覆蓋之
-                setNote((prev) => {
-                  if (!promo) return prev.startsWith('促銷活動：') ? '' : prev
-                  if (!prev.trim() || prev.startsWith('促銷活動：')) return `促銷活動：${promo.name}`
-                  return prev
-                })
-              }}
-              disabled={!canEdit}
-              className="select-soft px-3 py-2 sm:py-2 text-sm disabled:bg-stone-50 w-full sm:max-w-[280px]"
-            >
-              <option value="">— 無關聯活動 —</option>
-              {activePromos.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-              {/* If the order already has a promotion that's now ended, still show it */}
-              {promotionId && !activePromos.find((p) => p.id === promotionId) && (
-                <option value={promotionId}>{promotionName}</option>
-              )}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* 客戶資訊 */}
-      <div className="card-soft rounded-3xl p-5 sm:p-7 space-y-4">
-        <div><p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">第二步</p><h2 className="mt-1 text-lg font-bold text-stone-800">客戶資訊</h2></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* 客戶名稱：單一欄位，打字即搜尋 CRM */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs text-stone-500 mb-1">客戶名稱</label>
-            <CustomerNameInput customer={customer} onChange={setCustomer} disabled={!canEdit} />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">聯絡人</label>
-            <input
-              type="text"
-              value={customer.contactPerson}
-              onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))}
-              placeholder="聯絡人姓名（選填）"
-              disabled={!canEdit}
-              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">電話</label>
-            <input
-              type="text"
-              value={customer.phone}
-              onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
-              placeholder="電話號碼（選填）"
-              disabled={!canEdit}
-              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">統一編號</label>
-            <input
-              type="text"
-              value={customer.taxId}
-              onChange={(e) => setCustomer((c) => ({ ...c, taxId: e.target.value }))}
-              placeholder="統一編號（選填）"
-              disabled={!canEdit}
-              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">
-              公司抬頭 <span className="text-stone-400 text-[10px]">（選填）</span>
-            </label>
-            <input
-              type="text"
-              value={customer.companyTitle}
-              onChange={(e) => setCustomer((c) => ({ ...c, companyTitle: e.target.value }))}
-              placeholder="如：XX 牙醫診所"
-              disabled={!canEdit}
-              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-500 mb-1">地址</label>
-            <input
-              type="text"
-              value={customer.address}
-              onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
-              placeholder="送貨地址（選填）"
-              disabled={!canEdit}
-              className="input-soft w-full px-4 py-2.5 text-sm disabled:bg-stone-50"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Items table */}
-      <div className="card-soft rounded-3xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-900/[0.06] gap-2">
-          <h2 className="font-bold text-stone-800 min-w-0 truncate tracking-wide">
-            <span className="mr-2 text-[11px] font-bold uppercase tracking-widest text-stone-400">第三步</span>訂貨品項
-            {items.length > 0 && (
-              <span className="ml-1.5 text-[12px] sm:text-sm font-normal text-stone-400 whitespace-nowrap">
-                {items.length} 種 · 共 {totalQty} 件
-              </span>
-            )}
-          </h2>
-          {canEdit && (
-          <button
-            onClick={() => setShowPicker(true)}
-            className="shrink-0 whitespace-nowrap inline-flex items-center gap-1 px-4 sm:px-5 py-2 rounded-full text-[13px] sm:text-sm font-semibold bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all"
-          >
-            + 新增品項
-          </button>
+    <div className="grid gap-5 pb-44 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:pb-0">
+      <div className="min-w-0 space-y-5">
+        {!canEdit && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">🔒 {lockedNote ?? '僅限閱覽，無編輯權限'}</div>
         )}
-        </div>
 
-        {/* ── 跨規格系列買N送M 進度 banner ── */}
-        {Object.entries(seriesBuyNGetMStatus).map(([seriesId, { seriesName, n, m, totalQty, freeQty }]) => {
-          const reached = freeQty > 0
-          const giftCount = items
-            .filter(it => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample'))
-            .reduce((sum, it) => sum + (it.quantity || 1), 0)
-          const remaining = Math.max(0, freeQty - giftCount)
-          return (
-            <div
-              key={seriesId}
-              className={`mx-4 sm:mx-5 my-3 rounded-xl border px-4 py-3 text-sm ${
-                reached
-                  ? 'bg-brand-50 border-brand-200 text-teal-800'
-                  : 'bg-stone-50 border-stone-200 text-stone-600'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                <span className="font-medium">
-                  {reached ? '🎁' : '🏷'} {seriesName}
-                  <span className="ml-2 font-normal text-xs opacity-70">買{n}送{m}（同系列跨規格合計）</span>
-                </span>
-                <span className={`text-xs font-semibold ${reached ? 'text-teal-700' : 'text-stone-500'}`}>
-                  {totalQty} / {n} 件
-                  {freeQty > 0 && ` → 可自選 ${freeQty} 件贈品`}
-                </span>
-              </div>
-              {/* progress bar */}
-              <div className="h-1.5 rounded-full bg-stone-200 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${reached ? 'bg-brand-400' : 'bg-stone-400'}`}
-                  style={{ width: `${totalQty === 0 ? 0 : Math.min(100, (totalQty / n) * 100)}%` }}
-                />
-              </div>
-              {reached && (
-                <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
-                  <span className={`text-xs ${remaining > 0 ? 'text-amber-600 font-medium' : 'text-teal-600'}`}>
-                    {remaining > 0 ? `⚠ 尚未選滿贈品，還需 ${remaining} 件` : `✓ 已選 ${giftCount} 件贈品`}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setGiftPicker({ seriesId, seriesName })}
-                    className="text-xs px-3 py-1.5 rounded-full bg-brand-600 text-white font-medium hover:bg-brand-700 active:scale-95 transition-all"
-                  >
-                    🎁 選擇贈品
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {items.length === 0 ? (
-          <div className="text-center py-14 sm:py-20">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center text-3xl mb-4">📦</div>
-            <div className="text-sm text-stone-400">尚未新增品項</div>
-            <div className="text-xs text-stone-300 mt-1">點擊右上「+ 新增品項」開始選擇商品</div>
+        {/* STEP 1 客戶 */}
+        <section className={sectionCls}>
+          {sectionHead('STEP 1', '收貨客戶', '搜尋客戶主檔會自動帶入；帶入後每個欄位仍可修改。')}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="客戶名稱" className="sm:col-span-2">
+              <CustomerNameInput customer={customer} onChange={setCustomer} disabled={!canEdit} />
+            </Field>
+            <Field label="聯絡人"><input value={customer.contactPerson} onChange={(e) => setCustomer((c) => ({ ...c, contactPerson: e.target.value }))} disabled={!canEdit} className={inputCls} placeholder="例：陳技師" /></Field>
+            <Field label="電話"><input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} disabled={!canEdit} className={inputCls} inputMode="tel" /></Field>
+            <Field label="公司抬頭" hint="開立發票用"><input value={customer.companyTitle} onChange={(e) => setCustomer((c) => ({ ...c, companyTitle: e.target.value }))} disabled={!canEdit} className={inputCls} placeholder="同客戶名稱可留空" /></Field>
+            <Field label="統一編號"><input value={customer.taxId} onChange={(e) => setCustomer((c) => ({ ...c, taxId: e.target.value }))} disabled={!canEdit} className={inputCls} inputMode="numeric" maxLength={8} /></Field>
+            <Field label="送貨地址" className="sm:col-span-2"><input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} disabled={!canEdit} className={inputCls} /></Field>
           </div>
-        ) : (
-          <>
-            {/* ── 手機 / 平板卡片版（< md）── */}
-            <div className="md:hidden divide-y">
-              {items.map((item, idx) => {
-                const type    = (item.itemType ?? 'normal') as ItemType
-                const isGift  = type === 'gift' || type === 'sample'
-                const qty     = Math.max(1, item.quantity || 1)
-                const price   = isGift ? 0 : (item.unitPrice || 0)
-                const lineAmt = qty * price
-                const hint    = promoHints[item.id]
-                return (
-                  <div key={item.id} className={`p-4 space-y-3 ${isGift ? 'bg-brand-50/40' : ''}`}>
+        </section>
 
-                    {/* 品名 row */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-[10px] text-stone-400 shrink-0">{idx + 1}.</span>
-                          <span className="font-semibold text-stone-800 text-sm leading-snug">{item.skuName}</span>
-                        </div>
-                        {(item.skuCode || item.brand) && (
-                          <p className="text-[11px] text-stone-400 font-mono mt-0.5">
-                            {[item.skuCode, item.brand].filter(Boolean).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                      {canEdit && (
-                        <button onClick={() => removeItem(item.id)}
-                          className="text-stone-300 hover:text-red-400 text-2xl leading-none shrink-0 -mt-0.5 px-1">×</button>
-                      )}
-                    </div>
+        {/* STEP 2 訂購條件 */}
+        <section className={sectionCls}>
+          {sectionHead('STEP 2', '訂購條件', '會印在訂購單的「訂購資訊」。')}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="訂購日期" hint={rocDate(date)}><input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
+            <Field label="希望到貨日" hint={rocDate(requestedDate)}><input type="date" value={requestedDate} min={date} onChange={(e) => setRequestedDate(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
+            <Field label="業務承辦 *">
+              {salespersonOptions.length > 0 ? (
+                <select value={salesperson} onChange={(e) => setSalesperson(e.target.value)} disabled={!canEdit} className="select-soft w-full py-3">
+                  <option value="">請選擇</option>
+                  {salespersonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {salesperson && !salespersonOptions.includes(salesperson) && <option value={salesperson}>{salesperson}</option>}
+                </select>
+              ) : (
+                <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} disabled={!canEdit} className={inputCls} placeholder="輸入姓名" />
+              )}
+            </Field>
+            <Field label="關聯促銷活動">
+              <select value={promotionId} disabled={!canEdit} className="select-soft w-full py-3"
+                onChange={(e) => {
+                  const id = e.target.value
+                  const promo = activePromos.find((p) => p.id === id)
+                  setPromotionId(id); setPromotionName(promo?.name ?? '')
+                  setNote((prev) => {
+                    if (!promo) return prev.startsWith('促銷活動：') ? '' : prev
+                    if (!prev.trim() || prev.startsWith('促銷活動：')) return `促銷活動：${promo.name}`
+                    return prev
+                  })
+                }}>
+                <option value="">— 無關聯活動 —</option>
+                {activePromos.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {promotionId && !activePromos.find((p) => p.id === promotionId) && <option value={promotionId}>{promotionName}</option>}
+              </select>
+            </Field>
+            <Field label="付款方式">
+              <input list="order-payment" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={!canEdit} className={inputCls} placeholder="可選常用或自行輸入" />
+              <datalist id="order-payment">{PAYMENT_METHOD_PRESETS.map((p) => <option key={p} value={p} />)}</datalist>
+            </Field>
+            <Field label="送貨方式">
+              <input list="order-delivery" value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)} disabled={!canEdit} className={inputCls} placeholder="可選常用或自行輸入" />
+              <datalist id="order-delivery">{DELIVERY_METHOD_PRESETS.map((p) => <option key={p} value={p} />)}</datalist>
+            </Field>
+            <Field label="備註" hint="每行一條，印在訂購單備註區" className="sm:col-span-2">
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} disabled={!canEdit} rows={3} className="input-soft resize-y py-3 disabled:bg-stone-50" placeholder="例：請於週五前送達" />
+            </Field>
+          </div>
+        </section>
 
-                    {/* 促銷 hint — 明顯色塊 */}
-                    {hint && (
-                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        <span className="text-base leading-none">⚡</span>
-                        <span>{hint}</span>
-                      </div>
-                    )}
+        {/* STEP 3 品項 */}
+        <section className="card-soft overflow-hidden rounded-3xl">
+          <div className="flex flex-wrap items-start justify-between gap-3 p-5 pb-3 sm:p-6 sm:pb-3">
+            {sectionHead('STEP 3', `訂貨品項${items.length ? `（${items.length} 項 · ${totalQty} 件）` : ''}`, '從產品目錄加入會套用促銷與售價；自訂品項可填運費、維修等目錄外項目。')}
+            {canEdit && (
+              <div className="flex gap-2">
+                <button type="button" onClick={addCustomItem} className="button-secondary px-4 py-2">＋ 自訂品項</button>
+                <button type="button" onClick={() => setShowPicker(true)} className="button-primary px-4 py-2">＋ 從目錄加入</button>
+              </div>
+            )}
+          </div>
 
-                    {/* 類型 + 數量 */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-medium text-stone-400 mb-1">類型</label>
-                        <select
-                          value={type}
-                          onChange={(e) => {
-                            const next = e.target.value as ItemType
-                            updateItem(item.id, {
-                              itemType:  next,
-                              unitPrice: next === 'gift' || next === 'sample' ? 0 : item.unitPrice,
-                            })
-                          }}
-                          disabled={!canEdit}
-                          className={`text-xs font-medium rounded-full px-2 py-1 border-0 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-80 ${ITEM_TYPE_COLOR[type]}`}
-                        >
-                          <option value="normal">一般</option>
-                          <option value="gift">贈品</option>
-                          <option value="sample">樣品</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-medium text-stone-400 mb-1">數量</label>
-                        {canEdit ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
-                                else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
-                              }}
-                              className="w-8 h-8 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100 flex items-center justify-center text-base leading-none"
-                            >−</button>
-                            <input
-                              type="number"
-                              min={1}
-                              value={qty}
-                              onChange={(e) => {
-                                const v = Math.max(1, parseInt(e.target.value) || 1)
-                                if (!isGift) handleQtyChange(item, v)
-                                else updateItem(item.id, { quantity: v })
-                              }}
-                              className="input-soft w-12 rounded-xl px-1 py-1 text-center text-sm"
-                            />
-                            <button
-                              onClick={() => {
-                                if (!isGift) handleQtyChange(item, qty + 1)
-                                else updateItem(item.id, { quantity: qty + 1 })
-                              }}
-                              className="w-8 h-8 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100 flex items-center justify-center text-base leading-none"
-                            >+</button>
-                          </div>
-                        ) : (
-                          <span className="text-sm font-semibold text-stone-700">{qty} 件</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 單價 + 小計 */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-medium text-stone-400 mb-1">單價</label>
-                        {isGift ? (
-                          <span className="text-sm text-green-600 font-medium">$0</span>
-                        ) : canEdit ? (
-                          <input
-                            type="number"
-                            min={0}
-                            value={price > 0 ? price : ''}
-                            onChange={(e) => {
-                              const v = parseFloat(e.target.value)
-                              updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
-                            }}
-                            placeholder="—"
-                            className="w-full border-b border-dashed border-stone-300 bg-transparent py-0.5 text-sm focus:outline-none focus:border-brand-500"
-                          />
-                        ) : (
-                          <span className="text-sm text-stone-700">{price > 0 ? price.toLocaleString() : '—'}</span>
-                        )}
-                        {!isGift && price <= 0 && item.skuCode && (
-                          <span className="block text-[10px] text-amber-600 mt-0.5">⚠ 此商品尚未定價</span>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-medium text-stone-400 mb-1">小計</label>
-                        {isGift
-                          ? <span className="text-sm text-green-500 font-medium">贈送</span>
-                          : price > 0
-                            ? <span className="text-sm font-bold tabular-nums text-stone-800">{lineAmt.toLocaleString()}</span>
-                            : <span className="text-sm text-amber-500">待定價</span>
-                        }
-                      </div>
-                    </div>
-
-                    {/* 備註 */}
-                    {canEdit ? (
-                      <input
-                        type="text"
-                        value={item.note ?? ''}
-                        onChange={(e) => updateItem(item.id, { note: e.target.value })}
-                        placeholder="品項備註（選填）"
-                        className="w-full border-b border-dashed border-stone-200 bg-transparent py-1 text-sm text-stone-600 placeholder:text-stone-300 focus:outline-none focus:border-brand-500"
-                      />
-                    ) : item.note ? (
-                      <p className="text-xs text-stone-400">{item.note}</p>
-                    ) : null}
+          {/* 跨規格系列買N送M 進度 */}
+          {Object.entries(seriesBuyNGetMStatus).map(([seriesId, { seriesName, n, m, totalQty: sq, freeQty: fq }]) => {
+            const reached = fq > 0
+            const giftCount = items.filter((it) => it.seriesId === seriesId && (it.itemType === 'gift' || it.itemType === 'sample')).reduce((sum, it) => sum + (it.quantity || 1), 0)
+            const remaining = Math.max(0, fq - giftCount)
+            return (
+              <div key={seriesId} className={`mx-5 mb-3 rounded-2xl px-4 py-3 text-sm sm:mx-6 ${reached ? 'bg-brand-50 text-brand-800 ring-1 ring-brand-200' : 'bg-stone-50 text-stone-600 ring-1 ring-stone-200'}`}>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                  <span className="font-medium">{reached ? '🎁' : '🏷'} {seriesName}<span className="ml-2 text-xs font-normal opacity-70">買{n}送{m}（同系列跨規格合計）</span></span>
+                  <span className="text-xs font-semibold">{sq} / {n} 件{fq > 0 && ` → 可自選 ${fq} 件贈品`}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-stone-200">
+                  <div className={`h-full rounded-full transition-all ${reached ? 'bg-brand-400' : 'bg-stone-400'}`} style={{ width: `${sq === 0 ? 0 : Math.min(100, (sq / n) * 100)}%` }} />
+                </div>
+                {reached && (
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className={`text-xs ${remaining > 0 ? 'font-medium text-amber-700' : 'text-emerald-700'}`}>{remaining > 0 ? `⚠ 尚未選滿贈品，還需 ${remaining} 件` : `✓ 已選 ${giftCount} 件贈品`}</span>
+                    {canEdit && <button type="button" onClick={() => setGiftPicker({ seriesId, seriesName })} className="button-primary px-3 py-1.5 text-xs">🎁 選擇贈品</button>}
                   </div>
-                )
-              })}
+                )}
+              </div>
+            )
+          })}
 
-              {/* 手機合計 */}
-              {totalAmount > 0 && (
-                <div className="flex justify-between items-center px-4 py-3 bg-stone-50 border-t-2">
-                  <span className="text-sm text-stone-600 font-medium">合計（不含贈品）</span>
-                  <span className="text-sm font-bold tabular-nums text-stone-800">{totalAmount.toLocaleString()}</span>
-                </div>
-              )}
+          {items.length === 0 ? (
+            <div className="mx-5 mb-5 rounded-2xl border border-dashed border-stone-200 px-4 py-12 text-center sm:mx-6">
+              <div className="text-3xl">📦</div>
+              <p className="mt-2 text-sm text-stone-400">尚未新增品項</p>
+              <p className="mt-0.5 text-xs text-stone-300">按「＋ 從目錄加入」選擇商品</p>
             </div>
-
-            {/* ── 桌機表格版（md+）── */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[680px] text-sm">
-                <thead>
-                  <tr className="bg-stone-50 text-xs text-stone-500 uppercase tracking-wide">
-                    <th className="px-3 py-2.5 text-left w-8">#</th>
-                    <th className="px-3 py-2.5 text-left">貨品碼</th>
-                    <th className="px-3 py-2.5 text-left">品牌</th>
-                    <th className="px-3 py-2.5 text-left">品名</th>
-                    <th className="px-3 py-2.5 text-center w-20">類型</th>
-                    <th className="px-3 py-2.5 text-center w-24">數量</th>
-                    <th className="px-3 py-2.5 text-right w-28">單價</th>
-                    <th className="px-3 py-2.5 text-right w-28">金額</th>
-                    <th className="px-3 py-2.5 text-left">備註</th>
-                    <th className="px-3 py-2.5 w-8"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {items.map((item, idx) => {
-                    const type    = (item.itemType ?? 'normal') as ItemType
-                    const isGift  = type === 'gift' || type === 'sample'
-                    const qty     = Math.max(1, item.quantity || 1)
-                    const price   = isGift ? 0 : (item.unitPrice || 0)
-                    const lineAmt = qty * price
-                    return (
-                      <tr key={item.id} className={isGift ? 'bg-brand-50/40 hover:bg-brand-50' : 'hover:bg-stone-50'}>
-                        <td className="px-3 py-2.5 text-stone-400 text-xs">{idx + 1}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-stone-500 whitespace-nowrap">{item.skuCode}</td>
-                        <td className="px-3 py-2.5 text-stone-600 text-xs whitespace-nowrap">{item.brand}</td>
-                        <td className="px-3 py-2.5">
-                          <div className="font-medium text-stone-800">{item.skuName}</div>
-                          {promoHints[item.id] && (
-                            <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                              <span>⚡</span>
-                              <span>{promoHints[item.id]}</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          <select
-                            value={type}
-                            onChange={(e) => {
-                              const next = e.target.value as ItemType
-                              updateItem(item.id, {
-                                itemType:  next,
-                                unitPrice: next === 'gift' || next === 'sample' ? 0 : item.unitPrice,
-                              })
-                            }}
-                            disabled={!canEdit}
-                            className={`text-xs font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${ITEM_TYPE_COLOR[type]}`}
-                          >
-                            <option value="normal">一般</option>
-                            <option value="gift">贈品</option>
-                            <option value="sample">樣品</option>
-                          </select>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => {
-                                if (!isGift) handleQtyChange(item, Math.max(1, qty - 1))
-                                else updateItem(item.id, { quantity: Math.max(1, qty - 1) })
-                              }}
-                              className="w-6 h-6 rounded border text-stone-500 hover:bg-stone-100 flex items-center justify-center text-sm leading-none"
-                            >−</button>
-                            <input
-                              type="number"
-                              min={1}
-                              value={qty}
-                              onChange={(e) => {
-                                const v = Math.max(1, parseInt(e.target.value) || 1)
-                                if (!isGift) handleQtyChange(item, v)
-                                else updateItem(item.id, { quantity: v })
-                              }}
-                              className="input-soft w-12 rounded-xl px-1 py-0.5 text-center text-sm"
-                            />
-                            <button
-                              onClick={() => {
-                                if (!isGift) handleQtyChange(item, qty + 1)
-                                else updateItem(item.id, { quantity: qty + 1 })
-                              }}
-                              className="w-6 h-6 rounded border text-stone-500 hover:bg-stone-100 flex items-center justify-center text-sm leading-none"
-                            >+</button>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          {isGift ? (
-                            <span className="block text-right text-sm text-green-600 font-medium">$0</span>
+          ) : (
+            <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+              <div className="hidden grid-cols-[28px_minmax(0,1fr)_72px_108px_96px_96px_64px] gap-2 px-2 pb-2 text-[11px] font-medium text-stone-400 xl:grid">
+                <span>#</span><span>品名</span><span className="text-center">類型</span><span className="text-center">數量</span>
+                <span className="text-right">單價</span><span className="text-right">金額</span><span />
+              </div>
+              <ul className="space-y-2">
+                {items.map((item, idx) => {
+                  const type = (item.itemType ?? 'normal') as ItemType
+                  const isGift = type === 'gift' || type === 'sample'
+                  const qty = Math.max(1, item.quantity || 1)
+                  const price = isGift ? 0 : (item.unitPrice || 0)
+                  const detail = openDetail.includes(item.id)
+                  const custom = !item.skuCode
+                  const setQty = (v: number) => (isGift ? updateItem(item.id, { quantity: v }) : handleQtyChange(item, v))
+                  return (
+                    <li key={item.id} className={`rounded-2xl p-2 ring-1 ring-stone-900/[0.06] ${isGift ? 'bg-brand-50/40' : 'bg-white'}`}>
+                      <div className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-2 xl:grid-cols-[28px_minmax(0,1fr)_72px_108px_96px_96px_64px] xl:items-center">
+                        <span className="pt-2 text-center text-xs tabular-nums text-stone-400 xl:pt-0">{idx + 1}</span>
+                        <div className="min-w-0 px-1">
+                          {custom && canEdit ? (
+                            <input value={item.skuName} onChange={(e) => updateItem(item.id, { skuName: e.target.value })} className="input-soft py-2" placeholder="品名（例：運費、維修工資）" />
                           ) : (
-                            <input
-                              type="number"
-                              min={0}
-                              value={price > 0 ? price : ''}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value)
-                                updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 })
-                              }}
-                              placeholder="—"
-                              className="w-full border-0 border-b border-dashed border-stone-300 bg-transparent text-right text-sm focus:outline-none focus:border-brand-500"
-                            />
+                            <p className="text-sm font-medium leading-snug text-stone-800">{item.skuName || '（未命名）'}</p>
                           )}
-                          {!isGift && price <= 0 && item.skuCode && (
-                            <span className="block text-right text-[10px] text-amber-600 mt-0.5">⚠ 尚未定價</span>
+                          <p className="mt-0.5 truncate text-[11px] text-stone-400">
+                            {[custom ? '自訂品項' : item.skuCode, item.brand, item.note].filter(Boolean).join('　·　')}
+                          </p>
+                          {promoHints[item.id] && (
+                            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">⚡ {promoHints[item.id]}</span>
                           )}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-sm text-stone-700 tabular-nums">
-                          {isGift
-                            ? <span className="text-green-500 text-xs">贈送</span>
-                            : price > 0
-                              ? lineAmt.toLocaleString()
-                              : <span className="text-amber-500 text-xs">待定價</span>}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <input
-                            type="text"
-                            value={item.note ?? ''}
-                            onChange={(e) => updateItem(item.id, { note: e.target.value })}
-                            placeholder="備註"
-                            className="w-full border-0 border-b border-dashed border-stone-300 bg-transparent text-sm focus:outline-none focus:border-brand-500"
-                          />
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="text-stone-300 hover:text-red-400 text-lg leading-none"
-                          >×</button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot style={{ display: totalAmount > 0 ? '' : 'none' }}>
-                  <tr className="border-t-2 bg-stone-50">
-                    <td colSpan={7} className="px-3 py-2.5 text-right text-sm font-medium text-stone-600">合計（不含贈品）</td>
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-stone-800 tabular-nums">
-                      {totalAmount > 0 ? totalAmount.toLocaleString() : ''}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                </tfoot>
-              </table>
+                        </div>
+                        <div className="col-span-2 grid grid-cols-[72px_1fr_1fr] items-end gap-2 xl:contents">
+                          <label className="xl:contents">
+                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">類型</span>
+                            <select value={type} disabled={!canEdit}
+                              onChange={(e) => { const next = e.target.value as ItemType; updateItem(item.id, { itemType: next, unitPrice: next === 'gift' || next === 'sample' ? 0 : item.unitPrice }) }}
+                              className={`w-full rounded-full border-0 px-2 py-1.5 text-center text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-400/40 ${ITEM_TYPE_COLOR[type]}`}>
+                              <option value="normal">一般</option><option value="gift">贈品</option><option value="sample">樣品</option>
+                            </select>
+                          </label>
+                          <div className="xl:contents">
+                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">數量</span>
+                            {canEdit ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 ring-1 ring-stone-200 hover:bg-stone-100 active:scale-95">−</button>
+                                <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))} className="input-soft w-12 px-1 py-1.5 text-center tabular-nums" />
+                                <button type="button" onClick={() => setQty(qty + 1)} className="flex h-8 w-8 items-center justify-center rounded-full text-stone-500 ring-1 ring-stone-200 hover:bg-stone-100 active:scale-95">+</button>
+                              </div>
+                            ) : <span className="block text-center text-sm tabular-nums">{qty}</span>}
+                          </div>
+                          <label className="xl:contents">
+                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">單價</span>
+                            {isGift ? <span className="block text-right text-sm text-emerald-700">贈送</span>
+                              : canEdit ? (
+                                <input type="number" min={0} value={price > 0 ? price : ''} placeholder="待定價"
+                                  onChange={(e) => { const v = parseFloat(e.target.value); updateItem(item.id, { unitPrice: isFinite(v) && v >= 0 ? v : 0 }) }}
+                                  className={`input-soft py-1.5 text-right tabular-nums ${price <= 0 ? 'ring-1 ring-amber-300' : ''}`} />
+                              ) : <span className="block text-right text-sm tabular-nums">{price > 0 ? price.toLocaleString() : '—'}</span>}
+                          </label>
+                        </div>
+                        <div className="col-span-2 flex items-center justify-between gap-2 xl:col-span-1 xl:contents">
+                          <span className="text-sm font-semibold tabular-nums text-stone-800 xl:text-right">
+                            <span className="mr-1 text-[11px] font-normal text-stone-400 xl:hidden">金額</span>
+                            {isGift ? <span className="text-xs font-normal text-emerald-700">—</span> : price > 0 ? (qty * price).toLocaleString() : <span className="text-xs font-normal text-amber-600">待定價</span>}
+                          </span>
+                          <div className="flex items-center justify-end gap-0.5">
+                            <button type="button" onClick={() => toggleDetail(item.id)} className={`whitespace-nowrap rounded-full px-2 py-1 text-xs transition-all active:scale-95 ${detail ? 'bg-brand-50 text-brand-700' : 'text-stone-400 hover:bg-stone-100'}`}>詳細</button>
+                            {canEdit && <button type="button" onClick={() => removeItem(item.id)} title="刪除" className="rounded-full px-2 py-1 text-stone-300 hover:bg-red-50 hover:text-red-500">✕</button>}
+                          </div>
+                        </div>
+                      </div>
+                      {detail && (
+                        <div className="mt-2 grid grid-cols-1 gap-3 rounded-xl bg-stone-50 p-3 sm:grid-cols-2 xl:ml-[36px]">
+                          <Field label="品名" hint={custom ? '' : '可改顯示名稱，貨號不變'}>
+                            <input value={item.skuName} onChange={(e) => updateItem(item.id, { skuName: e.target.value })} disabled={!canEdit} className="input-soft bg-white py-2 disabled:bg-stone-100" />
+                          </Field>
+                          <Field label="品牌">
+                            <input value={item.brand} onChange={(e) => updateItem(item.id, { brand: e.target.value })} disabled={!canEdit || !custom} className="input-soft bg-white py-2 disabled:bg-stone-100" />
+                          </Field>
+                          <Field label="品項備註" hint="印在品名下方" className="sm:col-span-2">
+                            <input value={item.note ?? ''} onChange={(e) => updateItem(item.id, { note: e.target.value })} disabled={!canEdit} className="input-soft bg-white py-2 disabled:bg-stone-100" placeholder="例：指定批號" />
+                          </Field>
+                          {!custom && <p className="text-[11px] text-stone-400 sm:col-span-2">貨號 {item.skuCode}{item.seriesName ? `・${item.seriesName}` : ''}（單價為加入當下的售價，之後目錄調價不會改動這張訂單）</p>}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
-          </>
-        )}
+          )}
+        </section>
       </div>
 
-      {/* 訂購統計 */}
-      {items.length > 0 && (
-        <div className="card-soft rounded-3xl p-5 sm:p-7">
-          <h2 className="font-bold text-stone-800 text-sm mb-3">訂購統計</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-stone-500 border-b">
-                  <th className="text-left pb-2 font-medium">品牌</th>
-                  <th className="text-center pb-2 font-medium">種類</th>
-                  <th className="text-center pb-2 font-medium">件數</th>
-                  {totalAmount > 0 && <th className="text-right pb-2 font-medium">小計</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-50">
-                {Object.entries(
-                  items.reduce((acc, it) => {
-                    if (!acc[it.brand]) acc[it.brand] = { kinds: 0, qty: 0, amt: 0 }
-                    acc[it.brand].kinds += 1
-                    acc[it.brand].qty += it.quantity
-                    acc[it.brand].amt += it.quantity * (it.unitPrice || 0)
-                    return acc
-                  }, {} as Record<string, { kinds: number; qty: number; amt: number }>)
-                )
-                  .sort((a, b) => b[1].qty - a[1].qty)
-                  .map(([brand, stat]) => (
-                    <tr key={brand} className="text-stone-700">
-                      <td className="py-1.5">{brand || '—'}</td>
-                      <td className="text-center py-1.5 tabular-nums">{stat.kinds} 種</td>
-                      <td className="text-center py-1.5 tabular-nums font-medium">{stat.qty} 件</td>
-                      {totalAmount > 0 && (
-                        <td className="text-right py-1.5 tabular-nums text-stone-500">
-                          {stat.amt > 0 ? stat.amt.toLocaleString() : '—'}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t font-semibold text-stone-800">
-                  <td className="pt-2">合計</td>
-                  <td className="text-center pt-2 tabular-nums">{items.length} 種</td>
-                  <td className="text-center pt-2 tabular-nums">{totalQty} 件</td>
-                  {totalAmount > 0 && (
-                    <td className="text-right pt-2 tabular-nums">NT$ {totalAmount.toLocaleString()}</td>
-                  )}
-                </tr>
-              </tfoot>
-            </table>
+      {/* 右側摘要 */}
+      <aside className="space-y-4 lg:sticky lg:top-4">
+        <div className="card-soft rounded-3xl p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs text-stone-400">訂單編號</p>
+              <p className="mt-0.5 font-mono text-sm text-stone-700">{initialOrder?.orderNumber ?? '存檔後自動產生'}</p>
+            </div>
+            {isEdit && <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ORDER_STATUS_STYLE[status] ?? 'bg-stone-100 text-stone-600'}`}>{status}</span>}
+          </div>
+          <dl className="mt-4 space-y-1.5 text-sm">
+            <div className="flex justify-between"><dt className="text-stone-500">品項</dt><dd className="tabular-nums text-stone-700">{items.length} 項 · {totalQty} 件</dd></div>
+            {freeQty > 0 && <div className="flex justify-between"><dt className="text-stone-500">其中贈品／樣品</dt><dd className="tabular-nums text-stone-700">{freeQty} 件</dd></div>}
+            <div className="flex items-end justify-between border-t border-stone-100 pt-3">
+              <dt className="text-stone-600">合計</dt>
+              <dd className="text-2xl font-bold tabular-nums text-brand-700">NT$ {totalAmount.toLocaleString('zh-TW')}</dd>
+            </div>
+          </dl>
+          {brandStats.length > 1 && (
+            <details className="mt-3 text-xs text-stone-500">
+              <summary className="cursor-pointer text-stone-400 hover:text-stone-600">依品牌（{brandStats.length}）</summary>
+              <ul className="mt-2 space-y-1">
+                {brandStats.map(([b, v]) => (
+                  <li key={b} className="flex justify-between gap-2"><span className="truncate">{b}</span><span className="shrink-0 tabular-nums">{v.qty} 件{v.amt > 0 ? ` · ${v.amt.toLocaleString()}` : ''}</span></li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+
+        {transitions.length > 0 && (
+          <div className="card-soft rounded-3xl p-5">
+            <p className="mb-2 text-xs font-semibold text-stone-500">訂單狀態</p>
+            <div className="flex flex-wrap gap-2">
+              {transitions.map((t) => (
+                <button key={t.action} type="button" disabled={statusBusy} onClick={() => changeStatus(t.to, t.label)}
+                  className={t.tone === 'primary' ? 'button-primary px-4 py-2 text-xs' : t.tone === 'danger'
+                    ? 'rounded-full px-4 py-2 text-xs font-medium text-red-600 ring-1 ring-red-200 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50'
+                    : 'button-secondary px-4 py-2 text-xs'}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-900/[0.06] bg-[#fdfdfb]/95 px-4 py-3 shadow-[0_-4px_24px_rgba(28,25,23,0.06)] backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <div className="mb-2 flex items-baseline justify-between lg:hidden">
+            <span className="text-xs text-stone-500">{items.length} 項 · {totalQty} 件</span>
+            <span className="text-lg font-bold tabular-nums text-brand-700">NT$ {totalAmount.toLocaleString('zh-TW')}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col">
+            {canEdit && isDraftLike && (
+              <>
+                <button type="button" onClick={() => handleSave('已送出')} disabled={saving} className="button-primary col-span-2 py-3 lg:w-full">
+                  {saving ? '儲存中…' : isEdit ? '儲存並送出訂單' : '送出訂單'}
+                </button>
+                <button type="button" onClick={() => handleSave('草稿')} disabled={saving} className="button-secondary py-3 lg:w-full">儲存草稿</button>
+              </>
+            )}
+            {canEdit && !isDraftLike && (
+              <button type="button" onClick={() => handleSave()} disabled={saving || !dirty} className="button-primary col-span-2 py-3 lg:w-full">
+                {saving ? '儲存中…' : dirty ? '儲存修改' : '沒有變更'}
+              </button>
+            )}
+            <button type="button" onClick={previewPdf} disabled={previewing || items.length === 0}
+              className={`button-secondary py-3 lg:w-full ${canEdit && isDraftLike ? '' : 'col-span-2'}`}>
+              {previewing ? '產生中…' : isEdit && !dirty ? '訂購單 PDF' : '預覽 PDF'}
+            </button>
+            <button type="button" onClick={() => router.push('/orders')} className="hidden py-2 text-sm text-stone-400 hover:text-stone-600 lg:block lg:w-full">返回訂貨單清單</button>
           </div>
         </div>
-      )}
+      </aside>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-2xl bg-red-50 ring-1 ring-red-200 text-red-700 px-5 py-3.5 text-sm font-medium">
-          {error}
-        </div>
-      )}
-
-      {/* Footer actions */}
-      {/* Action bar — sticky on mobile */}
-      <div className="sticky bottom-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 sm:py-3.5 backdrop-blur-xl border-t border-stone-900/[0.06] shadow-[0_-4px_24px_rgba(28,25,23,0.06)] flex flex-wrap items-center justify-between gap-[10px] sm:gap-3 rounded-t-2xl" style={{ background: 'rgba(252,251,248,0.9)' }}>
-        {/* 左：取消 ＋ 儲存草稿 */}
-        <div className="flex gap-[8px] sm:gap-2">
-          <button
-            onClick={() => router.back()}
-            className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
-          >
-            取消
-          </button>
-          {canEdit && (
-            <button
-              onClick={() => handleSave('草稿')}
-              disabled={saving}
-              className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all disabled:opacity-50"
-            >
-              {saving ? '儲存中...' : '儲存草稿'}
-            </button>
-          )}
-        </div>
-        {/* 右：合計 ＋ 列印 ＋ 送出訂單 */}
-        <div className="flex items-center gap-[8px] sm:gap-3 flex-1 sm:flex-none justify-end">
-          {items.length > 0 && (
-            <div className="hidden sm:flex flex-col items-end leading-none mr-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1">合計</span>
-              <span className="text-lg font-bold tabular-nums text-stone-800">
-                NT$ {totalAmount.toLocaleString('zh-TW')}
-              </span>
-            </div>
-          )}
-          {items.length > 0 && (
-            <button
-              onClick={handlePrint}
-              className="px-4 sm:px-5 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-medium rounded-full border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:border-stone-300 active:scale-95 transition-all"
-            >
-              🖨️ 列印
-            </button>
-          )}
-          {canEdit && (
-            <button
-              onClick={() => handleSave('已送出')}
-              disabled={saving}
-              className="px-5 sm:px-6 py-[10px] sm:py-2.5 text-[13px] sm:text-sm font-semibold rounded-full bg-brand-500 text-white hover:bg-brand-600 shadow-md shadow-brand-500/25 active:scale-95 transition-all disabled:opacity-50 flex-1 sm:flex-none"
-            >
-              {saving ? '送出中...' : '✓ 送出訂單'}
-            </button>
-          )}
-          {!canEdit && (
-            <span className="text-[13px] sm:text-sm text-amber-600 bg-amber-50 border border-amber-200 px-3 py-[10px] sm:py-1.5 rounded-lg">
-              🔒 {lockedNote ?? '僅限閱覽，無編輯權限'}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Product picker panel */}
       <AnimatePresence>
-        {showPicker && (
-          <ProductPicker
-            onAdd={handleAddItem}
-            onClose={() => setShowPicker(false)}
-          />
-        )}
+        {showPicker && <ProductPicker onAdd={handleAddItem} onClose={() => setShowPicker(false)} />}
         {giftPicker && (
-          <ProductPicker
-            lockSeriesId={giftPicker.seriesId}
-            lockSeriesName={giftPicker.seriesName}
-            onAdd={(partial) => { handleAddGift(partial); setGiftPicker(null) }}
-            onClose={() => setGiftPicker(null)}
-          />
+          <ProductPicker lockSeriesId={giftPicker.seriesId} lockSeriesName={giftPicker.seriesName}
+            onAdd={(partial) => { handleAddGift(partial); setGiftPicker(null) }} onClose={() => setGiftPicker(null)} />
         )}
       </AnimatePresence>
     </div>
   )
-}
-
-// ── Print HTML ─────────────────────────────────────────────────
-
-function buildPrintHtml(data: {
-  orderNumber: string
-  date: string
-  salesperson: string
-  note: string
-  status: string
-  items: OrderItem[]
-  customer: SelectedCustomer  // includes companyTitle
-}) {
-  const totalQty  = data.items.reduce((a, i) => a + i.quantity, 0)
-  const totalAmt  = calcTotal(data.items)
-  const hasPrice  = data.items.some((i) => i.unitPrice > 0)
-  const printTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
-
-  const rows = data.items.map((item, i) => {
-    const lineTotal    = item.unitPrice > 0 ? (item.quantity * item.unitPrice).toLocaleString() : ''
-    const unitPriceStr = item.unitPrice > 0 ? item.unitPrice.toLocaleString() : ''
-    return `<tr>
-      <td class="tc gray">${i + 1}</td>
-      <td class="mono sm">${item.skuCode}</td>
-      <td class="sm">${item.brand}</td>
-      <td class="bold">${item.skuName}</td>
-      <td class="tc">${item.quantity}</td>
-      ${hasPrice ? `<td class="tr">${unitPriceStr}</td><td class="tr bold">${lineTotal}</td>` : ''}
-      <td class="sm gray">${item.note || ''}</td>
-    </tr>`
-  }).join('')
-
-  const totalRow = hasPrice ? `
-    <tr class="total-row">
-      <td colspan="4" class="tr" style="padding-right:12px">小計</td>
-      <td class="tc">${totalQty}</td>
-      <td></td>
-      <td class="tr bold" style="font-size:14px">${totalAmt.toLocaleString()}</td>
-      <td></td>
-    </tr>` : `
-    <tr class="total-row">
-      <td colspan="4" class="tr" style="padding-right:12px">總數量</td>
-      <td class="tc bold">${totalQty}</td>
-      <td></td>
-    </tr>`
-
-  const c = data.customer
-
-  return `<!DOCTYPE html>
-<html lang="zh-TW"><head>
-<meta charset="UTF-8">
-<title>訂貨單 ${data.orderNumber}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;font-size:12px;color:#111;background:#fff;padding:28px 32px 40px}
-  .hd{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid #111}
-  .co{font-size:18px;font-weight:700;letter-spacing:0.02em;line-height:1.3}
-  .co-sub{font-size:10px;color:#777;margin-top:2px;letter-spacing:0.06em}
-  .doc-meta{text-align:right}
-  .doc-type{font-size:10px;color:#777;letter-spacing:0.08em;margin-bottom:4px}
-  .doc-num{font-size:22px;font-weight:700;font-family:monospace;letter-spacing:0.06em}
-  /* ── 訂單資訊列 ── */
-  .info{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #ddd;background:#f8f8f8}
-  .info-cell{padding:6px 12px}
-  .lbl{font-size:9px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
-  .val{font-size:12px;font-weight:500;color:#111}
-  /* ── 客戶區塊 ── */
-  .cust-block{border:1px solid #ddd;border-top:none;background:#fff}
-  .cust-title{background:#333;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 12px;text-transform:uppercase}
-  .cust-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0}
-  .cust-cell{padding:6px 12px;border-right:1px solid #eee}
-  .cust-cell:last-child{border-right:none}
-  .cust-name-val{font-size:14px;font-weight:700;color:#111}
-  .cust-addr{border-top:1px solid #eee;padding:6px 12px}
-  /* ── 品項表格 ── */
-  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
-  th{background:#111;color:#fff;font-weight:600;text-align:left;padding:7px 8px;font-size:10px;letter-spacing:0.04em;white-space:nowrap}
-  td{padding:6px 8px;border-bottom:1px solid #e8e8e8}
-  tbody tr:nth-child(even) td{background:#f8f8f8}
-  .total-row td{background:#333!important;color:#fff;font-weight:600;padding:7px 8px;border:none}
-  .tc{text-align:center}.tr{text-align:right}.bold{font-weight:600}
-  .mono{font-family:monospace;font-size:10px;color:#666}.sm{font-size:11px}.gray{color:#999}
-  .ft{display:flex;justify-content:space-between;margin-top:12px;padding-top:8px;border-top:1px solid #ddd;font-size:10px;color:#aaa}
-  .sig{display:flex;gap:40px;margin-top:40px}
-  .sig-item{min-width:100px;border-top:1px solid #bbb;padding-top:4px;font-size:10px;color:#888}
-  @media print{body{padding:0}}
-</style>
-</head>
-<body>
-
-<!-- Header -->
-<div class="hd">
-  <div>
-    <div class="co">崧達企業股份有限公司</div>
-    <div class="co-sub">SONGTAH TRADING CO., LTD.</div>
-  </div>
-  <div class="doc-meta">
-    <div class="doc-type">內部訂貨單 PURCHASE ORDER</div>
-    <div class="doc-num">${data.orderNumber}</div>
-  </div>
-</div>
-
-<!-- 訂單資訊列 -->
-<div class="info">
-  <div class="info-cell"><div class="lbl">訂貨日期</div><div class="val">${data.date || '—'}</div></div>
-  <div class="info-cell"><div class="lbl">業務</div><div class="val">${data.salesperson || '—'}</div></div>
-  <div class="info-cell"><div class="lbl">狀態</div><div class="val">${data.status || '—'}</div></div>
-  <div class="info-cell"><div class="lbl">備注</div><div class="val">${data.note || '—'}</div></div>
-</div>
-
-<!-- 客戶資訊（永遠顯示） -->
-<div class="cust-block">
-  <div class="cust-title">收貨客戶資訊</div>
-  <div class="cust-grid">
-    <div class="cust-cell">
-      <div class="lbl">客戶名稱</div>
-      <div class="cust-name-val">${c.name || '—'}</div>
-    </div>
-    <div class="cust-cell">
-      <div class="lbl">公司抬頭</div>
-      <div class="val">${c.companyTitle || '—'}</div>
-    </div>
-    <div class="cust-cell">
-      <div class="lbl">聯絡人</div>
-      <div class="val">${c.contactPerson || '—'}</div>
-    </div>
-    <div class="cust-cell">
-      <div class="lbl">電話</div>
-      <div class="val">${c.phone || '—'}</div>
-    </div>
-    <div class="cust-cell">
-      <div class="lbl">統一編號</div>
-      <div class="val">${c.taxId || '—'}</div>
-    </div>
-  </div>
-  <div class="cust-addr">
-    <div class="lbl">地址</div>
-    <div class="val">${c.address || '—'}</div>
-  </div>
-</div>
-
-<!-- Items table -->
-<table>
-  <thead>
-    <tr>
-      <th style="width:24px;text-align:center">#</th>
-      <th>貨品代碼</th>
-      <th>品牌</th>
-      <th>品名</th>
-      <th style="text-align:center;width:44px">數量</th>
-      ${hasPrice ? '<th style="text-align:right;width:72px">單價</th><th style="text-align:right;width:80px">金額</th>' : ''}
-      <th>備註</th>
-    </tr>
-  </thead>
-  <tbody>${rows}</tbody>
-  ${totalRow}
-</table>
-
-<div class="ft">
-  <span>共 ${data.items.length} 種品項・總數量 ${totalQty} 件${hasPrice ? `・合計 NT$ ${totalAmt.toLocaleString()}` : ''}</span>
-  <span>列印：${printTime}</span>
-</div>
-
-<div class="sig">
-  <div class="sig-item">訂貨人</div>
-  <div class="sig-item">核准</div>
-  <div class="sig-item">收貨確認</div>
-</div>
-
-</body></html>`
 }

@@ -112,6 +112,7 @@
    - `lib/orders-notion.ts` 的 `validateOrderItems`：基本防線（數量正整數、單價非負、贈品/樣品貨號須存在、贈品數量不可超過一般購買數量）。
    - **`lib/order-pricing.ts` 的 `validateOrderPromotions`（促銷權威）**：`createOrder`/`updateOrder` 依訂單 `promotionId` 重抓「已確認」促銷品項→跑此純引擎→**驗證前端宣稱的促銷帶價與免費贈品是否真的成立**（免費品必須由 buy_a_get_b/buy_n_get_m/series_buy_n_get_m 授權且不超量;single_price/series_discount/qty_discount 等帶價須等於重算值;rate 型以目錄價當折前基準防灌高）。**手動非促銷價放行**（業務議價,由報價審批把關）。此引擎是前後端共用的單一真實來源;改促銷規則要同步改這裡。
 5. **報價單狀態機**：`lib/quote-status.ts` 的 `QUOTE_TRANSITIONS` 是唯一允許的狀態轉換來源（簽核 `/api/quotes/[id]/approve` 與修改後送審 `PUT /api/quotes/[id]` 共用），新增動作要先在這張表加規則，不可繞過直接呼叫 `updateQuoteStatus`。只有草稿／待行政審核／已退回可修改內容；已核准後價格定格。報價金額一律由 `lib/quote-model.ts` 計算（前後端共用），伺服器寫入時重算。報價單 PDF（`lib/pdf.tsx`）與客戶分享頁採 2026 品牌識別（千歲綠／崧達綠／Cornsilk），內嵌字型是子集，文字一律先轉半形（全形標點會消失）。
+5-1. **訂貨單狀態機**：`lib/order-status.ts` 的 `ORDER_TRANSITIONS` 是唯一允許的狀態轉換來源（`PATCH /api/orders/[id]` 依此驗證、清單與表單只顯示該角色可做的動作）；業務只能改草稿內容、只能刪草稿，行政（admin／行政／中央管理）可確認、到貨、改非草稿單（改品項須 `confirmNonDraftEdit`＋稽核）。建立／狀態轉換／刪除都要留稽核紀錄。訂購單 PDF（`lib/order-pdf.tsx`）與報價單共用 `lib/pdf-brand.tsx`；「再訂一次」單價一律改用當下有效售價，不沿用舊單價格。
 6. **對外代理／外部圖片一律驗證網域**：`app/api/notion-image/route.ts` 的 `isUrlSafeToProxy` 是唯一允許代理的網址檢查，新增任何「伺服器端 fetch 使用者可控 URL」的功能都要套用同等的 host allowlist + 私網位址檢查，避免 SSRF。
 
 ## Notion 資料層架構原則（拆 god module 的長期防線）
