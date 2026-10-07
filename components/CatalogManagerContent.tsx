@@ -2255,6 +2255,93 @@ function CategoryBrowserModal({
 
 // ── Main Component ────────────────────────────────────────────
 
+// ── 批次設定圖片（中央管理）──────────────────────────────────────
+// 對目前搜尋／篩選結果的所有品項套用同一張主圖；先預覽會更新／略過幾筆，再確認寫入。
+function BatchImageModal({ items, onClose, onDone }: {
+  items: CatalogItem[]
+  onClose: () => void
+  onDone: (updated: string[], imageUrl: string) => void
+}) {
+  const [imageUrl, setImageUrl] = useState('')
+  const [overwrite, setOverwrite] = useState(false)
+  const [preview, setPreview] = useState<{ willUpdate: number; skipped: number } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<{ updated: number; skipped: number; failed: { skuCode: string; error: string }[] } | null>(null)
+
+  async function call(dryRun: boolean) {
+    setBusy(true); setError('')
+    try {
+      const res = await fetch('/api/products/images/batch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skuCodes: items.map((i) => i.code), imageUrl, overwrite, dryRun }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? '批次設定失敗')
+      if (dryRun) setPreview({ willUpdate: data.willUpdate.length, skipped: data.skipped.length })
+      else {
+        setResult({ updated: data.updated.length, skipped: data.skipped.length, failed: data.failed ?? [] })
+        onDone(data.updated, imageUrl)
+      }
+    } catch (e) { setError(e instanceof Error ? e.message : '批次設定失敗') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#fdfdfb] p-5 shadow-2xl sm:rounded-3xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-stone-800">批次設定圖片</h2>
+            <p className="mt-0.5 text-xs text-stone-500">套用到目前搜尋結果的 {items.length.toLocaleString()} 個品項</p>
+          </div>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100">✕</button>
+        </div>
+
+        {result ? (
+          <div className="space-y-3 text-sm">
+            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-700">已更新 {result.updated} 個品項{result.skipped ? `，略過 ${result.skipped} 個` : ''}。縮圖已同步更新。</p>
+            {result.failed.length > 0 && (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-red-700">失敗 {result.failed.length} 個：{result.failed.slice(0, 5).map((f) => f.skuCode).join('、')}{result.failed.length > 5 ? '…' : ''}（可再按一次重試）</p>
+            )}
+            <button type="button" onClick={onClose} className="button-primary w-full py-3">完成</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <ImageUploadZone imageUrl={imageUrl} onUrlChange={(url) => { setImageUrl(url); setPreview(null) }} disabled={busy} />
+            <label className="flex items-start gap-2 text-sm text-stone-600">
+              <input type="checkbox" checked={overwrite} onChange={(e) => { setOverwrite(e.target.checked); setPreview(null) }} className="mt-0.5 accent-brand-500" />
+              <span>覆蓋已有圖片<span className="block text-xs text-stone-400">不勾選時，已經有圖的品項會保留原圖</span></span>
+            </label>
+            <details className="text-xs text-stone-500">
+              <summary className="cursor-pointer text-stone-400 hover:text-stone-600">查看套用的品項</summary>
+              <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto rounded-xl bg-stone-50 p-2">
+                {items.slice(0, 300).map((i) => <li key={i.code} className="truncate"><span className="font-mono text-stone-400">{i.code}</span>　{i.name}</li>)}
+                {items.length > 300 && <li className="text-stone-400">…另有 {items.length - 300} 個</li>}
+              </ul>
+            </details>
+            {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+            {preview ? (
+              <div className="space-y-2">
+                <p className="rounded-2xl bg-cream-100 px-4 py-3 text-sm text-stone-700">
+                  將更新 <b>{preview.willUpdate}</b> 個品項{preview.skipped ? `，略過 ${preview.skipped} 個` : ''}。
+                </p>
+                <button type="button" disabled={busy || preview.willUpdate === 0} onClick={() => call(false)} className="button-primary w-full py-3">
+                  {busy ? '寫入中…（品項多時約需一分鐘）' : `確認套用到 ${preview.willUpdate} 個品項`}
+                </button>
+              </div>
+            ) : (
+              <button type="button" disabled={busy || !imageUrl} onClick={() => call(true)} className="button-primary w-full py-3">
+                {busy ? '檢查中…' : imageUrl ? '下一步：預覽影響範圍' : '請先上傳圖片'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 type StatusKey = 'unpriced' | 'override' | 'disabled' | 'discontinued' | 'review'
 const STATUS_FILTERS: { key: StatusKey; label: string; manageOnly?: boolean; tone: string }[] = [
   { key: 'unpriced', label: '待定價', tone: 'text-amber-700' },
@@ -2300,6 +2387,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   const [modalAllowedSkuCodes, setModalAllowedSkuCodes] = useState<Set<string> | null>(null)
   const [seriesAdminOpen, setSeriesAdminOpen] = useState(false)
   const [seriesAdminError, setSeriesAdminError] = useState('')
+  const [batchImageOpen, setBatchImageOpen] = useState(false)
 
   // Cache: skuCode → price. Populated from catalog and refreshed after edits.
   const [priceCache,     setPriceCache]     = useState<Map<string, number | null>>(new Map())
@@ -2593,7 +2681,15 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               </button>
             ))}
             {(hasFilters || debouncedQ) && (
-              <button type="button" onClick={clearSearchAndFilters} className="ml-auto rounded-full px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-50">清除條件</button>
+              <span className="ml-auto flex items-center gap-1.5">
+                {canManageProducts && searchResults.length > 0 && (
+                  <button type="button" onClick={() => setBatchImageOpen(true)} title="把同一張主圖套用到目前搜尋結果的所有品項"
+                    className="rounded-full px-2.5 py-1 font-medium text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50 active:scale-95">
+                    批次設定圖片（{searchResults.length.toLocaleString()}）
+                  </button>
+                )}
+                <button type="button" onClick={clearSearchAndFilters} className="rounded-full px-2.5 py-1 font-medium text-brand-700 hover:bg-brand-50">清除條件</button>
+              </span>
             )}
           </div>
         )}
@@ -2859,6 +2955,17 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
           />
         )}
       </AnimatePresence>
+
+      {canManageProducts && batchImageOpen && (
+        <BatchImageModal
+          items={searchResults}
+          onClose={() => setBatchImageOpen(false)}
+          onDone={(updated, url) => {
+            const set = new Set(updated)
+            setAllItems((items) => items.map((item) => (set.has(item.code) ? { ...item, imageUrl: url } : item)))
+          }}
+        />
+      )}
 
       <AnimatePresence>
         {canManageProducts && seriesAdminOpen && (

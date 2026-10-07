@@ -185,6 +185,71 @@ export async function upsertProductRichData(
 }
 
 /**
+ * 批次設定產品主圖（中央管理「批次設定圖片」）。
+ * 逐筆寫 Notion「圖片URL」（權威來源），最後一次更新 Blob／Redis 縮圖索引——
+ * 不沿用 upsertProductRichData 逐筆更新索引，133 筆就要讀寫 Blob 索引 133 次。
+ * overwrite=false 時，已有圖片的品項略過。dryRun 只回報會更新／略過的筆數。
+ */
+export async function setProductImagesBatch(
+  entries: { skuCode: string; catalog: CatalogSnapshot }[],
+  imageUrl: string,
+  options: { overwrite: boolean; dryRun: boolean },
+): Promise<{ willUpdate: string[]; updated: string[]; skipped: { skuCode: string; reason: string }[]; failed: { skuCode: string; error: string }[] }> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is required before updating a product image')
+  const willUpdate: string[] = []
+  const skipped: { skuCode: string; reason: string }[] = []
+  const existingBySku = new Map<string, ProductRichData | null>()
+
+  // 先讀現況（3 筆並行），決定要更新哪些
+  for (let i = 0; i < entries.length; i += 3) {
+    const chunk = entries.slice(i, i + 3)
+    const rows = await Promise.all(chunk.map((e) => getProductRichData(e.skuCode).catch(() => null)))
+    chunk.forEach((e, k) => {
+      const existing = rows[k]
+      existingBySku.set(e.skuCode, existing)
+      if (existing?.imageUrl === imageUrl) skipped.push({ skuCode: e.skuCode, reason: '已是這張圖' })
+      else if (existing?.imageUrl && !options.overwrite) skipped.push({ skuCode: e.skuCode, reason: '已有圖片（未勾選覆蓋）' })
+      else willUpdate.push(e.skuCode)
+    })
+  }
+  if (options.dryRun) return { willUpdate, updated: [], skipped, failed: [] }
+
+  const updated: string[] = []
+  const failed: { skuCode: string; error: string }[] = []
+  const bySku = new Map(entries.map((e) => [e.skuCode, e]))
+  for (let i = 0; i < willUpdate.length; i += 3) {
+    const chunk = willUpdate.slice(i, i + 3)
+    await Promise.all(chunk.map(async (skuCode) => {
+      try {
+        await markProductImageIndexDirty(skuCode)
+        const existing = existingBySku.get(skuCode)
+        const catalog = bySku.get(skuCode)!.catalog
+        if (existing) {
+          await notion.pages.update({ page_id: existing.notionId, properties: { '圖片URL': { url: imageUrl } } } as any)
+        } else {
+          await notion.pages.create({
+            parent: { database_id: DB_PRODUCTS },
+            properties: {
+              'Name':   { title: richText(catalog.name) },
+              '貨號':   { rich_text: richText(skuCode) },
+              '生產商': { select: { name: catalog.brand || '其他' } },
+              '系列':   { select: { name: catalog.category || '其他' } },
+              '類型':   { select: { name: catalog.productType || '其他' } },
+              '圖片URL': { url: imageUrl },
+            },
+          } as any)
+        }
+        updated.push(skuCode)
+      } catch (error) {
+        failed.push({ skuCode, error: error instanceof Error ? error.message : String(error) })
+      }
+    }))
+  }
+  await updateProductImageIndexMany(updated.map((skuCode) => ({ skuCode, manufacturer: bySku.get(skuCode)!.catalog.brand, imageUrl })))
+  return { willUpdate, updated, skipped, failed }
+}
+
+/**
  * Returns SKU codes manually disabled by central management.
  * The static catalog's discontinued/status fields remain a separate authority.
  */
@@ -322,8 +387,14 @@ export async function listProductImageIndex(manufacturers: string[]): Promise<Re
 
 /** Best-effort atomic projection update after the authoritative Notion write succeeds. */
 async function updateProductImageIndex(skuCode: string, manufacturer: string, imageUrl: string): Promise<void> {
+  await updateProductImageIndexMany([{ skuCode, manufacturer, imageUrl }])
+}
+
+/** 多筆一次更新（批次換圖用）：Blob 索引只讀寫一次、Redis 一次 pipeline。 */
+async function updateProductImageIndexMany(entries: { skuCode: string; manufacturer: string; imageUrl: string }[]): Promise<void> {
+  if (entries.length === 0) return
   const redis = getRedis()
-  await updateBlobProductImageIndex(skuCode, imageUrl)
+  await updateBlobProductImageIndex(Object.fromEntries(entries.map((e) => [e.skuCode, e.imageUrl])))
   if (!redis) return
   try {
     const [activeVersion, buildingVersion] = await redis.mget<(string | number | null)[]>(
@@ -334,11 +405,13 @@ async function updateProductImageIndex(skuCode: string, manufacturer: string, im
     if (versions.length === 0) return
     const pipeline = redis.pipeline()
     for (const version of versions) {
-      const key = imageIndexShardKey(version as string | number, manufacturer)
-      if (imageUrl) pipeline.hset(key, { [skuCode]: imageUrl })
-      else pipeline.hdel(key, skuCode)
+      for (const { skuCode, manufacturer, imageUrl } of entries) {
+        const key = imageIndexShardKey(version as string | number, manufacturer)
+        if (imageUrl) pipeline.hset(key, { [skuCode]: imageUrl })
+        else pipeline.hdel(key, skuCode)
+      }
     }
-    pipeline.hdel(IMAGE_INDEX_DIRTY_KEY, skuCode)
+    for (const { skuCode } of entries) pipeline.hdel(IMAGE_INDEX_DIRTY_KEY, skuCode)
     await pipeline.exec()
   } catch (error) {
     console.warn('[products-notion] image index projection update failed:', error)
@@ -365,7 +438,8 @@ async function readBlobProductImageIndex(): Promise<Record<string, string>> {
   }
 }
 
-async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): Promise<void> {
+async function updateBlobProductImageIndex(changes: Record<string, string>): Promise<void> {
+  const label = Object.keys(changes).length === 1 ? Object.keys(changes)[0] : `${Object.keys(changes).length} SKUs`
   const token = process.env.BLOB_READ_WRITE_TOKEN
   if (!token) throw new Error('BLOB_READ_WRITE_TOKEN is required to update the product image index')
   const operation = blobImageIndexUpdateQueue.then(async () => {
@@ -384,8 +458,10 @@ async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): P
         if (!currentBlob) throw new Error('Blob image index current version was not readable')
         const data = await new Response(currentBlob.stream).json()
         const images = data?.images && typeof data.images === 'object' ? { ...data.images } : {}
-        if (imageUrl) images[skuCode] = imageUrl
-        else delete images[skuCode]
+        for (const [skuCode, imageUrl] of Object.entries(changes)) {
+          if (imageUrl) images[skuCode] = imageUrl
+          else delete images[skuCode]
+        }
         const blob = await put('products/catalog/image-index.json', Buffer.from(JSON.stringify({ version: new Date().toISOString(), images })), {
           access: 'public',
           allowOverwrite: true,
@@ -396,7 +472,7 @@ async function updateBlobProductImageIndex(skuCode: string, imageUrl: string): P
         })
         writeCommitted = true
         const committed = await head(PRODUCT_IMAGE_BLOB_INDEX_URL, { token })
-        if (committed.etag !== blob.etag) throw new Error(`Blob image index ETag mismatch after committed write: ${skuCode}`)
+        if (committed.etag !== blob.etag) throw new Error(`Blob image index ETag mismatch after committed write: ${label}`)
         return
       } catch (error) {
         lastError = error
