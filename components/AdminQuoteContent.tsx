@@ -20,7 +20,7 @@ function formatDate(d: string) {
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   待行政審核:    { label: '待行政審核',   cls: 'bg-amber-100  text-amber-700  border-amber-200',  dot: 'bg-amber-400'  },
   待總經理審核:  { label: '待總經理審核', cls: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-400' },
-  已核准:        { label: '✓ 已核准',     cls: 'bg-brand-50  text-green-700  border-brand-200',  dot: 'bg-brand-500'  },
+  已核准:        { label: '✓ 已核准',     cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',  dot: 'bg-brand-500'  },
   已退回:        { label: '✗ 已退回',     cls: 'bg-red-100    text-red-600    border-red-200',    dot: 'bg-red-400'    },
   草稿:          { label: '草稿',         cls: 'bg-stone-100  text-stone-500  border-stone-200',  dot: 'bg-stone-300'  },
 }
@@ -163,11 +163,12 @@ function QuoteRow({
         <div className="text-right shrink-0">
           <div className="text-lg font-bold text-brand-700">{formatMoney(quote.total)}</div>
           <a
-            href={`/share/${quote.id}`}
+            // 審核中的報價單分享頁不開放，改看內部預覽 PDF（帶浮水印）
+            href={`/api/quotes/${quote.id.replace(/-/g, '')}/pdf`}
             target="_blank" rel="noreferrer"
             className="text-xs text-brand-500 hover:underline"
           >
-            預覽 →
+            預覽 PDF →
           </a>
         </div>
       </div>
@@ -340,7 +341,7 @@ export default function AdminQuoteContent() {
         {[
           { label: '待行政審核', value: stats.pendingAdmin, cls: 'text-amber-600',  urgent: stats.pendingAdmin > 0 },
           { label: '待總經理審核', value: stats.pendingGM,  cls: 'text-orange-600', urgent: stats.pendingGM > 0   },
-          { label: '已核准',     value: stats.approved,    cls: 'text-green-600',  urgent: false },
+          { label: '已核准',     value: stats.approved,    cls: 'text-emerald-600',  urgent: false },
           { label: '已退回',     value: stats.rejected,    cls: 'text-red-500',    urgent: false },
         ].map(({ label, value, cls, urgent }) => (
           <div key={label} className={`panel p-5 ${urgent ? 'ring-2 ring-amber-300/50' : ''}`}>

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Quote } from '@/types'
+import { canEditQuote } from '@/lib/quote-status'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -12,20 +13,21 @@ function formatMoney(n: number) {
   return 'NT$ ' + n.toLocaleString('zh-TW')
 }
 
+/** 民國年短格式：2026-10-07 → 115/10/07（與報價單一致） */
 function formatDate(d: string) {
-  if (!d) return ''
-  return d.slice(0, 10).replace(/-/g, '/')
+  const m = (d ?? '').slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${Number(m[1]) - 1911}/${m[2]}/${m[3]}` : ''
 }
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  草稿:          { label: '草稿',         cls: 'bg-stone-100  text-stone-500  border-stone-200'  },
-  待行政審核:    { label: '待行政審核',   cls: 'bg-amber-100  text-amber-700  border-amber-200'  },
-  待總經理審核:  { label: '待總經理審核', cls: 'bg-orange-100 text-orange-700 border-orange-200' },
-  已核准:        { label: '✓ 已核准',     cls: 'bg-brand-50  text-green-700  border-brand-200'  },
-  已退回:        { label: '✗ 已退回',     cls: 'bg-red-100    text-red-600    border-red-200'    },
-  已送出:        { label: '已送出',        cls: 'bg-blue-100   text-blue-700   border-blue-200'   },
-  已確認:        { label: '已確認',        cls: 'bg-brand-100  text-brand-700  border-brand-200'  },
-  已過期:        { label: '已過期',        cls: 'bg-red-100    text-red-600    border-red-200'    },
+  草稿:          { label: '草稿',         cls: 'bg-stone-100 text-stone-500'  },
+  待行政審核:    { label: '待行政審核',   cls: 'bg-amber-50 text-amber-700'   },
+  待總經理審核:  { label: '待總經理審核', cls: 'bg-gold-50 text-gold-700'     },
+  已核准:        { label: '已核准',       cls: 'bg-emerald-50 text-emerald-700' },
+  已退回:        { label: '已退回',       cls: 'bg-red-50 text-red-600'       },
+  已送出:        { label: '已送出',       cls: 'bg-brand-50 text-brand-700'   },
+  已確認:        { label: '已確認',       cls: 'bg-brand-100 text-brand-700'  },
+  已過期:        { label: '已過期',       cls: 'bg-stone-100 text-stone-400'  },
 }
 
 const ALL = '全部'
@@ -50,8 +52,8 @@ function ApprovalModal({
   const [note, setNote] = useState('')
 
   const meta: Record<ApprovalAction, { icon: string; title: string; btn: string; btnCls: string; noteRequired: boolean }> = {
-    approve:   { icon: '✅', title: '確認核准報價單？',           btn: '核准',     btnCls: 'bg-brand-600 hover:bg-brand-700',  noteRequired: false },
-    escalate:  { icon: '📋', title: '呈送總經理審核？',           btn: '呈總經理', btnCls: 'bg-orange-500 hover:bg-orange-600', noteRequired: false },
+    approve:   { icon: '✅', title: '確認核准報價單？',           btn: '核准',     btnCls: 'bg-brand-500 hover:bg-brand-600 shadow-md shadow-brand-500/25',  noteRequired: false },
+    escalate:  { icon: '📋', title: '呈送總經理審核？',           btn: '呈總經理', btnCls: 'bg-gold-600 hover:bg-gold-700', noteRequired: false },
     reject:    { icon: '↩︎', title: '退回報價單？',              btn: '確認退回', btnCls: 'bg-red-500 hover:bg-red-600',      noteRequired: true  },
     resubmit:  { icon: '🔄', title: '重新送交行政審核？',         btn: '重新送審', btnCls: 'bg-brand-500 hover:bg-brand-600',  noteRequired: false },
   }
@@ -91,19 +93,19 @@ function ApprovalModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+            className="input-soft resize-none"
             placeholder="填寫說明或意見…"
           />
         </div>
         <div className="flex gap-2">
           <button onClick={onCancel} disabled={loading}
-            className="button-secondary flex-1 rounded-xl">
+            className="button-secondary flex-1 py-2.5">
             取消
           </button>
           <button
             onClick={() => onConfirm(note)}
             disabled={loading || (m.noteRequired && !note.trim())}
-            className={`flex-1 rounded-xl text-white text-sm font-semibold px-4 py-2.5 transition disabled:opacity-60 ${m.btnCls}`}
+            className={`flex-1 rounded-full text-white text-sm font-semibold px-4 py-2.5 transition-all active:scale-95 disabled:opacity-60 ${m.btnCls}`}
           >
             {loading ? '處理中…' : m.btn}
           </button>
@@ -153,15 +155,15 @@ function DeleteModal({
           客戶：<span className="font-semibold text-stone-700">{quote.customerName}</span>
         </p>
         <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-5">
-          此操作無法復原，相關品項也將一併刪除。
+          報價單與所有品項會一併移除（30 天內可由 Notion 垃圾桶救回）。
         </p>
         <div className="flex gap-2">
           <button onClick={onCancel} disabled={loading}
-            className="button-secondary flex-1 rounded-xl">
+            className="button-secondary flex-1 py-2.5">
             取消
           </button>
           <button onClick={onConfirm} disabled={loading}
-            className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2.5 transition disabled:opacity-60">
+            className="flex-1 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2.5 transition-all active:scale-95 disabled:opacity-60">
             {loading ? '刪除中…' : '確認刪除'}
           </button>
         </div>
@@ -182,27 +184,14 @@ export default function QuoteListContent() {
   const isStaff = accountType === '行政'
   const isGM    = accountType === '總經理'
 
-  // What approval actions each role sees per-status
+  // 簽核動作（核准／呈總經理／退回）。退回後的「修改並重新送審」改走編輯頁（PUT /api/quotes/[id] 的 submit），
+  // 原本一般業務按「重新送審」會被 approve 的角色門擋下。
   function allowedActions(status: string): ApprovalAction[] {
-    if (isAdmin) {
-      // 中央管理（Edward）= 總經理層級，可直接核准或退回，不需呈送
-      if (status === '待行政審核')   return ['approve', 'reject']
-      if (status === '待總經理審核') return ['approve', 'reject']
-      if (status === '已退回')       return ['resubmit']
+    if (isAdmin || isGM) {
+      if (status === '待行政審核' || status === '待總經理審核') return ['approve', 'reject']
       return []
     }
-    if (isStaff) {
-      if (status === '待行政審核')   return ['approve', 'escalate', 'reject']
-      if (status === '已退回')       return ['resubmit']
-      return []
-    }
-    if (isGM) {
-      if (status === '待行政審核')   return ['approve', 'reject']
-      if (status === '待總經理審核') return ['approve', 'reject']
-      return []
-    }
-    // Regular user: can resubmit their own rejected quotes
-    if (status === '已退回') return ['resubmit']
+    if (isStaff && status === '待行政審核') return ['approve', 'escalate', 'reject']
     return []
   }
 
@@ -224,6 +213,12 @@ export default function QuoteListContent() {
   const [approvalTarget, setApprovalTarget]   = useState<{ quote: Quote; action: ApprovalAction } | null>(null)
   const [approvalVisible, setApprovalVisible] = useState(false)
   const [approving, setApproving]             = useState(false)
+
+  const [copiedId, setCopiedId] = useState('')
+  function copyShare(quote: Quote) {
+    const url = quote.shareUrl || `${window.location.origin}/share/${quote.id.replace(/-/g, '')}`
+    navigator.clipboard?.writeText(url).then(() => { setCopiedId(quote.id); setTimeout(() => setCopiedId(''), 1800) })
+  }
 
   // ── Fetch ──────────────────────────────────────────────────────
   function loadQuotes() {
@@ -416,136 +411,81 @@ export default function QuoteListContent() {
         ) : (
           <div className="space-y-2">
             {displayed.map((quote) => {
-              const meta = STATUS_META[quote.status] ?? { label: quote.status, cls: 'bg-stone-100 text-stone-500 border-stone-200' }
+              const meta = STATUS_META[quote.status] ?? { label: quote.status, cls: 'bg-stone-100 text-stone-500' }
               const actions = allowedActions(quote.status)
+              const id = quote.id.replace(/-/g, '')
               const isApproved = quote.status === '已核准'
+              const editable = canEditQuote(quote.status)
+              const chip = 'rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95 whitespace-nowrap'
+              const ghost = `${chip} text-stone-500 hover:bg-stone-100 hover:text-stone-700`
 
               return (
-                <div
-                  key={quote.id}
-                  className="card-soft card-soft-hover group flex flex-col gap-2 bg-white px-4 py-4 sm:px-5 active:scale-[0.995] transition-all"
-                >
-                  {/* Main row */}
-                  <div className="flex items-center justify-between gap-4">
-                    {/* Left info */}
+                <div key={quote.id} className="card-soft bg-white px-4 py-4 sm:px-5">
+                  <div className="flex items-start gap-4">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-bold text-stone-700 shrink-0">
-                          {quote.quoteNumber}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={editable ? `/quote/${id}/edit` : `/api/quotes/${id}/pdf`} target={editable ? undefined : '_blank'}
+                          className="truncate font-semibold text-stone-800 hover:text-brand-700">
+                          {quote.customerName || '（未填客戶）'}
+                        </Link>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.cls}`}>{meta.label}</span>
                       </div>
-                      <div className="font-medium text-stone-800 truncate group-hover:text-brand-700 transition-colors">
-                        {quote.customerName}
-                      </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-stone-400">
-                        {quote.createdAt  && <span>{formatDate(quote.createdAt)}</span>}
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-stone-400">
+                        <span className="font-mono text-stone-500">{quote.quoteNumber}</span>
+                        <span>報價 {formatDate(quote.quoteDate || quote.createdAt)}</span>
+                        {quote.validUntil && <span>有效至 {formatDate(quote.validUntil)}</span>}
                         {quote.salesperson && <span>{quote.salesperson}</span>}
-                        {quote.validUntil  && <span>有效至 {formatDate(quote.validUntil)}</span>}
                       </div>
                     </div>
-
-                    {/* Right: amount + status + actions */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-semibold text-stone-700 tabular-nums">
-                        {formatMoney(quote.total)}
-                      </span>
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.cls}`}>
-                        {meta.label}
-                      </span>
-
-                      {/* Action buttons — always visible on touch, hover-only on pointer devices */}
-                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <Link
-                          href={`/share/${quote.id}`}
-                          target="_blank" rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-2 active:scale-95 transition-all whitespace-nowrap"
-                        >
-                          預覽
-                        </Link>
-                        {isApproved ? (
-                          <>
-                            <a
-                              href={`/api/quotes/${quote.id}/pdf`}
-                              target="_blank" rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="rounded-lg bg-brand-50 hover:bg-brand-50 text-green-700 text-xs font-semibold px-2.5 py-1.5 transition whitespace-nowrap"
-                            >
-                              PDF
-                            </a>
-                            <Link
-                              href={`/orders/new?fromQuote=${quote.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-2 active:scale-95 transition-all whitespace-nowrap"
-                            >
-                              轉訂單
-                            </Link>
-                          </>
-                        ) : (
-                          <span
-                            title="需核准後才可產生 PDF"
-                            className="rounded-lg bg-stone-50 text-stone-300 text-xs font-semibold px-2.5 py-1.5 whitespace-nowrap cursor-not-allowed select-none"
-                          >
-                            PDF
-                          </span>
-                        )}
-                        <button
-                          onClick={(e) => openDelete(e, quote)}
-                          className="rounded-lg bg-red-50 hover:bg-red-100 text-red-500 text-xs font-semibold px-2.5 py-1.5 transition"
-                        >
-                          刪除
-                        </button>
-                      </div>
-
-                      <span className="text-stone-300 group-hover:text-brand-400 transition-colors text-sm">›</span>
+                    <div className="shrink-0 text-right">
+                      <div className="text-base font-semibold tabular-nums text-stone-800">{formatMoney(quote.total)}</div>
+                      <div className="text-[11px] text-stone-400">{quote.taxMode === '未稅' ? '未稅＋營業稅' : '含稅'}</div>
                     </div>
                   </div>
 
-                  {/* Approval note banner */}
                   {quote.approvalNote && quote.status === '已退回' && (
-                    <div className="text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2 border border-red-100">
+                    <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
                       <span className="font-semibold">退回意見：</span>{quote.approvalNote}
                     </div>
                   )}
 
-                  {/* Approval action buttons */}
-                  {actions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-900/[0.06]">
-                      <span className="text-xs text-stone-400 self-center mr-1">簽核：</span>
-                      {actions.includes('approve') && (
-                        <button
-                          onClick={(e) => openApproval(e, quote, 'approve')}
-                          className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 transition"
-                        >
-                          ✓ 核准
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-stone-900/[0.06] pt-3">
+                    {/* 主要動作：依狀態只給一個最該做的 */}
+                    {quote.status === '草稿' && (
+                      <Link href={`/quote/${id}/edit`} className="button-primary px-4 py-1.5 text-xs">編輯並送出</Link>
+                    )}
+                    {quote.status === '已退回' && (
+                      <Link href={`/quote/${id}/edit`} className="button-primary px-4 py-1.5 text-xs">修改後重新送審</Link>
+                    )}
+                    {actions.includes('approve') && (
+                      <button onClick={(e) => openApproval(e, quote, 'approve')} className="button-primary px-4 py-1.5 text-xs">✓ 核准</button>
+                    )}
+                    {actions.includes('escalate') && (
+                      <button onClick={(e) => openApproval(e, quote, 'escalate')} className={`${chip} bg-gold-50 text-gold-700 hover:bg-gold-100`}>↑ 呈總經理</button>
+                    )}
+                    {actions.includes('reject') && (
+                      <button onClick={(e) => openApproval(e, quote, 'reject')} className={`${chip} bg-red-50 text-red-600 hover:bg-red-100`}>退回</button>
+                    )}
+                    {isApproved && (
+                      <>
+                        <a href={`/api/quotes/${id}/pdf`} target="_blank" rel="noreferrer" className="button-primary px-4 py-1.5 text-xs">下載 PDF</a>
+                        <button onClick={() => copyShare(quote)} className={`${chip} bg-brand-50 text-brand-700 hover:bg-brand-100`}>
+                          {copiedId === quote.id ? '✓ 已複製' : '複製分享連結'}
                         </button>
-                      )}
-                      {actions.includes('escalate') && (
-                        <button
-                          onClick={(e) => openApproval(e, quote, 'escalate')}
-                          className="rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 transition"
-                        >
-                          ↑ 呈總經理
-                        </button>
-                      )}
-                      {actions.includes('reject') && (
-                        <button
-                          onClick={(e) => openApproval(e, quote, 'reject')}
-                          className="rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-1.5 transition border border-red-200"
-                        >
-                          ✗ 退回
-                        </button>
-                      )}
-                      {actions.includes('resubmit') && (
-                        <button
-                          onClick={(e) => openApproval(e, quote, 'resubmit')}
-                          className="rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold px-3 py-1.5 active:scale-95 transition-all border border-brand-200"
-                        >
-                          🔄 重新送審
-                        </button>
-                      )}
-                    </div>
-                  )}
+                        <Link href={`/orders/new?fromQuote=${quote.id}`} className={`${chip} bg-brand-50 text-brand-700 hover:bg-brand-100`}>轉訂單</Link>
+                      </>
+                    )}
+
+                    {/* 次要動作 */}
+                    {!isApproved && (
+                      <a href={`/api/quotes/${id}/pdf`} target="_blank" rel="noreferrer" className={ghost} title="內部預覽，帶浮水印">預覽 PDF</a>
+                    )}
+                    {editable && quote.status !== '草稿' && quote.status !== '已退回' && (
+                      <Link href={`/quote/${id}/edit`} className={ghost}>編輯</Link>
+                    )}
+                    <Link href={`/quote/new?from=${id}`} className={ghost} title="以這張為底建立新報價單">複製</Link>
+                    <button onClick={(e) => openDelete(e, quote)} className={`${chip} ml-auto text-stone-400 hover:bg-red-50 hover:text-red-600`}>刪除</button>
+                  </div>
                 </div>
               )
             })}

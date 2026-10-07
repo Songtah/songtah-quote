@@ -1,513 +1,287 @@
+/**
+ * lib/pdf.tsx — 報價單 PDF（@react-pdf/renderer）
+ *
+ * 2026-10-07 改版：依公司紙本報價單欄位＋2026 品牌識別（SONG TAH final logo，2026-08-19 版）
+ *   - 色彩：千歲綠 #36563C（表頭、主色）、崧達綠 #62B320（點綴線）、Cornsilk #FEFAE0（資訊底）
+ *   - 紙本必備：公司地址／TEL／FAX／Email、客戶名稱／地址／電話、報價單號、民國報價日期、
+ *     編號／品名／數量／單價／總計、稅金說明、有效期限、公司章
+ *   - 補強：聯絡人、統編、付款／交貨條件、折讓、未稅另計營業稅、金額中文大寫、客戶回簽、頁碼
+ *   - 欄位依每張報價單的「版面設定」顯示（圖片／規格／單位／品牌）
+ * 只註冊了 NotoSansTC 400，全檔不使用 fontWeight，層級用字級與顏色區分。
+ */
 import React from 'react'
 import path from 'path'
-import {
-  Document, Page, Text, View, StyleSheet, Font, Image,
-} from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer'
 import type { Quote } from '@/types'
+import { COMPANY, computeQuoteTotals, parseLayout, rocDate, amountInChinese, TAX_RATE } from '@/lib/quote-model'
 
-// ── Font ─────────────────────────────────────────────────────────────────────
 Font.register({
   family: 'NotoSansTC',
-  // Local file in public/fonts/ — avoids CDN round-trip on every PDF render
   src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-400.woff'),
 })
+// 中文不要依英文規則斷字（會在字中間插入連字號）
+Font.registerHyphenationCallback((word) => Array.from(word))
 
-// ── Brand colours (metallic coffee-brown, same as share page) ────────────────
-const BRAND   = '#6b4c2a'   // primary — header border, table header, total line
-const BRAND_L = '#9a7248'   // lighter — total value text
-const CREAM   = '#fdf8f3'   // warm cream background for info blocks
+const GREEN_DARK = '#36563C'
+const GREEN = '#62B320'
+const CORNSILK = '#FEFAE0'
+const INK = '#1F1D1A'
+const MUTED = '#77756C'
+const LINE = '#E3E1D3'
+const ZEBRA = '#F8F9F3'
 
-// ── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  page: {
-    fontFamily: 'NotoSansTC',
-    fontSize: 10,
-    padding: 40,
-    color: '#1a1a1a',
-  },
+const s = StyleSheet.create({
+  page: { fontFamily: 'NotoSansTC', fontSize: 9, color: INK, paddingTop: 30, paddingHorizontal: 36, paddingBottom: 58 },
 
-  // ── Header ──────────────────────────────────────────────────────────────
-  header: {
-    marginBottom: 18,
-    borderBottomWidth: 2,
-    borderBottomColor: BRAND,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    maxWidth: '58%',
-  },
-  headerRight: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    minWidth: '30%',
-  },
-  logoFrame: {
-    width: 190,
-    height: 52,
-    marginBottom: 5,
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-  },
-  logo: {
-    width: 190,
-    height: 52,
-    objectFit: 'contain',
-    objectPositionX: 0,
-  },
-  companyEn: {
-    fontSize: 7.5,
-    color: '#888',
-    letterSpacing: 0.5,
-    marginBottom: 6,           // breathing room before Chinese block
-  },
-  companyBlock: {
-    flexDirection: 'column',
-  },
-  companyNameTw: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 3,
-  },
-  companyDetail: {
-    fontSize: 7.5,
-    color: '#555',
-    lineHeight: 1.6,
-  },
-  quoteTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    color: '#1a1a1a',
-    letterSpacing: 4,
-  },
-  quoteNumber: {
-    fontSize: 11,
-    textAlign: 'right',
-    color: '#666',
-    marginTop: 4,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  logo: { width: 186, height: 31 },
+  titleBox: { alignItems: 'flex-end' },
+  title: { fontSize: 20, color: GREEN_DARK, letterSpacing: 8 },
+  titleEn: { fontSize: 6.5, color: MUTED, letterSpacing: 3, marginTop: 1 },
+  ruleDark: { height: 2, backgroundColor: GREEN_DARK, marginTop: 10 },
+  ruleGreen: { height: 1, backgroundColor: GREEN, marginTop: 1.5, width: 64 },
+  companyLine: { fontSize: 7.2, color: MUTED, marginTop: 5, lineHeight: 1.5 },
 
-  // ── Info grid ────────────────────────────────────────────────────────────
-  // Use marginRight/marginBottom instead of gap to avoid Yoga calculation drift
-  infoSection: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-  },
-  infoBlock: {
-    width: '30%',
-    marginRight: '3%',
-    marginBottom: 10,
-    backgroundColor: CREAM,
-    borderRadius: 4,
-    padding: 9,
-  },
-  infoBlockWide: {          // for address — spans two columns
-    width: '63%',
-    marginRight: '3%',
-    marginBottom: 10,
-    backgroundColor: CREAM,
-    borderRadius: 4,
-    padding: 9,
-  },
-  infoLabel: {
-    fontSize: 7.5,
-    color: '#999',
-    marginBottom: 2.5,
-  },
-  infoValue: {
-    fontSize: 9.5,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    flexWrap: 'wrap',
-  },
+  infoRow: { flexDirection: 'row', marginTop: 14 },
+  customerPanel: { width: '57%', backgroundColor: CORNSILK, borderRadius: 3, padding: 10, marginRight: '3%' },
+  quotePanel: { width: '40%', borderWidth: 0.75, borderColor: LINE, borderRadius: 3, padding: 10 },
+  panelLabel: { fontSize: 7, color: GREEN_DARK, letterSpacing: 1.5, marginBottom: 4 },
+  customerName: { fontSize: 13, marginBottom: 2 },
+  customerSub: { fontSize: 8, color: MUTED, marginBottom: 5 },
+  kv: { flexDirection: 'row', marginTop: 2.5 },
+  k: { width: 50, fontSize: 7.5, color: MUTED },
+  v: { flex: 1, fontSize: 8.8 },
 
-  // ── Table ────────────────────────────────────────────────────────────────
-  table: {
-    marginBottom: 14,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: BRAND,
-    color: 'white',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    fontWeight: 'bold',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e8ddd3',
-    alignItems: 'center',
-    minHeight: 56,
-  },
-  tableRowAlt: {
-    backgroundColor: CREAM,
-  },
-  colIndex:    { width: '5%',  textAlign: 'center' },
-  colImage:    { width: '13%' },
-  colName:     { width: '27%', flexWrap: 'wrap' },
-  colSpec:     { width: '8%',  flexWrap: 'wrap', textAlign: 'center' },
-  colUnit:     { width: '7%',  textAlign: 'center' },
-  colQty:      { width: '7%',  textAlign: 'center' },
-  colPrice:    { width: '17%', textAlign: 'left' },
-  colSubtotal: { width: '16%', textAlign: 'left', paddingRight: 6 },
-  headerCell:  { textAlign: 'center' },
-  itemNote:    { fontSize: 7.5, color: '#888', marginTop: 2 },
+  table: { marginTop: 14 },
+  th: { flexDirection: 'row', backgroundColor: GREEN_DARK, color: '#FFFFFF', fontSize: 8, paddingVertical: 5.5 },
+  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: LINE, paddingVertical: 6, alignItems: 'center' },
+  cell: { paddingHorizontal: 5 },
+  right: { textAlign: 'right' },
+  center: { textAlign: 'center' },
+  itemName: { fontSize: 9.2 },
+  itemSub: { fontSize: 7.3, color: MUTED, marginTop: 1.5 },
+  imgBox: { width: 38, height: 38, borderRadius: 2, borderWidth: 0.5, borderColor: LINE, overflow: 'hidden' },
+  img: { width: 38, height: 38, objectFit: 'contain' },
 
-  imageBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#d6c9bb',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: CREAM,
-    overflow: 'hidden',
-  },
-  itemImage: {
-    width: 42,
-    height: 42,
-    objectFit: 'cover',
-  },
-  imagePlaceholder: {
-    fontSize: 6,
-    color: '#bbb',
-    textAlign: 'center',
-    paddingHorizontal: 3,
-  },
+  summary: { flexDirection: 'row', marginTop: 12 },
+  terms: { flex: 1, paddingRight: 18 },
+  termsLabel: { fontSize: 7, color: GREEN_DARK, letterSpacing: 1.5, marginBottom: 4 },
+  term: { flexDirection: 'row', marginBottom: 2.5 },
+  termNo: { width: 12, fontSize: 8, color: MUTED },
+  termText: { flex: 1, fontSize: 8.3, lineHeight: 1.45 },
+  totals: { width: 206 },
+  tRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2.2 },
+  tLabel: { fontSize: 8.5, color: MUTED },
+  tValue: { fontSize: 9 },
+  grand: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderTopWidth: 1.2, borderTopColor: GREEN_DARK, marginTop: 4, paddingTop: 5 },
+  grandLabel: { fontSize: 9.5, color: GREEN_DARK },
+  grandValue: { fontSize: 14, color: GREEN_DARK },
+  words: { fontSize: 7.5, color: MUTED, textAlign: 'right', marginTop: 3 },
 
-  // ── Total ────────────────────────────────────────────────────────────────
-  totalSection: {
-    alignItems: 'flex-end',
-    marginBottom: 18,
-    borderTopWidth: 2,
-    borderTopColor: BRAND,
-    paddingTop: 10,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  totalLabel: {
-    fontSize: 11,
-    color: '#555',
-    width: 80,
-    textAlign: 'right',
-    marginRight: 16,
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: BRAND_L,
-    width: 110,
-    textAlign: 'right',
-  },
+  bank: { flexDirection: 'row', backgroundColor: CORNSILK, borderRadius: 3, paddingVertical: 6, paddingHorizontal: 10, marginTop: 14, fontSize: 7.8 },
+  bankLabel: { color: GREEN_DARK, marginRight: 10 },
+  bankText: { color: INK, marginRight: 14 },
 
-  // ── Note ─────────────────────────────────────────────────────────────────
-  noteSection: {
-    backgroundColor: '#fffbeb',
-    borderLeftWidth: 3,
-    borderLeftColor: '#d4a94a',
-    padding: 8,
-    marginBottom: 16,
-  },
-  noteLabel: {
-    fontSize: 7.5,
-    color: '#92400e',
-    marginBottom: 2,
-  },
-  noteText: {
-    fontSize: 9,
-    color: '#1a1a1a',
-    lineHeight: 1.5,
-  },
+  sign: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+  stampBox: { width: '44%', alignItems: 'center' },
+  stamp: { width: 130, height: 82, objectFit: 'contain' },
+  stampCaption: { fontSize: 7, color: MUTED, marginTop: 2 },
+  signBox: { width: '48%', borderWidth: 0.75, borderColor: LINE, borderRadius: 3, padding: 10, height: 96 },
+  signTitle: { fontSize: 7.5, color: GREEN_DARK, letterSpacing: 1.5 },
+  signLine: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 22 },
+  signLabel: { width: 30, fontSize: 7.5, color: MUTED },
+  signRule: { flex: 1, borderBottomWidth: 0.5, borderBottomColor: MUTED },
 
-  // ── Bank info ────────────────────────────────────────────────────────────
-  bankSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f4f0ec',
-    borderRadius: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginBottom: 14,
-    gap: 16,
-  },
-  bankLabel: {
-    fontSize: 7.5,
-    color: BRAND,
-    fontWeight: 'bold',
-    marginRight: 4,
-  },
-  bankText: {
-    fontSize: 8,
-    color: '#444',
-    letterSpacing: 0.3,
-  },
-  bankSep: {
-    fontSize: 8,
-    color: '#c8b8a8',
-    marginHorizontal: 6,
-  },
-
-  // ── Signature / Stamp ────────────────────────────────────────────────────
-  signatureSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 14,
-    marginBottom: 52,        // clears the absolute footer
-  },
-  stampBox: {
-    width: '44%',
-    height: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stampImage: {
-    width: 160,
-    height: 100,
-    objectFit: 'contain',
-  },
-  signBox: {
-    width: '48%',
-    height: 100,
-    borderWidth: 1,
-    borderColor: '#c8b8a8',
-    borderRadius: 4,
-    padding: 10,
-    justifyContent: 'space-between',
-  },
-  signBoxTitle: {
-    fontSize: 8.5,
-    fontWeight: 'bold',
-    color: BRAND,
-    marginBottom: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0d4c8',
-    paddingBottom: 4,
-  },
-  signLine: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    flex: 1,
-  },
-  signLineLabel: {
-    fontSize: 7.5,
-    color: '#888',
-    width: 40,
-  },
-  signLineRule: {
-    flex: 1,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#c8b8a8',
-    marginBottom: 1,
-  },
-
-  // ── Footer ───────────────────────────────────────────────────────────────
-  footer: {
-    position: 'absolute',
-    bottom: 28,
-    left: 40,
-    right: 40,
-    borderTopWidth: 1,
-    borderTopColor: '#e0d4c8',
-    paddingTop: 7,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  footerText: {
-    fontSize: 7.5,
-    color: '#999',
-    letterSpacing: 0.6,
-  },
+  footer: { position: 'absolute', bottom: 24, left: 36, right: 36, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.8, color: MUTED },
+  watermark: { position: 'absolute', top: 360, left: 40, right: 40, textAlign: 'center', fontSize: 46, color: GREEN_DARK, opacity: 0.07, transform: 'rotate(-28deg)' },
 })
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function formatMoney(n: number): string {
-  return 'NT$ ' + n.toLocaleString('zh-TW')
+/**
+ * 內嵌的 NotoSansTC-400 是子集字型（6,606 字），沒有全形標點與全形英數（（），：；！？％／０…），
+ * 直接輸出會整個字消失（例：「現貨，下單後」變成「現貨下單後」）。一律先轉成半形（NFKC）。
+ */
+const T = (v: unknown) => String(v ?? '')
+  .replace(/，/g, ', ').replace(/：/g, ': ').replace(/；/g, '; ').replace(/[・･]/g, '·')
+  .normalize('NFKC')
+
+const money = (n: number) => (Number(n) || 0).toLocaleString('zh-TW')
+const qty = (n: number) => (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2))))
+
+function KV({ k, v }: { k: string; v?: string }) {
+  if (!v) return null
+  return (
+    <View style={s.kv}>
+      <Text style={s.k}>{k}</Text>
+      <Text style={s.v}>{T(v)}</Text>
+    </View>
+  )
 }
 
-function formatDate(d: string): string {
-  if (!d) return '—'
-  return d.replace(/-/g, '/')
-}
-
-// ── Document ──────────────────────────────────────────────────────────────────
-export function QuoteDocument({ quote }: { quote: Quote }) {
+/** watermark：未核准時的內部預覽浮水印（例如「內部預覽・尚未核准」） */
+export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: string }) {
   const items = quote.items ?? []
+  const layout = parseLayout(quote.layout)
+  const showImage = layout.showImage && items.some((i) => i.imageUrl)
+  const totals = computeQuoteTotals({ items, taxMode: quote.taxMode, discount: quote.discount })
+
+  // 欄寬（%）：品名吃剩下的寬度
+  const cols = [
+    { key: 'no', label: '編號', w: 6, align: s.center },
+    ...(showImage ? [{ key: 'img', label: '圖片', w: 10, align: s.center }] : []),
+    { key: 'name', label: '品名', w: 0, align: {} },
+    ...(layout.showSpec ? [{ key: 'spec', label: '規格', w: 15, align: {} }] : []),
+    { key: 'qty', label: '數量', w: 8, align: s.right },
+    ...(layout.showUnit ? [{ key: 'unit', label: '單位', w: 7, align: s.center }] : []),
+    { key: 'price', label: '單價', w: 12, align: s.right },
+    { key: 'amount', label: '總計', w: 13, align: s.right },
+  ]
+  const fixed = cols.reduce((sum, c) => sum + c.w, 0)
+  const width = (c: { w: number }) => `${c.w || 100 - fixed}%`
+
+  const terms = [
+    quote.taxMode === '未稅'
+      ? `本報價單金額未稅，${Math.round(TAX_RATE * 100)}% 營業稅另計（列於右方）。`
+      : `本報價單稅金內含（已含 ${Math.round(TAX_RATE * 100)}% 營業稅）。`,
+    ...(quote.validUntil ? [`本報價單有效至民國 ${rocDate(quote.validUntil)}止。`] : []),
+    ...(quote.note ?? '').split(/\n+/).map((t) => t.trim()).filter(Boolean),
+  ]
 
   return (
-    <Document>
-      <Page size="A4" style={styles.page}>
+    <Document title={`報價單 ${quote.quoteNumber} ${quote.customerName}`} author={COMPANY.name}>
+      <Page size="A4" style={s.page}>
+        {watermark && <Text style={s.watermark} fixed>{T(watermark)}</Text>}
 
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          {/* Left: logo + company info */}
-          <View style={styles.headerLeft}>
-            <View style={styles.logoFrame}>
-              <Image src={path.join(process.cwd(), 'public', 'Logo.png')} style={styles.logo} />
-            </View>
-            <Text style={styles.companyEn}>SONGTAH TRADING CO.,LTD.</Text>
-            <View style={styles.companyBlock}>
-              <Text style={styles.companyNameTw}>崧達企業股份有限公司</Text>
-              <Text style={styles.companyDetail}>電話　02-2703-6465　｜　統編　30934957</Text>
-              <Text style={styles.companyDetail}>臺北市大安區敦化南路1段376號12F之1</Text>
-              <Text style={styles.companyDetail}>sales@songtah.com.tw</Text>
-            </View>
+        {/* 抬頭 */}
+        <View style={s.header}>
+          <Image src={path.join(process.cwd(), 'public', 'Logo.png')} style={s.logo} />
+          <View style={s.titleBox}>
+            <Text style={s.title}>報價單</Text>
+            <Text style={s.titleEn}>QUOTATION</Text>
           </View>
+        </View>
+        <View style={s.ruleDark} />
+        <View style={s.ruleGreen} />
+        <Text style={s.companyLine}>
+          {COMPANY.address}　TEL {COMPANY.tel}　FAX {COMPANY.fax}　{COMPANY.email}　統一編號 {COMPANY.taxId}
+        </Text>
 
-          {/* Right: quote title + number */}
-          <View style={styles.headerRight}>
-            <Text style={styles.quoteTitle}>報　價　單</Text>
-            <Text style={styles.quoteNumber}>No. {quote.quoteNumber}</Text>
+        {/* 客戶／報價資訊 */}
+        <View style={s.infoRow}>
+          <View style={s.customerPanel}>
+            <Text style={s.panelLabel}>客戶</Text>
+            <Text style={s.customerName}>{T(quote.customerName)}</Text>
+            {!!quote.companyTitle && quote.companyTitle !== quote.customerName && (
+              <Text style={s.customerSub}>{T(quote.companyTitle)}</Text>
+            )}
+            <KV k="聯絡人" v={quote.contactPerson} />
+            <KV k="電話" v={quote.customerPhone} />
+            <KV k="統一編號" v={quote.customerTaxId} />
+            <KV k="地址" v={quote.customerAddress} />
+          </View>
+          <View style={s.quotePanel}>
+            <Text style={s.panelLabel}>報價資訊</Text>
+            <KV k="報價單號" v={quote.quoteNumber} />
+            <KV k="報價日期" v={rocDate(quote.quoteDate || quote.createdAt)} />
+            <KV k="有效期限" v={rocDate(quote.validUntil)} />
+            <KV k="業務承辦" v={quote.salesperson} />
+            <KV k="付款條件" v={quote.paymentTerms} />
+            <KV k="交貨條件" v={quote.deliveryTerms} />
           </View>
         </View>
 
-        {/* ── Customer info grid ── */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>客戶名稱</Text>
-            <Text style={styles.infoValue}>{quote.customerName || '—'}</Text>
+        {/* 品項 */}
+        <View style={s.table}>
+          <View style={s.th} fixed>
+            {cols.map((c) => (
+              <Text key={c.key} style={[s.cell, c.align, { width: width(c) }]}>{c.label}</Text>
+            ))}
           </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>公司抬頭</Text>
-            <Text style={styles.infoValue}>{quote.companyTitle || '—'}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>電話</Text>
-            <Text style={styles.infoValue}>{quote.customerPhone || '—'}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>統一編號</Text>
-            <Text style={styles.infoValue}>{quote.customerTaxId || '—'}</Text>
-          </View>
-          {/* Address gets wider column so it doesn't clip */}
-          <View style={styles.infoBlockWide}>
-            <Text style={styles.infoLabel}>地址</Text>
-            <Text style={styles.infoValue}>{quote.customerAddress || '—'}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>業務負責人</Text>
-            <Text style={styles.infoValue}>{quote.salesperson || '—'}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>報價日期</Text>
-            <Text style={styles.infoValue}>{formatDate(quote.createdAt?.slice(0, 10))}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>有效期限</Text>
-            <Text style={styles.infoValue}>{formatDate(quote.validUntil)}</Text>
-          </View>
-          <View style={styles.infoBlock}>
-            <Text style={styles.infoLabel}>付款條件</Text>
-            <Text style={styles.infoValue}>{quote.paymentTerms || '—'}</Text>
-          </View>
-        </View>
-
-        {/* ── Items table ── */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.colIndex,    styles.headerCell]}>#</Text>
-            <Text style={[styles.colImage,    styles.headerCell]}>圖片</Text>
-            <Text style={[styles.colName,     styles.headerCell]}>品名</Text>
-            <Text style={[styles.colSpec,     styles.headerCell]}>規格</Text>
-            <Text style={[styles.colUnit,     styles.headerCell]}>單位</Text>
-            <Text style={[styles.colQty,      styles.headerCell]}>數量</Text>
-            <Text style={[styles.colPrice,    styles.headerCell]}>單價</Text>
-            <Text style={[styles.colSubtotal, styles.headerCell]}>小計</Text>
-          </View>
-
-          {items.map((item, i) => (
-            <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
-              <Text style={styles.colIndex}>{i + 1}</Text>
-              <View style={styles.colImage}>
-                <View style={styles.imageBox}>
-                  {item.imageUrl ? (
-                    <Image src={item.imageUrl} style={styles.itemImage} />
-                  ) : (
-                    <Text style={styles.imagePlaceholder}>圖片預留</Text>
-                  )}
-                </View>
+          {items.map((item, i) => {
+            const sub = [layout.showBrand ? item.brand : '', layout.showSpec ? '' : item.spec].filter(Boolean).join('　')
+            return (
+              <View key={i} style={[s.tr, i % 2 === 1 ? { backgroundColor: ZEBRA } : {}]} wrap={false}>
+                {cols.map((c) => {
+                  const st = [s.cell, c.align, { width: width(c) }]
+                  switch (c.key) {
+                    case 'no': return <Text key={c.key} style={st}>{i + 1}</Text>
+                    case 'img': return (
+                      <View key={c.key} style={[...st, { alignItems: 'center' }]}>
+                        {item.imageUrl ? <View style={s.imgBox}><Image src={item.imageUrl} style={s.img} /></View> : null}
+                      </View>
+                    )
+                    case 'name': return (
+                      <View key={c.key} style={st}>
+                        <Text style={s.itemName}>{T(item.name)}</Text>
+                        {!!sub && <Text style={s.itemSub}>{T(sub)}</Text>}
+                        {!!item.note && <Text style={s.itemSub}>{T(item.note)}</Text>}
+                      </View>
+                    )
+                    case 'spec': return <Text key={c.key} style={st}>{T(item.spec)}</Text>
+                    case 'qty': return <Text key={c.key} style={st}>{qty(item.quantity)}</Text>
+                    case 'unit': return <Text key={c.key} style={st}>{T(item.unit)}</Text>
+                    case 'price': return <Text key={c.key} style={st}>{money(item.unitPrice)}</Text>
+                    default: return <Text key={c.key} style={st}>{money(item.subtotal)}</Text>
+                  }
+                })}
               </View>
-              <View style={styles.colName}>
-                <Text>{item.name || ''}</Text>
-                {!!item.note && <Text style={styles.itemNote}>{item.note}</Text>}
+            )
+          })}
+        </View>
+
+        {/* 說明＋金額 */}
+        <View style={s.summary} wrap={false}>
+          <View style={s.terms}>
+            <Text style={s.termsLabel}>說明</Text>
+            {terms.map((t, i) => (
+              <View key={i} style={s.term}>
+                <Text style={s.termNo}>{i + 1}.</Text>
+                <Text style={s.termText}>{T(t)}</Text>
               </View>
-              <Text style={styles.colSpec}>{item.spec || '—'}</Text>
-              <Text style={styles.colUnit}>{item.unit || ''}</Text>
-              <Text style={styles.colQty}>{String(item.quantity ?? '')}</Text>
-              <Text style={styles.colPrice}>{formatMoney(item.unitPrice)}</Text>
-              <Text style={styles.colSubtotal}>{formatMoney(item.subtotal)}</Text>
+            ))}
+          </View>
+          <View style={s.totals}>
+            <View style={s.tRow}><Text style={s.tLabel}>小計</Text><Text style={s.tValue}>NT$ {money(totals.subtotal)}</Text></View>
+            {totals.discount > 0 && (
+              <View style={s.tRow}><Text style={s.tLabel}>折讓</Text><Text style={s.tValue}>− NT$ {money(totals.discount)}</Text></View>
+            )}
+            {quote.taxMode === '未稅' && (
+              <View style={s.tRow}><Text style={s.tLabel}>營業稅 {Math.round(TAX_RATE * 100)}%</Text><Text style={s.tValue}>NT$ {money(totals.tax)}</Text></View>
+            )}
+            <View style={s.grand}>
+              <Text style={s.grandLabel}>{quote.taxMode === '未稅' ? '總計金額' : '總計金額 (含稅)'}</Text>
+              <Text style={s.grandValue}>NT$ {money(totals.total)}</Text>
             </View>
-          ))}
-        </View>
-
-        {/* ── Total ── */}
-        <View style={styles.totalSection}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>合計金額</Text>
-            <Text style={styles.totalValue}>{formatMoney(quote.total)}</Text>
+            <Text style={s.words}>{amountInChinese(totals.total)}</Text>
           </View>
         </View>
 
-        {/* ── Note ── */}
-        {!!quote.note && (
-          <View style={styles.noteSection}>
-            <Text style={styles.noteLabel}>備註</Text>
-            <Text style={styles.noteText}>{quote.note}</Text>
-          </View>
-        )}
-
-        {/* ── Bank info ── */}
-        <View style={styles.bankSection}>
-          <Text style={styles.bankLabel}>匯款資訊</Text>
-          <Text style={styles.bankText}>戶名：崧達企業股份有限公司</Text>
-          <Text style={styles.bankSep}>｜</Text>
-          <Text style={styles.bankText}>華南商業銀行（總行代號 008）</Text>
-          <Text style={styles.bankSep}>｜</Text>
-          <Text style={styles.bankText}>帳號：130-10-000184-7</Text>
+        {/* 匯款資訊 */}
+        <View style={s.bank} wrap={false}>
+          <Text style={s.bankLabel}>匯款資訊</Text>
+          <Text style={s.bankText}>戶名 {COMPANY.bank.holder}</Text>
+          <Text style={s.bankText}>{T(COMPANY.bank.name)}</Text>
+          <Text style={s.bankText}>帳號 {COMPANY.bank.account}</Text>
         </View>
 
-        {/* ── Signature & Stamp ── */}
-        <View style={styles.signatureSection}>
-          {/* Left: company stamp image */}
-          <View style={styles.stampBox}>
-            <Image
-              src={path.join(process.cwd(), 'public', 'stamp.png')}
-              style={styles.stampImage}
-            />
+        {/* 用印／回簽 */}
+        <View style={s.sign} wrap={false}>
+          <View style={s.stampBox}>
+            {/* stamp-transparent.png：由 stamp.png 去除方格底圖並縮小（原檔背景是畫上去的灰白方格） */}
+            <Image src={path.join(process.cwd(), 'public', 'stamp-transparent.png')} style={s.stamp} />
+            <Text style={s.stampCaption}>{COMPANY.name}</Text>
           </View>
-
-          {/* Right: countersign — signature line only */}
-          <View style={styles.signBox}>
-            <Text style={styles.signBoxTitle}>客戶確認回簽</Text>
-            <View style={styles.signLine}>
-              <Text style={styles.signLineLabel}>簽章</Text>
-              <View style={styles.signLineRule} />
-            </View>
+          <View style={s.signBox}>
+            <Text style={s.signTitle}>客戶確認回簽</Text>
+            <View style={s.signLine}><Text style={s.signLabel}>簽章</Text><View style={s.signRule} /></View>
+            <View style={s.signLine}><Text style={s.signLabel}>日期</Text><View style={s.signRule} /></View>
           </View>
         </View>
 
-        {/* ── Footer ── */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>SONGTAH TRADING CO.,LTD.</Text>
-          <Text style={styles.footerText}>崧達企業股份有限公司</Text>
-          <Text style={styles.footerText}>有效期至 {formatDate(quote.validUntil)}</Text>
-          <Text style={styles.footerText}>報價單號：{quote.quoteNumber}</Text>
+        <View style={s.footer} fixed>
+          <Text>{COMPANY.name}　{COMPANY.nameEn}</Text>
+          <Text>報價單號 {quote.quoteNumber}</Text>
+          <Text render={({ pageNumber, totalPages }) => `第 ${pageNumber} / ${totalPages} 頁`} />
         </View>
-
       </Page>
     </Document>
   )

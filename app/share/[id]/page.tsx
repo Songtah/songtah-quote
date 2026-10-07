@@ -3,18 +3,12 @@ import type { Metadata } from 'next'
 import { unstable_noStore as noStore } from 'next/cache'
 import { getQuote } from '@/lib/notion'
 import type { Quote } from '@/types'
+import { COMPANY, TAX_RATE, amountInChinese, computeQuoteTotals, formatMoney, parseLayout, rocDate } from '@/lib/quote-model'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 }
 
-function formatMoney(n: number) {
-  return 'NT$ ' + n.toLocaleString('zh-TW')
-}
-function formatDate(d: string) {
-  if (!d) return '—'
-  return d.slice(0, 10).replace(/-/g, '/')
-}
 
 export default async function SharePage({ params }: { params: { id: string } }) {
   noStore()
@@ -47,141 +41,162 @@ export default async function SharePage({ params }: { params: { id: string } }) 
   }
 
   const items = quote.items ?? []
+  const layout = parseLayout(quote.layout)
+  const showImage = layout.showImage && items.some((i) => i.imageUrl)
+  const totals = computeQuoteTotals({ items, taxMode: quote.taxMode, discount: quote.discount })
+  const terms = [
+    quote.taxMode === '未稅' ? `本報價單金額未稅，${Math.round(TAX_RATE * 100)}% 營業稅另計。` : `本報價單稅金內含（已含 ${Math.round(TAX_RATE * 100)}% 營業稅）。`,
+    ...(quote.validUntil ? [`本報價單有效至民國 ${rocDate(quote.validUntil)}止。`] : []),
+    ...(quote.note ?? '').split(/\n+/).map((t) => t.trim()).filter(Boolean),
+  ]
+  const info: [string, string | undefined][] = [
+    ['報價單號', quote.quoteNumber],
+    ['報價日期', rocDate(quote.quoteDate || quote.createdAt)],
+    ['有效期限', rocDate(quote.validUntil)],
+    ['業務承辦', quote.salesperson],
+    ['付款條件', quote.paymentTerms],
+    ['交貨條件', quote.deliveryTerms],
+  ]
+  const customer: [string, string | undefined][] = [
+    ['聯絡人', quote.contactPerson],
+    ['電話', quote.customerPhone],
+    ['統一編號', quote.customerTaxId],
+    ['地址', quote.customerAddress],
+  ]
 
+  // 客戶端頁面採 2026 品牌識別（與 PDF 一致）：千歲綠 #36563C、崧達綠 #62B320、Cornsilk #FEFAE0
   return (
-    <div className="min-h-screen bg-white px-4 py-6 sm:py-10">
-      <div className="max-w-3xl mx-auto">
-        {/* Header Card */}
-        <div className="mb-5 overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(90,66,51,0.22)] ring-1 ring-stone-900/[0.05]">
-          <div
-            className="px-8 py-7 relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, #f7f4ec 0%, #ffffff 50%, #f5eee1 100%)',
-            }}
-          >
-            {/* Metallic sheen sweep */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.75) 50%, transparent 75%)',
-              }}
-            />
-
-            <div className="relative flex justify-between items-center gap-6">
-              <div className="flex flex-col justify-center">
-                <div className="bg-white/90 rounded-xl px-4 py-2 inline-flex items-center mb-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.25)]">
-                  <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-48 object-contain" />
-                </div>
-                <div className="text-stone-400 text-[10px] font-semibold tracking-[0.22em] uppercase">
-                  SONGTAH TRADING CO.,LTD.
-                </div>
-              </div>
+    <div className="min-h-screen bg-[#FBFAF4] px-4 py-6 text-[#1F1D1A] sm:py-10">
+      <div className="mx-auto max-w-3xl">
+        <div className="overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(54,86,60,0.28)] ring-1 ring-black/[0.04]">
+          {/* 抬頭 */}
+          <div className="px-6 pt-6 sm:px-8 sm:pt-8">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <Image src="/Logo.svg" alt="崧達企業股份有限公司 SONG TAH" width={2638} height={437} priority className="h-auto w-44 sm:w-52" />
               <div className="text-right">
-                <div className="text-2xl font-black tracking-wider text-stone-800">報　價　單</div>
-                <div className="mt-1.5 inline-block rounded-full bg-brand-50 px-3 py-1 font-mono text-sm text-brand-700">
-                  {quote.quoteNumber}
-                </div>
+                <div className="text-2xl tracking-[0.3em] text-[#36563C]">報價單</div>
+                <div className="text-[10px] tracking-[0.35em] text-stone-400">QUOTATION</div>
               </div>
+            </div>
+            <div className="mt-4 h-[2px] bg-[#36563C]" />
+            <div className="mt-[3px] h-px w-16 bg-[#62B320]" />
+            <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+              {COMPANY.address}　TEL {COMPANY.tel}　FAX {COMPANY.fax}　{COMPANY.email}
+            </p>
+          </div>
+
+          {/* 客戶／報價資訊 */}
+          <div className="grid gap-3 px-6 py-5 sm:grid-cols-[1.4fr_1fr] sm:px-8">
+            <div className="rounded-2xl bg-[#FEFAE0] p-4">
+              <div className="text-[11px] tracking-widest text-[#36563C]">客戶</div>
+              <div className="mt-1 text-lg font-semibold">{quote.customerName}</div>
+              {quote.companyTitle && quote.companyTitle !== quote.customerName && <div className="text-xs text-stone-500">{quote.companyTitle}</div>}
+              <dl className="mt-2 space-y-1 text-sm">
+                {customer.filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k} className="flex gap-3"><dt className="w-16 shrink-0 text-xs leading-5 text-stone-400">{k}</dt><dd>{v}</dd></div>
+                ))}
+              </dl>
+            </div>
+            <div className="rounded-2xl p-4 ring-1 ring-black/[0.06]">
+              <div className="text-[11px] tracking-widest text-[#36563C]">報價資訊</div>
+              <dl className="mt-2 space-y-1 text-sm">
+                {info.filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k} className="flex gap-3"><dt className="w-16 shrink-0 text-xs leading-5 text-stone-400">{k}</dt><dd className={k === '報價單號' ? 'font-mono' : ''}>{v}</dd></div>
+                ))}
+              </dl>
             </div>
           </div>
 
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-brand-100/50">
-            {[
-              ['客戶名稱', quote.customerName],
-              ...(quote.companyTitle ? [['公司抬頭', quote.companyTitle]] : []),
-              ['電話', quote.customerPhone || '—'],
-              ['地址', quote.customerAddress || '—'],
-              ['統一編號', quote.customerTaxId || '—'],
-              ['業務負責人', quote.salesperson || '—'],
-              ['報價日期', formatDate(quote.createdAt?.slice(0, 10))],
-              ['有效期限', formatDate(quote.validUntil)],
-              ['付款條件', quote.paymentTerms || '—'],
-              ['報價狀態', quote.status],
-            ].map(([label, val]) => (
-              <div key={label} className="bg-white px-5 py-4">
-                <div className="text-xs text-stone-400 mb-1">{label}</div>
-                <div className="font-semibold text-stone-700 text-sm">{val}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Items Table */}
-        <div className="mb-5 overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(90,66,51,0.18)] ring-1 ring-stone-900/[0.05]">
-          <div className="px-6 py-4 border-b border-brand-100">
-            <h2 className="font-semibold text-stone-700">報價明細</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-cream-100/60 text-stone-500 text-xs">
-                <tr>
-                  <th className="px-4 py-3 text-left">#</th>
-                  <th className="px-4 py-3 text-left">圖片</th>
-                  <th className="px-4 py-3 text-left">品名</th>
-                  <th className="px-4 py-3 text-left">規格</th>
-                  <th className="px-4 py-3 text-center">單位</th>
-                  <th className="px-4 py-3 text-right">數量</th>
-                  <th className="px-4 py-3 text-right">單價</th>
-                  <th className="px-4 py-3 text-right">小計</th>
+          {/* 品項：桌機表格／手機卡片 */}
+          <div className="px-6 sm:px-8">
+            <table className="hidden w-full text-sm sm:table">
+              <thead>
+                <tr className="bg-[#36563C] text-xs text-white">
+                  <th className="px-3 py-2.5 text-center font-normal">編號</th>
+                  {showImage && <th className="px-3 py-2.5 font-normal">圖片</th>}
+                  <th className="px-3 py-2.5 text-left font-normal">品名</th>
+                  {layout.showSpec && <th className="px-3 py-2.5 text-left font-normal">規格</th>}
+                  <th className="px-3 py-2.5 text-right font-normal">數量</th>
+                  {layout.showUnit && <th className="px-3 py-2.5 text-center font-normal">單位</th>}
+                  <th className="px-3 py-2.5 text-right font-normal">單價</th>
+                  <th className="px-3 py-2.5 text-right font-normal">總計</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-100/40">
+              <tbody>
                 {items.map((item, i) => (
-                  <tr key={i} className={i % 2 === 1 ? 'bg-cream-50/50' : ''}>
-                    <td className="px-4 py-3 text-stone-400">{i + 1}</td>
-                    <td className="px-4 py-3">
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-xl object-cover border border-brand-200/50" />
-                      ) : (
-                        <div className="h-16 w-16 rounded-xl border border-dashed border-brand-200 bg-cream-50 flex items-center justify-center text-[10px] text-stone-400 text-center px-1">
-                          圖片預留
-                        </div>
-                      )}
+                  <tr key={i} className={`border-b border-[#E3E1D3] ${i % 2 ? 'bg-[#F8F9F3]' : ''}`}>
+                    <td className="px-3 py-3 text-center text-stone-400">{i + 1}</td>
+                    {showImage && <td className="px-3 py-3">{item.imageUrl && <img src={item.imageUrl} alt="" className="h-12 w-12 rounded-lg object-contain ring-1 ring-black/[0.06]" />}</td>}
+                    <td className="px-3 py-3">
+                      <div>{item.name}</div>
+                      {(layout.showBrand && item.brand) || (!layout.showSpec && item.spec) ? (
+                        <div className="text-xs text-stone-400">{[layout.showBrand ? item.brand : '', layout.showSpec ? '' : item.spec].filter(Boolean).join('　')}</div>
+                      ) : null}
+                      {item.note && <div className="text-xs text-stone-400">{item.note}</div>}
                     </td>
-                    <td className="px-4 py-3 font-medium text-stone-700">
-                      <div>{item.name}{item.brand && <span className="ml-2 text-xs text-stone-400">{item.brand}</span>}</div>
-                      {item.note && <div className="text-xs text-stone-400 mt-0.5">{item.note}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-stone-500">{item.spec || '—'}</td>
-                    <td className="px-4 py-3 text-center text-stone-500">{item.unit}</td>
-                    <td className="px-4 py-3 text-right">{item.quantity}</td>
-                    <td className="px-4 py-3 text-right">{formatMoney(item.unitPrice)}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{formatMoney(item.subtotal)}</td>
+                    {layout.showSpec && <td className="px-3 py-3 text-stone-500">{item.spec}</td>}
+                    <td className="px-3 py-3 text-right tabular-nums">{item.quantity}</td>
+                    {layout.showUnit && <td className="px-3 py-3 text-center text-stone-500">{item.unit}</td>}
+                    <td className="px-3 py-3 text-right tabular-nums">{item.unitPrice.toLocaleString('zh-TW')}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{item.subtotal.toLocaleString('zh-TW')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <ul className="divide-y divide-[#E3E1D3] border-y border-[#E3E1D3] sm:hidden">
+              {items.map((item, i) => (
+                <li key={i} className="flex gap-3 py-3">
+                  <span className="w-5 shrink-0 pt-0.5 text-xs text-stone-400">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm">{item.name}</div>
+                    <div className="text-xs text-stone-400">
+                      {[layout.showBrand ? item.brand : '', item.spec, item.note].filter(Boolean).join('　·　')}
+                    </div>
+                    <div className="mt-1 flex justify-between text-xs text-stone-500">
+                      <span className="tabular-nums">{item.quantity}{layout.showUnit ? ` ${item.unit}` : ''} × {formatMoney(item.unitPrice)}</span>
+                      <span className="text-sm tabular-nums text-[#1F1D1A]">{formatMoney(item.subtotal)}</span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Total */}
-          <div className="px-6 py-5 bg-gradient-to-r from-brand-50 to-cream-100 border-t border-brand-200/40 flex justify-between items-center">
-            <span className="text-stone-600 font-medium">合計金額</span>
-            <span className="text-2xl font-bold text-brand-700">{formatMoney(quote.total)}</span>
+          {/* 說明＋金額 */}
+          <div className="grid gap-5 px-6 py-6 sm:grid-cols-[1fr_260px] sm:px-8">
+            <div>
+              <div className="mb-1.5 text-[11px] tracking-widest text-[#36563C]">說明</div>
+              <ol className="list-decimal space-y-1 pl-4 text-sm text-stone-600">
+                {terms.map((t, i) => <li key={i}>{t}</li>)}
+              </ol>
+            </div>
+            <div className="text-sm">
+              <div className="flex justify-between py-1"><span className="text-stone-500">小計</span><span className="tabular-nums">{formatMoney(totals.subtotal)}</span></div>
+              {totals.discount > 0 && <div className="flex justify-between py-1"><span className="text-stone-500">折讓</span><span className="tabular-nums">− {formatMoney(totals.discount)}</span></div>}
+              {quote.taxMode === '未稅' && <div className="flex justify-between py-1"><span className="text-stone-500">營業稅 {Math.round(TAX_RATE * 100)}%</span><span className="tabular-nums">{formatMoney(totals.tax)}</span></div>}
+              <div className="mt-1 flex items-end justify-between border-t-2 border-[#36563C] pt-2">
+                <span className="text-[#36563C]">總計金額{quote.taxMode === '未稅' ? '' : '（含稅）'}</span>
+                <span className="text-2xl tabular-nums text-[#36563C]">{formatMoney(totals.total)}</span>
+              </div>
+              <div className="mt-1 text-right text-xs text-stone-400">{amountInChinese(totals.total)}</div>
+            </div>
+          </div>
+
+          <div className="mx-6 mb-6 flex flex-wrap gap-x-5 gap-y-1 rounded-2xl bg-[#FEFAE0] px-4 py-3 text-xs sm:mx-8">
+            <span className="text-[#36563C]">匯款資訊</span>
+            <span>戶名 {COMPANY.bank.holder}</span>
+            <span>{COMPANY.bank.name}</span>
+            <span>帳號 {COMPANY.bank.account}</span>
           </div>
         </div>
 
-        {/* Note */}
-        {quote.note && (
-          <div className="bg-cream-100 border border-brand-200/50 rounded-2xl px-6 py-4 mb-4">
-            <div className="text-xs text-brand-500 font-medium mb-1">備註</div>
-            <div className="text-sm text-stone-600 whitespace-pre-wrap">{quote.note}</div>
-          </div>
-        )}
-
-        {/* PDF Button */}
-        <div className="text-center">
-          <a
-            href={`/api/quotes/${params.id}/pdf`}
-            className="button-primary inline-flex items-center gap-2"
-          >
-            ↓ 下載 PDF
+        <div className="mt-6 text-center">
+          <a href={`/api/quotes/${params.id}/pdf`} target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-[#36563C] px-6 py-3 text-sm font-medium text-white shadow-md shadow-[#36563C]/25 transition-all hover:bg-[#2c4731] active:scale-95">
+            ↓ 下載 PDF（含公司用印）
           </a>
         </div>
-
-        <div className="text-center mt-6 text-xs text-stone-400">
-          SONGTAH TRADING CO.,LTD.｜此報價單由系統自動產生
-        </div>
+        <p className="mt-6 text-center text-xs text-stone-400">{COMPANY.name}　{COMPANY.nameEn}</p>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getQuote, updateQuoteStatus } from '@/lib/notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { QUOTE_TRANSITIONS } from '@/lib/quote-status'
 
 // 簽核權限：admin / 行政 / 總經理（withApiAuth 先擋入口，內部再依目前狀態做轉換層級判斷）
 export const POST = withApiAuth({ roles: ['行政', '總經理'] }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
@@ -25,30 +26,8 @@ export const POST = withApiAuth({ roles: ['行政', '總經理'] }, async (req: 
   const quote = await getQuote(params.id).catch(() => null)
   if (!quote) return NextResponse.json({ error: '找不到報價單' }, { status: 404 })
 
-  // ── 狀態機：依目前狀態決定合法的下一步，避免跳過總經理審核層級 ──────────────
-  // 注意：每個 action 的目標狀態與允許角色都綁定「目前狀態」，不是只看 action 本身。
-  type Transition = { to: string; roles: Array<'admin' | '行政' | '總經理'> }
-  const TRANSITIONS: Record<string, Record<string, Transition>> = {
-    '待行政審核': {
-      approve:  { to: '已核准',     roles: ['admin', '行政'] },
-      escalate: { to: '待總經理審核', roles: ['admin', '行政'] },
-      reject:   { to: '已退回',     roles: ['admin', '行政', '總經理'] },
-    },
-    '待總經理審核': {
-      // 已呈總經理者，只有總經理（或 admin）可核准——行政不可代為核准，避免繞過審核層級。
-      approve: { to: '已核准', roles: ['admin', '總經理'] },
-      reject:  { to: '已退回', roles: ['admin', '行政', '總經理'] },
-    },
-    '已退回': {
-      resubmit: { to: '待行政審核', roles: ['admin', '行政', '總經理'] },
-    },
-    '已核准': {
-      // 允許管理員撤銷誤核准的報價單，但不可由此狀態再「approve」（已是終態）。
-      reject: { to: '已退回', roles: ['admin'] },
-    },
-  }
-
-  const transition = TRANSITIONS[quote.status]?.[action]
+  // 狀態機集中在 lib/quote-status.ts（建立／修改報價單的「送出審核」也走同一張表）
+  const transition = action === 'submit' ? undefined : QUOTE_TRANSITIONS[quote.status]?.[action]
   if (!transition) {
     return NextResponse.json(
       { error: `報價單目前狀態為「${quote.status}」，無法執行「${action}」` },
