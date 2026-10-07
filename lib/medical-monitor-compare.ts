@@ -313,13 +313,16 @@ export interface MonitorResult {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-/** 讀人工排除清單；Redis 不可用時回空陣列（寧可多顯示，也不要讓比對整個失敗） */
+/**
+ * 讀人工排除清單。讀不到就讓比對失敗、不產生結果——
+ * 舊做法回空陣列，會把已排除的全部重新列出、而且這份結果還會被存 30 天（誤報反覆出現的主因之一）。
+ */
 async function listDismissedSafe(): Promise<MonitorDismissEntry[]> {
+  const { listDismissed } = await import('@/lib/notion/monitor-dismiss')
   try {
-    const { listDismissed } = await import('@/lib/notion/monitor-dismiss')
     return await listDismissed()
-  } catch {
-    return []
+  } catch (e: any) {
+    throw new Error(`讀取排除清單失敗，為避免已排除項目重新出現，本次比對中止：${e?.message ?? e}`)
   }
 }
 

@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, createContext, useContext } from 'react'
 import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
   SelfManagedCustomer, InconsistentData, CodeChanged, MonitorStats, HospitalUnverified,
   AcademicInstitution, InvalidCode, SameCityCandidate, MonitorDismissEntry, UnregisteredInstitution, SuspectedReopen,
 } from '@/app/api/admin/medical-monitor/route'
+
+/**
+ * 排除／復原要通知主頁：清單彈窗每次開都會重新掛載，只靠彈窗內的隱藏狀態，
+ * 關掉再開就會看到剛排除的項目又跑回來、統計數字也不會變（誤報反覆出現的原因之一）。
+ */
+const MonitorActions = createContext<{ onDismissed?: (customerId: string) => void; onRestored?: (key: string) => void }>({})
 
 // ── Shared UI ──────────────────────────────────────────────────────────────────
 
@@ -351,6 +357,7 @@ function DismissButton({ category, customerId, customerName, institutionCode, on
   customerId: string; customerName: string; institutionCode?: string
   onDismissed?: (customerId: string) => void
 }) {
+  const actions = useContext(MonitorActions)
   const [busy, setBusy] = useState(false)
   const [asking, setAsking] = useState(false)
   const [reason, setReason] = useState('')
@@ -368,6 +375,7 @@ function DismissButton({ category, customerId, customerName, institutionCode, on
       if (!res.ok) { setErr(data.error ?? '排除失敗'); return }
       setAsking(false)
       onDismissed?.(customerId)
+      actions.onDismissed?.(customerId)
     } catch (e: any) {
       setErr(e?.message ?? '排除失敗')
     } finally { setBusy(false) }
@@ -426,26 +434,32 @@ const DISMISS_CATEGORY_LABEL: Record<string, string> = {
 }
 
 function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onRestored?: (key: string) => void }) {
+  const actions = useContext(MonitorActions)
   const [busy, setBusy] = useState<string | null>(null)
+  const [err, setErr] = useState('')
   if (items.length === 0) return (
     <div className="py-12 text-center text-stone-400 text-sm"><div className="text-3xl mb-3">🚫</div><p>目前沒有被排除的項目</p></div>
   )
   async function restore(key: string) {
-    setBusy(key)
+    setBusy(key); setErr('')
     try {
-      await fetch('/api/admin/medical-monitor/dismiss', {
+      const res = await fetch('/api/admin/medical-monitor/dismiss', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'restore', key }),
       })
+      if (!res.ok) { setErr((await res.json().catch(() => ({}))).error ?? '復原失敗'); return }
       onRestored?.(key)
-    } finally { setBusy(null) }
+      actions.onRestored?.(key)
+    } catch (e: any) { setErr(e?.message ?? '復原失敗') }
+    finally { setBusy(null) }
   }
   return (
     <div className="space-y-3">
       <div className="text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
         🚫 這些項目已由人工確認不是問題，不再列入各分類與統計。
-        <span className="text-stone-400">機構代碼變動（換照／補正）時會自動重新出現；也可隨時按「復原」放回清單。</span>
+        <span className="text-stone-400">機構代碼變動（換照／補正）時會自動重新出現；也可隨時按「復原」，下次執行比對後回到清單。</span>
       </div>
+      {err && <div className="text-xs text-red-600">{err}</div>}
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {items.map(item => (
           <div key={item.key} className="flex items-center gap-3 px-4 py-3">
@@ -1711,7 +1725,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // 點擊摘要卡開啟的類別彈窗
   const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null)
   // 已在彈窗內編輯開業狀態而結案的客戶（樂觀移除）
-  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())   // 已結案或已排除（本次比對結果內立即移除）
+  const [dismissedNow, setDismissedNow] = useState(0)
+  const [restoredKeys, setRestoredKeys] = useState<Set<string>>(new Set())
 
   // 新開業 匯入
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
@@ -1721,7 +1737,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const [importResult, setImportResult] = useState('')
 
   function applyResult(data: MonitorResultPayload, when: string) {
-    setResult(data); setCachedAt(when); setResolvedIds(new Set())
+    setResult(data); setCachedAt(when); setResolvedIds(new Set()); setDismissedNow(0); setRestoredKeys(new Set())
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: when })) } catch {}
   }
 
@@ -1864,15 +1880,32 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   const stats = result?.stats
 
   // 樂觀移除已在彈窗編輯結案者
-  const closureItems  = (result?.suspectedClosures ?? []).filter(i => !resolvedIds.has(i.customerId))
-  const hospitalItems = (result?.hospitalUnverified ?? []).filter(i => !resolvedIds.has(i.customerId))
-  const pendingTotal = stats
-    ? closureItems.length + (result?.unregistered?.length ?? 0) + (stats.suspectedReopens ?? 0) + (stats.codeChanged ?? 0)
-      + hospitalItems.length + (stats.invalidCodes ?? 0) + (stats.inconsistentData ?? 0)
+  const notHandled = <T extends { customerId: string }>(list: T[] | undefined) => (list ?? []).filter(i => !resolvedIds.has(i.customerId))
+  const closureItems  = notHandled(result?.suspectedClosures)
+  const hospitalItems = notHandled(result?.hospitalUnverified)
+  // 排除／結案後所有清單與數字立即一致（不必等重新比對、關掉彈窗再開也不會跑回來）
+  const view = result ? {
+    ...result,
+    suspectedReopens: notHandled(result.suspectedReopens),
+    codeChanged:      notHandled(result.codeChanged),
+    inconsistentData: notHandled(result.inconsistentData),
+    invalidCodes:     notHandled(result.invalidCodes),
+    unregistered:     notHandled(result.unregistered),
+    dismissed:        (result.dismissed ?? []).filter(d => !restoredKeys.has(d.key)),
+  } : null
+  const pendingTotal = view
+    ? closureItems.length + view.unregistered.length + view.suspectedReopens.length + view.codeChanged.length
+      + hospitalItems.length + view.invalidCodes.length + view.inconsistentData.length
     : 0
+  const dismissedCount = Math.max(0, (stats?.dismissed ?? 0) + dismissedNow - restoredKeys.size)
+  const monitorActions = {
+    onDismissed: (id: string) => { setResolvedIds(prev => new Set(prev).add(id)); setDismissedNow(n => n + 1) },
+    onRestored:  (key: string) => setRestoredKeys(prev => new Set(prev).add(key)),
+  }
   const unfiledTotal = stats ? stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals : 0
 
   return (
+    <MonitorActions.Provider value={monitorActions}>
     <div className="space-y-5">
 
       {/* Control bar */}
@@ -1973,32 +2006,35 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">待處理</p>
               <span className="text-xs font-semibold text-brand-700 bg-brand-50 rounded-full px-2 py-0.5 tabular-nums">共 {pendingTotal.toLocaleString()} 筆</span>
               <span className="text-[11px] text-stone-300">點卡片看清單；每張清單內也有一鍵處理</span>
+              {restoredKeys.size > 0 && (
+                <span className="text-[11px] text-brand-700">已復原 {restoredKeys.size} 筆，按「執行比對」後回到清單</span>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatCard
                 label="⛔ 代碼查無"
-                value={closureItems.length + (result?.unregistered?.length ?? 0)}
+                value={closureItems.length + (view?.unregistered.length ?? 0)}
                 sub={(() => {
                   // 依衛福部詳細頁直查的真實狀態拆分（basVerdict）；舊快取結果沒有此欄位時退回舊寫法
-                  if (!closureItems.some((i: any) => i.basVerdict)) return `歇業候選 ${closureItems.length}／未立案 ${result?.unregistered?.length ?? 0}`
+                  if (!closureItems.some((i: any) => i.basVerdict)) return `歇業候選 ${closureItems.length}／未立案 ${view?.unregistered.length ?? 0}`
                   const n = (v: string) => closureItems.filter((i: any) => i.basVerdict === v).length
                   const parts = [`歇業 ${n('closed')}`, `停業 ${n('suspended')}`]
                   if (n('open')) parts.push(`仍開業 ${n('open')}`)
                   if (n('unverified')) parts.push(`待查證 ${n('unverified')}`)
-                  return `${parts.join('／')}／未立案 ${result?.unregistered?.length ?? 0}`
+                  return `${parts.join('／')}／未立案 ${view?.unregistered.length ?? 0}`
                 })()}
                 accent="text-red-600"
                 onClick={() => setActiveCategory('closure')}
               />
-              <StatCard label="↩️ 疑似復業"    value={stats.suspectedReopens ?? 0} sub="主檔標歇業、名冊仍在" accent="text-brand-600" onClick={() => setActiveCategory('reopen')} />
-              <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
+              <StatCard label="↩️ 疑似復業"    value={view?.suspectedReopens.length ?? 0} sub="主檔標歇業、名冊仍在" accent="text-brand-600" onClick={() => setActiveCategory('reopen')} />
+              <StatCard label="🔁 更換代碼"    value={view?.codeChanged.length ?? 0} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
               <StatCard label="🏥 醫院待確認"  value={hospitalItems.length} sub="醫院在營業、牙科未登記" accent="text-orange-600" onClick={() => setActiveCategory('hospital')} />
-              <StatCard label="⚠️ 代碼待補正"  value={stats.invalidCodes} sub="代碼欄不是代碼，無法比對" accent="text-amber-600" onClick={() => setActiveCategory('invalidcode')} />
-              <StatCard label="🔀 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-gold-700" onClick={() => setActiveCategory('inconsistent')} />
+              <StatCard label="⚠️ 代碼待補正"  value={view?.invalidCodes.length ?? 0} sub="代碼欄不是代碼，無法比對" accent="text-amber-600" onClick={() => setActiveCategory('invalidcode')} />
+              <StatCard label="🔀 資料不一致"  value={view?.inconsistentData.length ?? 0} sub="代碼符但名稱/地址有落差" accent="text-gold-700" onClick={() => setActiveCategory('inconsistent')} />
             </div>
 
             <VerifyBatchBlock
-              candidateCount={(stats.suspectedClosures ?? 0) + (stats.suspectedReopens ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
+              candidateCount={closureItems.length + hospitalItems.length + (view?.suspectedReopens.length ?? 0) + (view?.invalidCodes.length ?? 0) + (view?.codeChanged.length ?? 0)}
               onApplied={loadComparison}
             />
 
@@ -2052,7 +2088,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             <RefChip label="✅ 在 BAS 開業"   value={stats.normalOperating} hint="代碼比中現行開業機構" />
             <RefChip label="🎓 學術機構"      value={stats.academicInstitutions} hint="不在 BAS 體系，不判歇業" onClick={() => setActiveCategory('academic')} />
             <RefChip label="👤 公司自建"      value={stats.customerNoCode} hint="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
-            <RefChip label="🚫 已排除"        value={stats.dismissed ?? 0} hint="人工確認不是問題，可復原" onClick={() => setActiveCategory('dismissed')} />
+            <RefChip label="🚫 已排除"        value={dismissedCount} hint="人工確認不是問題，可復原" onClick={() => setActiveCategory('dismissed')} />
             {result?.hasSnapshot && (
               <RefChip label="📥 衛福部有、主檔未建檔" value={unfiledTotal} hint="衛福部開業、客戶主檔沒有這筆"
                 active={showUnfiled} onClick={() => setShowUnfiled(v => !v)} />
@@ -2104,7 +2140,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
           category={activeCategory}
           closureItems={closureItems}
           hospitalItems={hospitalItems}
-          result={result}
+          result={view ?? result}
           onResolved={onStatusResolved}
           onClose={() => setActiveCategory(null)}
         />
@@ -2118,5 +2154,6 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
         />
       )}
     </div>
+    </MonitorActions.Provider>
   )
 }

@@ -4,16 +4,22 @@
  */
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
-  getRedisValue, setRedisValue, getText,
+  getRedisValue, setRedisValue, getText, getRedis,
 } from './shared'
 
 // ── 最近一次比對結果（伺服器端共用，跨裝置/不受清快取影響）──────────
 const MONITOR_RESULT_KEY = 'medical-monitor:last-result'
+// 直接讀寫 Redis、不經 L1 記憶體快取：排除／復原後清掉結果時，其他 serverless 實例的 L1
+// 還會繼續回舊清單最多 2 分鐘（已排除的項目又跑出來）。
 export async function getCachedMonitorResult<T = unknown>(): Promise<T | null> {
-  return getRedisValue<T>(MONITOR_RESULT_KEY)
+  const r = getRedis()
+  if (!r) return null
+  try { return (await r.get<T>(MONITOR_RESULT_KEY)) ?? null } catch { return null }
 }
 export async function setCachedMonitorResult(value: unknown): Promise<void> {
-  return setRedisValue(MONITOR_RESULT_KEY, value, 30 * 24 * 60 * 60_000) // 30 天
+  const r = getRedis()
+  if (!r) return
+  try { await r.set(MONITOR_RESULT_KEY, value, { px: 30 * 24 * 60 * 60_000 }) } catch (e) { console.warn('[medical-monitor] save result failed:', e) } // 30 天
 }
 
 // ── 比對紀錄（每月摘要趨勢，供對照；伺服器端持久、刷新不消失）──────────
@@ -445,5 +451,6 @@ export async function getCodeNotFoundList(options?: { refresh?: boolean }): Prom
 
 /** 清掉「最近一次比對結果」快取——排除／復原後必須清，否則畫面還是舊清單 */
 export async function invalidateMonitorResultCache(): Promise<void> {
-  await setRedisValue(MONITOR_RESULT_KEY, null as any, 1)
+  const r = getRedis()
+  if (r) await r.del(MONITOR_RESULT_KEY)
 }

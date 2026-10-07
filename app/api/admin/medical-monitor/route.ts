@@ -21,7 +21,12 @@ export const GET = withApiAuth('admin', async (req: NextRequest) => {
     if (cached) return NextResponse.json(cached)
   }
 
-  const result = await computeMonitor()
-  await setCachedMonitorResult(result)   // 「執行比對」或首次計算 → 存起來供下次開頁顯示
-  return NextResponse.json(result)
+  try {
+    const result = await computeMonitor()
+    await setCachedMonitorResult(result)   // 「執行比對」或首次計算 → 存起來供下次開頁顯示
+    return NextResponse.json(result)
+  } catch (e: any) {
+    console.error('medical-monitor compute error:', e)
+    return NextResponse.json({ error: e?.message ?? '比對失敗' }, { status: 500 })
+  }
 })
