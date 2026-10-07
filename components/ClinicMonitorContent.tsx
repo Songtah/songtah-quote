@@ -35,13 +35,26 @@ function StatCard({ label, value, sub, accent, delta, onClick }: {
   )
 }
 
+// 參考區用的精簡籌碼（不需處理、只供查閱的分類）
+function RefChip({ label, value, hint, onClick, active }: {
+  label: string; value: number; hint?: string; onClick?: () => void; active?: boolean
+}) {
+  const cls = `inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all ${
+    active ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'bg-white text-stone-600 ring-1 ring-stone-900/[0.06]'
+  }`
+  const body = <>{label}<b className="tabular-nums text-stone-800">{value.toLocaleString()}</b>{onClick && <span className="text-stone-300">{active ? '▾' : '›'}</span>}</>
+  return onClick
+    ? <button onClick={onClick} title={hint} className={`${cls} hover:bg-stone-50 active:scale-95`}>{body}</button>
+    : <span title={hint} className={cls}>{body}</span>
+}
+
 function TypeChip({ kind }: { kind: string }) {
   const MAP: Record<string, string> = {
-    '牙醫一般診所': 'bg-blue-50 text-blue-700',
-    '牙醫診所':     'bg-blue-50 text-blue-700',
-    '牙醫專科診所': 'bg-indigo-50 text-indigo-700',
-    '牙體技術所':   'bg-violet-50 text-violet-700',
-    '醫院':         'bg-orange-50 text-orange-700',
+    '牙醫一般診所': 'bg-brand-50 text-brand-700',
+    '牙醫診所':     'bg-brand-50 text-brand-700',
+    '牙醫專科診所': 'bg-gold-50 text-gold-700',
+    '牙體技術所':   'bg-cream-300 text-stone-700',
+    '醫院':         'bg-stone-100 text-stone-700',
   }
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${MAP[kind] ?? 'bg-stone-100 text-stone-600'}`}>
@@ -461,8 +474,8 @@ function DismissedTab({ items, onRestored }: { items: MonitorDismissEntry[]; onR
 // ── 類別彈窗（摘要卡點擊 → 卡片視窗顯示該類清單）──────────────────────────────────
 type CategoryKey = 'closure' | 'reopen' | 'codechange' | 'hospital' | 'inconsistent' | 'selfmanaged' | 'academic' | 'invalidcode' | 'dismissed'
 const CATEGORY_TITLE: Record<CategoryKey, string> = {
-  closure: '⛔ 代碼查無（疑似歇業／未立案）', reopen: '🔄 疑似復業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
-  inconsistent: '🔄 資料不一致', selfmanaged: '👤 公司自建',
+  closure: '⛔ 代碼查無（疑似歇業／未立案）', reopen: '↩️ 疑似復業', codechange: '🔁 更換代碼', hospital: '🏥 醫院待確認',
+  inconsistent: '🔀 資料不一致', selfmanaged: '👤 公司自建',
   academic: '🎓 學術機構', invalidcode: '⚠️ 代碼待補正', dismissed: '🚫 已排除',
 }
 
@@ -543,7 +556,7 @@ function ImportPreviewModal({ selected, onConfirm, onClose }: {
   )
 }
 
-// ── 狀態 2：新開業候選 Tab ─────────────────────────────────────────────────────
+// ── 狀態 2：衛福部有、主檔未建檔 Tab ─────────────────────────────────────────────────────
 
 type NewOpeningFilter = 'all' | 'new' | 'existing'
 
@@ -582,7 +595,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
         {([
           { id: 'all',      label: '全部',      count: allItems.length },
           { id: 'new',      label: '本月新增',   count: newThisMonthCount },
-          { id: 'existing', label: '既有未開發', count: existingCount },
+          { id: 'existing', label: '先前即存在', count: existingCount },
         ] as const).map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
             className={`px-3 py-1.5 text-xs font-medium rounded-2xl transition-all flex items-center gap-1.5 ${filter === f.id ? 'bg-white shadow-sm text-stone-900' : 'text-stone-500 hover:text-stone-700'}`}>
@@ -611,7 +624,7 @@ function NewOpeningsTab({ clinics, labs, hospitals, selectedIds, onToggle, onTog
       )}
 
       {fClinics.length > 0 && (
-        <CollapsibleSection title="牙醫診所" count={fClinics.length} color="bg-blue-50 text-blue-700">
+        <CollapsibleSection title="牙醫診所" count={fClinics.length} color="bg-brand-50 text-brand-700">
           <div className="divide-y divide-stone-50">
             {fClinics.map(inst => (
               <NewOpeningRow key={inst.code} inst={inst} selected={selectedIds.has(inst.code)} onToggle={() => onToggle(inst.code)} />
@@ -773,10 +786,12 @@ function SuspectedReopensTab({ items, onResolved }: {
   )
   return (
     <div className="space-y-3">
-      <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
-        🔄 這些客戶在系統裡標成已歇業／停業／撤銷，但機構代碼<strong>仍在衛福部開業名冊上</strong>——
+      <VerifyBatchBlock compact candidateCount={items.length} categories={['reopen']}
+        customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
+      <div className="text-xs text-brand-700 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
+        ↩️ 這些客戶在系統裡標成已歇業／停業／撤銷，但機構代碼<strong>仍在衛福部開業名冊上</strong>——
         可能是當初誤標，也可能真的復業了。
-        <span className="text-blue-600">確認後把狀態改回開業，它們就會重新回到統計與業務清單。</span>
+        <span className="text-brand-600">確認後把狀態改回開業，它們就會重新回到統計與業務清單。</span>
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {visible(items).map(item => (
@@ -856,6 +871,8 @@ function InvalidCodeTab({ items, onResolved }: { items: InvalidCode[]; onResolve
   )
   return (
     <div className="space-y-3">
+      <VerifyBatchBlock compact candidateCount={items.length} categories={['invalidcode']}
+        customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
         ⚠️ 這些客戶的「機構代碼」欄填的不是代碼（例如「未立案」），無法與衛福部比對。
         <span className="text-amber-600">在補上正確代碼之前，這些機構不會被納入歇業判定——請到客戶頁補正，或確認其為未立案機構後改用「公司自建」（清空代碼）。</span>
@@ -965,8 +982,8 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
   )
   return (
     <div className="space-y-3">
-      <div className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
-        🔄 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請確認是否需要更新。
+      <div className="text-xs text-stone-600 bg-cream-100 border border-cream-300 rounded-xl px-4 py-2.5">
+        🔀 以下客戶的機構代碼在快照中找到，但名稱或縣市與快照資料有落差，請確認是否需要更新。
       </div>
       <div className="border border-stone-200 rounded-2xl overflow-hidden divide-y divide-stone-50">
         {visible(items).map(item => (
@@ -978,7 +995,7 @@ function InconsistentDataTab({ items }: { items: InconsistentData[] }) {
                   <span className="text-[10px] font-mono text-stone-400">{item.institutionCode}</span>
                   <TypeChip kind={item.snapshotKind} />
                   {item.diffs.map(d => (
-                    <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">{d.field}不符</span>
+                    <span key={d.field} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold-50 text-gold-700 font-semibold">{d.field}不符</span>
                   ))}
                 </div>
                 <div className="text-xs text-stone-400 mt-0.5">
@@ -1021,6 +1038,8 @@ function CodeChangedTab({ items, onResolved }: {
   )
   return (
     <div className="space-y-3">
+      <VerifyBatchBlock compact candidateCount={items.length} categories={['codechange']}
+        customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
         🔁 以下客戶的舊機構代碼已停用，同地址（縣市＋行政區＋名稱）查到新代碼 → 應為換照。
         按「查證並更新代碼」會即時向衛福部確認（名稱需完全相同、限同縣市、同縣市唯一），
@@ -1079,6 +1098,8 @@ function HospitalUnverifiedTab({ items, onResolved }: { items: HospitalUnverifie
   )
   return (
     <div className="space-y-3">
+      <VerifyBatchBlock compact candidateCount={items.length} categories={['hospital']}
+        customerIds={items.map(i => i.customerId)} onResolved={(id, st) => { hide(id); onResolved?.(id, st) }} />
       <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
         🏥 以下醫院客戶的機構代碼不在衛福部「牙醫一般科」開業清單中。醫院多半仍在營業，只是牙科未登記為牙醫一般科，故不列入歇業候選。請逐筆「查衛福部」確認牙科現況。
       </div>
@@ -1267,8 +1288,10 @@ const SYNC_FIELD_LABEL: Record<string, string> = {
  * 狀態對帳 + 一鍵處理。主頁用全部候選；歇業清單彈窗內嵌同一元件、限定只處理該清單
  * （categories／customerIds），使用者不必關彈窗回主頁找按鈕。
  */
-function VerifyBatchBlock({ candidateCount, onDone, categories, customerIds, onResolved, compact = false }: {
+function VerifyBatchBlock({ candidateCount, onDone, onApplied, categories, customerIds, onResolved, compact = false }: {
   candidateCount: number; onDone?: () => void
+  /** 一鍵同步寫回成功後（例：主頁自動重新比對） */
+  onApplied?: () => void
   categories?: string[]; customerIds?: string[]
   onResolved?: (id: string, status: string) => void
   compact?: boolean
@@ -1312,7 +1335,7 @@ function VerifyBatchBlock({ candidateCount, onDone, categories, customerIds, onR
       setAppliedMsg(`✓ ${parts.join('、')}${data.failures?.length ? `；失敗 ${data.failures.length} 筆：${data.failures.slice(0, 3).map((f: any) => f.customerName).join('、')}` : ''}`)
       for (const r of data.resolved ?? []) onResolved?.(r.customerId, r.status)
       setPreview(null)
-      onDone?.()
+      onApplied?.()
     } catch (e: any) { setErr(e?.message ?? '套用失敗') }
     finally { setApplying(false) }
   }
@@ -1450,7 +1473,7 @@ function VerifyBatchBlock({ candidateCount, onDone, categories, customerIds, onR
 interface ChangeRow { type: string; name: string; code: string; address: string; customer: string; customerUrl: string }
 const CHANGE_BADGE: Record<string, string> = {
   '新開業': 'bg-brand-50 text-emerald-700', '新增停業': 'bg-red-50 text-red-700',
-  '停業': 'bg-stone-100 text-stone-600', '恢復開業': 'bg-blue-50 text-blue-700',
+  '停業': 'bg-stone-100 text-stone-600', '恢復開業': 'bg-emerald-50 text-emerald-700',
 }
 function ChangesModal({ month, changes, loading, onClose }: { month: string; changes: ChangeRow[]; loading: boolean; onClose: () => void }) {
   const [typeFilter, setTypeFilter] = useState<string>('全部')
@@ -1693,6 +1716,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // 新開業 匯入
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
   const [showPreview, setShowPreview]   = useState(false)
+  const [showUnfiled, setShowUnfiled]   = useState(false)   // 參考區「衛福部有、主檔未建檔」展開
   const [importing, setImporting]       = useState(false)
   const [importResult, setImportResult] = useState('')
 
@@ -1842,6 +1866,11 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
   // 樂觀移除已在彈窗編輯結案者
   const closureItems  = (result?.suspectedClosures ?? []).filter(i => !resolvedIds.has(i.customerId))
   const hospitalItems = (result?.hospitalUnverified ?? []).filter(i => !resolvedIds.has(i.customerId))
+  const pendingTotal = stats
+    ? closureItems.length + (result?.unregistered?.length ?? 0) + (stats.suspectedReopens ?? 0) + (stats.codeChanged ?? 0)
+      + hospitalItems.length + (stats.invalidCodes ?? 0) + (stats.inconsistentData ?? 0)
+    : 0
+  const unfiledTotal = stats ? stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals : 0
 
   return (
     <div className="space-y-5">
@@ -1923,7 +1952,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               </p>
               <p className="text-[11px] text-white/60">
                 主檔共 {(stats.customerWithCode + stats.customerNoCode).toLocaleString()} 筆（已排除歇業／停業／撤銷）；
-                其餘 {(stats.engagedNoContact ?? 0).toLocaleString()} 筆是未曾往來的名單
+                其餘 <a href="/bd?tab=uncontacted" className="underline underline-offset-2 text-white/90 hover:text-white">{(stats.engagedNoContact ?? 0).toLocaleString()} 筆已建檔但未曾往來 ›</a>
               </p>
             </div>
             <div className="flex gap-6 text-sm">
@@ -1938,31 +1967,14 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             </div>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
-              {stats.totalLabs > 0
-                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : (stats.labDelta === null ? '全台 · 首次建立基準' : '全台')} />
-                : (
-                  <div className="bg-white rounded-2xl border border-amber-200 p-4 flex flex-col gap-1">
-                    <span className="text-xs text-stone-400 font-medium">牙體技術所</span>
-                    <span className="text-lg font-bold text-amber-500">資料未取得</span>
-                    <span className="text-xs text-amber-500">BAS 上次抓取失敗，請點「更新醫事資料」重新執行</span>
-                  </div>
-                )
-              }
-              <StatCard label="客戶（有代碼）" value={stats.customerWithCode} />
-              <StatCard label="客戶（無代碼）" value={stats.customerNoCode} sub="未納入監控" />
+          {/* 待處理：需要人（或一鍵處理）動手的佇列 */}
+          <div className="space-y-3">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">待處理</p>
+              <span className="text-xs font-semibold text-brand-700 bg-brand-50 rounded-full px-2 py-0.5 tabular-nums">共 {pendingTotal.toLocaleString()} 筆</span>
+              <span className="text-[11px] text-stone-300">點卡片看清單；每張清單內也有一鍵處理</span>
             </div>
-            <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
-              ℹ️ 此處「淨增減」是全台院所總數較上月的變化（新增−歇業），與下方「新開業候選」不同——後者只列尚未成為崧達客戶的新機構，已是客戶者會被排除，故數字通常較小。
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">客戶機構代碼 vs 衛福部(BAS) <span className="normal-case font-normal text-stone-300">— 點卡片看清單</span></p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="✅ 在 BAS 開業" value={stats.normalOperating} sub="代碼比中現行開業機構" accent="text-emerald-600" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <StatCard
                 label="⛔ 代碼查無"
                 value={closureItems.length + (result?.unregistered?.length ?? 0)}
@@ -1978,20 +1990,51 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
                 accent="text-red-600"
                 onClick={() => setActiveCategory('closure')}
               />
-              <StatCard label="🔄 疑似復業"    value={stats.suspectedReopens ?? 0} sub="主檔標歇業、名冊仍在" accent="text-blue-600" onClick={() => setActiveCategory('reopen')} />
+              <StatCard label="↩️ 疑似復業"    value={stats.suspectedReopens ?? 0} sub="主檔標歇業、名冊仍在" accent="text-brand-600" onClick={() => setActiveCategory('reopen')} />
               <StatCard label="🔁 更換代碼"    value={stats.codeChanged} sub="同地區查到新代碼（換照）" accent="text-amber-600" onClick={() => setActiveCategory('codechange')} />
               <StatCard label="🏥 醫院待確認"  value={hospitalItems.length} sub="醫院在營業、牙科未登記" accent="text-orange-600" onClick={() => setActiveCategory('hospital')} />
-              <StatCard label="🔄 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-blue-600" onClick={() => setActiveCategory('inconsistent')} />
-              <StatCard label="🎓 學術機構"    value={stats.academicInstitutions} sub="不在 BAS 體系，不判歇業" onClick={() => setActiveCategory('academic')} />
               <StatCard label="⚠️ 代碼待補正"  value={stats.invalidCodes} sub="代碼欄不是代碼，無法比對" accent="text-amber-600" onClick={() => setActiveCategory('invalidcode')} />
-              <StatCard label="👤 公司自建"    value={stats.customerNoCode} sub="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
-              <StatCard label="🚫 已排除"      value={stats.dismissed ?? 0} sub="人工確認不是問題，可復原" onClick={() => setActiveCategory('dismissed')} />
+              <StatCard label="🔀 資料不一致"  value={stats.inconsistentData} sub="代碼符但名稱/地址有落差" accent="text-gold-700" onClick={() => setActiveCategory('inconsistent')} />
             </div>
-            <p className="mt-2 text-[11px] text-stone-400 leading-relaxed">
-              ℹ️ BAS 列表只含「開業」機構，停業/歇業者會從清單消失。「疑似歇業」＝代碼不在 BAS 開業清單（可能停業/歇業/換照/遷址/代碼誤植）；點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。
-              判定依序排除：<b>學術機構</b>（大學牙醫系等，本來就不在 BAS）、<b>代碼待補正</b>（欄位填「未立案」之類無法比對）、代碼命中、同名同區、換照新碼、已人工結案、醫院待確認，全都不中才列為疑似歇業。
-              醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，故另列「醫院待確認」。
-            </p>
+
+            <VerifyBatchBlock
+              candidateCount={(stats.suspectedClosures ?? 0) + (stats.suspectedReopens ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
+              onApplied={loadComparison}
+            />
+
+            <details className="group text-[11px] text-stone-400 leading-relaxed">
+              <summary className="cursor-pointer select-none text-stone-400 hover:text-stone-600 list-none flex items-center gap-1">
+                <span className="transition-transform group-open:rotate-90">›</span> 判定方式
+              </summary>
+              <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-cream-300">
+                <p>
+                  衛福部 BAS 列表只含「開業」機構，停業／歇業者會從清單消失。「代碼查無」＝代碼不在 BAS 開業清單；曾登錄過的會再依機構代碼直開衛福部詳細頁，標出真實狀態（歇業／停業／仍開業）。點開可逐筆查衛福部並直接編輯開業狀態（寫回 Notion）。
+                </p>
+                <p>
+                  判定依序排除：<b>學術機構</b>（大學牙醫系等，本來就不在 BAS）、<b>代碼待補正</b>（欄位填「未立案」之類無法比對）、代碼命中、同名同區、換照新碼、已人工結案、醫院待確認，全都不中才列為代碼查無。
+                  醫院查無多為「牙科未登記為牙醫一般科」、醫院本身仍營業，故另列「醫院待確認」。
+                </p>
+                <p>一鍵處理只寫回有衛福部實證的欄位；寫回後會自動重新比對，數字即時更新。</p>
+              </div>
+            </details>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-stone-400 mb-2 uppercase tracking-wide">全台牙科單位數量（較上月淨增減）</p>
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard label="牙醫診所"   value={stats.totalClinics} delta={stats.clinicDelta} sub="全台" />
+              {stats.totalLabs > 0
+                ? <StatCard label="牙體技術所" value={stats.totalLabs} delta={stats.labsStale ? null : stats.labDelta} sub={stats.labsStale ? '⚠ 上月資料（本次未完整抓取）' : (stats.labDelta === null ? '全台 · 首次建立基準' : '全台')} />
+                : (
+                  <div className="card-soft p-4 flex flex-col gap-1">
+                    <span className="text-xs text-stone-400 font-medium">牙體技術所</span>
+                    <span className="text-lg font-bold text-amber-500">資料未取得</span>
+                    <span className="text-xs text-amber-500">BAS 上次抓取失敗，請點「更新醫事資料」重新執行</span>
+                  </div>
+                )
+              }
+              <StatCard label="醫院（設牙科）" value={stats.totalHospitals ?? 0} sub="全台" />
+            </div>
           </div>
         </>
       )}
@@ -2001,47 +2044,50 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
 
       <KindTrendChart trend={kindTrend} loading={kindTrendLoading} onRefresh={() => loadKindTrend(true)} />
 
+      {/* 參考：不需處理、只供查閱的分類 */}
       {stats && (
-        <VerifyBatchBlock
-          candidateCount={(stats.suspectedClosures ?? 0) + (stats.suspectedReopens ?? 0) + (stats.hospitalUnverified ?? 0) + (stats.invalidCodes ?? 0) + (stats.codeChanged ?? 0)}
-        />
-      )}
-
-
-      {/* 待開發機構：BAS 有、尚未成為崧達客戶（＝客戶 DB 與 BAS 的差異，可勾選匯入 Notion）*/}
-      {result?.hasSnapshot && (
-        <div>
-          <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">🆕 待開發機構（BAS 有、非客戶）</p>
-            {stats && (
-              <span className="text-[11px] text-stone-400">
-                本月新增 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong>
-                ｜既有未開發 <strong className="text-amber-600">{(stats.newOpeningClinics + stats.newOpeningLabs + stats.newOpeningHospitals) - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}</strong>
-                ｜可勾選下方項目匯入客戶資料庫
-              </span>
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">參考</p>
+          <div className="flex flex-wrap gap-2">
+            <RefChip label="✅ 在 BAS 開業"   value={stats.normalOperating} hint="代碼比中現行開業機構" />
+            <RefChip label="🎓 學術機構"      value={stats.academicInstitutions} hint="不在 BAS 體系，不判歇業" onClick={() => setActiveCategory('academic')} />
+            <RefChip label="👤 公司自建"      value={stats.customerNoCode} hint="無機構代碼，未納入監控" onClick={() => setActiveCategory('selfmanaged')} />
+            <RefChip label="🚫 已排除"        value={stats.dismissed ?? 0} hint="人工確認不是問題，可復原" onClick={() => setActiveCategory('dismissed')} />
+            {result?.hasSnapshot && (
+              <RefChip label="📥 衛福部有、主檔未建檔" value={unfiledTotal} hint="衛福部開業、客戶主檔沒有這筆"
+                active={showUnfiled} onClick={() => setShowUnfiled(v => !v)} />
             )}
           </div>
 
-          {importResult && (
-            <div className={`mb-3 text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-brand-50 text-emerald-700 border-brand-200'}`}>
-              {importResult}
+          {/* 衛福部有、主檔未建檔（＝客戶主檔與 BAS 的差異，可勾選匯入 Notion；不是「未往來名單」）*/}
+          {result?.hasSnapshot && showUnfiled && (
+            <div className="space-y-3">
+              <div className="text-xs text-stone-500 bg-cream-100 border border-cream-300 rounded-xl px-4 py-2.5 leading-relaxed">
+                這裡是<b>主檔資料完整度</b>：衛福部名冊上開業、但客戶主檔裡<b>還沒建檔</b>的機構，
+                其中本月新開業 <strong className="text-emerald-600">{stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals}</strong> 筆、
+                先前即存在 <strong className="text-amber-600">{unfiledTotal - (stats.newThisMonthClinics + stats.newThisMonthLabs + stats.newThisMonthHospitals)}</strong> 筆。勾選後可匯入客戶主檔。
+                <br />要找「已建檔但從未往來」的開發名單，請到 <a href="/bd?tab=uncontacted" className="text-brand-700 underline underline-offset-2">業務開發 › 未往來名單</a>。
+                {stats.newOpeningExcludedExisting > 0 && (
+                  <><br />已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構（可能是代碼未同步、換照換碼或同名同區）。</>
+                )}
+              </div>
+              {importResult && (
+                <div className={`text-sm px-4 py-3 rounded-xl border ${importResult.startsWith('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-brand-50 text-emerald-700 border-brand-200'}`}>
+                  {importResult}
+                </div>
+              )}
+              <NewOpeningsTab
+                clinics={result.newOpenings.clinics}
+                labs={result.newOpenings.labs}
+                hospitals={result.newOpenings.hospitals}
+                selectedIds={selectedIds}
+                onToggle={toggleId}
+                onToggleAll={toggleAll}
+                onImport={() => selectedIds.size > 0 && setShowPreview(true)}
+                importing={importing}
+              />
             </div>
           )}
-          {stats && stats.newOpeningExcludedExisting > 0 && (
-            <div className="mb-3 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5">
-              ℹ️ 已自動排除 {stats.newOpeningExcludedExisting} 筆「名稱與地區已是現有客戶」的機構，可能是客戶代碼未同步、換照換碼或同名同區資料，暫不列入新開業機會。
-            </div>
-          )}
-          <NewOpeningsTab
-            clinics={result.newOpenings.clinics}
-            labs={result.newOpenings.labs}
-            hospitals={result.newOpenings.hospitals}
-            selectedIds={selectedIds}
-            onToggle={toggleId}
-            onToggleAll={toggleAll}
-            onImport={() => selectedIds.size > 0 && setShowPreview(true)}
-            importing={importing}
-          />
         </div>
       )}
 
