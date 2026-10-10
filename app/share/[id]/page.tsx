@@ -64,22 +64,22 @@ export default async function SharePage({ params }: { params: { id: string } }) 
     ['地址', quote.customerAddress],
   ]
 
-  // 客戶端頁面採 2026 品牌識別（與 PDF 一致）：千歲綠 #36563C、崧達綠 #62B320、Cornsilk #FEFAE0
+  // 與 PDF 同一套：系統設計語言（棕金 brand、cream 暖底、stone 中性色）
   return (
-    <div className="min-h-screen bg-[#FBFAF4] px-4 py-6 text-[#1F1D1A] sm:py-10">
+    <div className="min-h-screen bg-cream-50 px-4 py-6 text-stone-800 sm:py-10">
       <div className="mx-auto max-w-3xl">
-        <div className="overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(54,86,60,0.28)] ring-1 ring-black/[0.04]">
+        <div className="overflow-hidden rounded-3xl bg-white shadow-[0_24px_70px_-32px_rgba(90,66,51,0.22)] ring-1 ring-stone-900/[0.06]">
           {/* 抬頭 */}
           <div className="px-6 pt-6 sm:px-8 sm:pt-8">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <Image src="/Logo.svg" alt="崧達企業股份有限公司 SONG TAH" width={2638} height={437} priority className="h-auto w-44 sm:w-52" />
               <div className="text-right">
-                <div className="text-2xl tracking-[0.3em] text-[#36563C]">報價單</div>
+                <div className="text-2xl tracking-[0.3em] text-brand-700">報價單</div>
                 <div className="text-[10px] tracking-[0.35em] text-stone-400">QUOTATION</div>
               </div>
             </div>
-            <div className="mt-4 h-[2px] bg-[#36563C]" />
-            <div className="mt-[3px] h-px w-16 bg-[#62B320]" />
+            <div className="mt-4 h-[2px] bg-brand-700" />
+            <div className="mt-[3px] h-px w-16 bg-brand-500" />
             <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
               {COMPANY.address}　TEL {COMPANY.tel}　FAX {COMPANY.fax}　{COMPANY.email}
             </p>
@@ -87,8 +87,8 @@ export default async function SharePage({ params }: { params: { id: string } }) 
 
           {/* 客戶／報價資訊 */}
           <div className="grid gap-3 px-6 py-5 sm:grid-cols-[1.4fr_1fr] sm:px-8">
-            <div className="rounded-2xl bg-[#FEFAE0] p-4">
-              <div className="text-[11px] tracking-widest text-[#36563C]">客戶</div>
+            <div className="rounded-2xl bg-cream-100 p-4">
+              <div className="text-[11px] tracking-widest text-brand-700">客戶</div>
               <div className="mt-1 text-lg font-semibold">{quote.customerName}</div>
               {quote.companyTitle && quote.companyTitle !== quote.customerName && <div className="text-xs text-stone-500">{quote.companyTitle}</div>}
               <dl className="mt-2 space-y-1 text-sm">
@@ -97,8 +97,8 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                 ))}
               </dl>
             </div>
-            <div className="rounded-2xl p-4 ring-1 ring-black/[0.06]">
-              <div className="text-[11px] tracking-widest text-[#36563C]">報價資訊</div>
+            <div className="rounded-2xl p-4 ring-1 ring-stone-900/[0.06]">
+              <div className="text-[11px] tracking-widest text-brand-700">報價資訊</div>
               <dl className="mt-2 space-y-1 text-sm">
                 {info.filter(([, v]) => v).map(([k, v]) => (
                   <div key={k} className="flex gap-3"><dt className="w-16 shrink-0 text-xs leading-5 text-stone-400">{k}</dt><dd className={k === '報價單號' ? 'font-mono' : ''}>{v}</dd></div>
@@ -111,7 +111,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           <div className="px-6 sm:px-8">
             <table className="hidden w-full text-sm sm:table">
               <thead>
-                <tr className="bg-[#36563C] text-xs text-white">
+                <tr className="bg-brand-700 text-xs text-white">
                   <th className="px-3 py-2.5 text-center font-normal">編號</th>
                   {showImage && <th className="px-3 py-2.5 font-normal">圖片</th>}
                   <th className="px-3 py-2.5 text-left font-normal">品名</th>
@@ -124,9 +124,9 @@ export default async function SharePage({ params }: { params: { id: string } }) 
               </thead>
               <tbody>
                 {items.map((item, i) => (
-                  <tr key={i} className={`border-b border-[#E3E1D3] ${i % 2 ? 'bg-[#F8F9F3]' : ''}`}>
+                  <tr key={i} className={`border-b border-stone-200 ${i % 2 ? 'bg-brand-50/60' : ''}`}>
                     <td className="px-3 py-3 text-center text-stone-400">{i + 1}</td>
-                    {showImage && <td className="px-3 py-3">{item.imageUrl && <img src={item.imageUrl} alt="" className="h-12 w-12 rounded-lg object-contain ring-1 ring-black/[0.06]" />}</td>}
+                    {showImage && <td className="px-3 py-3">{item.imageUrl && <img src={item.imageUrl} alt="" className="h-12 w-12 rounded-lg object-contain ring-1 ring-stone-900/[0.06]" />}</td>}
                     <td className="px-3 py-3">
                       <div>{item.name}</div>
                       {(layout.showBrand && item.brand) || (!layout.showSpec && item.spec) ? (
@@ -143,7 +143,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                 ))}
               </tbody>
             </table>
-            <ul className="divide-y divide-[#E3E1D3] border-y border-[#E3E1D3] sm:hidden">
+            <ul className="divide-y divide-stone-200 border-y border-stone-200 sm:hidden">
               {items.map((item, i) => (
                 <li key={i} className="flex gap-3 py-3">
                   <span className="w-5 shrink-0 pt-0.5 text-xs text-stone-400">{i + 1}</span>
@@ -154,7 +154,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                     </div>
                     <div className="mt-1 flex justify-between text-xs text-stone-500">
                       <span className="tabular-nums">{item.quantity}{layout.showUnit ? ` ${item.unit}` : ''} × {formatMoney(item.unitPrice)}</span>
-                      <span className="text-sm tabular-nums text-[#1F1D1A]">{formatMoney(item.subtotal)}</span>
+                      <span className="text-sm tabular-nums text-stone-800">{formatMoney(item.subtotal)}</span>
                     </div>
                   </div>
                 </li>
@@ -165,7 +165,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
           {/* 說明＋金額 */}
           <div className="grid gap-5 px-6 py-6 sm:grid-cols-[1fr_260px] sm:px-8">
             <div>
-              <div className="mb-1.5 text-[11px] tracking-widest text-[#36563C]">說明</div>
+              <div className="mb-1.5 text-[11px] tracking-widest text-brand-700">說明</div>
               <ol className="list-decimal space-y-1 pl-4 text-sm text-stone-600">
                 {terms.map((t, i) => <li key={i}>{t}</li>)}
               </ol>
@@ -174,16 +174,16 @@ export default async function SharePage({ params }: { params: { id: string } }) 
               <div className="flex justify-between py-1"><span className="text-stone-500">小計</span><span className="tabular-nums">{formatMoney(totals.subtotal)}</span></div>
               {totals.discount > 0 && <div className="flex justify-between py-1"><span className="text-stone-500">折讓</span><span className="tabular-nums">− {formatMoney(totals.discount)}</span></div>}
               {quote.taxMode === '未稅' && <div className="flex justify-between py-1"><span className="text-stone-500">營業稅 {Math.round(TAX_RATE * 100)}%</span><span className="tabular-nums">{formatMoney(totals.tax)}</span></div>}
-              <div className="mt-1 flex items-end justify-between border-t-2 border-[#36563C] pt-2">
-                <span className="text-[#36563C]">總計金額{quote.taxMode === '未稅' ? '' : '（含稅）'}</span>
-                <span className="text-2xl tabular-nums text-[#36563C]">{formatMoney(totals.total)}</span>
+              <div className="mt-1 flex items-end justify-between border-t-2 border-brand-700 pt-2">
+                <span className="text-brand-700">總計金額{quote.taxMode === '未稅' ? '' : '（含稅）'}</span>
+                <span className="text-2xl tabular-nums text-brand-700">{formatMoney(totals.total)}</span>
               </div>
               <div className="mt-1 text-right text-xs text-stone-400">{amountInChinese(totals.total)}</div>
             </div>
           </div>
 
-          <div className="mx-6 mb-6 flex flex-wrap gap-x-5 gap-y-1 rounded-2xl bg-[#FEFAE0] px-4 py-3 text-xs sm:mx-8">
-            <span className="text-[#36563C]">匯款資訊</span>
+          <div className="mx-6 mb-6 flex flex-wrap gap-x-5 gap-y-1 rounded-2xl bg-cream-100 px-4 py-3 text-xs sm:mx-8">
+            <span className="text-brand-700">匯款資訊</span>
             <span>戶名 {COMPANY.bank.holder}</span>
             <span>{COMPANY.bank.name}</span>
             <span>帳號 {COMPANY.bank.account}</span>
@@ -192,7 +192,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
 
         <div className="mt-6 text-center">
           <a href={`/api/quotes/${params.id}/pdf`} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#36563C] px-6 py-3 text-sm font-medium text-white shadow-md shadow-[#36563C]/25 transition-all hover:bg-[#2c4731] active:scale-95">
+            className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-6 py-3 text-sm font-medium text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-800 active:scale-95">
             ↓ 下載 PDF（含公司用印）
           </a>
         </div>

@@ -1,6 +1,7 @@
 /**
  * lib/pdf-brand.tsx — 公司文件 PDF 共用（報價單 lib/pdf.tsx、訂購單 lib/order-pdf.tsx）
- * 2026 品牌識別：千歲綠 #36563C、崧達綠 #62B320、Cornsilk #FEFAE0；新版 Logo（public/Logo.png）。
+ * 2026-10-11 改依系統設計語言（docs/rules/design-language.md）：棕金 brand 為唯一主色、
+ * cream 暖底、stone 中性色（數值取自 tailwind.config.ts）；Logo 維持新版品牌標誌（public/Logo.png）。
  * 只註冊了 NotoSansTC 400（子集字型），全檔不使用 fontWeight；文字輸出一律經 T() 轉半形。
  */
 import React from 'react'
@@ -15,13 +16,15 @@ Font.register({
 // 中文不要依英文規則斷字（會在字中間插入連字號）
 Font.registerHyphenationCallback((word) => Array.from(word))
 
-export const GREEN_DARK = '#36563C'
-export const GREEN = '#62B320'
-export const CORNSILK = '#FEFAE0'
-export const INK = '#1F1D1A'
-export const MUTED = '#77756C'
-export const LINE = '#E3E1D3'
-export const ZEBRA = '#F8F9F3'
+export const BRAND_DARK = '#6E503C'   // brand-800：標題、總額
+export const BRAND = '#866245'        // brand-700：表頭、主線
+export const BRAND_GOLD = '#B8956A'   // brand-500：點綴線（系統主色）
+export const BRAND_SOFT = '#A07A52'   // brand-600：區塊小標
+export const CREAM = '#FAF6F0'        // cream-100：資訊底
+export const INK = '#292524'          // stone-800
+export const MUTED = '#78716C'        // stone-500
+export const LINE = '#E7E5E4'         // stone-200
+export const ZEBRA = '#FAF7F2'        // brand-50
 
 export const s = StyleSheet.create({
   page: { fontFamily: 'NotoSansTC', fontSize: 9, color: INK, paddingTop: 30, paddingHorizontal: 36, paddingBottom: 58 },
@@ -29,16 +32,16 @@ export const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   logo: { width: 186, height: 31 },
   titleBox: { alignItems: 'flex-end' },
-  title: { fontSize: 20, color: GREEN_DARK, letterSpacing: 8 },
+  title: { fontSize: 20, color: BRAND_DARK, letterSpacing: 8 },
   titleEn: { fontSize: 6.5, color: MUTED, letterSpacing: 3, marginTop: 1 },
-  ruleDark: { height: 2, backgroundColor: GREEN_DARK, marginTop: 10 },
-  ruleGreen: { height: 1, backgroundColor: GREEN, marginTop: 1.5, width: 64 },
+  ruleDark: { height: 2, backgroundColor: BRAND, marginTop: 10 },
+  ruleGreen: { height: 1.5, backgroundColor: BRAND_GOLD, marginTop: 1.5, width: 64 },
   companyLine: { fontSize: 7.2, color: MUTED, marginTop: 5, lineHeight: 1.5 },
 
   infoRow: { flexDirection: 'row', marginTop: 14 },
-  customerPanel: { width: '57%', backgroundColor: CORNSILK, borderRadius: 3, padding: 10, marginRight: '3%' },
-  quotePanel: { width: '40%', borderWidth: 0.75, borderColor: LINE, borderRadius: 3, padding: 10 },
-  panelLabel: { fontSize: 7, color: GREEN_DARK, letterSpacing: 1.5, marginBottom: 4 },
+  customerPanel: { width: '57%', backgroundColor: CREAM, borderRadius: 8, padding: 10, marginRight: '3%' },
+  quotePanel: { width: '40%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, padding: 10 },
+  panelLabel: { fontSize: 7, color: BRAND_SOFT, letterSpacing: 1.5, marginBottom: 4 },
   customerName: { fontSize: 13, marginBottom: 2 },
   customerSub: { fontSize: 8, color: MUTED, marginBottom: 5 },
   kv: { flexDirection: 'row', marginTop: 2.5 },
@@ -46,7 +49,7 @@ export const s = StyleSheet.create({
   v: { flex: 1, fontSize: 8.8 },
 
   table: { marginTop: 14 },
-  th: { flexDirection: 'row', backgroundColor: GREEN_DARK, color: '#FFFFFF', fontSize: 8, paddingVertical: 5.5 },
+  th: { flexDirection: 'row', backgroundColor: BRAND, borderRadius: 4, color: '#FFFFFF', fontSize: 8, paddingVertical: 5.5 },
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: LINE, paddingVertical: 6, alignItems: 'center' },
   cell: { paddingHorizontal: 5 },
   right: { textAlign: 'right' },
@@ -58,7 +61,7 @@ export const s = StyleSheet.create({
 
   summary: { flexDirection: 'row', marginTop: 12 },
   terms: { flex: 1, paddingRight: 18 },
-  termsLabel: { fontSize: 7, color: GREEN_DARK, letterSpacing: 1.5, marginBottom: 4 },
+  termsLabel: { fontSize: 7, color: BRAND_SOFT, letterSpacing: 1.5, marginBottom: 4 },
   term: { flexDirection: 'row', marginBottom: 2.5 },
   termNo: { width: 12, fontSize: 8, color: MUTED },
   termText: { flex: 1, fontSize: 8.3, lineHeight: 1.45 },
@@ -66,27 +69,27 @@ export const s = StyleSheet.create({
   tRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2.2 },
   tLabel: { fontSize: 8.5, color: MUTED },
   tValue: { fontSize: 9 },
-  grand: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderTopWidth: 1.2, borderTopColor: GREEN_DARK, marginTop: 4, paddingTop: 5 },
-  grandLabel: { fontSize: 9.5, color: GREEN_DARK },
-  grandValue: { fontSize: 14, color: GREEN_DARK },
+  grand: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderTopWidth: 1.2, borderTopColor: BRAND, marginTop: 4, paddingTop: 5 },
+  grandLabel: { fontSize: 9.5, color: BRAND_DARK },
+  grandValue: { fontSize: 14, color: BRAND_DARK },
   words: { fontSize: 7.5, color: MUTED, textAlign: 'right', marginTop: 3 },
 
-  bank: { flexDirection: 'row', backgroundColor: CORNSILK, borderRadius: 3, paddingVertical: 6, paddingHorizontal: 10, marginTop: 14, fontSize: 7.8 },
-  bankLabel: { color: GREEN_DARK, marginRight: 10 },
+  bank: { flexDirection: 'row', backgroundColor: CREAM, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginTop: 14, fontSize: 7.8 },
+  bankLabel: { color: BRAND_SOFT, marginRight: 10 },
   bankText: { color: INK, marginRight: 14 },
 
   sign: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
   stampBox: { width: '44%', alignItems: 'center' },
   stamp: { width: 130, height: 82, objectFit: 'contain' },
   stampCaption: { fontSize: 7, color: MUTED, marginTop: 2 },
-  signBox: { width: '48%', borderWidth: 0.75, borderColor: LINE, borderRadius: 3, padding: 10, height: 96 },
-  signTitle: { fontSize: 7.5, color: GREEN_DARK, letterSpacing: 1.5 },
+  signBox: { width: '48%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, padding: 10, height: 96 },
+  signTitle: { fontSize: 7.5, color: BRAND_SOFT, letterSpacing: 1.5 },
   signLine: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 22 },
   signLabel: { width: 30, fontSize: 7.5, color: MUTED },
   signRule: { flex: 1, borderBottomWidth: 0.5, borderBottomColor: MUTED },
 
   footer: { position: 'absolute', bottom: 24, left: 36, right: 36, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.8, color: MUTED },
-  watermark: { position: 'absolute', top: 360, left: 40, right: 40, textAlign: 'center', fontSize: 46, color: GREEN_DARK, opacity: 0.07, transform: 'rotate(-28deg)' },
+  watermark: { position: 'absolute', top: 360, left: 40, right: 40, textAlign: 'center', fontSize: 46, color: BRAND, opacity: 0.08, transform: 'rotate(-28deg)' },
 })
 
 /**

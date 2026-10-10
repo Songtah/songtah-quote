@@ -1,7 +1,7 @@
 /**
  * lib/order-pdf.tsx — 訂購單 PDF（2026-10-07 取代 OrderForm 內的 HTML 列印）
  *
- * 與報價單共用 lib/pdf-brand.tsx（新版 Logo、千歲綠／Cornsilk、子集字型半形轉換）。
+ * 與報價單共用 lib/pdf-brand.tsx（新版 Logo、系統設計語言棕金／cream、子集字型半形轉換）。
  * 原列印版：沒有 Logo、贈品／樣品沒標示、使用者輸入直接拼進 HTML（未跳脫）。
  * 草稿／已取消加浮水印，避免被當成已確認的單據。
  */
@@ -9,15 +9,15 @@ import React from 'react'
 import { Document, Page, Text, View } from '@react-pdf/renderer'
 import type { Order, OrderItem } from '@/lib/orders-notion'
 import { COMPANY, rocDate, amountInChinese } from '@/lib/quote-model'
-import { s, T, money, qty, KV, ZEBRA, GREEN_DARK, LINE, MUTED, BrandHeader, BrandFooter, Watermark } from '@/lib/pdf-brand'
+import { s, T, money, qty, KV, ZEBRA, BRAND_SOFT, LINE, MUTED, BrandHeader, BrandFooter, Watermark } from '@/lib/pdf-brand'
 
 const TYPE_LABEL: Record<string, string> = { gift: '贈品', sample: '樣品' }
 const isFree = (i: OrderItem) => i.itemType === 'gift' || i.itemType === 'sample'
 
 const sign = {
   row: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, marginTop: 18 },
-  box: { width: '31.5%', borderWidth: 0.75, borderColor: LINE, borderRadius: 3, padding: 9, height: 78 },
-  title: { fontSize: 7.5, color: GREEN_DARK, letterSpacing: 1.5 },
+  box: { width: '31.5%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, padding: 9, height: 78 },
+  title: { fontSize: 7.5, color: BRAND_SOFT, letterSpacing: 1.5 },
   line: { flexDirection: 'row' as const, alignItems: 'flex-end' as const, marginTop: 16 },
   label: { width: 26, fontSize: 7.3, color: MUTED },
   rule: { flex: 1, borderBottomWidth: 0.5, borderBottomColor: MUTED },
