@@ -8,6 +8,8 @@
  *
  * 版面（2026-10-11 改版）：抬頭左 Logo＋公司資訊、右標題＋單號日期；客戶資料／報價條件兩欄等高；
  * 表格細分隔線；總計粗體；用印與客戶回簽固定在最後一頁底部。
+ * 2026-10-11 二修：一般 5～8 項的報價單收在一頁（原本 5 項就把簽章擠到全白的第 2 頁）——
+ * 匯款資訊移到底部與用印、回簽同一排，行距與留白收斂、用印縮小；單價 0 元印「贈品」不印 0；品名已含品牌不重複列。
  * 字型、色票、共用元件在 lib/pdf-brand.tsx（與訂購單共用）。
  */
 import React from 'react'
@@ -91,7 +93,11 @@ export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: 
             ))}
           </View>
           {items.map((item, i) => {
-            const sub = [layout.showBrand ? item.brand : '', layout.showSpec ? '' : item.spec].filter(Boolean).join('　')
+            // 品名已含品牌（「Asiga MAX…」）就不再重複列品牌
+            const brand = layout.showBrand && item.brand && !item.name.toLowerCase().includes(item.brand.toLowerCase()) ? item.brand : ''
+            const sub = [brand, layout.showSpec ? '' : item.spec].filter(Boolean).join('　')
+            // 單價 0 元的品項是贈品：金額欄寫「贈品」，不要印一排 0 讓客戶以為漏報價
+            const isGift = !item.unitPrice && !item.subtotal
             return (
               <View key={i} style={s.tr} wrap={false}>
                 {cols.map((c) => {
@@ -113,8 +119,8 @@ export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: 
                     case 'spec': return <Text key={c.key} style={st}>{T(item.spec)}</Text>
                     case 'qty': return <Text key={c.key} style={st}>{qty(item.quantity)}</Text>
                     case 'unit': return <Text key={c.key} style={st}>{T(item.unit)}</Text>
-                    case 'price': return <Text key={c.key} style={st}>{money(item.unitPrice)}</Text>
-                    default: return <Text key={c.key} style={st}>{money(item.subtotal)}</Text>
+                    case 'price': return <Text key={c.key} style={isGift ? [...st, s.dash] : st}>{isGift ? '—' : money(item.unitPrice)}</Text>
+                    default: return <Text key={c.key} style={isGift ? [...st, s.gift] : st}>{isGift ? '贈品' : money(item.subtotal)}</Text>
                   }
                 })}
               </View>
@@ -149,17 +155,15 @@ export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: 
           </View>
         </View>
 
-        {/* 匯款資訊 */}
-        <View style={s.bank} wrap={false}>
-          <Text style={s.bankLabel}>匯款資訊</Text>
-          <Text style={s.bankText}>戶名　{COMPANY.bank.holder}</Text>
-          <Text style={s.bankText}>{COMPANY.bank.name}</Text>
-          <Text style={s.bankText}>帳號　{COMPANY.bank.account}</Text>
-        </View>
-
-        {/* 用印／客戶回簽：推到最後一頁底部 */}
+        {/* 匯款資訊／用印／客戶回簽：同一排，推到最後一頁底部 */}
         <PushToBottom />
         <View style={s.sign} wrap={false}>
+          <View style={s.bankBox}>
+            <Text style={s.termsLabel}>匯款資訊</Text>
+            <View style={s.bankLine}><Text style={s.bankK}>戶名</Text><Text style={s.bankV}>{COMPANY.bank.holder}</Text></View>
+            <View style={s.bankLine}><Text style={s.bankK}>銀行</Text><Text style={s.bankV}>{COMPANY.bank.name}</Text></View>
+            <View style={s.bankLine}><Text style={s.bankK}>帳號</Text><Text style={s.bankV}>{COMPANY.bank.account}</Text></View>
+          </View>
           <View style={s.stampBox}>
             {/* stamp-transparent.png：由 stamp.png 去除方格底圖並縮小（原檔背景是畫上去的灰白方格） */}
             <Image src={path.join(process.cwd(), 'public', 'stamp-transparent.png')} style={s.stamp} />

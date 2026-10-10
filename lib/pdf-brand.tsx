@@ -38,7 +38,7 @@ export const ZEBRA = '#FAF7F2'        // brand-50
 const PAD_X = 40
 
 export const s = StyleSheet.create({
-  page: { fontFamily: 'NotoSansTC', fontSize: 9, color: INK, lineHeight: 1.45, paddingTop: 36, paddingHorizontal: PAD_X, paddingBottom: 54 },
+  page: { fontFamily: 'NotoSansTC', fontSize: 9, color: INK, lineHeight: 1.45, paddingTop: 32, paddingHorizontal: PAD_X, paddingBottom: 50 },
 
   // ── 抬頭：左 Logo＋公司資訊、右 標題＋單號日期 ──
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -51,13 +51,13 @@ export const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', marginTop: 8 },
   metaK: { fontSize: 7.5, color: MUTED, width: 44, textAlign: 'right', marginRight: 8 },
   metaV: { fontSize: 9, color: INK, fontWeight: 'bold', minWidth: 92, textAlign: 'right' },
-  rule: { height: 1.2, backgroundColor: BRAND, marginTop: 14 },
+  rule: { height: 1.2, backgroundColor: BRAND, marginTop: 12 },
   ruleAccent: { height: 2.5, backgroundColor: BRAND_GOLD, width: 56, marginTop: -1.8 },
 
   // ── 資訊面板 ──
-  infoRow: { flexDirection: 'row', marginTop: 18, alignItems: 'stretch' },
-  customerPanel: { flex: 1.35, backgroundColor: CREAM, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14, marginRight: 10 },
-  quotePanel: { flex: 1, borderWidth: 0.75, borderColor: LINE, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14 },
+  infoRow: { flexDirection: 'row', marginTop: 14, alignItems: 'stretch' },
+  customerPanel: { flex: 1.35, backgroundColor: CREAM, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, marginRight: 10 },
+  quotePanel: { flex: 1, borderWidth: 0.75, borderColor: LINE, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 },
   panelLabel: { fontSize: 7.5, fontWeight: 'bold', color: BRAND_SOFT, marginBottom: 6 },
   customerName: { fontSize: 13.5, fontWeight: 'bold', color: INK, lineHeight: 1.3 },
   customerSub: { fontSize: 8, color: MUTED, marginTop: 1 },
@@ -67,23 +67,28 @@ export const s = StyleSheet.create({
   v: { flex: 1, fontSize: 8.8, color: TEXT },
 
   // ── 品項表 ──
-  table: { marginTop: 18 },
+  table: { marginTop: 14 },
   th: { flexDirection: 'row', backgroundColor: BRAND, borderRadius: 4, color: '#FFFFFF', fontSize: 8, fontWeight: 'bold', paddingVertical: 6 },
-  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: LINE, paddingVertical: 8, alignItems: 'flex-start' },
+  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: LINE, paddingVertical: 6, alignItems: 'flex-start' },
   cell: { paddingHorizontal: 6 },
   num: { textAlign: 'right' },
   right: { textAlign: 'right' },
   center: { textAlign: 'center' },
   idx: { color: FAINT, textAlign: 'center' },
   itemName: { fontSize: 9.5, color: INK },
-  itemSub: { fontSize: 7.5, color: MUTED, marginTop: 2 },
+  itemSub: { fontSize: 7.5, color: MUTED, marginTop: 1.5 },
+  gift: { color: BRAND_SOFT, fontWeight: 'bold' },
+  dash: { color: FAINT },
   imgBox: { width: 40, height: 40, borderRadius: 4, borderWidth: 0.5, borderColor: LINE, overflow: 'hidden' },
   img: { width: 40, height: 40, objectFit: 'contain' },
 
   // ── 說明＋金額 ──
-  summary: { flexDirection: 'row', marginTop: 14 },
+  summary: { flexDirection: 'row', marginTop: 12 },
   terms: { flex: 1, paddingRight: 24 },
-  termsLabel: { fontSize: 7.5, fontWeight: 'bold', color: BRAND_SOFT, marginBottom: 5 },
+  termsLabel: { fontSize: 7.5, fontWeight: 'bold', color: BRAND_SOFT, marginBottom: 4 },
+  bankLine: { flexDirection: 'row', marginBottom: 2 },
+  bankK: { width: 30, fontSize: 8, color: MUTED },
+  bankV: { flex: 1, fontSize: 8.3, color: TEXT },
   term: { flexDirection: 'row', marginBottom: 3 },
   termNo: { width: 13, fontSize: 8.3, color: FAINT },
   termText: { flex: 1, fontSize: 8.3, color: TEXT, lineHeight: 1.55 },
@@ -103,16 +108,17 @@ export const s = StyleSheet.create({
   // ── 簽章（推到最後一頁底部）──
   pushDown: { flexGrow: 1, minHeight: 16 },
   sign: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  stampBox: { width: '46%', alignItems: 'center' },
-  stamp: { width: 128, height: 80, objectFit: 'contain' },
-  stampCaption: { fontSize: 7.3, color: MUTED, marginTop: 3, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 4, width: 170, textAlign: 'center' },
-  signBox: { width: '48%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14 },
+  bankBox: { width: '31%', paddingBottom: 2 },
+  stampBox: { width: '29%', alignItems: 'center' },
+  stamp: { width: 104, height: 60, objectFit: 'contain' },
+  stampCaption: { fontSize: 7.3, color: MUTED, marginTop: 3, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 4, width: '100%', textAlign: 'center' },
+  signBox: { width: '36%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 },
   signTitle: { fontSize: 7.5, fontWeight: 'bold', color: BRAND_SOFT },
-  signLine: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 24 },
+  signLine: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 18 },
   signLabel: { width: 28, fontSize: 7.8, color: MUTED },
   signRule: { flex: 1, borderBottomWidth: 0.5, borderBottomColor: FAINT },
 
-  footer: { position: 'absolute', bottom: 24, left: PAD_X, right: PAD_X, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.8, color: FAINT },
+  footer: { position: 'absolute', bottom: 22, left: PAD_X, right: PAD_X, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.8, color: FAINT },
   watermark: { position: 'absolute', top: 360, left: 40, right: 40, textAlign: 'center', fontSize: 46, fontWeight: 'bold', color: BRAND, opacity: 0.07, transform: 'rotate(-28deg)' },
 })
 
