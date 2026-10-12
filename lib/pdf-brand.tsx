@@ -4,9 +4,13 @@
  * 配色依系統設計語言（docs/rules/design-language.md）：棕金 brand 為唯一主色、cream 暖底、stone 中性色
  * （數值取自 tailwind.config.ts）；Logo 維持新版品牌標誌（public/Logo.png）。
  *
- * 字型（2026-10-11）：public/fonts/NotoSansTC-Regular／Bold.woff，由專案相依套件
+ * 字型（2026-10-11）：public/fonts/NotoSansTC-Regular／Bold.ttf，由專案相依套件
  * @fontsource/noto-sans-tc（OFL）的 106 個網頁分片合併而成（12,161 字，含全形標點、有粗體）。
  * 舊版只有 6,606 字的子集、沒有全形逗號括號冒號，也沒有粗體，排版只能硬轉半形。
+ *
+ * 效能鐵則（2026-10-12 實測，一份報價單 53～81 秒 → 不到 1 秒）：
+ * - 字型必須是 TTF，不要用 WOFF：fontkit 讀 WOFF 每次查字都重新解壓，大字型會慢到 20 秒以上。
+ * - 斷字函式只拆中日文字，英數單字原樣回傳；整串逐字拆（含英數）同樣會慢到 20 秒以上。
  */
 import React from 'react'
 import path from 'path'
@@ -16,12 +20,13 @@ import { COMPANY } from '@/lib/quote-model'
 Font.register({
   family: 'NotoSansTC',
   fonts: [
-    { src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-Regular.woff') },
-    { src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-Bold.woff'), fontWeight: 'bold' },
+    { src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-Regular.ttf') },
+    { src: path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-Bold.ttf'), fontWeight: 'bold' },
   ],
 })
-// 中文不要依英文規則斷字（會在字中間插入連字號）
-Font.registerHyphenationCallback((word) => Array.from(word))
+// 中文不要依英文規則斷字（會在字中間插入連字號）：中文逐字可斷行，英數單字保持完整
+const CJK = /[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef\u3000-\u303f]/
+Font.registerHyphenationCallback((word) => (CJK.test(word) ? Array.from(word) : [word]))
 
 export const BRAND_DARK = '#6E503C'   // brand-800：標題、總額
 export const BRAND = '#866245'        // brand-700：表頭、主線
@@ -111,6 +116,8 @@ export const s = StyleSheet.create({
   bankBox: { width: '31%', paddingBottom: 2 },
   stampBox: { width: '29%', alignItems: 'center' },
   stamp: { width: 104, height: 60, objectFit: 'contain' },
+  stampPending: { width: 104, height: 60, borderWidth: 0.75, borderColor: LINE, borderStyle: 'dashed', borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
+  stampPendingText: { fontSize: 7, color: FAINT, textAlign: 'center', lineHeight: 1.5 },
   stampCaption: { fontSize: 7.3, color: MUTED, marginTop: 3, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 4, width: '100%', textAlign: 'center' },
   signBox: { width: '36%', borderWidth: 0.75, borderColor: LINE, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 },
   signTitle: { fontSize: 7.5, fontWeight: 'bold', color: BRAND_SOFT },

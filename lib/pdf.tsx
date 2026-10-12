@@ -19,8 +19,11 @@ import type { Quote } from '@/types'
 import { COMPANY, computeQuoteTotals, parseLayout, rocDate, amountInChinese, TAX_RATE } from '@/lib/quote-model'
 import { s, T, money, qty, KV, BrandHeader, BrandFooter, PushToBottom, Watermark } from '@/lib/pdf-brand'
 
-/** watermark：未核准時的內部預覽浮水印（例如「內部預覽 · 待行政審核」） */
-export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: string }) {
+/**
+ * watermark：未核准時的內部預覽浮水印（例如「內部預覽 · 待行政審核」）
+ * stamped：行政審核通過（已核准）才蓋公司章；未核准只留虛線框，避免未審的報價單帶著公司章流出去。
+ */
+export function QuoteDocument({ quote, watermark, stamped = false }: { quote: Quote; watermark?: string; stamped?: boolean }) {
   const items = quote.items ?? []
   const layout = parseLayout(quote.layout)
   const showImage = layout.showImage && items.some((i) => i.imageUrl)
@@ -166,7 +169,11 @@ export function QuoteDocument({ quote, watermark }: { quote: Quote; watermark?: 
           </View>
           <View style={s.stampBox}>
             {/* stamp-transparent.png：由 stamp.png 去除方格底圖並縮小（原檔背景是畫上去的灰白方格） */}
-            <Image src={path.join(process.cwd(), 'public', 'stamp-transparent.png')} style={s.stamp} />
+            {stamped ? (
+              <Image src={path.join(process.cwd(), 'public', 'stamp-transparent.png')} style={s.stamp} />
+            ) : (
+              <View style={s.stampPending}><Text style={s.stampPendingText}>行政審核後{'\n'}用印</Text></View>
+            )}
             <Text style={s.stampCaption}>{COMPANY.name}　用印</Text>
           </View>
           <View style={s.signBox}>

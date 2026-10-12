@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
 
     const buffer = await renderToBuffer(
-      <QuoteDocument quote={quote} watermark={approved ? undefined : `內部預覽 · ${quote.status}`} />,
+      <QuoteDocument quote={quote} stamped={approved} watermark={approved ? undefined : `內部預覽 · ${quote.status}`} />,
     )
     const filename = `${approved ? '' : '【預覽】'}報價單_${quote.quoteNumber}_${quote.customerName}.pdf`
 
