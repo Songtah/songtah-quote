@@ -1,27 +1,21 @@
 {
   "month": "2026-10",
-  "fetchedAt": "2026-10-07T02:34:56.930Z",
+  "fetchedAt": "2026-10-13T11:45:28.698Z",
   "source": "mohw-bas",
-  "totalClinics": 7148,
-  "totalLabs": 1105,
+  "totalClinics": 7150,
+  "totalLabs": 1103,
   "totalHospitals": 188,
   "labsStale": false,
-  "pendingRemaining": 0,
-  "prevTotalClinics": 7146,
-  "prevTotalLabs": 1104,
+  "pendingRemaining": 1,
+  "prevTotalClinics": 7148,
+  "prevTotalLabs": 1105,
   "prevTotalHospitals": 188,
   "totalCustomers": 8167,
   "newCodes": [
-    "3703200269",
-    "3703280703",
-    "3717040351",
-    "3731023736",
-    "3732014731",
-    "3732071816",
-    "3741010063",
-    "3743110011",
-    "2Y07010228",
-    "2Y07320407"
+    "3703220047",
+    "3705070081",
+    "3732061301",
+    "柏泰柏睿牙醫診所__基隆市__安樂區"
   ],
   "codes": {
     "1101010012": {
@@ -2152,15 +2146,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "維一牙醫診所",
-      "address": "臺北市松山區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3701014292": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "勤美民生牙醫診所",
       "address": "臺北市松山區",
       "specialty": "",
       "termDate": "",
@@ -18375,6 +18360,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3703220047": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "芳禾牙醫診所",
+      "address": "臺中市中區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3703230016": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -19369,15 +19363,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "森之白牙醫診所",
-      "address": "臺中市西屯區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3703270476": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "市府雅德思牙醫診所",
       "address": "臺中市西屯區",
       "specialty": "",
       "termDate": "",
@@ -20656,6 +20641,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "善植美學牙醫診所",
+      "address": "臺南市善化區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3705070081": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "小迎曦牙醫診所",
       "address": "臺南市善化區",
       "specialty": "",
       "termDate": "",
@@ -47697,6 +47691,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3732061301": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "大園植德牙醫診所",
+      "address": "桃園市大園區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3732070015": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -66048,6 +66051,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "柏泰柏睿牙醫診所__基隆市__安樂區": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "柏泰柏睿牙醫診所",
+      "address": "基隆市安樂區",
+      "specialty": "",
+      "termDate": "",
+      "status": ""
+    },
     "2Y07110045": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -69522,15 +69534,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y31030163": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "漢鼎牙體技術所",
-      "address": "新北市永和區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y01100232": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -70971,20 +70974,20 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y07350101": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "福家牙體技術所",
-      "address": "高雄市苓雅區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y03270255": {
       "source": "mohw",
       "kind": "牙體技術所",
       "name": "信實牙體技術所",
       "address": "臺中市西屯區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y07350101": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "福家牙體技術所",
+      "address": "高雄市苓雅區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
@@ -72447,15 +72450,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y01010162": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "自有光數位牙體技術所",
-      "address": "臺北市松山區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y11030023": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -73698,20 +73692,20 @@
       "termDate": "",
       "status": "開業"
     },
-    "2Y31010205": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "泓宇牙體技術所",
-      "address": "新北市板橋區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "2Y37010067": {
       "source": "mohw",
       "kind": "牙體技術所",
       "name": "行家牙體技術所",
       "address": "彰化縣彰化市",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y31010205": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "泓宇牙體技術所",
+      "address": "新北市板橋區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
