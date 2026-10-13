@@ -2776,9 +2776,10 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
               <h3 className="text-sm font-bold text-stone-700">依分類瀏覽</h3>
               <span className="text-[11px] text-stone-400">{taxonomy.mains.length} 個主分類，點分類名稱或標籤直接看產品</span>
             </div>
-            <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* 瀑布流：卡片依標籤多寡自然長短，往下接續排列，不留同列等高的空白 */}
+            <div className="columns-1 gap-3 sm:columns-2 lg:columns-3">
               {taxonomy.mains.map((m) => (
-                <div key={m.id} className="card-soft p-3 sm:p-4">
+                <div key={m.id} className="card-soft mb-3 break-inside-avoid p-3 sm:p-4">
                   <button type="button" onClick={() => setCategorySelection({ main: m.name })}
                           className="group flex w-full items-center gap-3 rounded-2xl text-left transition-all active:scale-[0.99]">
                     <MainCategoryArtwork categoryId={m.id} compact />
@@ -2789,20 +2790,16 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
                     <span className="text-stone-300 group-hover:text-stone-500" aria-hidden="true">›</span>
                   </button>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {m.funcs.map((f) => (
+                    {/* 0 個品項的細分點了也沒東西，不顯示 */}
+                    {m.funcs.filter((f) => f.count > 0).map((f) => (
                       <button key={f.id}
                               type="button"
-                              disabled={f.count === 0}
                               onClick={() => setCategorySelection({ main: m.name, category: f.name })}
-                              className={`min-h-9 rounded-full px-3 py-1.5 text-xs transition-all active:scale-95 ${
-                                f.count > 0
-                                  ? 'bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700'
-                                  : 'cursor-not-allowed bg-stone-50 text-stone-300'
-                              }`}>
+                              className="min-h-9 rounded-full bg-stone-100 px-3 py-1.5 text-xs text-stone-600 transition-all hover:bg-brand-50 hover:text-brand-700 active:scale-95">
                         {f.name} <span className="opacity-60">{f.count}</span>
                       </button>
                     ))}
-                    {m.funcs.length === 0 && <span className="text-[11px] text-stone-300">(暫無細分)</span>}
+                    {m.funcs.every((f) => f.count === 0) && <span className="text-[11px] text-stone-300">(暫無細分)</span>}
                   </div>
                 </div>
               ))}
