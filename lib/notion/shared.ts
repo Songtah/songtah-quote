@@ -20,8 +20,9 @@ let _redis: Redis | null | undefined = undefined
 
 export function getRedis(): Redis | null {
   if (_redis !== undefined) return _redis
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  // 兩組名稱都認：自行設定用 UPSTASH_*；從 Vercel Marketplace 連 Upstash 時，Vercel 自動注入的是 KV_REST_API_*
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
   _redis = url && token ? new Redis({ url, token }) : null
   return _redis
 }
