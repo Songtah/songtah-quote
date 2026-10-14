@@ -1,21 +1,18 @@
 {
   "month": "2026-10",
-  "fetchedAt": "2026-10-13T11:45:28.698Z",
+  "fetchedAt": "2026-10-14T09:30:10.586Z",
   "source": "mohw-bas",
-  "totalClinics": 7150,
+  "totalClinics": 7149,
   "totalLabs": 1103,
   "totalHospitals": 188,
   "labsStale": false,
-  "pendingRemaining": 1,
-  "prevTotalClinics": 7148,
-  "prevTotalLabs": 1105,
+  "pendingRemaining": 0,
+  "prevTotalClinics": 7150,
+  "prevTotalLabs": 1103,
   "prevTotalHospitals": 188,
-  "totalCustomers": 8167,
+  "totalCustomers": 8164,
   "newCodes": [
-    "3703220047",
-    "3705070081",
-    "3732061301",
-    "柏泰柏睿牙醫診所__基隆市__安樂區"
+    "3711061301"
   ],
   "codes": {
     "1101010012": {
@@ -25236,6 +25233,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3711061301": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "柏泰柏睿牙醫診所",
+      "address": "基隆市安樂區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3711070122": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -30622,15 +30628,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "佳美牙醫診所",
-      "address": "臺南市東區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3721012196": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "德宣牙醫診所",
       "address": "臺南市東區",
       "specialty": "",
       "termDate": "",
@@ -66050,15 +66047,6 @@
       "specialty": "",
       "termDate": "",
       "status": "開業"
-    },
-    "柏泰柏睿牙醫診所__基隆市__安樂區": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "柏泰柏睿牙醫診所",
-      "address": "基隆市安樂區",
-      "specialty": "",
-      "termDate": "",
-      "status": ""
     },
     "2Y07110045": {
       "source": "mohw",
