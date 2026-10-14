@@ -12,7 +12,7 @@
 import { computeMonitorKindTrend, type MonitorKindTrend, type MonitorTrendKind } from '@/lib/notion/medical-monitor'
 import { getCustomersWithCodes } from '@/lib/notion/customers'
 import { loadBasCacheIndex, basVerdict, type BasCacheRow, type BasVerdict } from '@/lib/bas-cache-index'
-import { getRedis } from '@/lib/notion/shared'
+import { getRedis, runExclusiveScan } from '@/lib/notion/shared'
 
 export type KindTrendItem = {
   month: string
@@ -102,7 +102,15 @@ export async function getKindTrend(options: { months?: number; refresh?: boolean
       if (cached && Array.isArray(cached.items)) return cached
     } catch { /* 讀不到就重算 */ }
   }
-  const out = await compute(months)
+  // 與醫事比對共用全掃鎖：同時開頁不會兩邊一起打 Notion；別人剛算好就直接用
+  const started = Date.now()
+  const run = await runExclusiveScan(() => compute(months), async () => {
+    if (!r) return false
+    const c = await r.get<KindTrendWithItems>(KEY(months)).catch(() => null)
+    return !!c && Array.isArray(c.items) && (!options.refresh || Date.parse(c.computedAt ?? '') >= started)
+  })
+  if (!run.ran) return (await r!.get<KindTrendWithItems>(KEY(months)))!
+  const out = run.value
   if (r) {
     try { await r.set(KEY(months), out, { px: TTL_MS }) } catch (e) { console.warn('[kind-trend] save failed:', e) }
   }

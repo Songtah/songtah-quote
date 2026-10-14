@@ -9,7 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { computeMonitor } from '@/lib/medical-monitor-compare'
-import { setCachedMonitorResult } from '@/lib/notion/medical-monitor'
+import { runExclusiveScan } from '@/lib/notion/shared'
+import { getCachedMonitorResult, setCachedMonitorResult } from '@/lib/notion/medical-monitor'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -25,8 +26,12 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     const started = Date.now()
-    const result = await computeMonitor()
-    await setCachedMonitorResult(result)
+    const out = await runExclusiveScan(() => computeMonitor(), async () => {
+      const c = await getCachedMonitorResult<{ computedAt?: string }>()
+      return !!c && Date.parse(c.computedAt ?? '') >= started
+    })
+    const result = out.ran ? out.value : (await getCachedMonitorResult<Awaited<ReturnType<typeof computeMonitor>>>())!
+    if (out.ran) await setCachedMonitorResult(result)
     const n = result.newOpenings
     return NextResponse.json({
       ok: true,

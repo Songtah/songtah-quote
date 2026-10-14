@@ -208,6 +208,37 @@ export function isRateLimited(error: unknown) {
   )
 }
 
+/**
+ * 大型 Notion 全掃（醫事比對、醫事數量趨勢）同一時間只跑一個——跨 serverless 實例靠 Redis 鎖。
+ * 2026-10-14 Redis 剛開通、快取全空：開監控頁同時觸發比對×2＋趨勢×1，三個全掃一起打 Notion 被限流（429），
+ * 全部失敗、結果沒存，下次開頁又來一輪。
+ * 拿不到鎖 → 每 3 秒問 done()（持鎖者已算好就直接回 { ran:false }，呼叫端讀它存的結果）；鎖釋放後自己再搶。
+ * 沒有 Redis（本機）直接執行。
+ */
+const HEAVY_SCAN_LOCK = 'lock:notion-heavy-scan'
+export async function runExclusiveScan<T>(
+  fn: () => Promise<T>,
+  done: () => Promise<boolean>,
+  waitMs = 150_000,   // 等候上限＋自己重算要落在 maxDuration 300 秒內
+): Promise<{ ran: true; value: T } | { ran: false }> {
+  const r = getRedis()
+  if (!r) return { ran: true, value: await fn() }
+  const token = `scan-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const deadline = Date.now() + waitMs
+  for (;;) {
+    if (await r.set(HEAVY_SCAN_LOCK, token, { nx: true, ex: 300 })) {
+      try {
+        return { ran: true, value: await fn() }
+      } finally {
+        try { if ((await r.get<string>(HEAVY_SCAN_LOCK)) === token) await r.del(HEAVY_SCAN_LOCK) } catch { /* 鎖 5 分鐘自動過期 */ }
+      }
+    }
+    if (await done()) return { ran: false }
+    if (Date.now() > deadline) throw new Error('另一個比對／重算正在進行，請稍候再試')
+    await sleep(3000)
+  }
+}
+
 export async function notionCallWithRetry<T>(
   label: string,
   action: () => Promise<T>,
