@@ -91,7 +91,7 @@ export default function TerritoryReportClient({
   }
 
   return (
-    <main className="min-h-screen bg-stone-100 px-3 py-4 text-stone-800 sm:px-6 sm:py-7">
+    <main className="report-shell min-h-screen bg-stone-100 px-3 py-4 text-stone-800 sm:px-6 sm:py-7">
       <section className="report-controls mx-auto mb-5 max-w-[210mm] rounded-3xl bg-white p-4 shadow-lg ring-1 ring-stone-900/[0.06] sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
@@ -150,6 +150,8 @@ export default function TerritoryReportClient({
         @media print {
           html, body { background: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           body { margin: 0 !important; }
+          /* 外層畫面用的灰底與內距不印：print-color-adjust: exact 會把它印成報表外圈的灰框 */
+          .report-shell { background: #fff !important; padding: 0 !important; min-height: auto !important; }
           .report-controls, [data-font-size-toggle] { display: none !important; }
           .report-page { min-height: auto !important; max-width: none !important; width: 100% !important; padding: 0 !important; box-shadow: none !important; }
           .avoid-break, .report-page tr { break-inside: avoid; page-break-inside: avoid; }
