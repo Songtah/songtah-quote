@@ -21,9 +21,10 @@
  */
 import {
   getRedisValue, setRedisValue, getCachedValue, setCachedValue,
-  notion, DB, normalizeDatabaseId, notionCallWithRetry, getTitle, getSelect,
+  getTitle, getSelect,
 } from './shared'
 import { customerNameStem } from '@/lib/customer-name-match'
+import { scanVisitPages } from './visits'
 
 export type AliasEntry = { id: string; city: string; name?: string }
 type Store = Record<string, AliasEntry>
@@ -95,29 +96,15 @@ export async function rebuildLearnedAliases(
     m.set(id, (m.get(id) ?? 0) + 1)
     votes.set(k, m)
   }
-  let cursor: string | undefined
-  let total = 0
-  do {
-    const res: any = await notionCallWithRetry('rebuildLearnedAliases', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        filter: { property: '🏥 牙科單位資料', relation: { is_not_empty: true } },
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    for (const page of res.results ?? []) {
-      total++
-      const id = normId(page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id ?? '')
-      const stem = customerNameStem(getTitle(page, '單位名稱'))
-      if (!id || !stem) continue
-      const sp = getSelect(page, '業務人員')
-      if (sp) vote(`${sp}|${stem}`, id)
-      vote(`*|${stem}`, id)
-    }
-    cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
-  } while (cursor)
-  if (total >= 9500) console.warn(`rebuildLearnedAliases: 已關聯客情達 ${total} 筆，逼近 Notion 10k 截斷上限，須改分區掃描`)
+  // 客情庫全掃走 scanVisitPages 分區（Notion 1 萬筆靜默截斷，鐵則 #0）
+  for await (const page of scanVisitPages('rebuildLearnedAliases', { property: '🏥 牙科單位資料', relation: { is_not_empty: true } })) {
+    const id = normId(page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id ?? '')
+    const stem = customerNameStem(getTitle(page, '單位名稱'))
+    if (!id || !stem) continue
+    const sp = getSelect(page, '業務人員')
+    if (sp) vote(`${sp}|${stem}`, id)
+    vote(`*|${stem}`, id)
+  }
 
   const learned: Store = {}
   let conflicts = 0

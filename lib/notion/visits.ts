@@ -101,34 +101,23 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
     const allSalespersonSet = new Set<string>(salespersonOptions)
 
     // Paginate through all records to also collect values from actual data
-    let cursor: string | undefined
-    do {
-      const response: any = await notionCallWithRetry('getVisitFormOptions-scan', () =>
-        notion.databases.query({
-          database_id: normalizeDatabaseId(DB.visits),
-          page_size: 100,
-          ...(cursor ? { start_cursor: cursor } : {}),
-        })
-      )
-      for (const page of response.results ?? []) {
-        for (const item of getProp(page, '客戶標籤')?.multi_select ?? []) {
-          if (item?.name) allTagsSet.add(item.name)
-        }
-        for (const item of getProp(page, '競品')?.multi_select ?? []) {
-          if (item?.name) allCompetitorSet.add(item.name)
-        }
-        // Collect salesperson names from each record (covers select / rich_text / people fields)
-        const spProp = getProp(page, '業務人員')
-        let sp = ''
-        if (spProp?.type === 'select') sp = spProp.select?.name ?? ''
-        else if (spProp?.type === 'status') sp = spProp.status?.name ?? ''
-        else if (spProp?.type === 'rich_text') sp = spProp.rich_text?.map((t: any) => t.plain_text).join('') ?? ''
-        else if (spProp?.type === 'people') sp = spProp.people?.[0]?.name ?? ''
-        else if (spProp?.type === 'formula') sp = spProp.formula?.string ?? ''
-        if (sp) allSalespersonSet.add(sp)
+    for await (const page of scanVisitPages('getVisitFormOptions-scan')) {
+      for (const item of getProp(page, '客戶標籤')?.multi_select ?? []) {
+        if (item?.name) allTagsSet.add(item.name)
       }
-      cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
-    } while (cursor)
+      for (const item of getProp(page, '競品')?.multi_select ?? []) {
+        if (item?.name) allCompetitorSet.add(item.name)
+      }
+      // Collect salesperson names from each record (covers select / rich_text / people fields)
+      const spProp = getProp(page, '業務人員')
+      let sp = ''
+      if (spProp?.type === 'select') sp = spProp.select?.name ?? ''
+      else if (spProp?.type === 'status') sp = spProp.status?.name ?? ''
+      else if (spProp?.type === 'rich_text') sp = spProp.rich_text?.map((t: any) => t.plain_text).join('') ?? ''
+      else if (spProp?.type === 'people') sp = spProp.people?.[0]?.name ?? ''
+      else if (spProp?.type === 'formula') sp = spProp.formula?.string ?? ''
+      if (sp) allSalespersonSet.add(sp)
+    }
 
     const result: VisitFormOptions = {
       salespersons: Array.from(allSalespersonSet).filter((s) => !INACTIVE_SALESPERSONS.has(s)).sort(),
@@ -531,28 +520,17 @@ export async function autoCloseStaleFollowUps(
 
   type Row = { id: string; name: string; sp: string; date: string; need: boolean; done: boolean; status: string }
   const rows: Row[] = []
-  let cur: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('autoCloseStaleFollowUps:scan', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        ...(cur ? { start_cursor: cur } : {}),
-      })
-    )
-    for (const page of response.results ?? []) {
-      rows.push({
-        id: page.id,
-        name: getTitle(page, '單位名稱'),
-        sp: getSelect(page, '業務人員') || getText(page, '業務人員'),
-        date: getDate(page, '日期'),
-        need: page.properties?.['是否需追蹤']?.checkbox ?? false,
-        done: page.properties?.['追蹤已結案']?.checkbox ?? false,
-        status: page.properties?.['狀態']?.status?.name ?? '',
-      })
-    }
-    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cur)
+  for await (const page of scanVisitPages('autoCloseStaleFollowUps:scan')) {
+    rows.push({
+      id: page.id,
+      name: getTitle(page, '單位名稱'),
+      sp: getSelect(page, '業務人員') || getText(page, '業務人員'),
+      date: getDate(page, '日期'),
+      need: page.properties?.['是否需追蹤']?.checkbox ?? false,
+      done: page.properties?.['追蹤已結案']?.checkbox ?? false,
+      status: page.properties?.['狀態']?.status?.name ?? '',
+    })
+  }
 
   // 每個客戶的最新拜訪日
   const latestByCustomer = new Map<string, string>()
@@ -678,34 +656,64 @@ export async function deleteVisit(id: string): Promise<void> {
   )
 }
 
+// ── 客情庫全掃（分區）─────────────────────────────────────────────────────────
+
+/**
+ * 客情庫全掃一律走這裡（CLAUDE.md 資料架構鐵則 0）：無過濾的 databases.query 在 10,000 筆處
+ * **靜默截斷**（has_more 直接 false、不報錯），客情庫已近萬筆。2026-10-19 起依「日期」切半年分區
+ * （另含無日期、2025 以前、遠期），逐區分頁；任一分區讀到 1 萬筆就丟錯，不默默少算——
+ * 拜訪訊號少算＝課後拜訪不觸發結案、待追蹤不自動結案，而且沒有任何錯誤訊息。
+ */
+export async function* scanVisitPages(label: string, extraFilter?: any): AsyncGenerator<any> {
+  for (const part of visitDatePartitions()) {
+    const filter = extraFilter ? { and: [part, extraFilter] } : part
+    let cur: string | undefined
+    let n = 0
+    do {
+      const res: any = await notionCallWithRetry(label, () =>
+        notion.databases.query({
+          database_id: normalizeDatabaseId(DB.visits),
+          page_size: 100,
+          filter,
+          ...(cur ? { start_cursor: cur } : {}),
+        })
+      )
+      for (const page of res.results ?? []) { n++; yield page }
+      cur = res.has_more ? (res.next_cursor ?? undefined) : undefined
+    } while (cur)
+    if (n >= 10_000) throw new Error(`${label}：客情單一分區已達 ${n} 筆（Notion 1 萬筆截斷上限），需把分區切更細`)
+  }
+}
+
+function visitDatePartitions(): any[] {
+  const D = (cond: Record<string, unknown>) => ({ property: '日期', date: cond })
+  const parts: any[] = [D({ is_empty: true }), D({ before: '2025-01-01' })]
+  const horizon = new Date(Date.now() + 400 * 86400e3).toISOString().slice(0, 10)
+  let start = '2025-01-01'
+  while (start <= horizon) {
+    const [y, m] = start.split('-').map(Number)
+    const next = m === 1 ? `${y}-07-01` : `${y + 1}-01-01`
+    parts.push({ and: [D({ on_or_after: start }), D({ before: next })] })
+    start = next
+  }
+  parts.push(D({ on_or_after: start }))   // 誤植的遠期日期也要掃到
+  return parts
+}
+
 /**
  * 全掃拜訪庫,回傳 customerId(去連字號)→最後拜訪日(YYYY-MM-DD)。
  * 供拜訪建議快取層(組合層 visit-suggestions)每晚重算;不要在請求路徑直接呼叫。
- * 現量 ~4.8k 筆;接近 10k 靜默截斷上限時需改分區掃描(鐵則 #0)。
+ * 走 scanVisitPages 分區全掃(鐵則 #0)。
  */
 export async function scanVisitRecency(): Promise<Record<string, string>> {
   const map: Record<string, string> = {}
-  let total = 0
-  let cur: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('scanVisitRecency', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        ...(cur ? { start_cursor: cur } : {}),
-      })
-    )
-    for (const page of response.results ?? []) {
-      total++
-      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
-      if (!relId) continue
-      const date = page.properties?.['日期']?.date?.start ?? ''
-      if (!date) continue
-      if (!map[relId] || date > map[relId]) map[relId] = date
-    }
-    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cur)
-  if (total >= 9500) console.warn(`scanVisitRecency: 拜訪庫已達 ${total} 筆,逼近 Notion 10k 截斷上限,須改分區掃描`)
+  for await (const page of scanVisitPages('scanVisitRecency')) {
+    const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+    if (!relId) continue
+    const date = page.properties?.['日期']?.date?.start ?? ''
+    if (!date) continue
+    if (!map[relId] || date > map[relId]) map[relId] = date
+  }
   return map
 }
 
@@ -729,48 +737,37 @@ export type CustomerVisitSignal = {
 
 export async function scanCustomerVisitSignals(): Promise<Record<string, CustomerVisitSignal>> {
   const map: Record<string, CustomerVisitSignal> = {}
-  let cur: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('scanCustomerVisitSignals', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        ...(cur ? { start_cursor: cur } : {}),
-      })
-    )
-    for (const page of response.results ?? []) {
-      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
-      if (!relId) continue
-      const date = getDate(page, '日期')
-      const reaction = getSelect(page, '客戶反應')
-      const done = page.properties?.['追蹤已結案']?.checkbox ?? false
-      const need = page.properties?.['是否需追蹤']?.checkbox ?? false
-      const status = page.properties?.['狀態']?.status?.name ?? ''
-      const nextDate = getDate(page, '下次追蹤日')
+  for await (const page of scanVisitPages('scanCustomerVisitSignals')) {
+    const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+    if (!relId) continue
+    const date = getDate(page, '日期')
+    const reaction = getSelect(page, '客戶反應')
+    const done = page.properties?.['追蹤已結案']?.checkbox ?? false
+    const need = page.properties?.['是否需追蹤']?.checkbox ?? false
+    const status = page.properties?.['狀態']?.status?.name ?? ''
+    const nextDate = getDate(page, '下次追蹤日')
 
-      const hit = map[relId] ?? (map[relId] = {
-        lastVisit: '', visitCount: 0, lastReaction: '', lastReactionDate: '', openFollowUp: null,
-      })
-      hit.visitCount++
-      if (date > hit.lastVisit) hit.lastVisit = date
-      if (reaction && date >= hit.lastReactionDate) {
-        hit.lastReaction = reaction
-        hit.lastReactionDate = date
-      }
-      // 待追蹤的定義與 listOpenFollowUps 一致：checkbox 或 狀態=追蹤中，且未結案
-      const isOpen = !done && (need || status === '追蹤中') && !FOLLOW_UP_COMPLETE_STATUS.has(status)
-      if (isOpen) {
-        const cand = { date, nextDate, action: getText(page, '後續動作') }
-        const kept = hit.openFollowUp
-        // 有到期日者優先；同樣有（或同樣沒有）就取比較舊的那筆（拖最久）
-        const better = !kept
-          || (!!cand.nextDate && !kept.nextDate)
-          || (!!cand.nextDate === !!kept.nextDate && (cand.nextDate || cand.date) < (kept.nextDate || kept.date))
-        if (better) hit.openFollowUp = cand
-      }
+    const hit = map[relId] ?? (map[relId] = {
+      lastVisit: '', visitCount: 0, lastReaction: '', lastReactionDate: '', openFollowUp: null,
+    })
+    hit.visitCount++
+    if (date > hit.lastVisit) hit.lastVisit = date
+    if (reaction && date >= hit.lastReactionDate) {
+      hit.lastReaction = reaction
+      hit.lastReactionDate = date
     }
-    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cur)
+    // 待追蹤的定義與 listOpenFollowUps 一致：checkbox 或 狀態=追蹤中，且未結案
+    const isOpen = !done && (need || status === '追蹤中') && !FOLLOW_UP_COMPLETE_STATUS.has(status)
+    if (isOpen) {
+      const cand = { date, nextDate, action: getText(page, '後續動作') }
+      const kept = hit.openFollowUp
+      // 有到期日者優先；同樣有（或同樣沒有）就取比較舊的那筆（拖最久）
+      const better = !kept
+        || (!!cand.nextDate && !kept.nextDate)
+        || (!!cand.nextDate === !!kept.nextDate && (cand.nextDate || cand.date) < (kept.nextDate || kept.date))
+      if (better) hit.openFollowUp = cand
+    }
+  }
   return map
 }
 
@@ -786,30 +783,16 @@ export type VisitClaimSignal = { visitors: Record<string, number>; lastDate: str
 
 export async function scanVisitClaimSignals(): Promise<Record<string, VisitClaimSignal>> {
   const map: Record<string, VisitClaimSignal> = {}
-  let total = 0
-  let cur: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('scanVisitClaimSignals', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        ...(cur ? { start_cursor: cur } : {}),
-      })
-    )
-    for (const page of response.results ?? []) {
-      total++
-      const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
-      if (!relId) continue
-      const who = getSelect(page, '業務人員') || getText(page, '業務人員')
-      if (!who) continue
-      const date = getDate(page, '日期')
-      const hit = map[relId] ?? (map[relId] = { visitors: {}, lastDate: '' })
-      hit.visitors[who] = (hit.visitors[who] ?? 0) + 1
-      if (date > hit.lastDate) hit.lastDate = date
-    }
-    cur = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cur)
-  if (total >= 9500) console.warn(`scanVisitClaimSignals: 拜訪庫已達 ${total} 筆,逼近 Notion 10k 截斷上限,須改分區掃描`)
+  for await (const page of scanVisitPages('scanVisitClaimSignals')) {
+    const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
+    if (!relId) continue
+    const who = getSelect(page, '業務人員') || getText(page, '業務人員')
+    if (!who) continue
+    const date = getDate(page, '日期')
+    const hit = map[relId] ?? (map[relId] = { visitors: {}, lastDate: '' })
+    hit.visitors[who] = (hit.visitors[who] ?? 0) + 1
+    if (date > hit.lastDate) hit.lastDate = date
+  }
   return map
 }
 
@@ -830,23 +813,11 @@ export async function listVisitTallies(
   if (salesperson) filters.push({ property: '業務人員', select: { equals: salesperson } })
 
   const out: { date: string; salesperson: string }[] = []
-  let cursor: string | undefined
-  do {
-    const response: any = await notionCallWithRetry('listVisitTallies', () =>
-      notion.databases.query({
-        database_id: normalizeDatabaseId(DB.visits),
-        page_size: 100,
-        filter: { and: filters },
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-    )
-    for (const page of response.results ?? []) {
-      out.push({
-        date: getDate(page, '日期'),
-        salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
-      })
-    }
-    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
-  } while (cursor)
+  for await (const page of scanVisitPages('listVisitTallies', { and: filters })) {
+    out.push({
+      date: getDate(page, '日期'),
+      salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
+    })
+  }
   return out
 }
