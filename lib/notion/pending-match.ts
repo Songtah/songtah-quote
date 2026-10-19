@@ -18,6 +18,7 @@ import { searchSystemCustomers } from './customers'
 import { type MatchCandidate } from '@/lib/customer-name-match'
 import { loadMatchContext, matchVisitCustomer } from './match-context'
 import { loadAliases, rememberAlias } from './visit-alias'
+import { recordVisitBump } from './visits'
 
 export type PendingMatchCandidate = MatchCandidate & { type?: string; salesperson?: string }
 
@@ -180,7 +181,7 @@ async function linkVisits(visitIds: string[], customerId: string, opts: { overwr
   const fullName = getTitle(page, '客戶名稱') || getText(page, '客戶名稱')
   const city = getSelect(page, '縣市')
   for (const id of visitIds) {
-    await notionCallWithRetry('linkVisits:visit', () =>
+    const updated: any = await notionCallWithRetry('linkVisits:visit', () =>
       notion.pages.update({
         page_id: id,
         properties: {
@@ -189,6 +190,7 @@ async function linkVisits(visitIds: string[], customerId: string, opts: { overwr
         } as any,
       })
     )
+    await recordVisitBump(customerId, getDate(updated, '日期'))
   }
   return { fullName, city }
 }

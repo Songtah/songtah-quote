@@ -4,7 +4,7 @@
  */
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
-  getRedisValue, setRedisValue, deleteRedisValue, richText,
+  getRedis, getRedisValue, setRedisValue, deleteRedisValue, richText,
   getProp, getTitle, getText, getSelect, getDate, getRelationIds, getRollupText,
 } from './shared'
 import { resolveCustomerInfo, resolveProductNames } from './relations'
@@ -332,6 +332,42 @@ export async function getVisitById(id: string): Promise<Visit> {
   }
 }
 
+// ── 拜訪即時訊號（不等每晚重建）───────────────────────────────────────────────
+
+/**
+ * 拜訪建檔或關聯到客戶的當下，記下「該客戶最新拜訪日」到 Redis hash（一客戶一欄、只往後推）。
+ * 拜訪訊號（scanCustomerVisitSignals）每晚才重建，課程客戶清單、拜訪建議靠它判斷「課後拜訪過沒」；
+ * 讀訊號時併入這份即時紀錄，業務回報日報後下次打開就消失，不必等到隔天。
+ * 每晚重建後舊欄位不清也無妨（取較晚日期）；整個 hash 3 天沒新拜訪才過期。
+ */
+const VISIT_BUMPS_KEY = 'visit-signal-bumps'
+export async function recordVisitBump(customerId: string, date: string): Promise<void> {
+  const id = (customerId ?? '').replace(/-/g, '')
+  const day = (date ?? '').slice(0, 10)
+  if (!id || !day) return
+  deleteRedisValue('event-customers-v1')   // 課程客戶清單（快取 10 分鐘）帶著最近拜訪日
+  const r = getRedis()
+  if (!r) return
+  try {
+    const cur = await r.hget<string>(VISIT_BUMPS_KEY, id)
+    if (!cur || day > String(cur)) await r.hset(VISIT_BUMPS_KEY, { [id]: day })
+    await r.expire(VISIT_BUMPS_KEY, 3 * 86400)
+  } catch (e) {
+    console.warn('[visit-bump] 寫入失敗（每晚重建仍會補上）:', e)
+  }
+}
+
+export async function getVisitBumps(): Promise<Record<string, string>> {
+  const r = getRedis()
+  if (!r) return {}
+  try {
+    const all = (await r.hgetall<Record<string, string>>(VISIT_BUMPS_KEY)) ?? {}
+    return Object.fromEntries(Object.entries(all).map(([k, v]) => [k, String(v)]))
+  } catch {
+    return {}
+  }
+}
+
 export async function createVisit(data: {
   customerName: string
   date: string
@@ -390,6 +426,8 @@ export async function createVisit(data: {
       } as any,
     })
   )
+
+  if (data.customerId) await recordVisitBump(data.customerId, data.date)
 
   return {
     id: response.id,

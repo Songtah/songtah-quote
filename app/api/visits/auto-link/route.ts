@@ -21,6 +21,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
 import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
 import { loadAliases } from '@/lib/notion/visit-alias'
+import { recordVisitBump } from '@/lib/notion/visits'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -97,6 +98,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
             '🏥 牙科單位資料': { relation: [{ id: match.id }] },
           } as any,
         })
+        await recordVisitBump(match.id, page.properties?.['日期']?.date?.start ?? '')
       }
       linked++
     }

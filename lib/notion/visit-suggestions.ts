@@ -25,7 +25,7 @@
  */
 import { getRedisValue, setRedisValue } from './shared'
 import { listCustomersByArea, getAllSystemCustomers, NON_CLAIMABLE_OWNERS } from './customers'
-import { scanCustomerVisitSignals, type CustomerVisitSignal } from './visits'
+import { scanCustomerVisitSignals, getVisitBumps, type CustomerVisitSignal } from './visits'
 import { listTerritories } from './territories'
 import { isInactiveCustomer } from '@/lib/customer-status'
 import { getEventFootprints, FOOTPRINT_WINDOW_DAYS, type EventFootprint } from '@/lib/registration-footprint'
@@ -48,7 +48,17 @@ export async function getVisitSignals() {
 
 async function getSignals() {
   const cached = await getRedisValue<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }>(SIGNALS_CACHE_KEY)
-  return cached ?? refreshSuggestionMaps()   // 冷啟動當場算，之後由每晚 cron 保鮮
+  const base = cached ?? await refreshSuggestionMaps()   // 冷啟動當場算，之後由每晚 cron 保鮮
+  // 併入白天剛建檔／剛關聯的拜訪（recordVisitBump），不必等每晚重建；不改快取本體
+  const bumps = await getVisitBumps()
+  if (!Object.keys(bumps).length) return base
+  const signals = { ...base.signals }
+  for (const [id, day] of Object.entries(bumps)) {
+    const cur = signals[id]
+    if (!cur) signals[id] = { lastVisit: day, visitCount: 1, lastReaction: '', lastReactionDate: '', openFollowUp: null }
+    else if (day > cur.lastVisit) signals[id] = { ...cur, lastVisit: day }
+  }
+  return { ...base, signals }
 }
 
 // ── 訊號權重 ───────────────────────────────────────────────────
