@@ -464,7 +464,7 @@ async function invalidateCustomerCaches() {
   try { await deleteRedisValue('region-stats-rows-v2'); await deleteRedisValue('customers-with-codes-v5') } catch {}
   // 課程／活動客戶清單（lib/event-customers.ts，快取 10 分鐘）帶著負責業務；認領／指派後不清，
   // 剛認領的客戶會繼續顯示「轄區未認領／無人負責」最多 10 分鐘。只刪鍵、不 import 組合層。
-  deleteRedisValue('event-customers-v1')
+  deleteRedisValue('event-customers-v2')
 }
 
 /**

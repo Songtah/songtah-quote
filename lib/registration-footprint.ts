@@ -376,7 +376,7 @@ const FOOTPRINTS_CACHE_KEY = 'event-footprints-v1'
 /** 人工調整配對後呼叫，讓拜訪建議立即反映 */
 export function invalidateEventFootprints() {
   deleteRedisValue(FOOTPRINTS_CACHE_KEY)
-  deleteRedisValue('event-customers-v1')   // 首頁「課程／活動客戶」視窗（lib/event-customers）
+  deleteRedisValue('event-customers-v2')   // 首頁「課程／活動客戶」視窗（lib/event-customers）
 }
 
 /** 客戶 id（去 dash）→ 最近一次足跡。已到場優先於報名。快取 1 小時，配對寫入時清除。 */

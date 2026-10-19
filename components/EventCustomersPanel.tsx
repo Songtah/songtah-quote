@@ -4,6 +4,7 @@
  * EventCustomersPanel —— 業務首頁「課程／活動客戶」
  *
  * 參加（或報名了）課程、展會，但之後還沒被拜訪的客戶。純檢視，拜訪回報後自動消失，業務不需操作。
+ * 課後 60 天到期：最後 14 天標「剩 N 天」；過期仍未拜訪者主管再看 30 天「逾期未拜訪」，不默默消失。
  * 主管看全部並標出歸屬；中央管理可把無人負責／公司戶直接指派給業務。
  * 資料規則見 lib/event-customers.ts；地址電話不在此顯示（未認領客戶資料保護）。
  */
@@ -17,7 +18,12 @@ type Item = {
   owner: string; territoryOwner: string
   eventName: string; eventDate: string; upcoming: boolean; status: string; source: string
   lastVisit: string; scope: Scope
+  daysLeft: number | null; overdue: boolean
 }
+type Filter = '' | Scope | 'expiring' | 'overdue'
+/** 與 lib/event-customers.ts EXPIRING_SOON_DAYS 一致 */
+const EXPIRING_SOON_DAYS = 14
+const isExpiring = (i: Item) => !i.overdue && i.daysLeft !== null && i.daysLeft <= EXPIRING_SOON_DAYS
 
 const SCOPE_LABEL: Record<Scope, string> = {
   mine: '我的客戶', territory: '轄區未認領', unowned: '無人負責', company: '公司戶', other: '同事負責',
@@ -37,7 +43,7 @@ export function EventCustomersPanel() {
   const [assignable, setAssignable] = useState<string[]>([])
   const [pick, setPick] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState('')
-  const [filter, setFilter] = useState<'' | Scope>('')
+  const [filter, setFilter] = useState<Filter>('')
   const [visible, setVisible] = useState(PAGE)
   const [error, setError] = useState('')
   const [done, setDone] = useState('')
@@ -64,7 +70,10 @@ export function EventCustomersPanel() {
     for (const i of items ?? []) c[i.scope] = (c[i.scope] ?? 0) + 1
     return c
   }, [items])
-  const filtered = (items ?? []).filter((i) => !filter || i.scope === filter)
+  const expiringCount = (items ?? []).filter(isExpiring).length
+  const overdueCount = (items ?? []).filter((i) => i.overdue).length
+  const filtered = (items ?? []).filter((i) =>
+    !filter ? true : filter === 'expiring' ? isExpiring(i) : filter === 'overdue' ? i.overdue : i.scope === filter)
 
   async function assign(item: Item) {
     const to = pick[item.customerId] || item.territoryOwner
@@ -111,6 +120,7 @@ export function EventCustomersPanel() {
         {items && (
           <div className="flex shrink-0 items-center gap-2">
             {upcomingCount > 0 && <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">即將上課 {upcomingCount}</span>}
+            {overdueCount > 0 && <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600">逾期未拜訪 {overdueCount}</span>}
             <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{items.length} 家</span>
           </div>
         )}
@@ -120,7 +130,7 @@ export function EventCustomersPanel() {
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
       {done && <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">{done}</p>}
 
-      {Object.keys(counts).length > 1 && (
+      {(Object.keys(counts).length > 1 || expiringCount > 0 || overdueCount > 0) && (
         <div className="mt-4 flex flex-wrap gap-1.5">
           <button onClick={() => { setFilter(''); setVisible(PAGE) }}
             className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === '' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
@@ -132,6 +142,18 @@ export function EventCustomersPanel() {
               {SCOPE_LABEL[s]} {counts[s]}
             </button>
           ))}
+          {expiringCount > 0 && (
+            <button onClick={() => { setFilter('expiring'); setVisible(PAGE) }}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'expiring' ? 'bg-stone-800 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
+              即將到期 {expiringCount}
+            </button>
+          )}
+          {overdueCount > 0 && (
+            <button onClick={() => { setFilter('overdue'); setVisible(PAGE) }}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'overdue' ? 'bg-stone-800 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
+              逾期未拜訪 {overdueCount}
+            </button>
+          )}
         </div>
       )}
 
@@ -161,6 +183,16 @@ export function EventCustomersPanel() {
                     {i.upcoming ? '已報名，可先拜訪提醒出席' : i.status === '已到場' ? '有出席' : '有報名'}
                   </span>
                 </p>
+                {i.overdue && (
+                  <p className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                    課後超過 60 天仍未拜訪（逾期 {-(i.daysLeft ?? 0)} 天）
+                  </p>
+                )}
+                {isExpiring(i) && (
+                  <p className="mt-1.5 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                    {i.daysLeft === 0 ? '今天到期' : `剩 ${i.daysLeft} 天到期`}，拜訪後自動消失
+                  </p>
+                )}
                 <p className="mt-1 text-[11px] text-stone-400">
                   {i.lastVisit ? `上次拜訪 ${i.lastVisit}` : '尚無拜訪紀錄'}
                   {viewingAll && i.scope === 'unowned' && i.territoryOwner && `・轄區 ${i.territoryOwner}（不承接新客戶）`}

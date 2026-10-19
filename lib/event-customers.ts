@@ -6,7 +6,7 @@
  *
  * 列入條件（任一不符即不列）：
  *   1. 報名紀錄已配對客戶，狀態不是取消（getEventFootprints 已處理，每家取最近一次）
- *   2. 活動還沒辦，或辦完 60 天內
+ *   2. 活動還沒辦，或辦完 60 天內（業務）；主管多看 30 天「逾期未拜訪」，不讓沒人追的客戶默默消失
  *   3. 活動之後尚無拜訪紀錄 —— 拜訪回報後自動消失（拜訪訊號每晚重建，最慢隔天消失）
  *   4. 客戶機構狀態不是歇業類
  * 歸屬：
@@ -37,6 +37,8 @@ export type EventCustomer = {
   status: string             // 已報名／已確認／已到場
   source: string
   lastVisit: string
+  daysLeft: number | null    // 距 60 天到期還剩幾天（未上課＝null；負數＝已逾期）
+  overdue: boolean           // 超過 60 天仍未拜訪：只給主管看
 }
 
 export type EventCustomerScope = 'mine' | 'territory' | 'unowned' | 'company' | 'other'
@@ -44,7 +46,11 @@ export type EventCustomerScope = 'mine' | 'territory' | 'unowned' | 'company' | 
 const todayTW = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 const daysSince = (d: string) => Math.floor((Date.parse(todayTW()) - Date.parse(d.slice(0, 10))) / 86400e3)
 
-const CACHE_KEY = 'event-customers-v1'
+const CACHE_KEY = 'event-customers-v2'   // v2＝加 daysLeft／overdue；失效點在 customers.ts、visits.ts
+/** 到期前幾天開始提醒「剩 N 天」 */
+export const EXPIRING_SOON_DAYS = 14
+/** 過了 60 天仍未拜訪，主管視角再保留幾天標「逾期未拜訪」 */
+const OVERDUE_GRACE_DAYS = 30
 const CACHE_TTL = 10 * 60_000
 
 /** 全部符合條件的課程客戶（未分歸屬）。客戶主檔逐筆讀取、5 筆一批，結果快取 10 分鐘。 */
@@ -57,7 +63,7 @@ async function loadAll(): Promise<EventCustomer[]> {
   const candidates = Object.entries(footprints).filter(([key, fp]: [string, EventFootprint]) => {
     if (!fp.date) return false
     const upcoming = fp.date > today
-    if (!upcoming && daysSince(fp.date) > FOOTPRINT_WINDOW_DAYS) return false
+    if (!upcoming && daysSince(fp.date) > FOOTPRINT_WINDOW_DAYS + OVERDUE_GRACE_DAYS) return false
     const lastVisit = signals[key]?.lastVisit ?? ''
     return !lastVisit || lastVisit < fp.date
   })
@@ -70,18 +76,22 @@ async function loadAll(): Promise<EventCustomer[]> {
     details.forEach((c, j) => {
       if (!c || isInactiveCustomer(c.status) || c.salesperson === '盤商') return
       const [key, fp] = batch[j]
+      const upcoming = fp.date > today
+      const daysLeft = upcoming ? null : FOOTPRINT_WINDOW_DAYS - daysSince(fp.date)
       out.push({
         customerId: c.id, name: c.name, type: c.type, city: c.city, district: c.district,
         owner: c.salesperson,
         territoryOwner: territoryOwner(ctx, c.city, c.district),
-        eventName: fp.eventName, eventDate: fp.date, upcoming: fp.date > today,
+        eventName: fp.eventName, eventDate: fp.date, upcoming,
         status: fp.status, source: fp.source,
         lastVisit: signals[key]?.lastVisit ?? '',
+        daysLeft, overdue: daysLeft !== null && daysLeft < 0,
       })
     })
   }
   // 快到的課排前面（提醒出席），其次最近剛上完的
   out.sort((a, b) =>
+    Number(a.overdue) - Number(b.overdue) ||
     Number(b.upcoming) - Number(a.upcoming) ||
     (a.upcoming ? a.eventDate.localeCompare(b.eventDate) : b.eventDate.localeCompare(a.eventDate)) ||
     a.name.localeCompare(b.name, 'zh-TW'))
@@ -101,5 +111,6 @@ export async function listEventCustomers(params: { viewer: string; manager: bool
   const canClaim = (name: string) => ctx.canClaimBy.get(name) === true
   const items = all.map((c) => ({ ...c, scope: scopeFor(c, params.viewer, canClaim) }))
   if (params.manager) return items
-  return items.filter((c) => c.scope === 'mine' || c.scope === 'territory')
+  // 逾期未拜訪只給主管看；業務清單維持 60 天內，不越積越長
+  return items.filter((c) => !c.overdue && (c.scope === 'mine' || c.scope === 'territory'))
 }

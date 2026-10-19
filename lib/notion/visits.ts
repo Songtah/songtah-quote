@@ -345,7 +345,7 @@ export async function recordVisitBump(customerId: string, date: string): Promise
   const id = (customerId ?? '').replace(/-/g, '')
   const day = (date ?? '').slice(0, 10)
   if (!id || !day) return
-  deleteRedisValue('event-customers-v1')   // 課程客戶清單（快取 10 分鐘）帶著最近拜訪日
+  deleteRedisValue('event-customers-v2')   // 課程客戶清單（快取 10 分鐘）帶著最近拜訪日
   const r = getRedis()
   if (!r) return
   try {
