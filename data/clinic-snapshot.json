@@ -1,18 +1,21 @@
 {
   "month": "2026-10",
-  "fetchedAt": "2026-10-14T09:30:10.586Z",
+  "fetchedAt": "2026-10-20T07:32:59.762Z",
   "source": "mohw-bas",
-  "totalClinics": 7149,
-  "totalLabs": 1103,
+  "totalClinics": 7150,
+  "totalLabs": 1104,
   "totalHospitals": 188,
   "labsStale": false,
-  "pendingRemaining": 0,
-  "prevTotalClinics": 7150,
+  "pendingRemaining": 1,
+  "prevTotalClinics": 7149,
   "prevTotalLabs": 1103,
   "prevTotalHospitals": 188,
   "totalCustomers": 8164,
   "newCodes": [
-    "3711061301"
+    "3707300564",
+    "竣禾顯微牙醫診所__新北市__板橋區",
+    "2Y01100394",
+    "2Y31010670"
   ],
   "codes": {
     "1101010012": {
@@ -23473,6 +23476,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "小滿齒科牙醫診所",
+      "address": "高雄市左營區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3707300564": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "101牙醫診所",
       "address": "高雄市左營區",
       "specialty": "",
       "termDate": "",
@@ -47787,15 +47799,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3732070266": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "漾白牙醫診所",
-      "address": "桃園市龜山區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3732071307": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -65643,6 +65646,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "竣禾顯微牙醫診所__新北市__板橋區": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "竣禾顯微牙醫診所",
+      "address": "新北市板橋區",
+      "specialty": "",
+      "termDate": "",
+      "status": ""
+    },
     "0633030010": {
       "source": "mohw",
       "kind": "醫院",
@@ -70251,6 +70263,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "2Y01100394": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "貝倫牙體技術所",
+      "address": "臺北市中山區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "2Y32010110": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -72339,6 +72360,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "2Y31010670": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "榮暄牙體技術所",
+      "address": "新北市板橋區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "2Y03250011": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -73271,15 +73301,6 @@
       "kind": "牙體技術所",
       "name": "上承牙體技術所",
       "address": "桃園市平鎮區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "2Y01010171": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "貝倫牙體技術所",
-      "address": "臺北市松山區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
