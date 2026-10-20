@@ -369,6 +369,8 @@ export async function getVisitBumps(): Promise<Record<string, string>> {
 }
 
 export async function createVisit(data: {
+  /** 對口（Claude 從客情抽出，例：小凱老闆｜負責訂貨），寫入「聯絡人」 */
+  contactPerson?: string
   customerName: string
   date: string
   salesperson: string
@@ -422,6 +424,7 @@ export async function createVisit(data: {
         ...(data.customerReaction ? { 客戶反應: { select: { name: data.customerReaction } } } : {}),
         ...(data.followUpAction ? { 後續動作: { rich_text: richText(data.followUpAction) } } : {}),
         是否需追蹤: { checkbox: data.needsFollowUp ?? false },
+        ...(data.contactPerson ? { 聯絡人: { rich_text: richText(data.contactPerson) } } : {}),
         ...(data.nextFollowUpDate ? { 下次追蹤日: { date: { start: data.nextFollowUpDate } } } : {}),
       } as any,
     })

@@ -12,6 +12,7 @@
  * 冪等：同業務、同日期、同客戶（名稱字根）已有紀錄就略過——同一則日報重送、重試、補匯都不會重複。
  */
 import { parseDailyReport, devStageForReaction, reportDateOf, resultLineCount } from '@/lib/line-daily-report'
+import { classifyVisitReaction } from '@/lib/visit-reaction-ai'
 import { businessDayOf } from '@/lib/line-report-window'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/notion/visits'
 import { searchSystemCustomers, advanceCustomerDevStage } from '@/lib/notion/customers'
@@ -110,9 +111,14 @@ export async function ingestDailyReport(input: {
   const matchCtx = await loadMatchContext()
   const aliases = await loadAliases().catch(() => ({ manual: {}, learned: {} }))
 
+  // 客戶反應與對口由 Claude 判讀（lib/visit-reaction-ai.ts），整則日報平行處理以免拖慢建檔。
+  // 判讀失敗就留白，不退回關鍵字規則——那套規則「確認下單」實測只有約三成正確（2026-10-20）。
+  const ai = input.dryRun ? [] : await Promise.all(byName.map((v) => classifyVisitReaction(v.content).catch(() => null)))
+
   // ── 第一階段：全部先建檔（最重要，確保紀錄進系統）──
   const createdVisits: { customerId?: string; unambiguous: boolean; reaction: string; name: string }[] = []
-  for (const visit of byName) {
+  for (let vi = 0; vi < byName.length; vi++) {
+    const visit = byName[vi]
     try {
       // 比對一律走 matchVisitCustomer（慣用稱呼記憶 → 名稱字根＋業務脈絡），與夜間補關聯同一套規則
       const res = await matchVisitCustomer({
@@ -136,7 +142,8 @@ export async function ingestDailyReport(input: {
         result.planned!.push({ customer: visit.customerName, date: report.date, content: visit.content })
         continue
       }
-      const reaction = formOptions!.customerReactions.includes(visit.customerReaction) ? visit.customerReaction : ''
+      const judged = ai[vi]
+      const reaction = judged?.reaction && formOptions!.customerReactions.includes(judged.reaction) ? judged.reaction : ''
 
       await createVisit({
         customerName: visit.customerName,
@@ -154,6 +161,7 @@ export async function ingestDailyReport(input: {
         address: '', city: '', district: '',
         tags: [],
         competitorEquipment: detectCompetitors(visit.content, formOptions!.competitorOptions),
+        contactPerson: judged?.contact || undefined,
         interestedProductIds: [],
       })
       result.created++

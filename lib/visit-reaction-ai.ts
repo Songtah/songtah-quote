@@ -8,7 +8,7 @@
  *
  * 做法：Claude Haiku 依明確定義判讀並交出原文依據 → 系統檢核（依據須逐字出現在原文；
  * 確認下單須有已下單／明確承諾的說法；低把握一律留白）。寧可漏判、不可誤判。
- * 呼叫失敗回 null，呼叫端退回關鍵字規則，不影響日報建檔。
+ * 呼叫失敗回 null，呼叫端留白，不影響日報建檔。
  */
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -80,7 +80,10 @@ const SYSTEM = `你是牙科材料代理商的業務主管，負責判讀業務�
 1. 一次拜訪有多個反應時，選「推進最遠」的：確認下單 > 要求報價 > 同意試用 > 價格有疑慮 > 積極詢問 > 有興趣待確認 > 安排再次拜訪 > 持觀望態度 > 使用競品 > 近期無需求 > 反應冷淡。
 2. evidence 必須是紀錄中「逐字」出現的一段文字（10 到 40 字），不可改寫、不可摘要。選「無明確反應」時 evidence 留空字串。
 3. confidence：證據直接明確選「高」；需要推敲選「中」；勉強才選「低」。
-4. contact：格式「稱呼｜角色」，例如「小凱老闆｜負責訂貨、確認新品項」「邱醫師｜大型機器購買決定權」。紀錄沒提到就留空字串。不要把業務自己、公司同事寫成對口。
+4. contact：格式「稱呼｜角色」，例如「小凱老闆｜負責訂貨、確認新品項」「邱醫師｜大型機器購買決定權」。
+   - 只寫有具體稱呼的人（含姓氏或名字，如林主任、小凱老闆、彭理事長）；只有職稱（老闆、醫師、院長、技師）就留空字串。
+   - 角色只寫紀錄裡明說的（負責訂貨、採購決定、主要聯絡）；沒明說就只寫稱呼、不加「｜」。
+   - 不要寫公司自己的人：業務、技術人員、行政（例如 Ray、Luca、王小姐、林總）。
 
 範例：「主要現在都是小凱老闆在負責訂貨與確認新品項 已留名片 晚上會聯絡」
 → reaction：無明確反應（只是認識對口；晚上聯絡是業務自己的安排），contact：小凱老闆｜負責訂貨、確認新品項`
@@ -97,8 +100,14 @@ const SCHEMA = {
   additionalProperties: false,
 } as const
 
-// 「確認下單」的依據必須有已完成或明確承諾的購買說法；否則降級留白
-const ORDER_COMMIT = /已下單|下單了|下訂|已訂|訂了|要了|買了|已購買|購買了|確認購買|確認會購買|會購買|決定購買|決定買|簽約|簽合約|叫貨|下單\S{0,6}\d|訂購\S{0,8}\d|購買\S{0,8}\d|要\d|訂\d|買\d|告知下單|先購買|先買/
+// 「確認下單」的依據若帶有可疑字眼（關心、追蹤、意願、負責、之前、需要時、考慮…）且沒有明確的購買說法，降級留白。
+// 2026-10-20 驗證集：原本改成「必須出現指定說法才放行」，把「黃醫師購買一組」「要訂石膏5箱」「asiga合約簽訂」
+// 「另外加購BUR」等 12 筆真下單全擋掉；AI 本身判確認下單約九成正確，所以改成只擋可疑者。
+const ORDER_DOUBT = /關心|追蹤|意願|負責|決定權|之前|以前|上次|上週|曾經|需要時|用完|考慮|評估|討論中|詢問/
+const ORDER_COMMIT = /已下單|下單了|下訂|已訂|訂了|要了|買了|已購買|購買了|確認購買|確定要買|確認會購買|決定購買|簽約|簽合約|簽訂|叫了|加購|另外訂|要訂|告知下單|一(組|箱|盒|罐|片|支|包|瓶|桶|台|顆|套)|\d\s*(組|箱|盒|罐|片|支|包|瓶|桶|台|顆|套)/
+// 公司內部人員不是對口；只有職稱沒有稱呼的也不算
+const INTERNAL_NAMES = /^(Ray|Luca|Paul|Aaron|Ted|Otis|Hank|Duncan|Eason|Sam|Edward|Amy|Gus|Chloe|王小姐|林總|小黃|小郭|小宏|致廷|業務|公司)/i
+const TITLE_ONLY = /^(老闆|老板|老闆娘|老板娘|闆娘|小老闆|院長|副院長|醫師|醫生|技師|技師長|主任|經理|採購|助理|窗口|櫃台|女兒|兒子|理事長|所長|總監|老師|醫工|師傅|大哥|大姐)$/
 const norm = (s: string) => (s ?? '').replace(/\s+/g, '')
 
 let client: Anthropic | null = null
@@ -107,29 +116,46 @@ function getClient(): Anthropic | null {
   return (client ??= new Anthropic())
 }
 
-/** 判讀一筆客情。未設定金鑰或 API 失敗回 null（呼叫端退回關鍵字規則）。 */
+/** 一筆客情的判讀請求參數（單筆判讀與批次重跑共用，確保兩邊同一套指示） */
+export function reactionRequestParams(text: string) {
+  return {
+    model: REACTION_MODEL,
+    max_tokens: 2000,
+    system: [{ type: 'text' as const, text: SYSTEM, cache_control: { type: 'ephemeral' as const } }],
+    output_config: { effort: 'low' as const, format: { type: 'json_schema' as const, schema: SCHEMA as any } },
+    messages: [{ role: 'user' as const, content: `拜訪紀錄：\n${(text ?? '').trim().slice(0, 3000)}` }],
+  }
+}
+
+/** 把模型回覆解析成檢核後的結果；拒答、被截斷、格式不對回 null */
+export function parseReactionMessage(text: string, res: Pick<Anthropic.Message, 'content' | 'stop_reason'>): ReactionResult | null {
+  if (res.stop_reason === 'refusal' || res.stop_reason === 'max_tokens') return null
+  const out = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
+  if (!out) return null
+  try {
+    return guard(text, JSON.parse(out.text))
+  } catch {
+    return null
+  }
+}
+
+/** 判讀一筆客情。未設定金鑰或 API 失敗回 null（呼叫端留白）。 */
 export async function classifyVisitReaction(text: string): Promise<ReactionResult | null> {
   const body = (text ?? '').trim()
   if (!body) return { reaction: '', evidence: '', confidence: '高', contact: '', note: '空白內容' }
   const c = getClient()
   if (!c) return null
   try {
-    const res = await c.messages.create({
-      model: REACTION_MODEL,
-      max_tokens: 2000,
-      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA as any } },
-      messages: [{ role: 'user', content: `拜訪紀錄：\n${body.slice(0, 3000)}` }],
-    } as any)
-    if (res.stop_reason === 'refusal' || res.stop_reason === 'max_tokens') return null
-    const out = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
-    if (!out) return null
-    const raw = JSON.parse(out.text) as { reaction: string; evidence: string; confidence: '高' | '中' | '低'; contact: string }
-    return guard(body, raw)
+    const res = await c.messages.create(reactionRequestParams(body) as any)
+    return parseReactionMessage(body, res as Anthropic.Message)
   } catch (e) {
-    console.warn('[visit-reaction-ai] 判讀失敗，退回關鍵字規則:', (e as Error)?.message ?? e)
+    console.warn('[visit-reaction-ai] 判讀失敗:', (e as Error)?.message ?? e)
     return null
   }
+}
+
+export function getReactionClient(): Anthropic | null {
+  return getClient()
 }
 
 /** 系統檢核：依據要逐字出現在原文、低把握留白、確認下單要有承諾說法、對口要真的出現在原文 */
@@ -140,10 +166,15 @@ export function guard(text: string, raw: { reaction: string; evidence: string; c
   let note = ''
   if (reaction && (!evidence || !t.includes(norm(evidence)))) { note = `依據不在原文：${evidence}`; reaction = '' }
   if (reaction && raw.confidence === '低') { note = '把握低，留白'; reaction = '' }
-  if (reaction === '確認下單' && !ORDER_COMMIT.test(norm(evidence))) { note = `確認下單缺承諾說法：${evidence}`; reaction = '' }
-  // 對口：稱呼（｜前）至少要有兩個字出現在原文，避免模型自己編人名
+  if (reaction === '確認下單' && ORDER_DOUBT.test(evidence) && !ORDER_COMMIT.test(evidence)) { note = `確認下單證據可疑：${evidence}`; reaction = '' }
+  // 對口：要有具體稱呼、出現在原文、不是公司內部人員；角色寫「未註明」之類的就只留稱呼
   let contact = (raw.contact ?? '').trim()
-  const who = norm(contact.split('｜')[0] ?? '')
-  if (contact && (who.length < 2 || !t.includes(who.slice(0, 2)))) contact = ''
+  const [whoRaw, roleRaw = ''] = contact.split('｜')
+  const who = norm(whoRaw).replace(/[（(].*$/, '')
+  const role = /未(註明|說明|明|載明|提)|不明|待確認|角色/.test(roleRaw) ? '' : roleRaw.trim()
+  // 「技師、經理」「總公司採購」「主要技師」這類泛稱也不算具體對口
+  const generic = /、/.test(who) || TITLE_ONLY.test(who.replace(/^(總公司|主要|年輕|資深|新)/, ''))
+  if (!who || who.length < 2 || generic || INTERNAL_NAMES.test(who) || !t.includes(who.slice(0, 2))) contact = ''
+  else contact = role ? `${who}｜${role.slice(0, 24)}` : who
   return { reaction, evidence: reaction ? evidence : '', confidence: raw.confidence, contact: contact.slice(0, 60), note }
 }
