@@ -925,7 +925,8 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
     throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
   }
   await notionCallWithRetry('updateCustomerStatus', () =>
-    notion.pages.update({ page_id: id, properties: { '機構狀態': { select: { name: status } } } as any })
+    // 空字串＝清空（客情歇業偵測復原時，原值可能是空白）
+    notion.pages.update({ page_id: id, properties: { '機構狀態': { select: status ? { name: status } : null } } as any })
   )
   // 失效客戶快取，使下次比對讀到新狀態
   deleteRedisValue('customers-with-codes-v5')

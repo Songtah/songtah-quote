@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, createContext, useContext } from 'react'
+import { VisitClosuresPanel } from '@/components/VisitClosuresPanel'
 import type {
   MonitorResult, NewOpening,
   SuspectedClosure, CodeNotFound,
@@ -2100,6 +2101,9 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
               </div>
             </div>
           </div>
+
+          {/* 客情回報歇業：每晚自動寫入機構狀態，這裡看紀錄與復原 */}
+          <VisitClosuresPanel />
 
           {/* 待處理：需要人（或一鍵處理）動手的佇列 */}
           <div className="space-y-3">
