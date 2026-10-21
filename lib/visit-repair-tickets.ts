@@ -68,10 +68,16 @@ const daysAgo = (d: string) => (Date.parse(today()) - Date.parse(d)) / 86400_000
  * 主管通知：發到「崧達售後服務報修詢問群組」（官方帳號已加入；群組 ID 由 webhook 記錄，見 lib/line-groups.ts）。
  * TECH_MANAGER_LINE_ID 有設定時以它為準；群組還沒被記錄到（群組裡還沒人發過言）就略過。
  */
-async function notifyManager(text: string) {
+export async function notifyManager(text: string): Promise<boolean> {
   const to = process.env.TECH_MANAGER_LINE_ID || await findLineGroupByName(/售後服務|報修/).catch(() => '')
-  if (!to) return
-  await pushLineMessage(to, text).catch((e) => console.warn('[repair-ticket] LINE 通知失敗:', e?.message ?? e))
+  if (!to) return false
+  try {
+    await pushLineMessage(to, text)
+    return true
+  } catch (e: any) {
+    console.warn('[repair-ticket] LINE 通知失敗:', e?.message ?? e)
+    return false
+  }
 }
 
 /** 由一筆客情開工單或補進既有工單 */
