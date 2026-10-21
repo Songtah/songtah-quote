@@ -253,7 +253,14 @@ const NON_VISIT_KEYWORDS = [
   // 2026-09-23 比對 Duncan 2～9 月日報時發現的內部作業（出貨、備品、內訓、行政）
   '周會', '品相', '內訓', '問卷', '展會', '報價確認', '合約內容', '聯絡追蹤', '更新notion', '更新Notion',
   '晨會', '潛在名單',
+  // 2026-10-21 Amy「和Meko確認申請書填寫方式，確認完成明日將申請書寄回至公司」、Gus「公司黃單寄回」：
+  // 內部行政作業，客戶名稱不會出現這些字
+  '寄回', '黃單', '代墊', '申請書', '報帳', '填寫方式', '簽呈',
 ]
+
+// 「和／跟」開頭＋協調用語＝對內溝通（和Meko確認…、跟經理討論…）。不能只看開頭：
+// 真的客戶也有「和心齒模工作室」「和欣牙體技術所」，所以要同時出現協調用語才排除。
+const COORDINATION_ENTRY = /^(和|跟)\S{1,8}?(確認|討論|對帳|溝通|協調|說明|請教|回報|聯繫|開會)/
 
 // 明顯的任務描述動詞開頭（不是客戶名稱）
 // 「與…」一律排除：與公司討論、與經理確認替代產品、與小胖對帳……開頭是「與」的都是對內溝通，
@@ -265,11 +272,12 @@ const TASK_VERB_PREFIXES = [
   '9:', '19:', '08:', '10:', '11:', '12:', '13:', '14:', '15:', '16:', '17:', '18:',
 ]
 
-function isNonVisitEntry(name: string): boolean {
+export function isNonVisitEntry(name: string): boolean {
   // 關鍵字比對
   if (NON_VISIT_KEYWORDS.some((kw) => name.includes(kw))) return true
   // 任務動詞開頭
   if (TASK_VERB_PREFIXES.some((p) => name.startsWith(p))) return true
+  if (COORDINATION_ENTRY.test(name)) return true
   // Notion 資料維護（Key notion、更新 NOTION…）大小寫寫法很多，一律排除
   if (/notion/i.test(name)) return true
   // 名稱含 & 代表是多任務描述，不是客戶
