@@ -3,7 +3,7 @@
 本文件整理每個導覽分頁的用途、資料來源、權限與編寫原則，供新增功能或改版時對照。
 全站共用設計語言與資料鐵則見 `CLAUDE.md`，重點：
 - **柔深度取代框線**、品牌色 `brand-500` 為唯一 accent、膠囊與大圓角、中性色用 stone。
-- **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/價格/規格歸 `public/products_catalog.json`；圖片/介紹歸 Notion。
+- **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/價格/規格歸 `data/catalog/products_catalog.json`（含內部價，僅伺服器端讀取，禁止放 `public/`）；圖片/介紹歸 Notion。
 - **價格快照**：報價/訂單一旦成立，品名與單價定格於單據，禁止連動主檔。
 - 所有可檢視模組受 `帳號權限` 控管（`module.view` / `module.edit`），admin 看全部。
 
@@ -74,7 +74,7 @@
 ## 產品 `/products/catalog`
 
 - **用途**：產品目錄管理——瀏覽全部 SKU，編輯售價、圖片與介紹。
-- **資料來源**：`public/products_catalog.json`（6000+ SKU 靜態主檔）＋ Notion（圖片/介紹）。
+- **資料來源**：`data/catalog/products_catalog.json`（6000+ SKU 靜態主檔）＋ Notion（圖片/介紹）。
 - **編寫原則**
   - 欄位擁有權嚴格分離（見上方鐵則）；貨號/品名唯讀，分類/價格改 JSON。
   - 新增/異動分類後必跑 `scripts/validate_categories.py`，0 錯誤才上線。

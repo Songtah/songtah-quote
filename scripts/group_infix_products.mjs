@@ -6,8 +6,8 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const CATALOG_PATH = resolve(ROOT, 'public/products_catalog.json')
-const FAMILIES_PATH = resolve(ROOT, 'public/product_families.json')
+const CATALOG_PATH = resolve(ROOT, 'data/catalog/products_catalog.json')
+const FAMILIES_PATH = resolve(ROOT, 'data/catalog/product_families.json')
 const WRITE_MODE = process.argv.includes('--write')
 const REPORT_JSON_PATH = resolve(ROOT, WRITE_MODE ? 'tmp/infix-series-write-report.json' : 'tmp/infix-series-dry-run.json')
 const REPORT_MD_PATH = resolve(ROOT, WRITE_MODE ? 'tmp/infix-series-write-report.md' : 'tmp/infix-series-dry-run.md')

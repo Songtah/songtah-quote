@@ -8,8 +8,10 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@react-pdf/renderer'],
     // 操作手冊以 fs 在執行時讀取，明確打包進 serverless 函式，避免部署後讀不到檔案
+    // 產品目錄／系列 JSON 含內部基準價，放 data/catalog（不公開），所有路由的函式都帶上
     outputFileTracingIncludes: {
       '/support/manual': ['./content/support/**'],
+      '/**/*': ['./data/catalog/**'],
     },
   },
   async headers() {

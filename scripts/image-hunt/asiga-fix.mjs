@@ -10,7 +10,7 @@ import path from 'path'
 const ROOT = '/Users/ted/Desktop/Songtah/quote-system'
 const WORKSPACE = '/Users/ted/Desktop/Songtah/產品圖片工作區'
 
-const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/products_catalog.json'), 'utf8'))
+const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/catalog/products_catalog.json'), 'utf8'))
 const { targets } = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'targets.json'), 'utf8'))
 
 const asiga = catalog.filter((p) => p.brand === 'ASIGA' && !p.discontinued && p.productType !== '維修料件' && p.productType !== '待確認')

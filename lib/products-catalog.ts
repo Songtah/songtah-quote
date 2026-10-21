@@ -1,11 +1,16 @@
 /**
- * Static product catalog loaded from public/products_catalog.json
- * and public/product_families.json.
+ * Static product catalog loaded from data/catalog/products_catalog.json
+ * and data/catalog/product_families.json.
  *
  * This replaces the Notion-based product search for the full 6 000+ SKU catalog.
  * Notion remains the source of truth for "rich" product pages (images, pricing, specs).
+ *
+ * 資安（2026-10-21）：目錄含內部基準價，刻意不放 public/（否則未登入即可直接下載）。
+ * 只在伺服器端以 fs 讀取，next.config.mjs 的 outputFileTracingIncludes 負責打包進
+ * serverless 函式；`server-only` 確保任何 client component 誤 import 時 build 直接失敗。
  */
 
+import 'server-only'
 import path from 'path'
 import fs from 'fs'
 import Fuse from 'fuse.js'
@@ -58,7 +63,7 @@ export interface ProductFamily {
 // ── Data loading (server-side, cached in module scope) ───────────────────────
 
 function loadJson<T>(filename: string): T {
-  const filePath = path.join(process.cwd(), 'public', filename)
+  const filePath = path.join(process.cwd(), 'data', 'catalog', filename)
   const raw = fs.readFileSync(filePath, 'utf-8')
   return JSON.parse(raw) as T
 }

@@ -11,7 +11,7 @@ import path from 'path'
 const ROOT = process.cwd()
 const WORKSPACE = '/Users/ted/Desktop/Songtah/產品圖片工作區'
 const WRITE = process.argv.includes('--write')
-const CATALOG_PATH = path.join(ROOT, 'public/products_catalog.json')
+const CATALOG_PATH = path.join(ROOT, 'data/catalog/products_catalog.json')
 
 const decisions = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'decisions.json'), 'utf8'))
 const { targets } = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'targets.json'), 'utf8'))

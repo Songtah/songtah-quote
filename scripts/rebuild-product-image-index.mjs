@@ -101,7 +101,7 @@ const partitions = [
   { manufacturer: '__empty__', filter: { property: '生產商', select: { is_empty: true } } },
 ]
 const shards = new Map()
-const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/products_catalog.json'), 'utf8'))
+const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/catalog/products_catalog.json'), 'utf8'))
 const catalogBrandByCode = new Map(catalog.map((item) => [item.code, item.brand || '__empty__']))
 const samples = []
 let rowCount = 0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-將「產品價格主檔.xlsx」的售價/優惠價/技術規格合併回 public/products_catalog.json。
+將「產品價格主檔.xlsx」的售價/優惠價/技術規格合併回 data/catalog/products_catalog.json。
 
 用法：
     python3 scripts/merge_catalog_prices.py [Excel路徑]
@@ -19,7 +19,7 @@ from openpyxl import load_workbook
 EXCEL_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser(
     '~/Desktop/Songtah/產品價格主檔.xlsx'
 )
-JSON_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', 'products_catalog.json')
+JSON_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'catalog', 'products_catalog.json')
 
 
 def main():

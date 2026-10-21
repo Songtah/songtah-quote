@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 const GENERATOR_PATH = fileURLToPath(import.meta.url)
 const ROOT = resolve(dirname(GENERATOR_PATH), '..')
-const CATALOG_PATH = resolve(ROOT, 'public/products_catalog.json')
-const FAMILIES_PATH = resolve(ROOT, 'public/product_families.json')
+const CATALOG_PATH = resolve(ROOT, 'data/catalog/products_catalog.json')
+const FAMILIES_PATH = resolve(ROOT, 'data/catalog/product_families.json')
 const RESEARCH_OVERRIDES_PATH = resolve(ROOT, 'data/product_taxonomy_research_overrides.json')
 const WRITE_MODE = process.argv.includes('--write')
 const VERSION = '2026-07-14.v1'
@@ -690,7 +690,7 @@ async function main() {
   const mapOutput = {
     schemaVersion: VERSION,
     generatorSourceHash,
-    source: ['public/products_catalog.json', 'public/product_families.json', 'data/product_taxonomy_research_overrides.json'],
+    source: ['data/catalog/products_catalog.json', 'data/catalog/product_families.json', 'data/product_taxonomy_research_overrides.json'],
     total: records.length,
     items: records,
   }

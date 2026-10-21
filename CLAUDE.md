@@ -41,7 +41,7 @@
 0. **Notion 全庫掃描必用分區**:無過濾的 `databases.query` 分頁在 **10,000 筆處靜默截斷**(has_more 直接 false,2026-07-06 實測 10,655 筆只回 10,000,曾致監控誤判 280 筆重複匯入)。掃全客戶庫一律走 `lib/notion/customers.ts` 的 `scanAllCustomerPages`(按縣市分區+空白批);其他接近萬筆的 DB 全掃比照辦理。
 
 1. **價格快照**：訂單/報價一旦成立，品名與單價定格在單據內，禁止連動主檔。
-2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/目錄基準價/目錄規格摘要歸 `public/products_catalog.json`；中央人工售價覆寫與圖片/介紹/富內容技術規格表/文件歸 Notion。Notion 富內容不得反向覆蓋 ERP 與目錄主檔欄位。
+2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/目錄基準價/目錄規格摘要歸 `data/catalog/products_catalog.json`；中央人工售價覆寫與圖片/介紹/富內容技術規格表/文件歸 Notion。Notion 富內容不得反向覆蓋 ERP 與目錄主檔欄位。**目錄與 `data/catalog/product_families.json` 含內部基準價，禁止放回 `public/`**（2026-10-21 曾可未登入直接下載）；只由 `lib/products-catalog.ts`（`server-only`）讀取、經 withApiAuth API 提供。
 3. **ERP 匯入新品後必跑** `python3 scripts/validate_categories.py`，分類錯誤先修再上線。
 4. **價格更新與優先序**：批次／基準價仍走「改 Excel 主檔 → `scripts/merge_catalog_prices.py` → 驗證 → git push 部署」，價格表比對規則見桌面《價格表比對規則.docx》。中央管理可在產品後台用 Notion `售價` 做單一 SKU 可逆覆寫；有效售價一律為「Notion 正值覆寫 > `products_catalog.json` 基準價 > 待定價」，清空覆寫即回到基準價。產品搜尋、目錄、系列成員、訂購價表、具 SKU 的報價產品來源與促銷伺服器驗價必須共用有效售價；無 SKU 的舊報價產品暫留既有 Notion `價格`，待完成貨號對應後再遷移。新價只影響之後選入的品項，既有訂單／報價價格快照禁止回刷。
 5. **銷售狀態同步**：核對表（桌面《產品目錄核對表》）的「銷售狀態」以貨號（`code`）合併回 `products_catalog.json`——有售價→寫 `price`；已停售／未販售→`discontinued:true` 且 `status` 記細分。**選品器以 `discontinued` 隱藏**：`searchCatalog`（`/api/products/search`，訂貨/報價）過濾掉 discontinued；管理頁走 `getCatalog`／`catalog-raw` 仍全顯示並標狀態徽章。既成單據走價格快照不受影響。

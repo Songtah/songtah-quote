@@ -20,7 +20,7 @@ import sys
 import os
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-CATALOG = os.path.join(ROOT, 'public', 'products_catalog.json')
+CATALOG = os.path.join(ROOT, 'data', 'catalog', 'products_catalog.json')
 TAXONOMY = os.path.join(ROOT, 'data', 'product-taxonomy.json')
 
 # ── 品名 regex → 建議功能分類(新品自動歸位用;由上而下先中先贏)──────

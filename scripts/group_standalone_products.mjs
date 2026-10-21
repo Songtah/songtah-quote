@@ -6,8 +6,8 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const CATALOG_PATH = resolve(ROOT, 'public/products_catalog.json')
-const FAMILIES_PATH = resolve(ROOT, 'public/product_families.json')
+const CATALOG_PATH = resolve(ROOT, 'data/catalog/products_catalog.json')
+const FAMILIES_PATH = resolve(ROOT, 'data/catalog/product_families.json')
 const TAXONOMY_MAP_PATH = resolve(ROOT, 'data/product_taxonomy_map.json')
 const REPORT_JSON_PATH = resolve(ROOT, 'tmp/standalone-series-dry-run.json')
 const REPORT_MD_PATH = resolve(ROOT, 'tmp/standalone-series-dry-run.md')

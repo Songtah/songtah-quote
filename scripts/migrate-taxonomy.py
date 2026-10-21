@@ -14,7 +14,7 @@ from collections import Counter
 from openpyxl import load_workbook
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-CATALOG = os.path.join(ROOT, 'public', 'products_catalog.json')
+CATALOG = os.path.join(ROOT, 'data', 'catalog', 'products_catalog.json')
 TAXONOMY_OUT = os.path.join(ROOT, 'data', 'product-taxonomy.json')
 
 if len(sys.argv) < 2:

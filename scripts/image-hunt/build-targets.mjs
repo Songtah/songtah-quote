@@ -10,8 +10,8 @@ import { extractAttrs } from './attrs.mjs'
 const ROOT = process.cwd()
 const WORKSPACE = '/Users/ted/Desktop/Songtah/產品圖片工作區'
 
-const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/products_catalog.json'), 'utf8'))
-const families = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/product_families.json'), 'utf8'))
+const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/catalog/products_catalog.json'), 'utf8'))
+const families = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/catalog/product_families.json'), 'utf8'))
 
 // 系列成員判定:只認明確列出的 SKU(coveredSkuCodes / skuMap 值)。
 // 2026-07-21 修正:原本多加了「貨號開頭跟系列代碼一樣就算」的 prefix fallback,

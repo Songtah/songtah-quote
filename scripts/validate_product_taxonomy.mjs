@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PATHS = {
   generator: resolve(ROOT, 'scripts/build_product_taxonomy.mjs'),
-  catalog: resolve(ROOT, 'public/products_catalog.json'),
-  families: resolve(ROOT, 'public/product_families.json'),
+  catalog: resolve(ROOT, 'data/catalog/products_catalog.json'),
+  families: resolve(ROOT, 'data/catalog/product_families.json'),
   dictionary: resolve(ROOT, 'data/product_taxonomy_dictionary.json'),
   mapping: resolve(ROOT, 'data/product_taxonomy_map.json'),
   research: resolve(ROOT, 'data/product_taxonomy_research_overrides.json'),

@@ -341,7 +341,7 @@ const args = parseArgs(process.argv.slice(2))
 if (!process.env.NOTION_TOKEN || !process.env.NOTION_PRODUCTS_DB) throw new Error('Notion product configuration is missing')
 if (args.execute && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is missing')
 
-const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/products_catalog.json'), 'utf8'))
+const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/catalog/products_catalog.json'), 'utf8'))
 const catalogByCode = new Map(catalog.map((item) => [item.code, item]))
 const manifest = JSON.parse(fs.readFileSync(path.resolve(ROOT, args.manifestPath), 'utf8'))
 validateManifest(manifest, catalogByCode)
