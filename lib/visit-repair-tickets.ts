@@ -17,6 +17,7 @@ import { createTicket, updateTicket, listCustomerTickets, getSystemTicketById } 
 import { listCustomerEquipment } from '@/lib/notion/equipment'
 import { getRedis } from '@/lib/notion/shared'
 import { pushLineMessage } from '@/lib/line-push'
+import { findLineGroupByName } from '@/lib/line-groups'
 import type { RepairFinding } from '@/lib/visit-reaction-ai'
 
 const DONE_KEY = 'repair-ticket:visits'      // set：已處理過的客情 id
@@ -63,9 +64,12 @@ const visitUrl = (id: string) => `https://www.notion.so/${id.replace(/-/g, '')}`
 const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 const daysAgo = (d: string) => (Date.parse(today()) - Date.parse(d)) / 86400_000
 
-/** 主管通知：設定 TECH_MANAGER_LINE_ID（主管的 LINE userId 或技術群組 groupId）才會發；沒設定就略過 */
+/**
+ * 主管通知：發到「崧達售後服務報修詢問群組」（官方帳號已加入；群組 ID 由 webhook 記錄，見 lib/line-groups.ts）。
+ * TECH_MANAGER_LINE_ID 有設定時以它為準；群組還沒被記錄到（群組裡還沒人發過言）就略過。
+ */
 async function notifyManager(text: string) {
-  const to = process.env.TECH_MANAGER_LINE_ID
+  const to = process.env.TECH_MANAGER_LINE_ID || await findLineGroupByName(/售後服務|報修/).catch(() => '')
   if (!to) return
   await pushLineMessage(to, text).catch((e) => console.warn('[repair-ticket] LINE 通知失敗:', e?.message ?? e))
 }

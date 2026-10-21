@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { rememberLineGroup } from '@/lib/line-groups'
 import crypto from 'crypto'
 import { waitUntil } from '@vercel/functions'
 import { isDailyReport, decideDailyReportIngest } from '@/lib/line-daily-report'
@@ -88,6 +89,8 @@ async function processEvents(events: any[]) {
 
   for (const event of events) {
     try {
+      // 記下官方帳號所在的群組（ID＋名稱），供維修工單通知找「售後服務」群組（lib/line-groups.ts）
+      if (event.source?.type === 'group' && event.source.groupId) await rememberLineGroup(event.source.groupId)
       if (event.type !== 'message' || event.message?.type !== 'text') continue
       if (event.source?.type !== 'group') continue
       if (targetGroupId && event.source?.groupId !== targetGroupId) continue
