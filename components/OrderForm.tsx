@@ -10,6 +10,7 @@ import { matchPromoRule, buyNGetMGiftQty, SERIES_CONDITION_TYPES } from '@/lib/o
 import { ProductFamily, YMHToothGridPanel, FamilySpecPanel } from '@/components/FamilySpecPicker'
 import { allowedOrderTransitions, ORDER_STATUS_STYLE, PAYMENT_METHOD_PRESETS, DELIVERY_METHOD_PRESETS, type OrderActor } from '@/lib/order-status'
 import { rocDate } from '@/lib/quote-model'
+import { parseCodeInput, lookupProductCodes, quickAddMessage } from '@/lib/product-code-quickadd'
 
 /** 欄位外框（放在元件外：定義在 render 內會每次重建，輸入框打一個字就失去焦點） */
 function Field({ label, children, className = '', hint }: { label: string; children: React.ReactNode; className?: string; hint?: string }) {
@@ -311,6 +312,24 @@ function ProductPicker({
     [onAdd]
   )
 
+  // 打貨號直接加入：完整貨號（可多個）按 Enter；不像貨號時，結果只有一筆也直接加（lib/product-code-quickadd.ts）
+  const [quickMsg, setQuickMsg] = useState('')
+  const quickAddByCode = async () => {
+    const codes = parseCodeInput(search)
+    if (!codes.length) {
+      if (remainingSearchResults.length === 1) {
+        handleAddCatalogItem(remainingSearchResults[0])
+        setQuickMsg(`已加入 ${remainingSearchResults[0].name}`)
+        setSearch('')
+      }
+      return
+    }
+    const { found, missing } = await lookupProductCodes<CatalogItem>(codes)
+    found.forEach((p) => handleAddCatalogItem(p))
+    setQuickMsg(quickAddMessage(found.length, missing))
+    setSearch(missing.join(' '))
+  }
+
   const toggleFamily = useCallback((id: string) => {
     setExpandedFamilyId((prev) => (prev === id ? null : id))
   }, [])
@@ -355,11 +374,13 @@ function ProductPicker({
           <input
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null) }}
-            placeholder="搜尋品名、貨號、系列、規格；可輸入部分文字…"
+            onChange={(e) => { setSearch(e.target.value); setExpandedFamilyId(null); setQuickMsg('') }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); quickAddByCode() } }}
+            placeholder="搜尋品名、貨號、系列、規格；輸入完整貨號按 Enter 直接加入，可一次貼上多個"
             className="input-soft"
             autoFocus
           />
+          {quickMsg && <p className="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">{quickMsg}</p>}
           <div className="flex gap-2">
             <select
               value={filterBrand}

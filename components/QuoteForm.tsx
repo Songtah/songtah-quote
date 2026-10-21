@@ -16,6 +16,7 @@ import {
   type QuoteLayout, type TaxMode,
 } from '@/lib/quote-model'
 import { canEditQuote } from '@/lib/quote-status'
+import { parseCodeInput, lookupProductCodes, quickAddMessage } from '@/lib/product-code-quickadd'
 
 interface Props {
   /** create：新增（initial 有值＝複製既有報價單）；edit：修改 initial */
@@ -203,6 +204,21 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
     }, 250)
     return () => { controller.abort(); clearTimeout(timer) }
   }, [pickerOpen, productQuery, brandFilter, categoryFilter])
+
+  // 打貨號直接加入：完整貨號（可多個）按 Enter；不像貨號時，結果只有一筆也直接加（lib/product-code-quickadd.ts）
+  const [quickMsg, setQuickMsg] = useState('')
+  async function quickAddByCode() {
+    const codes = parseCodeInput(productQuery)
+    if (!codes.length) {
+      if (products.length === 1) { addItem(fromProduct(products[0])); setProductQuery(''); setQuickMsg(`已加入 ${products[0].name}`) }
+      return
+    }
+    const { found, missing } = await lookupProductCodes<CatalogPick>(codes)
+    found.forEach((p) => addItem(fromProduct(p)))
+    setQuickMsg(quickAddMessage(found.length, missing))
+    if (!missing.length) setProductQuery('')
+    else setProductQuery(missing.join(' '))
+  }
 
   // 品項操作
   function addItem(item: DraftItem) {
@@ -453,9 +469,10 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
           {/* 選品 */}
           <div className="rounded-2xl bg-stone-50 p-3">
             <div className="flex flex-wrap gap-2">
-              <input value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setPickerOpen(true) }}
+              <input value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setPickerOpen(true); setQuickMsg('') }}
                 onFocus={() => setPickerOpen(true)}
-                className="input-soft min-w-[200px] flex-1 bg-white" placeholder="🔍 搜尋產品資料庫：品名、貨號…" />
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); quickAddByCode() } }}
+                className="input-soft min-w-[200px] flex-1 bg-white" placeholder="🔍 搜尋品名、貨號；輸入完整貨號按 Enter 直接加入，可一次貼上多個" />
               <select value={brandFilter} onChange={(e) => { setBrandFilter(e.target.value); setPickerOpen(true) }} className="select-soft bg-white">
                 <option value="">全部品牌</option>{brands.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -466,6 +483,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                 <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full px-3 text-xs text-stone-400 hover:text-stone-600">收起</button>
               )}
             </div>
+            {quickMsg && <p className="mt-2 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">{quickMsg}</p>}
             {pickerOpen && (
               <div className="mt-2 max-h-80 overflow-y-auto rounded-xl bg-white ring-1 ring-stone-900/[0.06]">
                 {productsLoading ? (
