@@ -13,7 +13,7 @@
  *   - 設備：客戶名下同品牌設備只有一台才關聯，不猜
  *   - 同一筆客情只處理一次（Redis 記錄），重試、回補都不會重複開
  */
-import { createTicket, updateTicket, listCustomerTickets } from '@/lib/notion/tickets'
+import { createTicket, updateTicket, listCustomerTickets, getSystemTicketById } from '@/lib/notion/tickets'
 import { listCustomerEquipment } from '@/lib/notion/equipment'
 import { getRedis } from '@/lib/notion/shared'
 import { pushLineMessage } from '@/lib/line-push'
@@ -84,8 +84,15 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
   const brand = detectBrand(`${repair.equipment} ${repair.evidence}`)
   const source = `由客情自動建立：${input.visitDate} ${input.salesperson} 回報「${repair.evidence}」｜客情 ${visitUrl(input.visitId)}`
 
-  // 不重複開：同客戶、同品牌、90 天內未結案
+  // 不重複開：同客戶、同品牌、90 天內未結案。
+  // 剛建立的工單 Notion 查詢要幾秒後才查得到，連續處理同一家的兩筆客情會重複開——先看 Redis 記的近期工單。
+  const recentKey = `repair-ticket:recent:${input.customerId.replace(/-/g, '')}|${brand || '-'}`
   const tickets = await listCustomerTickets(input.customerId)
+  const recentId = r ? await r.get<string>(recentKey) : null
+  if (recentId && !tickets.some((t) => t.id === recentId)) {
+    const t = await getSystemTicketById(recentId).catch(() => null)
+    if (t) tickets.unshift(t as any)
+  }
   const open = tickets.find((t) => t.status !== CLOSED_STATUS && !/結案/.test(t.status)
     && (!t.createdDate || daysAgo(t.createdDate) <= 90)
     && (!brand || !t.manufacturer || sameBrand(t.manufacturer, brand)))
@@ -125,6 +132,7 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
   if (r) {
     await r.sadd(DONE_KEY, vid)
     await r.hdel(PENDING_KEY, vid)
+    if (!closed) await r.set(recentKey, ticket.id, { ex: 7 * 86400 })
   }
   if (!closed) {
     await notifyManager(`🔧 新維修工單 ${ticket.number}（待指派）\n客戶：${input.customerName}\n設備／問題：${[repair.equipment, repair.issue].filter(Boolean).join('｜') || '未註明'}\n業務：${input.salesperson}（${input.visitDate} 回報）\n原文：${repair.evidence}`)
