@@ -13,6 +13,7 @@
  */
 import { parseDailyReport, devStageForReaction, reportDateOf, resultLineCount } from '@/lib/line-daily-report'
 import { classifyVisitReaction } from '@/lib/visit-reaction-ai'
+import { createRepairTicketFromVisit } from '@/lib/visit-repair-tickets'
 import { businessDayOf } from '@/lib/line-report-window'
 import { createVisit, listVisits, getVisitFormOptions } from '@/lib/notion/visits'
 import { searchSystemCustomers, advanceCustomerDevStage } from '@/lib/notion/customers'
@@ -145,7 +146,7 @@ export async function ingestDailyReport(input: {
       const judged = ai[vi]
       const reaction = judged?.reaction && formOptions!.customerReactions.includes(judged.reaction) ? judged.reaction : ''
 
-      await createVisit({
+      const createdVisit = await createVisit({
         customerName: visit.customerName,
         customerId: matched?.id,
         date: report.date,
@@ -165,6 +166,13 @@ export async function ingestDailyReport(input: {
         interestedProductIds: [],
       })
       result.created++
+      // 提到維修 → 開技術支援工單（或補進既有工單）；未關聯客戶的先記著，配對後由夜間排程補開。失敗不影響建檔。
+      if (judged?.repair) {
+        await createRepairTicketFromVisit({
+          visitId: createdVisit.id, visitDate: report.date, salesperson: input.salesperson,
+          customerId: matched?.id, customerName: visit.customerName, repair: judged.repair,
+        }).catch((e) => console.warn(`[LINE ingest] 開維修工單失敗（${visit.customerName}）:`, e?.message ?? e))
+      }
       createdVisits.push({ customerId: matched?.id, unambiguous: Boolean(matched), reaction, name: visit.customerName })
     } catch (err: any) {
       const message = err?.body?.message ?? err?.message ?? String(err)

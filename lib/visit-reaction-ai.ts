@@ -24,6 +24,15 @@ export type ReactionResult = {
   confidence: '高' | '中' | '低'
   contact: string                  // 對口（例：小凱老闆｜負責訂貨、新品），沒有就 ''
   note: string                     // 系統檢核降級的原因（除錯用）
+  repair: RepairFinding | null     // 這次拜訪提到「我們要處理的」維修案件；沒有就 null
+}
+
+/** 客情中提到的維修案件（由 lib/visit-repair-tickets.ts 開成技術支援工單） */
+export type RepairFinding = {
+  status: '待處理' | '處理中' | '已完成'
+  equipment: string                // 設備（品牌型號，照紀錄寫法），例：Zirkonzahn 燒結爐
+  issue: string                    // 問題描述，例：不會升溫
+  evidence: string                 // 原文依據
 }
 
 export const REACTION_MODEL = 'claude-haiku-5-5'
@@ -85,6 +94,18 @@ const SYSTEM = `你是牙科材料代理商的業務主管，負責判讀業務�
    - 角色只寫紀錄裡明說的（負責訂貨、採購決定、主要聯絡）；沒明說就只寫稱呼、不加「｜」。
    - 不要寫公司自己的人：業務、技術人員、行政（例如 Ray、Luca、王小姐、林總）。
 
+## 維修案件（與客戶反應分開判斷）
+判斷這次紀錄有沒有提到「需要崧達處理、或崧達已經處理」的設備維修、故障、校正、保養。
+- repair_status：
+  - 待處理：客戶反映故障或異常，需要安排維修、尚未處理（「爐子不會升溫，需安排維修」「近期安排維修」）
+  - 處理中：已取回送修、已到場處理但未完成、等零件、明天再去確認（「取回需維修技工桌控制器」「明早再前往確認」）
+  - 已完成：這次已經修好、校正好、處理完畢（「手機維修（已完成）」「重新校正就可以正常使用」）
+  - 無：沒有提到維修，或不屬於崧達要處理的維修
+- 不算維修案件（選「無」）：別家原廠或其他廠商的售後（「有遇到 arum 的售後在做維修」「金妮可有維修部」）；客戶自己修；只是關心機器狀況、運作正常（「校正完還蠻穩定的」）；業務只是介紹維修服務。
+- repair_equipment：設備，照紀錄寫法（如「zz 爐子」「asiga」「技工桌控制器」「手機」），不知道就空字串。
+- repair_issue：問題，10 字左右（如「不會升溫」「無法開機」）。
+- repair_evidence：作為依據的原文，逐字 10 到 40 字；選「無」時留空字串。
+
 範例：「主要現在都是小凱老闆在負責訂貨與確認新品項 已留名片 晚上會聯絡」
 → reaction：無明確反應（只是認識對口；晚上聯絡是業務自己的安排），contact：小凱老闆｜負責訂貨、確認新品項`
 
@@ -95,8 +116,12 @@ const SCHEMA = {
     evidence: { type: 'string' },
     confidence: { type: 'string', enum: ['高', '中', '低'] },
     contact: { type: 'string' },
+    repair_status: { type: 'string', enum: ['無', '待處理', '處理中', '已完成'] },
+    repair_equipment: { type: 'string' },
+    repair_issue: { type: 'string' },
+    repair_evidence: { type: 'string' },
   },
-  required: ['reaction', 'evidence', 'confidence', 'contact'],
+  required: ['reaction', 'evidence', 'confidence', 'contact', 'repair_status', 'repair_equipment', 'repair_issue', 'repair_evidence'],
   additionalProperties: false,
 } as const
 
@@ -142,7 +167,7 @@ export function parseReactionMessage(text: string, res: Pick<Anthropic.Message, 
 /** 判讀一筆客情。未設定金鑰或 API 失敗回 null（呼叫端留白）。 */
 export async function classifyVisitReaction(text: string): Promise<ReactionResult | null> {
   const body = (text ?? '').trim()
-  if (!body) return { reaction: '', evidence: '', confidence: '高', contact: '', note: '空白內容' }
+  if (!body) return { reaction: '', evidence: '', confidence: '高', contact: '', note: '空白內容', repair: null }
   const c = getClient()
   if (!c) return null
   try {
@@ -159,7 +184,10 @@ export function getReactionClient(): Anthropic | null {
 }
 
 /** 系統檢核：依據要逐字出現在原文、低把握留白、確認下單要有承諾說法、對口要真的出現在原文 */
-export function guard(text: string, raw: { reaction: string; evidence: string; confidence: '高' | '中' | '低'; contact: string }): ReactionResult {
+export function guard(text: string, raw: {
+  reaction: string; evidence: string; confidence: '高' | '中' | '低'; contact: string
+  repair_status?: string; repair_equipment?: string; repair_issue?: string; repair_evidence?: string
+}): ReactionResult {
   const t = norm(text)
   const evidence = (raw.evidence ?? '').trim()
   let reaction: Reaction | '' = (REACTION_OPTIONS as readonly string[]).includes(raw.reaction) ? (raw.reaction as Reaction) : ''
@@ -176,5 +204,12 @@ export function guard(text: string, raw: { reaction: string; evidence: string; c
   const generic = /、/.test(who) || TITLE_ONLY.test(who.replace(/^(總公司|主要|年輕|資深|新)/, ''))
   if (!who || who.length < 2 || generic || INTERNAL_NAMES.test(who) || !t.includes(who.slice(0, 2))) contact = ''
   else contact = role ? `${who}｜${role.slice(0, 24)}` : who
-  return { reaction, evidence: reaction ? evidence : '', confidence: raw.confidence, contact: contact.slice(0, 60), note }
+  // 維修：依據要逐字出現在原文，否則不開工單（寧可漏開、不可亂開）
+  let repair: RepairFinding | null = null
+  const rs = raw.repair_status
+  const rev = (raw.repair_evidence ?? '').trim()
+  if ((rs === '待處理' || rs === '處理中' || rs === '已完成') && rev && t.includes(norm(rev))) {
+    repair = { status: rs, equipment: (raw.repair_equipment ?? '').trim().slice(0, 40), issue: (raw.repair_issue ?? '').trim().slice(0, 40), evidence: rev }
+  }
+  return { reaction, evidence: reaction ? evidence : '', confidence: raw.confidence, contact: contact.slice(0, 60), note, repair }
 }
