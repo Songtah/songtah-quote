@@ -162,15 +162,23 @@ export function parseDailyReport(
   let currentNotes: string[] = []
 
   function flush() {
-    if (!currentName || isNonVisitEntry(currentName)) return
-    visits.push({
-      customerName: currentName,
-      notes: currentNotes,
-      content: currentNotes.join('\n'),
-      customerReaction: inferReaction(currentNotes),
-      needsFollowUp: inferFollowUp(currentNotes, date),
-      nextFollowUpDate: inferNextFollowUpDate(currentNotes, date),
-    })
+    if (!currentName) return
+    // 一筆寫好幾家（「謙禾牙醫、彼粼牙醫、岡山秀傳聯繫」「…拜訪（依德/晶采/佳康）」）拆成各家一筆，內容共用
+    const multi = splitMultiCustomer(currentName)
+    const entries = multi
+      ? multi.names.map((name) => ({ name, notes: multi.context ? [multi.context, ...currentNotes] : currentNotes }))
+      : [{ name: currentName, notes: currentNotes }]
+    for (const e of entries) {
+      if (isNonVisitEntry(e.name)) continue
+      visits.push({
+        customerName: e.name,
+        notes: e.notes,
+        content: e.notes.join('\n'),
+        customerReaction: inferReaction(e.notes),
+        needsFollowUp: inferFollowUp(e.notes, date),
+        nextFollowUpDate: inferNextFollowUpDate(e.notes, date),
+      })
+    }
   }
 
   for (const line of bodyLines) {
@@ -241,6 +249,41 @@ function extractNameAndContent(raw: string): { name: string; inlineContent: stri
 
   // 找不到分隔符 → 整行是名稱，內容在後續條列
   return { name: rest, inlineContent: '' }
+}
+
+// ── 一筆寫好幾家 → 拆開 ──────────────────────────────────────────────────────
+//
+// 2026-10-21 使用者指定：「謙禾牙醫、彼粼牙醫、岡山秀傳聯繫」「彰化&台中診所陌生拜訪…（依德/晶采/佳康/璽瑞美學/樂維牙醫）」
+// 要拆成對應數量的客情。拆完每家照樣走客戶配對（唯一才關聯，否則進待確認配對）。
+const INSTITUTION_SUFFIX = /(牙體技術所|牙醫診所|技工所|技術所|牙技所|診所|牙醫|牙科|醫院|鑲牙所)$/
+const TRAILING_ACTION = /(聯繫|聯絡|拜訪|陌生拜訪|送貨|收款|追蹤|關心|電訪)$/
+const LIST_SEP = /[、／\/&＆]/
+const TASK_WORDS = /確認|討論|處理|整理|協助|更新|寄|報帳|會議|資料/
+
+function looksLikeName(part: string) {
+  return part.length >= 2 && part.length <= 14 && !TASK_WORDS.test(part)
+}
+
+export function splitMultiCustomer(raw: string): { names: string[]; context: string } | null {
+  const name = (raw ?? '').trim()
+  // 括號裡列名單：說明（A/B/C牙醫）
+  const paren = name.match(/^(.*?)[（(]([^）)]+)[）)]\s*$/)
+  if (paren) {
+    const parts = paren[2].split(LIST_SEP).map((x) => x.trim()).filter(Boolean)
+    if (parts.length >= 2 && parts.every(looksLikeName)) {
+      const suffix = parts[parts.length - 1].match(INSTITUTION_SUFFIX)?.[1] ?? ''
+      const names = parts.map((x) => (INSTITUTION_SUFFIX.test(x) ? x : x + suffix))
+      return { names, context: paren[1].trim() }
+    }
+  }
+  // 頓號、斜線、& 列名單：A牙醫、B牙醫、C聯繫
+  const body = name.replace(TRAILING_ACTION, '')
+  if (!LIST_SEP.test(body)) return null
+  const parts = body.split(LIST_SEP).map((x) => x.trim()).filter(Boolean)
+  if (parts.length < 2 || !parts.every(looksLikeName)) return null
+  // 至少一半要看得出是機構，避免把「A&B 品牌」之類的描述拆開
+  if (parts.filter((x) => INSTITUTION_SUFFIX.test(x)).length * 2 < parts.length) return null
+  return { names: parts, context: '' }
 }
 
 // ── 跳過非拜訪項目 ────────────────────────────────────────────────────────────
