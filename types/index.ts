@@ -76,6 +76,8 @@ export interface CreateTicketPayload {
   keyPart?: string
   note?: string
   manufacturer?: string
+  /** 建立日期（YYYY-MM-DD）。客情自動開單帶客情／日報日期；未帶或格式不符時用今天（台北） */
+  createdDate?: string
 }
 
 export interface UpdateTicketPayload {

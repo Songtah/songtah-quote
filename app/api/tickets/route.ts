@@ -51,8 +51,10 @@ export const POST = withApiAuth({ module: 'rma', action: 'edit' }, async (req: N
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
+    // 手動開單的建立日期一律為今天，不接受前端指定（createdDate 只給客情自動開單用）
+    const { createdDate: _ignoredCreatedDate, ...input } = body
     const ticket = await createTicket({
-      ...body,
+      ...input,
       status: body.status || '尚未處理',
       priority: body.priority || 'P2',
     })

@@ -63,6 +63,12 @@ const sameBrand = (a: string, b: string) => {
 const visitUrl = (id: string) => `https://www.notion.so/${id.replace(/-/g, '')}`
 const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 const daysAgo = (d: string) => (Date.parse(today()) - Date.parse(d)) / 86400_000
+/** 客情日期（YYYY-MM-DD）；缺漏或格式不符時用今天 */
+const reportDateOf = (d?: string) => {
+  const s = (d ?? '').slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s)) ? s : today()
+}
+const daysBetween = (a: string, b: string) => Math.abs(Date.parse(a.slice(0, 10)) - Date.parse(b.slice(0, 10))) / 86400_000
 
 /**
  * 主管通知：發到「崧達售後服務報修詢問群組」（官方帳號已加入；群組 ID 由 webhook 記錄，見 lib/line-groups.ts）。
@@ -94,7 +100,11 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
   const brand = detectBrand(`${repair.equipment} ${repair.evidence}`)
   const source = `由客情自動建立：${input.visitDate} ${input.salesperson} 回報「${repair.evidence}」｜客情 ${visitUrl(input.visitId)}`
 
-  // 不重複開：同客戶、同品牌、90 天內未結案。
+  // 工單建立日期＝客情日期（不是匯入／回補當天），90 天去重也以客情日期與工單建立日期的距離計算，
+  // 否則回補的舊客情會併進一年後才開的工單（實例：#213），新客情也會併進回補出來的舊案。
+  const reportDate = reportDateOf(input.visitDate)
+
+  // 不重複開：同客戶、同品牌、與這次客情前後 90 天內建立的未結案工單。
   // 剛建立的工單 Notion 查詢要幾秒後才查得到，連續處理同一家的兩筆客情會重複開——先看 Redis 記的近期工單。
   const recentKey = `repair-ticket:recent:${input.customerId.replace(/-/g, '')}|${brand || '-'}`
   const tickets = await listCustomerTickets(input.customerId)
@@ -104,7 +114,7 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
     if (t) tickets.unshift(t as any)
   }
   const open = tickets.find((t) => t.status !== CLOSED_STATUS && !/結案/.test(t.status)
-    && (!t.createdDate || daysAgo(t.createdDate) <= 90)
+    && (!t.createdDate || daysBetween(t.createdDate, reportDate) <= 90)
     && (!brand || !t.manufacturer || sameBrand(t.manufacturer, brand)))
 
   if (open) {
@@ -138,6 +148,7 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
     description: repair.evidence,
     note: source,
     manufacturer: brand || undefined,
+    createdDate: reportDate,
   })
   if (r) {
     await r.sadd(DONE_KEY, vid)

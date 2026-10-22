@@ -116,8 +116,18 @@ function mapManufacturerOption(value: string) {
   return mapping[value] ?? value
 }
 
+/** YYYY-MM-DD 且是真實日期才回傳，否則空字串 */
+function validDateOnly(value?: string): string {
+  const d = (value ?? '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return ''
+  const t = new Date(`${d}T00:00:00Z`)
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d ? d : ''
+}
+
 export async function createTicket(payload: CreateTicketPayload): Promise<Ticket> {
-  const createdAt = new Date().toISOString().slice(0, 10)
+  // 建立日期：有帶（客情自動開單＝客情日期）用帶入值，否則今天（台北時區，避免 00:00–08:00 記成前一天）
+  const createdAt = validDateOnly(payload.createdDate)
+    || new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
   const response: any = await notionCallWithRetry('createTicket', () =>
     notion.pages.create({
       parent: { database_id: normalizeDatabaseId(DB.tickets) },
