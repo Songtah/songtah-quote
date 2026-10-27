@@ -31,7 +31,8 @@ function ogImageUrl(eventId: string, bannerUrl: string) {
   return `https://${host}/api/public/register/og/${eventId}?v=${v}`
 }
 
-const weekday = (d: string) => (d ? '日一二三四五六'[new Date(`${d.slice(0, 10)}T00:00:00+08:00`).getDay()] : '')
+// 用 UTC 取星期：伺服器在 UTC，原本 getDay() 把台灣 00:00 當成前一天，12/12（六）顯示成（五）
+const weekday = (d: string) => (d ? '日一二三四五六'[new Date(`${d.slice(0, 10)}T00:00:00Z`).getUTCDay()] : '')
 const fmtDate = (d: string) => (d ? `${d.slice(0, 10).replace(/-/g, '/')}（${weekday(d)}）` : '')
 
 export default async function RegisterPage({ params }: { params: { eventId: string } }) {
@@ -43,23 +44,24 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-cream-100 px-4 py-8 sm:py-12">
-      <div className="mx-auto max-w-2xl">
+      {/* 桌機：廣告圖與下方內容同寬（max-w-5xl），活動資訊與報名表左右並排；手機上下排列 */}
+      <div className="mx-auto max-w-5xl">
         <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="mx-auto h-auto w-36 object-contain" />
 
         {!event || !event.onlineRegistration ? (
-          <div className="card-soft mt-6 p-8 text-center text-sm text-stone-500">此活動目前未開放線上報名。</div>
+          <div className="card-soft mx-auto mt-6 max-w-2xl p-8 text-center text-sm text-stone-500">此活動目前未開放線上報名。</div>
         ) : (
           <>
             {event.bannerUrl && (
-              // 廣告圖比例不固定（1200×630、2000×770 長橫幅都常見）：一律等比完整顯示、不裁切；
-              // 比報名表寬一些，長橫幅上的小字才看得清楚；手機上點圖開原圖可放大。
+              // 廣告圖比例不固定（1200×630、2000×770 長橫幅都常見）：一律等比完整顯示、不裁切；手機上點圖開原圖可放大。
               <a href={event.bannerUrl} target="_blank" rel="noreferrer" title="點擊查看原圖"
-                className="relative left-1/2 mt-6 block w-[min(calc(100vw_-_2rem),64rem)] -translate-x-1/2 overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-900/[0.05]">
+                className="mt-6 block overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-900/[0.05]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={event.bannerUrl} alt={event.name} className="block h-auto w-full" />
               </a>
             )}
-            <article className="card-soft mt-6 overflow-hidden">
+            <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+            <article className="card-soft overflow-hidden">
               <div className="p-6 sm:p-8">
                 <div className="flex flex-wrap items-center gap-2">
                   {event.type && <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{event.type}</span>}
@@ -72,7 +74,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
                     <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">剩餘名額 {gate?.seatsLeft}</span>
                   )}
                 </div>
-                <h1 className="mt-3 text-2xl font-bold leading-snug text-stone-800 sm:text-3xl">{event.name}</h1>
+                <h1 className="mt-3 text-balance text-2xl font-bold leading-snug text-stone-800 sm:text-3xl lg:text-2xl">{event.name}</h1>
                 <dl className="mt-4 grid gap-2 text-sm text-stone-600">
                   <div className="flex gap-2"><dt className="shrink-0 font-semibold text-stone-500">日期</dt>
                     <dd>{fmtDate(event.date)}{event.endDate && event.endDate !== event.date ? ` — ${fmtDate(event.endDate)}` : ''}</dd></div>
@@ -83,7 +85,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
               </div>
             </article>
 
-            <section className="card-soft mt-5 p-6 sm:p-8">
+            <section className="card-soft p-6 sm:p-8">
               {gate?.open ? (
                 <RegisterForm
                   eventId={params.eventId}
@@ -97,6 +99,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
                 <p className="py-6 text-center text-base font-semibold text-stone-600">{gate?.reason}</p>
               )}
             </section>
+            </div>
             <p className="mt-6 text-center text-xs text-stone-400">崧達企業股份有限公司</p>
           </>
         )}
