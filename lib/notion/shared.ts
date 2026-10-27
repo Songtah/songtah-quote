@@ -59,6 +59,28 @@ export async function setRedisValue<T>(key: string, value: T, ttlMs: number): Pr
   }
 }
 
+/**
+ * 公開頁的 IP 限流：Redis INCR 原子計數（固定時間窗），超過 limit 回 true＝應拒絕。
+ * 2026-10-27：原本用 getRedisValue＋setRedisValue「讀了再寫」，讀到的是各 Vercel 實例自己的 L1 快取，
+ * 換實例就各算各的、併發也會少算，等於限流可被繞過。沒有 Redis 時退回單一實例記憶體計數。
+ */
+export async function hitRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+  const r = getRedis()
+  if (r) {
+    try {
+      const n = await r.incr(key)
+      if (n === 1) await r.pexpire(key, windowMs)
+      return n > limit
+    } catch (e) {
+      console.warn(`[redis] rate limit "${key}" failed:`, e)
+    }
+  }
+  const hit = transientCache.get(key)
+  const n = hit && Date.now() <= hit.expiresAt ? (hit.value as number) + 1 : 1
+  transientCache.set(key, { value: n, expiresAt: hit && Date.now() <= hit.expiresAt ? hit.expiresAt : Date.now() + windowMs })
+  return n > limit
+}
+
 /** Delete from both L1 and L2 (fire-and-forget for L2). */
 export function deleteRedisValue(key: string): void {
   transientCache.delete(key)

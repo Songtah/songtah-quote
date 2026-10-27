@@ -12,7 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getEventById, createRegistration, listEventRegistrations, UNIT_TYPES } from '@/lib/notion/events'
-import { getRedisValue, setRedisValue } from '@/lib/notion/shared'
+import { hitRateLimit } from '@/lib/notion/shared'
 import {
   registrationGate, registrationAmount, MAX_ATTENDEES_PER_SIGNUP, JOB_TITLES,
   GENDERS, DIETS, INFO_SOURCES, PAYMENT_METHODS,
@@ -34,10 +34,7 @@ export async function POST(req: NextRequest) {
   if (clip(body?.website, 100)) return NextResponse.json({ ok: true, amount: 0 })   // honeypot
 
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
-  const rlKey = `register-rl:${ip}`
-  const hits = (await getRedisValue<number>(rlKey)) ?? 0
-  if (hits >= RATE_LIMIT) return NextResponse.json({ error: '操作太頻繁，請稍後再試' }, { status: 429 })
-  await setRedisValue(rlKey, hits + 1, RATE_WINDOW_MS)
+  if (await hitRateLimit(`register-rl:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return NextResponse.json({ error: '操作太頻繁，請稍後再試' }, { status: 429 })
 
   const eventId = clip(body?.eventId, 64)
   const name = clip(body?.name, 50)

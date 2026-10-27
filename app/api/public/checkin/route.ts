@@ -11,7 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getEventById, createRegistration, listEventRegistrations } from '@/lib/notion/events'
-import { getRedisValue, setRedisValue } from '@/lib/notion/shared'
+import { hitRateLimit } from '@/lib/notion/shared'
 import { verifyCheckinToken, isCheckinOpen } from '@/lib/checkin-token'
 
 export const dynamic = 'force-dynamic'
@@ -33,10 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
-  const rlKey = `checkin-rl:${ip}`
-  const hits = (await getRedisValue<number>(rlKey)) ?? 0
-  if (hits >= RATE_LIMIT) return NextResponse.json({ error: '操作太頻繁，請稍後再試' }, { status: 429 })
-  await setRedisValue(rlKey, hits + 1, RATE_WINDOW_MS)
+  if (await hitRateLimit(`checkin-rl:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return NextResponse.json({ error: '操作太頻繁，請稍後再試' }, { status: 429 })
 
   const institution = clip(body?.institution, 100)
   const contact = clip(body?.contact, 50)

@@ -26,10 +26,12 @@ function isOwnBlob(url: string) {
   }
 }
 
-export async function GET(_req: Request, { params }: { params: { eventId: string } }) {
+export async function GET(req: Request, { params }: { params: { eventId: string } }) {
   const event = await getEventById(params.eventId).catch(() => null)
   const banner = event?.onlineRegistration ? event.bannerUrl : ''
   if (!banner || !isOwnBlob(banner)) return new NextResponse('Not found', { status: 404 })
+  // v 必須等於目前廣告圖檔名（報名頁 metadata 就是這樣產生的）：亂帶 v 會繞過 CDN 快取、每次重新產圖，直接拒絕
+  if (new URL(req.url).searchParams.get('v') !== banner.split('/').pop()) return new NextResponse('Not found', { status: 404 })
   // 產圖元件不支援 WebP：直接給原圖（分享卡會裁切，但至少有圖）
   if (/\.webp($|\?)/i.test(banner)) return NextResponse.redirect(banner)
 

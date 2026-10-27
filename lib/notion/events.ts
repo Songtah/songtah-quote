@@ -273,6 +273,20 @@ export async function updateEvent(id: string, data: Partial<{
   invalidateEventsList()
 }
 
+/** 短網址代碼（活動 id 前綴）→ 開放線上報名的活動 id；查無或撞號回 null */
+export async function findOpenEventIdByShortCode(code: string): Promise<string | null> {
+  if (!DB.events || !/^[0-9a-f]{6,32}$/.test(code)) return null
+  const res: any = await notionCallWithRetry('findOpenEventIdByShortCode', () =>
+    notion.databases.query({
+      database_id: normalizeDatabaseId(DB.events!),
+      filter: { property: '線上報名', checkbox: { equals: true } },
+      page_size: 100,
+    })
+  )
+  const hits = (res.results ?? []).filter((p: any) => p.id.replace(/-/g, '').startsWith(code))
+  return hits.length === 1 ? hits[0].id : null
+}
+
 export async function deleteEvent(id: string): Promise<void> {
   await notionCallWithRetry('deleteEvent', () =>
     notion.pages.update({ page_id: id, archived: true })

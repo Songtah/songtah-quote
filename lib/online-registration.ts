@@ -68,3 +68,9 @@ export const INFO_SOURCES = ['臉書粉絲團', 'LINE 官方帳號', '業務介�
 export const PAYMENT_METHODS = ['匯款', '現金交業務'] as const
 
 export const formatNT = (n: number) => `NT$ ${n.toLocaleString('zh-TW')}`
+
+/**
+ * 報名頁短網址：/r/<活動 id 前 6 碼>（例 /r/406dcd），轉到 /register/[完整 id]。
+ * 不另存代碼、不用外部短網址服務；只對「開放線上報名」的活動有效，前綴撞號時不轉址（見 app/r/[code]）。
+ */
+export const shortCodeOf = (eventId: string) => eventId.replace(/-/g, '').slice(0, 6).toLowerCase()

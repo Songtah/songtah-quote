@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import type { EventItem } from '@/lib/notion/events'
-import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP } from '@/lib/online-registration'
+import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP, shortCodeOf } from '@/lib/online-registration'
 
 type Settings = Pick<EventItem, 'onlineRegistration' | 'paid' | 'fee' | 'paymentNote' | 'bannerUrl' | 'capacity' | 'deadline' | 'plans'>
 
@@ -26,7 +26,8 @@ export function EventRegistrationPageSettings({
   const [url, setUrl] = useState('')
 
   useEffect(() => {
-    const link = `${window.location.origin}/register/${event.id}`
+    // 對外一律給短網址（/r/前 6 碼），QR code 也較疏、較好掃；完整網址 /register/[id] 仍可用
+    const link = `${window.location.origin}/r/${shortCodeOf(event.id)}`
     setUrl(link)
     QRCode.toDataURL(link, { width: 480, margin: 1 }).then(setQr).catch(() => {})
   }, [event.id])
