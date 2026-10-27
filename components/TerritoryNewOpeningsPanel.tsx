@@ -25,6 +25,8 @@ type Item = {
 }
 
 const PAGE = 20
+/** 首屏只放幾筆，避免首頁被單一面板佔滿（2026-10-27 首頁精簡） */
+const FIRST = 6
 
 export function TerritoryNewOpeningsPanel() {
   const [items, setItems] = useState<Item[] | null>(null)
@@ -32,7 +34,7 @@ export function TerritoryNewOpeningsPanel() {
   const [computedAt, setComputedAt] = useState('')
   const [error, setError] = useState('')
   const [ownerFilter, setOwnerFilter] = useState('')
-  const [visible, setVisible] = useState(PAGE)
+  const [visible, setVisible] = useState(FIRST)
 
   useEffect(() => {
     let alive = true
@@ -68,8 +70,7 @@ export function TerritoryNewOpeningsPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">醫事資料庫比對</p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">轄區新機構</h2>
+          <h2 className="text-lg font-bold text-stone-800">轄區新機構</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
               ? '衛福部登記開業、但還沒有人負責的機構，依所在轄區標明負責業務。'
@@ -91,7 +92,7 @@ export function TerritoryNewOpeningsPanel() {
 
       {viewingAll && owners.length > 1 && (
         <div className="mt-4">
-          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); setVisible(PAGE) }} className="select-soft text-sm">
+          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); setVisible(FIRST) }} className="select-soft text-sm">
             <option value="">全部業務（{items?.length ?? 0}）</option>
             {owners.map(([o, n]) => (
               <option key={o || '__none__'} value={o || '__none__'}>{o || '不在任何轄區'}（{n}）</option>
@@ -136,7 +137,7 @@ export function TerritoryNewOpeningsPanel() {
 
       {filtered.length > visible && (
         <button onClick={() => setVisible((v) => v + PAGE)}
-          className="mt-3 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
+          className="tap-target mt-3 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
           再顯示（還有 {filtered.length - visible} 家）
         </button>
       )}

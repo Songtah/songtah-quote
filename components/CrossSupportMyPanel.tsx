@@ -94,8 +94,7 @@ export function CrossSupportMyPanel() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">CROSS-TERRITORY SUPPORT</p>
-          <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-stone-800">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-stone-800">
             <Handshake className="size-4.5 text-brand-600" />跨區支援
             {data && <span className="text-sm font-semibold text-brand-700">{data.salesperson}</span>}
           </h2>
@@ -108,7 +107,7 @@ export function CrossSupportMyPanel() {
           <button
             key={tab.value}
             onClick={() => setPeriod(tab.value)}
-            className={`min-w-max rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
+            className={`tap-target min-w-max rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
               period === tab.value ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' : 'bg-stone-50 text-stone-500 hover:bg-brand-50 hover:text-brand-700'
             }`}
           >
@@ -171,7 +170,7 @@ export function CrossSupportMyPanel() {
                     {!item.customerMatched && picking !== item.id && (
                       <button
                         onClick={() => { setPicking(item.id); setNotice('') }}
-                        className="flex min-h-8 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95"
+                        className="tap-target flex min-h-8 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95"
                       >
                         <Link2 className="size-3" />指定客戶
                       </button>

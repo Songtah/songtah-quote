@@ -37,7 +37,8 @@ export function ClaimSuggestionsPanel() {
   const [assignPick, setAssignPick] = useState<Record<string, string>>({})
   // 全體視角可達 1,500 筆，一次全渲染（每張卡含下拉選單）會讓瀏覽器卡住，改為分批顯示
   const PAGE = 30
-  const [visibleCount, setVisibleCount] = useState(PAGE)
+  const FIRST = 6 // 首屏只放幾筆，避免首頁被單一面板佔滿（2026-10-27 首頁精簡）
+  const [visibleCount, setVisibleCount] = useState(FIRST)
   const [ownerFilter, setOwnerFilter] = useState('')
   const [busy, setBusy] = useState('')
   const [bulkPreview, setBulkPreview] = useState<{ total: number; willClaim: number; excludedContested: number; sample: { name: string; area: string; visitCount: number }[] } | null>(null)
@@ -143,8 +144,7 @@ export function ClaimSuggestionsPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">客情回報後續</p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">待認領建議</h2>
+          <h2 className="text-lg font-bold text-stone-800">待認領建議</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
               ? '全體業務的待認領建議。有人回報過、但客戶目前還沒有人負責，各筆標明該由誰處理。'
@@ -166,7 +166,7 @@ export function ClaimSuggestionsPanel() {
           </p>
           {!bulkPreview ? (
             <button onClick={previewBulk} disabled={busy === 'bulk'}
-              className="mt-3 rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-emerald-800 active:scale-95 disabled:opacity-40">
+              className="tap-target mt-3 rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-emerald-800 active:scale-95 disabled:opacity-40">
               {busy === 'bulk' ? '計算中…' : `預覽並一次認領這 ${backlog.length} 家`}
             </button>
           ) : (
@@ -182,9 +182,9 @@ export function ClaimSuggestionsPanel() {
               </p>
               <div className="mt-2.5 flex gap-2">
                 <button onClick={() => setBulkPreview(null)}
-                  className="rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">取消</button>
+                  className="tap-target rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">取消</button>
                 <button onClick={confirmBulk} disabled={busy === 'bulk'}
-                  className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-emerald-800 active:scale-95 disabled:opacity-40">
+                  className="tap-target rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-emerald-800 active:scale-95 disabled:opacity-40">
                   {busy === 'bulk' ? '認領中…' : `確認認領 ${bulkPreview.willClaim} 家`}
                 </button>
               </div>
@@ -199,7 +199,7 @@ export function ClaimSuggestionsPanel() {
 
       {viewingAll && owners.length > 1 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); setVisibleCount(PAGE) }}
+          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); setVisibleCount(FIRST) }}
             className="select-soft text-sm" aria-label="只看某位業務的建議">
             <option value="">全部業務（{items?.length ?? 0}）</option>
             {owners.map((o) => (
@@ -264,7 +264,7 @@ export function ClaimSuggestionsPanel() {
                 <button
                   onClick={() => act(s, 'support')}
                   disabled={busy === s.customerId || busy === key}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95 disabled:opacity-40">
+                  className="tap-target inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95 disabled:opacity-40">
                   <Handshake className="size-3.5" />只是支援，不認領
                 </button>
                 {canAssign ? (
@@ -282,7 +282,7 @@ export function ClaimSuggestionsPanel() {
                     <button
                       onClick={() => assign(s, key)}
                       disabled={busy === key || !picked}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
+                      className="tap-target inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
                       <UserRoundPlus className="size-3.5" />{busy === key ? '指派中…' : picked ? `指派給 ${picked}` : '指派'}
                     </button>
                   </>
@@ -291,7 +291,7 @@ export function ClaimSuggestionsPanel() {
                     onClick={() => act(s, 'claim')}
                     disabled={busy === s.customerId || blocked}
                     title={blocked ? '此客戶歸屬有爭議，需主管核可' : undefined}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
+                    className="tap-target inline-flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40 disabled:shadow-none">
                     <UserRoundPlus className="size-3.5" />認領這家客戶
                   </button>
                 )}
@@ -303,7 +303,7 @@ export function ClaimSuggestionsPanel() {
 
       {filtered.length > shown.length && (
         <button onClick={() => setVisibleCount((n) => n + PAGE)}
-          className="mt-3 w-full rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.06] transition-all hover:bg-stone-100 active:scale-95">
+          className="tap-target mt-3 w-full rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.06] transition-all hover:bg-stone-100 active:scale-95">
           再顯示 {Math.min(PAGE, filtered.length - shown.length)} 筆（還有 {filtered.length - shown.length} 筆）
         </button>
       )}

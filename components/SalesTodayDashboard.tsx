@@ -11,9 +11,7 @@ import {
   PackageCheck,
   Search,
 } from 'lucide-react'
-import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
-import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { AppSidebar, AppMobileNav, AppBottomNav } from '@/components/AppNav'
 import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
@@ -33,6 +31,9 @@ const quickActions = [
   { href: '/orders', label: '查訂單', icon: PackageCheck, module: 'orders' as const },
   { href: '/tickets/new', label: '新增工單', icon: Headphones, module: 'rma' as const },
 ]
+
+/** 「接下來的工作」首屏筆數；管理帳號一次 30 筆會把首頁拉得很長（2026-10-27 首頁精簡） */
+const WORK_FIRST = 8
 
 const kindLabel: Record<TodayWorkItem['kind'], string> = {
   visit: '拜訪',
@@ -65,6 +66,7 @@ export function SalesTodayDashboard({
 }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
+  const [showAllWork, setShowAllWork] = useState(false)
   const logged = useRef(false)
 
   useEffect(() => {
@@ -120,8 +122,10 @@ export function SalesTodayDashboard({
           </div>
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(260px,.75fr)]" aria-label="今天最重要的工作">
-            <MagicCard gradientColor="#e7e5e4" gradientFrom="#d6d3d1" gradientTo="#f5f5f4" gradientOpacity={0.28} className="rounded-3xl border-0 shadow-[0_18px_55px_rgba(28,25,23,0.08)] ring-1 ring-stone-900/[0.05]">
-              <div className="relative z-30 min-h-[300px] bg-white p-6 sm:p-9">
+            {/* 原本是跟著滑鼠走的漸層光暈（MagicCard）＋流光按鈕（ShimmerButton），屬裝飾特效且寫死色碼，
+                改回設計語言的 card-soft／button-primary（2026-10-27 impeccable audit 第 4、7 項） */}
+            <div className="card-soft">
+              <div className="min-h-[300px] p-6 sm:p-9">
                 <div className="mb-10 flex items-center justify-between gap-4">
                   <span className="rounded-full bg-brand-50 px-3 py-1.5 text-xs font-bold tracking-wide text-brand-700">下一個動作</span>
                   {next?.overdue && <span className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600">已逾期</span>}
@@ -132,9 +136,9 @@ export function SalesTodayDashboard({
                     <h2 className="mt-2 text-2xl font-bold tracking-tight text-stone-900 sm:text-4xl">{next.customer}</h2>
                     <p className="mt-3 max-w-xl text-base leading-7 text-stone-600 sm:text-lg">{next.action}</p>
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <ShimmerButton onClick={() => router.push(next.href)} background="#8a6c32" shimmerColor="#fff7df" className="h-12 px-6 text-sm font-bold shadow-lg shadow-brand-500/20 active:scale-95">
-                        開始處理 <ArrowRight className="ml-2 size-4" />
-                      </ShimmerButton>
+                      <Link href={next.href} className="button-primary h-12 px-6 text-sm font-bold">
+                        開始處理 <ArrowRight aria-hidden="true" className="ml-2 size-4" />
+                      </Link>
                       {visibleModules.crm && (
                         <Link href={`/customers?q=${encodeURIComponent(next.customer)}`} className="rounded-full bg-stone-50 px-6 py-3 text-center text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.05] transition-all hover:bg-stone-100 active:scale-95">查看客戶資料</Link>
                       )}
@@ -155,7 +159,7 @@ export function SalesTodayDashboard({
                   </>
                 )}
               </div>
-            </MagicCard>
+            </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-[0_16px_45px_rgba(28,25,23,0.06)] ring-1 ring-stone-900/[0.05] sm:p-7">
               <h2 className="text-base font-bold text-stone-800">今天還有</h2>
@@ -168,6 +172,38 @@ export function SalesTodayDashboard({
                 ))}
               </div>
             </div>
+          </section>
+
+          <section className="mt-8" aria-labelledby="up-next-title">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="up-next-title" className="text-lg font-bold text-stone-800">接下來的工作</h2>
+              {visibleModules.bd && <Link href="/bd" className="tap-target inline-flex items-center text-sm font-semibold text-brand-600 hover:text-brand-700">查看全部</Link>}
+            </div>
+            {data.workItems.length > 0 ? (<>
+              // 一開始就全部顯示：原本 AnimatedList 每 0.14 秒才多冒一筆（30 筆約 4 秒），
+              // 初始只有第一筆存在，鍵盤與螢幕閱讀器也只讀得到它（2026-10-27 impeccable audit）
+              <ul className="flex flex-col gap-3">
+                {(showAllWork ? data.workItems : data.workItems.slice(0, WORK_FIRST)).map((item) => (
+                  <li key={`${item.kind}-${item.id}`}><Link href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:px-6">
+                    <span className={`w-20 shrink-0 text-sm font-bold ${item.overdue ? 'text-rose-600' : 'text-brand-600'}`}>{item.time}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-stone-800 sm:text-base">{item.customer}</span>
+                      <span className="mt-0.5 block truncate text-sm text-stone-500">{item.action}</span>
+                    </span>
+                    <span className="hidden rounded-full bg-stone-50 px-3 py-1.5 text-xs font-semibold text-stone-500 sm:block">{kindLabel[item.kind]}</span>
+                    <ArrowRight aria-hidden="true" className="size-4 text-stone-500 transition-transform group-hover:translate-x-1 group-hover:text-brand-500 motion-reduce:transition-none" />
+                  </Link></li>
+                ))}
+              </ul>
+              {data.workItems.length > WORK_FIRST && (
+                <button type="button" onClick={() => setShowAllWork((v) => !v)} aria-expanded={showAllWork}
+                  className="tap-target mt-3 w-full rounded-full bg-stone-50 px-4 py-2.5 text-sm font-semibold text-stone-600 ring-1 ring-stone-900/[0.06] transition-all hover:bg-stone-100 active:scale-95">
+                  {showAllWork ? '收起' : `顯示其餘 ${data.workItems.length - WORK_FIRST} 項`}
+                </button>
+              )}
+            </>) : (
+              <div className="rounded-3xl bg-white px-6 py-10 text-center text-sm text-stone-500 shadow-sm ring-1 ring-stone-900/[0.05]">目前沒有待辦工作，從下方快速建立一筆。</div>
+            )}
           </section>
 
           {showPerformance && (
@@ -212,38 +248,13 @@ export function SalesTodayDashboard({
             </section>
           )}
 
-          <section className="mt-8" aria-labelledby="up-next-title">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 id="up-next-title" className="text-lg font-bold text-stone-800">接下來的工作</h2>
-              {visibleModules.bd && <Link href="/bd" className="text-sm font-semibold text-brand-600 hover:text-brand-700">查看全部</Link>}
-            </div>
-            {data.workItems.length > 0 ? (
-              // 一開始就全部顯示：原本 AnimatedList 每 0.14 秒才多冒一筆（30 筆約 4 秒），
-              // 初始只有第一筆存在，鍵盤與螢幕閱讀器也只讀得到它（2026-10-27 impeccable audit）
-              <ul className="flex flex-col gap-3">
-                {data.workItems.map((item) => (
-                  <li key={`${item.kind}-${item.id}`}><Link href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:px-6">
-                    <span className={`w-20 shrink-0 text-sm font-bold ${item.overdue ? 'text-rose-600' : 'text-brand-600'}`}>{item.time}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-stone-800 sm:text-base">{item.customer}</span>
-                      <span className="mt-0.5 block truncate text-sm text-stone-500">{item.action}</span>
-                    </span>
-                    <span className="hidden rounded-full bg-stone-50 px-3 py-1.5 text-xs font-semibold text-stone-500 sm:block">{kindLabel[item.kind]}</span>
-                    <ArrowRight aria-hidden="true" className="size-4 text-stone-500 transition-transform group-hover:translate-x-1 group-hover:text-brand-500 motion-reduce:transition-none" />
-                  </Link></li>
-                ))}
-              </ul>
-            ) : (
-              <div className="rounded-3xl bg-white px-6 py-10 text-center text-sm text-stone-500 shadow-sm ring-1 ring-stone-900/[0.05]">目前沒有待辦工作，從下方快速建立一筆。</div>
-            )}
-          </section>
 
           {visibleActions.length > 0 && (
             <section className="mt-8" aria-labelledby="quick-actions-title">
               <h2 id="quick-actions-title" className="mb-4 text-lg font-bold text-stone-800">快速開始</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                 {visibleActions.map(({ href, label, icon: Icon }) => (
-                  <Link key={href} href={href} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-white px-3 py-4 text-sm font-semibold text-stone-600 shadow-sm ring-1 ring-stone-900/[0.04] transition-all hover:-translate-y-0.5 hover:text-brand-700 hover:shadow-md active:scale-95">
+                  <Link key={href} href={href} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-white px-3 py-4 text-sm font-semibold text-stone-600 shadow-sm ring-1 ring-stone-900/[0.04] transition-all hover:-translate-y-0.5 hover:text-brand-700 hover:shadow-md active:scale-95 motion-reduce:hover:translate-y-0">
                     <span className="rounded-full bg-brand-50 p-2.5 text-brand-600"><Icon className="size-5" /></span>
                     {label}
                   </Link>

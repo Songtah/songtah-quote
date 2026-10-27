@@ -33,6 +33,8 @@ const SCOPE_STYLE: Record<Scope, string> = {
   unowned: 'bg-amber-50 text-amber-700', company: 'bg-stone-100 text-stone-600', other: 'bg-stone-50 text-stone-500',
 }
 const PAGE = 20
+/** 首屏只放幾筆，避免首頁被單一面板佔滿（2026-10-27 首頁精簡） */
+const FIRST = 6
 const md = (d: string) => (d ? `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}` : '')
 
 export function EventCustomersPanel() {
@@ -44,7 +46,7 @@ export function EventCustomersPanel() {
   const [pick, setPick] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState('')
   const [filter, setFilter] = useState<Filter>('')
-  const [visible, setVisible] = useState(PAGE)
+  const [visible, setVisible] = useState(FIRST)
   const [error, setError] = useState('')
   const [done, setDone] = useState('')
 
@@ -109,8 +111,7 @@ export function EventCustomersPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">行銷活動足跡</p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">課程／活動客戶</h2>
+          <h2 className="text-lg font-bold text-stone-800">課程／活動客戶</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
               ? '參加或報名課程、展會後還沒被拜訪的客戶，標明歸屬。無人負責與公司戶沒有業務看得到，可在這裡指派。'
@@ -132,25 +133,25 @@ export function EventCustomersPanel() {
 
       {(Object.keys(counts).length > 1 || expiringCount > 0 || overdueCount > 0) && (
         <div className="mt-4 flex flex-wrap gap-1.5">
-          <button onClick={() => { setFilter(''); setVisible(PAGE) }}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === '' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
+          <button onClick={() => { setFilter(''); setVisible(FIRST) }}
+            className={`tap-target rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === '' ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
             全部 {items?.length}
           </button>
           {(Object.keys(SCOPE_LABEL) as Scope[]).filter((s) => counts[s]).map((s) => (
-            <button key={s} onClick={() => { setFilter(s); setVisible(PAGE) }}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === s ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
+            <button key={s} onClick={() => { setFilter(s); setVisible(FIRST) }}
+              className={`tap-target rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === s ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
               {SCOPE_LABEL[s]} {counts[s]}
             </button>
           ))}
           {expiringCount > 0 && (
-            <button onClick={() => { setFilter('expiring'); setVisible(PAGE) }}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'expiring' ? 'bg-stone-800 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
+            <button onClick={() => { setFilter('expiring'); setVisible(FIRST) }}
+              className={`tap-target rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'expiring' ? 'bg-stone-800 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
               即將到期 {expiringCount}
             </button>
           )}
           {overdueCount > 0 && (
-            <button onClick={() => { setFilter('overdue'); setVisible(PAGE) }}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'overdue' ? 'bg-stone-800 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
+            <button onClick={() => { setFilter('overdue'); setVisible(FIRST) }}
+              className={`tap-target rounded-full px-3 py-1 text-xs font-semibold transition-all active:scale-95 ${filter === 'overdue' ? 'bg-stone-800 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
               逾期未拜訪 {overdueCount}
             </button>
           )}
@@ -205,7 +206,7 @@ export function EventCustomersPanel() {
                       {assignable.map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                     <button onClick={() => assign(i)} disabled={busy === i.customerId || !pick[i.customerId]}
-                      className="shrink-0 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">
+                      className="tap-target shrink-0 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">
                       {busy === i.customerId ? '指派中…' : '指派'}
                     </button>
                   </div>
@@ -218,7 +219,7 @@ export function EventCustomersPanel() {
 
       {filtered.length > visible && (
         <button onClick={() => setVisible((v) => v + PAGE)}
-          className="mt-3 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
+          className="tap-target mt-3 rounded-full bg-stone-100 px-4 py-2 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
           再顯示（還有 {filtered.length - visible} 家）
         </button>
       )}

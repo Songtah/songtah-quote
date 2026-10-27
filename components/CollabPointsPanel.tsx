@@ -149,15 +149,14 @@ export function CollabPointsPanel() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">COLLABORATION POINTS</p>
-          <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-stone-800">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-stone-800">
             <Trophy className="size-4.5 text-brand-600" />協作積分
             {data && <span className="text-sm font-semibold text-brand-700">{data.focus}</span>}
           </h2>
         </div>
         <button
           onClick={() => { setFormOpen((open) => !open); setNotice('') }}
-          className="flex min-h-10 items-center gap-1.5 rounded-full bg-brand-500 px-4 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95"
+          className="tap-target flex min-h-10 items-center gap-1.5 rounded-full bg-brand-500 px-4 text-sm font-semibold text-white shadow-md shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95"
         >
           <Plus className="size-4" />申報助攻
         </button>
@@ -168,7 +167,7 @@ export function CollabPointsPanel() {
           <button
             key={tab.value}
             onClick={() => setPeriod(tab.value)}
-            className={`min-w-max rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
+            className={`tap-target min-w-max rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
               period === tab.value ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20' : 'bg-stone-50 text-stone-500 hover:bg-brand-50 hover:text-brand-700'
             }`}
           >
@@ -208,7 +207,7 @@ export function CollabPointsPanel() {
           <button
             onClick={submitReport}
             disabled={busy === 'report'}
-            className="mt-3 flex min-h-10 items-center rounded-full bg-stone-900 px-5 text-sm font-semibold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50"
+            className="tap-target mt-3 flex min-h-10 items-center rounded-full bg-stone-900 px-5 text-sm font-semibold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50"
           >
             {busy === 'report' ? '送出中…' : '送出申報'}
           </button>
@@ -267,7 +266,7 @@ export function CollabPointsPanel() {
                       <p className="mt-0.5 text-xs text-stone-500">
                         {item.customerName || '未指定客戶'}{item.note ? `・${item.note}` : ''}
                         {!item.customerMatched && picking !== item.id && (
-                          <button onClick={() => { setPicking(item.id); setNotice('') }} className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white active:scale-95">
+                          <button onClick={() => { setPicking(item.id); setNotice('') }} className="tap-target ml-2 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white active:scale-95">
                             <Link2 className="size-2.5" />指定客戶
                           </button>
                         )}
@@ -277,8 +276,8 @@ export function CollabPointsPanel() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已確認')} className="flex min-h-9 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50"><Check className="size-3.5" />確認</button>
-                      <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '駁回')} className="flex min-h-9 items-center gap-1 rounded-full bg-stone-100 px-3 text-xs font-semibold text-stone-600 active:scale-95 disabled:opacity-50"><X className="size-3.5" />駁回</button>
+                      <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已確認')} className="tap-target flex min-h-9 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50"><Check className="size-3.5" />確認</button>
+                      <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '駁回')} className="tap-target flex min-h-9 items-center gap-1 rounded-full bg-stone-100 px-3 text-xs font-semibold text-stone-600 active:scale-95 disabled:opacity-50"><X className="size-3.5" />駁回</button>
                     </div>
                     </div>
                     <label className="mt-2 block text-xs font-semibold text-stone-500">
@@ -310,7 +309,7 @@ export function CollabPointsPanel() {
                     <div className="flex items-center gap-2">
                       <span className="chip text-xs">{item.status}</span>
                       {item.status === '已確認' && (
-                        <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已認列')} className="min-h-9 rounded-full bg-stone-900 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50" title="須由總經理或管理層執行">認列</button>
+                        <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已認列')} className="tap-target min-h-9 rounded-full bg-stone-900 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50" title="須由總經理或管理層執行">認列</button>
                       )}
                     </div>
                   </div>

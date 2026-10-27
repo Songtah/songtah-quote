@@ -249,3 +249,26 @@ input[type="date"] {
     }
   }
 }
+
+/* ── 觸控與減少動態效果（2026-10-27 impeccable audit 第 4、5 項）───────────
+   放在所有 layer 之外並提高權重，才蓋得過 min-h-8 之類的 utility。 */
+
+/* 觸控裝置的按鈕點擊區至少 44px（WCAG 2.5.5／Apple HIG）；滑鼠操作維持原本的緊湊尺寸 */
+@media (pointer: coarse) {
+  button.tap-target,
+  a.tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* 使用者設定「減少動態效果」：拿掉位移與縮放，保留顏色、陰影等狀態回饋 */
+@media (prefers-reduced-motion: reduce) {
+  .card-soft-hover:hover,
+  .btn:active,
+  [class*='active:scale']:active,
+  [class*='hover:-translate-y']:hover,
+  [class*='group-hover:translate-x']:is(.group:hover *) {
+    transform: none;
+  }
+}
