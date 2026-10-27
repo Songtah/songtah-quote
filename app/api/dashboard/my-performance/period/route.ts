@@ -15,6 +15,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { listOrdersBySalesperson, listOrdersByDateRange } from '@/lib/orders-notion'
 import { listVisitTallies } from '@/lib/notion/visits'
 import { getSystemUsers } from '@/lib/notion/accounts'
+import { cachedSWR } from '@/lib/notion/shared'
 import { INACTIVE_SALESPERSONS, resolveSalesperson } from '@/lib/line-salesperson-map'
 import { parsePeriod, resolvePeriod, PERIOD_LABEL, PREVIOUS_PERIOD_LABEL, ALL_SALESPEOPLE } from '@/lib/performance-periods'
 
@@ -41,15 +42,20 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
     const period = parsePeriod(req.nextUrl.searchParams.get('period'))
     const range = resolvePeriod(period)
 
-    // 一次撈「對照期起 ~ 本期迄」，本期與對照期在記憶體切分，省一輪查詢
+    // 一次撈「對照期起 ~ 本期迄」，本期與對照期在記憶體切分，省一輪查詢。
+    // 首頁快取（2026-10-27）：同一人同一期 5 分鐘內共用，過期先回舊值、背景重算
+    let failed = false   // 任一來源讀取失敗（退回空清單）就不快取，避免把 0 存起來
+    const { orders, visitResult } = await cachedSWR(`my-performance:v1:${teamMode ? 'team' : owner}:${range.prevFrom}:${range.to}`, async () => {
     const [orders, visitResult] = await Promise.all([
       (teamMode
         ? listOrdersByDateRange(range.prevFrom, range.to)
         : listOrdersBySalesperson(owner, { from: range.prevFrom, to: range.to })
-      ).catch((error) => { console.error('my-performance/period: 訂單讀取失敗', error); return [] }),
+      ).catch((error) => { console.error('my-performance/period: 訂單讀取失敗', error); failed = true; return [] }),
       listVisitTallies(range.prevFrom, range.to, teamMode ? undefined : owner)
-        .catch((error) => { console.error('my-performance/period: 拜訪讀取失敗', error); return [] }),
+        .catch((error) => { console.error('my-performance/period: 拜訪讀取失敗', error); failed = true; return [] }),
     ])
+    return { orders, visitResult }
+    }, { freshMs: 5 * 60_000, maxAgeMs: 6 * 3600_000, shouldCache: () => !failed })
 
     const mine = orders.filter((o) => !EXCLUDED_ORDER_STATUS.has(o.status))
     const inRange = (date: string, from: string, to: string) => date >= from && date <= to

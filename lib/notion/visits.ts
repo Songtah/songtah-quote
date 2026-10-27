@@ -854,12 +854,27 @@ export async function listVisitTallies(
   ]
   if (salesperson) filters.push({ property: '業務人員', select: { equals: salesperson } })
 
+  // 已依日期範圍過濾（一期約一兩千筆，遠低於 1 萬筆截斷），直接分頁即可。
+  // 2026-10-27：曾誤改成 scanVisitPages 分區全掃，十幾個日期分區逐一查詢，首頁業績區塊因此要 6 秒以上。
   const out: { date: string; salesperson: string }[] = []
-  for await (const page of scanVisitPages('listVisitTallies', { and: filters })) {
-    out.push({
-      date: getDate(page, '日期'),
-      salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
-    })
-  }
+  let cursor: string | undefined
+  do {
+    const response: any = await notionCallWithRetry('listVisitTallies', () =>
+      notion.databases.query({
+        database_id: normalizeDatabaseId(DB.visits),
+        page_size: 100,
+        filter: { and: filters },
+        ...(cursor ? { start_cursor: cursor } : {}),
+      })
+    )
+    for (const page of response.results ?? []) {
+      out.push({
+        date: getDate(page, '日期'),
+        salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
+      })
+    }
+    cursor = response.has_more ? (response.next_cursor ?? undefined) : undefined
+  } while (cursor)
+  if (out.length >= 10_000) console.warn(`listVisitTallies: ${from}～${to} 達 ${out.length} 筆，可能被 Notion 截斷`)
   return out
 }
