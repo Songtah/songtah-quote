@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { listOrders, listOrderSummaries, createOrder } from '@/lib/orders-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { orderStatusChanged } from '@/lib/notification-events'
 
 /** ?view=summary：清單頁用，只回訂單摘要（不含品項明細），避免每次掃全部明細 */
 export const GET = withApiAuth('session', async (req: NextRequest) => {
@@ -39,6 +40,8 @@ export const POST = withApiAuth({ module: 'orders', action: 'edit' }, async (req
       customerAddress, customerPhone, contactPerson, customerTaxId,
       promotionId, promotionName, requestedDate, paymentMethod, deliveryMethod,
     })
+
+    if (initialStatus === '已送出') orderStatusChanged(order, '已送出')
 
     await logAuditEvent({
       module: 'orders', action: 'create', entityType: 'order', entityId: order.id, entityTitle: order.orderNumber,

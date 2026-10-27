@@ -18,6 +18,7 @@ import { getVisitSignals } from '@/lib/notion/visit-suggestions'
 import { getRedis, getTitle, getText, getDate, getSelect, deleteRedisValue } from '@/lib/notion/shared'
 import { logAuditEvent } from '@/lib/audit'
 import { detectClosure, type ClosureStatus } from '@/lib/visit-closure-detect'
+import { visitClosureApplied } from '@/lib/notification-events'
 
 const LOG_KEY = 'medical-monitor:visit-closures'   // hash：customerId（去連字號）→ VisitClosureEntry
 const CLOSED = new Set(['停業', '已歇業', '撤銷'])
@@ -107,6 +108,7 @@ export async function runVisitClosureDetection(options: { days?: number; dryRun?
     if (dryRun) { out.updated.push(entry); continue }
     await updateCustomerStatus(customer.id, entry.to)
     await writeLog(entry)
+    visitClosureApplied(entry)
     await logAuditEvent({
       module: 'clinic_monitor', action: 'update', entityType: 'customer-status',
       entityId: customer.id, entityTitle: customer.name,

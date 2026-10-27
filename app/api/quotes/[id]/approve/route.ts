@@ -3,6 +3,7 @@ import { withApiAuth } from '@/lib/api-auth'
 import { getQuote, updateQuoteStatus } from '@/lib/notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { QUOTE_TRANSITIONS } from '@/lib/quote-status'
+import { quoteStatusChanged } from '@/lib/notification-events'
 
 // 簽核權限：admin / 行政 / 總經理（withApiAuth 先擋入口，內部再依目前狀態做轉換層級判斷）
 export const POST = withApiAuth({ roles: ['行政', '總經理'] }, async (req: NextRequest, { params }: { params: { id: string } }, session) => {
@@ -42,6 +43,7 @@ export const POST = withApiAuth({ roles: ['行政', '總經理'] }, async (req: 
   const newStatus = transition.to
 
   await updateQuoteStatus(params.id, newStatus, note || undefined)
+  quoteStatusChanged(quote, newStatus)
 
   await logAuditEvent({
     module: 'quote',

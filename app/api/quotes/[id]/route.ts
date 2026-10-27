@@ -4,6 +4,7 @@ import { getQuote, deleteQuote, updateQuote } from '@/lib/notion'
 import { parseQuoteInput } from '@/lib/quote-input'
 import { QUOTE_TRANSITIONS, canEditQuote } from '@/lib/quote-status'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
+import { quoteStatusChanged } from '@/lib/notification-events'
 
 export const GET = withApiAuth('session', async (_req: NextRequest, { params }: { params: { id: string } }) => {
   try {
@@ -20,6 +21,7 @@ export const DELETE = withApiAuth({ module: 'quote', action: 'edit' }, async (re
   try {
     const before = await getQuote(params.id).catch(() => null)
     await deleteQuote(params.id)
+    if (before) quoteStatusChanged(before, '已刪除')   // 收掉待審核通知
 
     await logAuditEvent({
       module: 'quote',
@@ -62,6 +64,7 @@ export const PUT = withApiAuth({ module: 'quote', action: 'edit' }, async (req: 
     }
 
     const after = await updateQuote(params.id, input, nextStatus)
+    if (nextStatus) quoteStatusChanged(after, nextStatus)
 
     await logAuditEvent({
       module: 'quote',

@@ -5,6 +5,7 @@ import { parseQuoteInput } from '@/lib/quote-input'
 import { QUOTE_TRANSITIONS } from '@/lib/quote-status'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { advanceCustomerDevStage } from '@/lib/notion/customers'
+import { quoteStatusChanged } from '@/lib/notification-events'
 
 export const GET = withApiAuth('session', async (req: NextRequest) => {
   try {
@@ -29,6 +30,7 @@ export const POST = withApiAuth({ module: 'quote', action: 'edit' }, async (req:
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const quote = await createQuote({ ...input, appUrl, status })
+    if (status === '待行政審核') quoteStatusChanged(quote, status)
 
     if (input.customerId) {
       const user = session.user as any

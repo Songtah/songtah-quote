@@ -19,6 +19,7 @@ import {
 } from '@/lib/online-registration'
 import { parseArea, normalizeCity } from '@/lib/event-import'
 import { isValidDistrict } from '@/lib/tw-districts'
+import { registrationCreated } from '@/lib/notification-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -141,6 +142,7 @@ export async function POST(req: NextRequest) {
       gender, diet, infoSource, referrer,
       paymentMethod, transferLast5: last5, paidDate,
     })
+    registrationCreated(event, { institution, contact: name, attendees, amount, transferLast5: last5 })
     return NextResponse.json({ ok: true, amount, paymentNote: event.paid ? event.paymentNote : '' })
   } catch (error) {
     console.error('public register error:', error)

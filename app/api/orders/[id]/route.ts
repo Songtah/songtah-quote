@@ -4,6 +4,7 @@ import { getOrderById, updateOrder, updateOrderStatus, archiveOrder } from '@/li
 import { updateCustomerDevStage } from '@/lib/notion/customers'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { orderActorOf, findOrderTransition, canEditOrderContent, canDeleteOrder } from '@/lib/order-status'
+import { orderStatusChanged } from '@/lib/notification-events'
 
 const VALIDATION_HINTS = ['數量須為正整數', '單價不可為負數', '不存在於產品目錄', '已停用', '贈品／樣品總數量', '促銷驗證未通過']
 const CONTENT_KEYS = [
@@ -27,6 +28,7 @@ export const DELETE = withApiAuth({ module: 'orders', action: 'edit' }, async (r
       return NextResponse.json({ error: `訂單已${existing.status}，只有行政帳號可以刪除；如不需要了請改用「取消訂單」` }, { status: 403 })
     }
     await archiveOrder(params.id)
+    orderStatusChanged(existing, '已刪除')   // 收掉待受理通知
     await logAuditEvent({
       module: 'orders', action: 'delete', entityType: 'order', entityId: params.id, entityTitle: existing.orderNumber,
       summary: `刪除訂貨單：${existing.orderNumber}（${existing.status}）`,
@@ -79,6 +81,7 @@ export const PATCH = withApiAuth({ module: 'orders', action: 'edit' }, async (re
     } else if (wantsStatus) {
       await updateOrderStatus(params.id, body.status)
     }
+    if (wantsStatus) orderStatusChanged(existing, body.status)
 
     // 訂單到貨＝成交訊號:同步客戶開發階段(業務開發漏斗鐵則——只在此推進,不覆蓋機構狀態)
     if (wantsStatus && body.status === '已到貨' && existing.customerId) {

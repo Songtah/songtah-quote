@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
+import { NotificationBell } from '@/components/NotificationBell'
 import {
   BadgeDollarSign, BriefcaseBusiness, Building2, CircleUserRound, FileText,
   Headphones, Home, LifeBuoy, Menu, PackageCheck, Settings2, ShoppingBag, TrendingUp,
@@ -107,9 +108,12 @@ export function AppSidebar({ sessionUser }: { sessionUser?: SessionUserLike }) {
   const { visibleGroups, isActive, userName } = useVisibleNav(sessionUser)
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-stone-900/[0.06] bg-[#fdfdfb] px-5 py-6 lg:flex">
-      <Link href="/dashboard" className="mb-8 block px-2" aria-label="崧達企業 — 回首頁">
-        <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-36" priority />
-      </Link>
+      <div className="mb-8 flex items-center justify-between gap-2 px-2">
+        <Link href="/dashboard" className="block" aria-label="崧達企業 — 回首頁">
+          <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-32" priority />
+        </Link>
+        <NotificationBell />
+      </div>
       <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1" aria-label="主要導覽">
         {visibleGroups.map(({ group, items }) => (
           <div key={group}>
@@ -152,6 +156,8 @@ export function AppMobileNav({ sessionUser }: { sessionUser?: SessionUserLike })
     <header className="sticky top-0 z-30 border-b border-stone-900/[0.06] bg-white/95 backdrop-blur-xl lg:hidden">
       <div className="flex h-16 items-center justify-between px-4">
         <Link href="/dashboard"><Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="h-auto w-28" priority /></Link>
+        <div className="flex items-center gap-2">
+        <NotificationBell />
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -161,6 +167,7 @@ export function AppMobileNav({ sessionUser }: { sessionUser?: SessionUserLike })
         >
           {open ? <X className="size-5" /> : <Menu className="size-5" />}
         </button>
+        </div>
       </div>
       {open && (
         <nav className="max-h-[70vh] overflow-y-auto border-t border-stone-900/[0.06] bg-white p-4" aria-label="手機主要導覽">

@@ -19,6 +19,7 @@ import { getRedis } from '@/lib/notion/shared'
 import { pushLineMessage } from '@/lib/line-push'
 import { findLineGroupByName } from '@/lib/line-groups'
 import type { RepairFinding } from '@/lib/visit-reaction-ai'
+import { repairTicketCreated } from '@/lib/notification-events'
 
 const DONE_KEY = 'repair-ticket:visits'      // set：已處理過的客情 id
 const PENDING_KEY = 'repair-ticket:pending'  // hash：客情 id → 待配對客戶的維修資訊
@@ -156,6 +157,10 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
     if (!closed) await r.set(recentKey, ticket.id, { ex: 7 * 86400 })
   }
   if (!closed) {
+    repairTicketCreated({
+      id: ticket.id, number: ticket.number, customerName: input.customerName, salesperson: input.salesperson,
+      summary: [repair.equipment, repair.issue].filter(Boolean).join('｜') || '未註明設備／問題',
+    })
     await notifyManager(`🔧 新維修工單 ${ticket.number}（待指派）\n客戶：${input.customerName}\n設備／問題：${[repair.equipment, repair.issue].filter(Boolean).join('｜') || '未註明'}\n業務：${input.salesperson}（${input.visitDate} 回報）\n原文：${repair.evidence}`)
   }
   return { action: 'created', ticketId: ticket.id, number: ticket.number, closed }

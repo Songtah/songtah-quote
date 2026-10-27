@@ -129,6 +129,13 @@
 
 **現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**（2883 → ~72 行），所有實作在 `lib/notion/*`：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `dashboard`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
 
+## 通知鐵則（2026-10-28 建立：站內通知中心＋網頁推播，不做 LINE 個人通知）
+
+1. **機制只有一套**：`lib/notifications.ts`（Redis 儲存、頻道 `u:/n:/t:/r:admin`、web-push）；**哪些事通知誰只寫在 `lib/notification-events.ts`**，各流程在狀態改變處呼叫它，不得在 route 裡直接 `notify()` 另寫文字與對象。
+2. **通知不是待辦**：需要處理的事帶 `resolveKey`，處理完（報價已簽核、訂單已受理、刪除）由流程收掉，不要求人回來點「已處理」（最高原則）。
+3. **主管＝中央管理＋總經理＋admin**；客情監控衍生的系統動作（維修自動開單、客情歇業自動更新）一律通知回報業務＋主管。
+4. **推播金鑰** `VAPID_PUBLIC_KEY／VAPID_PRIVATE_KEY／VAPID_SUBJECT` 只放環境變數；未設定時站內通知照常、推播自動隱藏。推播訂閱網址只收各瀏覽器推播服務網域。
+
 ## 工程慣例
 
 - 修改後必跑 `npx tsc --noEmit`，乾淨才 commit。

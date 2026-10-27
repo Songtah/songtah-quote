@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   description: 'SONGTAH TRADING CO.,LTD. 內部營運平台',
   icons: {
     icon: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
   },
+  // 加到 iPhone 主畫面時以 App 樣式開啟（網頁推播在 iPhone 上需要這樣開）
+  appleWebApp: { capable: true, title: '崧達系統', statusBarStyle: 'default' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
