@@ -7,6 +7,7 @@
  * 首頁數字卡因此每次先閃「待追蹤 0、進行中報價 0」；分頁在背景、減少動態效果、截圖時永遠停在 0
  * （伺服器資料是 203，畫面是 0）。改為一開始就顯示正確數字（伺服器端輸出即正確），之後數值變動才動畫；
  * 使用者設定減少動態效果時直接換數字。
+ * 2026-10-28：拿掉元件庫預設的 dark:text-white——系統沒有深色模式，電腦設成深色時數字變白字白底看不到。
  */
 import { useEffect, useRef, type ComponentPropsWithoutRef } from "react"
 import { useMotionValue, useSpring, useReducedMotion } from "motion/react"
@@ -64,7 +65,7 @@ export function NumberTicker({
   return (
     <span
       ref={ref}
-      className={cn("inline-block tracking-wider text-black tabular-nums dark:text-white", className)}
+      className={cn("inline-block tracking-wider text-stone-800 tabular-nums", className)}
       {...props}
     >
       {format(value)}
