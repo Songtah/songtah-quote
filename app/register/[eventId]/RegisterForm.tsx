@@ -77,11 +77,11 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote
         <p className="text-xl font-bold text-emerald-800">{done.duplicate ? '您已經報名過了' : '報名完成，謝謝您！'}</p>
         <p className="mt-2 text-sm text-stone-500">我們已收到您的報名資料，活動前會與您聯繫。</p>
         {done.amount > 0 && (
-          <div className="mt-6 rounded-2xl bg-amber-50 p-5 text-left ring-1 ring-amber-600/15">
-            <p className="text-sm font-semibold text-amber-800">應繳報名費：{formatNT(done.amount)}</p>
+          <div className="mt-6 rounded-2xl bg-pine-50 p-5 text-left ring-1 ring-pine-700/15">
+            <p className="text-sm font-semibold text-pine-700">應繳報名費：{formatNT(done.amount)}</p>
             {done.paymentNote
-              ? <p className="mt-2 whitespace-pre-line text-sm leading-7 text-amber-900">{done.paymentNote}</p>
-              : <p className="mt-2 text-sm text-amber-900">付款方式將由專人與您聯繫。</p>}
+              ? <p className="mt-2 whitespace-pre-line text-sm leading-7 text-pine-800">{done.paymentNote}</p>
+              : <p className="mt-2 text-sm text-pine-800">付款方式將由專人與您聯繫。</p>}
           </div>
         )}
       </div>
@@ -198,10 +198,11 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote
       {showPaymentSection && (
         <fieldset className="space-y-3">
           <legend className={legend}>付款</legend>
-          <div className="rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-600/15">
-            <p className="text-sm text-amber-700">{plan ? plan.name : `報名費 ${formatNT(fee)} × ${attendees} 位`}</p>
-            <p className="text-lg font-bold tabular-nums text-amber-800">應繳 {formatNT(total)}</p>
-            {paymentNote && <p className="mt-2 whitespace-pre-line border-t border-amber-600/15 pt-2 text-sm leading-7 text-amber-900">{paymentNote}</p>}
+          {/* 付款資訊用崧達品牌深綠（Logo 色 #344a33），與報名表其餘棕金互動色區隔 */}
+          <div className="rounded-2xl bg-pine-50 px-4 py-3 ring-1 ring-pine-700/15">
+            <p className="text-sm text-pine-600">{plan ? plan.name : `報名費 ${formatNT(fee)} × ${attendees} 位`}</p>
+            <p className="text-lg font-bold tabular-nums text-pine-700">應繳 {formatNT(total)}</p>
+            {paymentNote && <p className="mt-2 whitespace-pre-line border-t border-pine-700/15 pt-2 text-sm leading-7 text-pine-800">{paymentNote}</p>}
           </div>
           {show('paymentMethod') && <div className={label}>付款方式{star('paymentMethod')}
             <div className="mt-1 flex flex-wrap gap-2">
