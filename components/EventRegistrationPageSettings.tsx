@@ -144,7 +144,7 @@ export function EventRegistrationPageSettings({
           </div>
 
           <div>
-            <span className={label}>廣告圖（建議橫式 1200×630，JPG／PNG／WebP，4 MB 內）</span>
+            <span className={label}>廣告圖（橫式，寬 1200px 以上，例如 1200×630、2000×770；JPG／PNG／WebP，4 MB 內；整張完整顯示不裁切）</span>
             {s.bannerUrl ? (
               <div className="mt-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

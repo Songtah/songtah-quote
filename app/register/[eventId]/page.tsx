@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { unstable_noStore as noStore } from 'next/cache'
+import { headers } from 'next/headers'
 import { getEventById, listEventRegistrations } from '@/lib/notion/events'
 import { registrationGate, formatNT } from '@/lib/online-registration'
 import { RegisterForm } from './RegisterForm'
@@ -18,9 +19,16 @@ export async function generateMetadata({ params }: { params: { eventId: string }
     title: `${event.name}｜線上報名｜崧達企業`,
     description,
     robots: { index: false, follow: false },
-    // 分享到 LINE／Facebook 時顯示廣告圖
-    openGraph: { title: event.name, description, ...(event.bannerUrl ? { images: [event.bannerUrl] } : {}) },
+    // 分享到 LINE／Facebook 時顯示廣告圖：經 og 路由把任意比例的廣告圖完整放進 1200×630，避免分享卡裁掉左右兩側。
+    // v＝廣告圖檔名，換圖即換網址，不被分享平台與 CDN 的舊快取卡住。
+    openGraph: { title: event.name, description, ...(event.bannerUrl ? { images: [{ url: ogImageUrl(params.eventId, event.bannerUrl), width: 1200, height: 630 }] } : {}) },
   }
+}
+
+function ogImageUrl(eventId: string, bannerUrl: string) {
+  const host = headers().get('x-forwarded-host') ?? headers().get('host') ?? 'songtah-quote.vercel.app'
+  const v = encodeURIComponent(bannerUrl.split('/').pop() ?? '')
+  return `https://${host}/api/public/register/og/${eventId}?v=${v}`
 }
 
 const weekday = (d: string) => (d ? '日一二三四五六'[new Date(`${d.slice(0, 10)}T00:00:00+08:00`).getDay()] : '')
@@ -34,7 +42,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
   const gate = event ? registrationGate(event, taken) : null
 
   return (
-    <div className="min-h-screen bg-cream-100 px-4 py-8 sm:py-12">
+    <div className="min-h-screen overflow-x-hidden bg-cream-100 px-4 py-8 sm:py-12">
       <div className="mx-auto max-w-2xl">
         <Image src="/Logo.svg" alt="崧達企業" width={2638} height={437} className="mx-auto h-auto w-36 object-contain" />
 
@@ -42,11 +50,16 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
           <div className="card-soft mt-6 p-8 text-center text-sm text-stone-500">此活動目前未開放線上報名。</div>
         ) : (
           <>
+            {event.bannerUrl && (
+              // 廣告圖比例不固定（1200×630、2000×770 長橫幅都常見）：一律等比完整顯示、不裁切；
+              // 比報名表寬一些，長橫幅上的小字才看得清楚；手機上點圖開原圖可放大。
+              <a href={event.bannerUrl} target="_blank" rel="noreferrer" title="點擊查看原圖"
+                className="relative left-1/2 mt-6 block w-[min(calc(100vw_-_2rem),64rem)] -translate-x-1/2 overflow-hidden rounded-3xl bg-stone-100 ring-1 ring-stone-900/[0.05]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={event.bannerUrl} alt={event.name} className="block h-auto w-full" />
+              </a>
+            )}
             <article className="card-soft mt-6 overflow-hidden">
-              {event.bannerUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={event.bannerUrl} alt={event.name} className="block h-auto w-full bg-stone-100" />
-              )}
               <div className="p-6 sm:p-8">
                 <div className="flex flex-wrap items-center gap-2">
                   {event.type && <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{event.type}</span>}
