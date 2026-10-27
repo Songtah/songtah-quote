@@ -38,7 +38,7 @@ const money = (n: number) => `NT$ ${n.toLocaleString()}`
 function DeltaBadge({ value, suffix = '' }: { value: number; suffix?: string }) {
   if (value === 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-400">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-500">
         <Minus className="size-3" />持平
       </span>
     )
@@ -93,7 +93,7 @@ export function SalesPerformancePeriods() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
             {data?.scope === 'team' ? 'TEAM PERFORMANCE' : 'MY PERFORMANCE'}
           </p>
           <h2 className="mt-1 text-lg font-bold text-stone-800">
@@ -101,7 +101,7 @@ export function SalesPerformancePeriods() {
             {data && <span className="ml-2 text-sm font-semibold text-brand-700">{data.salesperson}</span>}
           </h2>
         </div>
-        {data && <p className="text-xs text-stone-400">{data.range.label}・{data.range.from} ~ {data.range.to}</p>}
+        {data && <p className="text-xs text-stone-500">{data.range.label}・{data.range.from} ~ {data.range.to}</p>}
       </div>
 
       {canPickPerson && (
@@ -135,7 +135,7 @@ export function SalesPerformancePeriods() {
         ))}
       </div>
 
-      {loading && <p className="px-6 py-10 text-center text-sm text-stone-400 sm:px-7">正在統計業績…</p>}
+      {loading && <p className="px-6 py-10 text-center text-sm text-stone-500 sm:px-7">正在統計業績…</p>}
       {error && <p className="mx-6 my-5 rounded-2xl bg-red-50 p-4 text-sm text-red-600 sm:mx-7">{error}</p>}
 
       {!loading && !error && data && (
@@ -146,26 +146,26 @@ export function SalesPerformancePeriods() {
               <p className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{money(data.summary.amount)}</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <DeltaBadge value={data.growth.amountDelta} />
-                {data.growth.amountPct !== null && <span className="text-xs text-stone-400">({data.growth.amountPct > 0 ? '+' : ''}{data.growth.amountPct}%)</span>}
+                {data.growth.amountPct !== null && <span className="text-xs text-stone-500">({data.growth.amountPct > 0 ? '+' : ''}{data.growth.amountPct}%)</span>}
               </div>
-              <p className="mt-1 text-[11px] text-stone-400">{data.previousLabel} {money(data.previous.amount)}</p>
+              <p className="mt-1 text-xs text-stone-500">{data.previousLabel} {money(data.previous.amount)}</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">訂單數</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{data.summary.orders.toLocaleString()}</p>
               <div className="mt-1.5"><DeltaBadge value={data.growth.ordersDelta} suffix=" 筆" /></div>
-              <p className="mt-1 text-[11px] text-stone-400">{data.previousLabel} {data.previous.orders} 筆</p>
+              <p className="mt-1 text-xs text-stone-500">{data.previousLabel} {data.previous.orders} 筆</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">平均客單價</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{money(data.summary.averageOrderAmount)}</p>
-              <p className="mt-1.5 text-[11px] text-stone-400">依本期成立訂單計算</p>
+              <p className="mt-1.5 text-xs text-stone-500">依本期成立訂單計算</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">拜訪次數</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-stone-900">{data.summary.visits.toLocaleString()}</p>
               <div className="mt-1.5"><DeltaBadge value={data.growth.visitsDelta} suffix=" 次" /></div>
-              <p className="mt-1 text-[11px] text-stone-400">{data.previousLabel} {data.previous.visits} 次</p>
+              <p className="mt-1 text-xs text-stone-500">{data.previousLabel} {data.previous.visits} 次</p>
             </div>
           </div>
 
@@ -185,7 +185,7 @@ export function SalesPerformancePeriods() {
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[420px] text-sm">
                   <thead>
-                    <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-stone-400">
+                    <tr className="text-left text-xs font-bold uppercase tracking-widest text-stone-500">
                       <th className="pb-2 pr-3 font-bold">#</th>
                       <th className="pb-2 pr-3 font-bold">業務</th>
                       <th className="pb-2 pr-3 text-right font-bold">業績金額</th>
@@ -196,7 +196,7 @@ export function SalesPerformancePeriods() {
                   <tbody className="divide-y divide-stone-900/[0.06]">
                     {data.bySalesperson.map((row, index) => (
                       <tr key={row.name}>
-                        <td className="py-2.5 pr-3 tabular-nums text-stone-400">{index + 1}</td>
+                        <td className="py-2.5 pr-3 tabular-nums text-stone-500">{index + 1}</td>
                         <td className="py-2.5 pr-3">
                           <button
                             onClick={() => setWho(row.name)}
@@ -213,24 +213,24 @@ export function SalesPerformancePeriods() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-[11px] text-stone-400">點業務姓名可切換為單人檢視。</p>
+              <p className="mt-2 text-xs text-stone-500">點業務姓名可切換為單人檢視。</p>
             </div>
           )}
 
           <div className="px-6 py-5 sm:px-7">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-stone-700">訂單明細</h3>
-              <p className="text-xs text-stone-400">{data.summary.orders.toLocaleString()} 筆{data.itemsTruncated ? '（顯示最新 200 筆）' : ''}</p>
+              <p className="text-xs text-stone-500">{data.summary.orders.toLocaleString()} 筆{data.itemsTruncated ? '（顯示最新 200 筆）' : ''}</p>
             </div>
             {data.items.length === 0 ? (
-              <p className="mt-4 rounded-2xl bg-stone-50 py-8 text-center text-sm text-stone-400">
+              <p className="mt-4 rounded-2xl bg-stone-50 py-8 text-center text-sm text-stone-500">
                 {data.periodLabel}尚無成立的訂單
               </p>
             ) : (
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[520px] text-sm">
                   <thead>
-                    <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-stone-400">
+                    <tr className="text-left text-xs font-bold uppercase tracking-widest text-stone-500">
                       <th className="pb-2 pr-3 font-bold">日期</th>
                       <th className="pb-2 pr-3 font-bold">客戶</th>
                       <th className="pb-2 pr-3 font-bold">訂單編號</th>
@@ -243,8 +243,8 @@ export function SalesPerformancePeriods() {
                       <tr key={`${item.orderNumber}-${index}`}>
                         <td className="py-2.5 pr-3 tabular-nums text-stone-500">{item.date}</td>
                         <td className="py-2.5 pr-3 font-medium text-stone-800">{item.customerName || '（未填客戶）'}</td>
-                        <td className="py-2.5 pr-3 tabular-nums text-stone-400">{item.orderNumber || '—'}</td>
-                        <td className="py-2.5 pr-3"><span className="chip text-[11px]">{item.status}</span></td>
+                        <td className="py-2.5 pr-3 tabular-nums text-stone-500">{item.orderNumber || '—'}</td>
+                        <td className="py-2.5 pr-3"><span className="chip text-xs">{item.status}</span></td>
                         <td className="py-2.5 text-right font-semibold tabular-nums text-stone-900">{money(item.amount)}</td>
                       </tr>
                     ))}

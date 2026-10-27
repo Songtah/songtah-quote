@@ -55,7 +55,7 @@ function Field({ label, hint, required, children, className = '' }: {
     <label className={`block ${className}`}>
       <span className="mb-1.5 flex items-baseline gap-1.5 text-xs font-medium text-stone-500">
         {label}{required && <span className="text-red-500">*</span>}
-        {hint && <span className="font-normal text-stone-400">{hint}</span>}
+        {hint && <span className="font-normal text-stone-500">{hint}</span>}
       </span>
       {children}
     </label>
@@ -69,9 +69,9 @@ function Section({ step, title, desc, action, children }: {
     <section className="card-soft rounded-3xl p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold tracking-widest text-stone-400">{step}</p>
+          <p className="text-xs font-semibold tracking-widest text-stone-500">{step}</p>
           <h2 className="mt-0.5 text-base font-bold text-stone-800">{title}</h2>
-          {desc && <p className="mt-0.5 text-xs text-stone-400">{desc}</p>}
+          {desc && <p className="mt-0.5 text-xs text-stone-500">{desc}</p>}
         </div>
         {action}
       </div>
@@ -85,7 +85,7 @@ function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange
     <button type="button" onClick={() => onChange(!checked)} className="flex w-full items-center justify-between gap-3 py-1.5 text-left">
       <span>
         <span className="block text-sm text-stone-700">{label}</span>
-        {hint && <span className="block text-[11px] text-stone-400">{hint}</span>}
+        {hint && <span className="block text-xs text-stone-500">{hint}</span>}
       </span>
       <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? 'bg-brand-500' : 'bg-stone-200'}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${checked ? 'left-[18px]' : 'left-0.5'}`} />
@@ -327,7 +327,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
         <p className="mt-1 text-sm text-stone-500">
           {result.quoteNumber}　·　{result.customerName}　·　{formatMoney(result.total)}
         </p>
-        <p className="mt-3 text-xs text-stone-400">
+        <p className="mt-3 text-xs text-stone-500">
           {result.status === '草稿'
             ? '草稿只有內部看得到，確認後到報價清單按「編輯」再送出審核。'
             : approved ? '已核准，可以把分享連結或 PDF 交給客戶。' : '審核通過後，分享連結與正式 PDF 才會開放給客戶。'}
@@ -379,9 +379,9 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                 {customerId ? (
                   <span className="inline-flex items-center gap-2 text-emerald-700">
                     ✓ 已連結客戶主檔
-                    <button type="button" onClick={() => { setCustomerId(''); markDirty() }} className="text-stone-400 underline hover:text-stone-600">取消連結</button>
+                    <button type="button" onClick={() => { setCustomerId(''); markDirty() }} className="text-stone-500 underline hover:text-stone-600">取消連結</button>
                   </span>
-                ) : customerName ? <span className="text-stone-400">未連結客戶主檔（報價仍可建立，但不會推進客戶的開發階段）</span> : null}
+                ) : customerName ? <span className="text-stone-500">未連結客戶主檔（報價仍可建立，但不會推進客戶的開發階段）</span> : null}
               </div>
               {showCustomerList && customerResults.length > 0 && (
                 <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-2xl bg-white shadow-xl ring-1 ring-stone-900/[0.08]">
@@ -389,7 +389,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                     <button key={c.id} type="button" onMouseDown={() => pickCustomer(c)}
                       className="block w-full border-b border-stone-50 px-4 py-2.5 text-left last:border-0 hover:bg-brand-50">
                       <span className="block text-sm font-medium text-stone-800">{c.name}</span>
-                      <span className="mt-0.5 block truncate text-xs text-stone-400">
+                      <span className="mt-0.5 block truncate text-xs text-stone-500">
                         {[c.city, c.type, c.phone, c.address].filter(Boolean).join('　·　')}
                       </span>
                     </button>
@@ -427,7 +427,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
               <span className="mt-1.5 flex flex-wrap gap-1.5">
                 {([['14 天', addDays(quoteDate, 14)], ['1 個月', addMonths(quoteDate, 1)], ['2 個月', addMonths(quoteDate, 2)], ['3 個月', addMonths(quoteDate, 3)]] as const).map(([l, v]) => (
                   <button key={l} type="button" onClick={() => { setValidUntil(v); markDirty() }}
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] transition-all active:scale-95 ${validUntil === v ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}>{l}</button>
+                    className={`rounded-full px-2.5 py-0.5 text-xs transition-all active:scale-95 ${validUntil === v ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}>{l}</button>
                 ))}
               </span>
             </Field>
@@ -455,7 +455,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
             <Field label="備註／附加條款" hint="每行一條，列在報價單「說明」區" className="sm:col-span-2">
               <textarea value={note} onChange={(e) => { setNote(e.target.value); markDirty() }} rows={3}
                 className="input-soft resize-y py-3" placeholder={'例：本報價含教育訓練 2 小時\n安裝場地需備 110V 專用迴路'} />
-              <span className="mt-1 block text-[11px] text-stone-400">稅金說明與有效期限會自動列出，不用重複寫。</span>
+              <span className="mt-1 block text-xs text-stone-500">稅金說明與有效期限會自動列出，不用重複寫。</span>
             </Field>
           </div>
         </Section>
@@ -472,24 +472,25 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
               <input value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setPickerOpen(true); setQuickMsg('') }}
                 onFocus={() => setPickerOpen(true)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); quickAddByCode() } }}
+                aria-label="搜尋產品資料庫（品名或貨號；輸入完整貨號按 Enter 直接加入）"
                 className="input-soft min-w-[200px] flex-1 bg-white" placeholder="🔍 搜尋品名、貨號；輸入完整貨號按 Enter 直接加入，可一次貼上多個" />
-              <select value={brandFilter} onChange={(e) => { setBrandFilter(e.target.value); setPickerOpen(true) }} className="select-soft bg-white">
+              <select aria-label="篩選品牌" value={brandFilter} onChange={(e) => { setBrandFilter(e.target.value); setPickerOpen(true) }} className="select-soft bg-white">
                 <option value="">全部品牌</option>{brands.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
-              <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPickerOpen(true) }} className="select-soft bg-white">
+              <select aria-label="篩選品類" value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPickerOpen(true) }} className="select-soft bg-white">
                 <option value="">全部品類</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               {pickerOpen && (
-                <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full px-3 text-xs text-stone-400 hover:text-stone-600">收起</button>
+                <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full px-3 text-xs text-stone-500 hover:text-stone-600">收起</button>
               )}
             </div>
-            {quickMsg && <p className="mt-2 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">{quickMsg}</p>}
+            {quickMsg && <p role="status" className="mt-2 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">{quickMsg}</p>}
             {pickerOpen && (
               <div className="mt-2 max-h-80 overflow-y-auto rounded-xl bg-white ring-1 ring-stone-900/[0.06]">
                 {productsLoading ? (
-                  <p className="py-8 text-center text-sm text-stone-400">搜尋中…</p>
+                  <p className="py-8 text-center text-sm text-stone-500">搜尋中…</p>
                 ) : products.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-stone-400">
+                  <p className="py-8 text-center text-sm text-stone-500">
                     {productQuery || brandFilter || categoryFilter ? '產品資料庫沒有符合的品項，可改用「自訂品項」' : '輸入關鍵字或選擇品牌／品類'}
                   </p>
                 ) : products.map((p) => {
@@ -502,9 +503,9 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                         : <div className="h-10 w-10 shrink-0 rounded-lg bg-stone-100" />}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm text-stone-800">{p.name}</p>
-                        <p className="truncate text-[11px] text-stone-400">{[p.skuCode, p.manufacturer, p.productType].filter(Boolean).join('　·　')}</p>
+                        <p className="truncate text-xs text-stone-500">{[p.skuCode, p.manufacturer, p.productType].filter(Boolean).join('　·　')}</p>
                       </div>
-                      <span className="shrink-0 text-sm tabular-nums text-stone-600">{price != null ? formatMoney(price) : <span className="text-stone-400">待定價</span>}</span>
+                      <span className="shrink-0 text-sm tabular-nums text-stone-600">{price != null ? formatMoney(price) : <span className="text-stone-500">待定價</span>}</span>
                       <button type="button" onClick={() => addItem(fromProduct(p))}
                         className="shrink-0 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95">
                         {count ? `再加一筆（已加 ${count}）` : '＋ 加入'}
@@ -518,12 +519,12 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
 
           {/* 品項明細 */}
           {items.length === 0 ? (
-            <div className={`mt-4 rounded-2xl border border-dashed px-4 py-10 text-center text-sm ${touched ? 'border-red-300 text-red-500' : 'border-stone-200 text-stone-400'}`}>
+            <div className={`mt-4 rounded-2xl border border-dashed px-4 py-10 text-center text-sm ${touched ? 'border-red-300 text-red-500' : 'border-stone-200 text-stone-500'}`}>
               還沒有品項——從上方搜尋產品加入，或按「＋ 自訂品項」。
             </div>
           ) : (
             <div className="mt-4">
-              <div className="hidden grid-cols-[28px_minmax(0,1fr)_76px_64px_112px_104px_72px] gap-2 px-2 pb-2 text-[11px] font-medium text-stone-400 xl:grid">
+              <div className="hidden grid-cols-[28px_minmax(0,1fr)_76px_64px_112px_104px_72px] gap-2 px-2 pb-2 text-xs font-medium text-stone-500 xl:grid">
                 <span>#</span><span>品名</span><span className="text-right">數量</span><span>單位</span>
                 <span className="text-right">單價</span><span className="text-right">金額</span><span />
               </div>
@@ -535,12 +536,13 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                     <li key={item.tempId}
                       className={`rounded-2xl bg-white p-2 ring-1 transition-all ${flashId === item.tempId ? 'ring-2 ring-brand-300' : 'ring-stone-900/[0.06]'}`}>
                       <div className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-2 xl:grid-cols-[28px_minmax(0,1fr)_64px_56px_96px_92px_80px] xl:items-center">
-                        <span className="pt-2.5 text-center text-xs tabular-nums text-stone-400 xl:pt-0">{idx + 1}</span>
+                        <span className="pt-2.5 text-center text-xs tabular-nums text-stone-500 xl:pt-0">{idx + 1}</span>
                         <div className="min-w-0">
                           <input value={item.name} onChange={(e) => updateItem(item.tempId, { name: e.target.value })}
+                            aria-label={`第 ${idx + 1} 項品名`} aria-required="true"
                             className={`input-soft py-2 ${showError(!item.name.trim())}`} placeholder="品名（必填）" />
                           {!detail && (item.brand || item.spec || item.note) && (
-                            <button type="button" onClick={() => toggleDetail(item.tempId)} className="mt-1 block max-w-full truncate px-1 text-left text-[11px] text-stone-400 hover:text-stone-600">
+                            <button type="button" onClick={() => toggleDetail(item.tempId)} className="mt-1 block max-w-full truncate px-1 text-left text-xs text-stone-500 hover:text-stone-600">
                               {[item.brand, item.spec, item.note && `備註：${item.note}`].filter(Boolean).join('　·　')}
                             </button>
                           )}
@@ -548,18 +550,18 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                         {/* 手機：數量／單位／單價／金額第二列 */}
                         <div className="col-span-2 grid grid-cols-[1fr_64px_1fr] gap-2 xl:contents">
                           <label className="xl:contents">
-                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">數量</span>
+                            <span className="mb-1 block text-xs text-stone-500 xl:sr-only">數量</span>
                             <input type="number" min={0} step="any" value={item.quantity}
                               onChange={(e) => updateItem(item.tempId, { quantity: Number(e.target.value) })}
                               className={`input-soft py-2 text-right tabular-nums ${showError(!(Number(item.quantity) > 0))}`} />
                           </label>
                           <label className="xl:contents">
-                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">單位</span>
+                            <span className="mb-1 block text-xs text-stone-500 xl:sr-only">單位</span>
                             <input value={item.unit} onChange={(e) => updateItem(item.tempId, { unit: e.target.value })}
                               className="input-soft px-2 py-2 text-center" placeholder="個" />
                           </label>
                           <label className="xl:contents">
-                            <span className="mb-1 block text-[11px] text-stone-400 xl:hidden">單價</span>
+                            <span className="mb-1 block text-xs text-stone-500 xl:sr-only">單價</span>
                             <input type="number" min={0} step="any" value={item.unitPrice}
                               onChange={(e) => updateItem(item.tempId, { unitPrice: Number(e.target.value) })}
                               className="input-soft py-2 text-right tabular-nums" />
@@ -567,13 +569,13 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                         </div>
                         <div className="col-span-2 flex items-center justify-between gap-2 xl:col-span-1 xl:contents">
                           <span className="text-sm font-semibold tabular-nums text-stone-800 xl:text-right">
-                            <span className="mr-1 text-[11px] font-normal text-stone-400 xl:hidden">金額</span>{amount.toLocaleString('zh-TW')}
+                            <span className="mr-1 text-xs font-normal text-stone-500 xl:sr-only">金額</span>{amount.toLocaleString('zh-TW')}
                           </span>
                           <div className="flex items-center justify-end gap-0.5">
                             <button type="button" onClick={() => toggleDetail(item.tempId)} title="品牌、規格、備註、圖片"
-                              className={`whitespace-nowrap rounded-full px-2 py-1 text-xs transition-all active:scale-95 ${detail ? 'bg-brand-50 text-brand-700' : 'text-stone-400 hover:bg-stone-100'}`}>詳細</button>
+                              className={`whitespace-nowrap rounded-full px-2 py-1 text-xs transition-all active:scale-95 ${detail ? 'bg-brand-50 text-brand-700' : 'text-stone-500 hover:bg-stone-100'}`}>詳細</button>
                             <details className="relative">
-                              <summary className="list-none cursor-pointer rounded-full px-2 py-1 text-stone-400 hover:bg-stone-100" title="更多">⋯</summary>
+                              <summary className="list-none cursor-pointer rounded-full px-2 py-1 text-stone-500 hover:bg-stone-100" title="更多" aria-label={`第 ${idx + 1} 項更多操作`}>⋯</summary>
                               <div onClick={(e) => e.currentTarget.closest('details')?.removeAttribute('open')}
                                 className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-xl bg-white py-1 text-sm shadow-xl ring-1 ring-stone-900/[0.08]">
                                 <button type="button" disabled={idx === 0} onClick={() => moveItem(item.tempId, -1)} className="block w-full px-3 py-1.5 text-left text-stone-600 hover:bg-stone-50 disabled:opacity-30">上移</button>
@@ -601,7 +603,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                               <input value={item.imageUrl} onChange={(e) => updateItem(item.tempId, { imageUrl: e.target.value })} className="input-soft bg-white py-2" placeholder="https://…" />
                             </div>
                           </Field>
-                          {item.productId && <p className="text-[11px] text-stone-400 sm:col-span-2">貨號 {item.productId}（單價為加入當下的售價，之後目錄調價不會改動這張報價單）</p>}
+                          {item.productId && <p className="text-xs text-stone-500 sm:col-span-2">貨號 {item.productId}（單價為加入當下的售價，之後目錄調價不會改動這張報價單）</p>}
                         </div>
                       )}
                     </li>
@@ -617,8 +619,8 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
       <aside className="space-y-4 lg:sticky lg:top-4">
         <div className="card-soft rounded-3xl p-5">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs text-stone-400">報價單號</p>
-            {isEdit && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{status}</span>}
+            <p className="text-xs text-stone-500">報價單號</p>
+            {isEdit && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">{status}</span>}
           </div>
           <p className="mt-0.5 font-mono text-sm text-stone-700">{isEdit ? initial!.quoteNumber : '存檔後自動產生'}</p>
 
@@ -627,7 +629,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
             <div className="flex items-center justify-between gap-3">
               <dt className="text-stone-500">折讓</dt>
               <dd className="flex items-center gap-1">
-                <span className="text-stone-400">−</span>
+                <span className="text-stone-500">−</span>
                 <input type="number" min={0} value={discount || ''} placeholder="0"
                   onChange={(e) => { setDiscount(Math.max(0, Number(e.target.value) || 0)); markDirty() }}
                   className="input-soft w-28 px-2 py-1 text-right tabular-nums" />
@@ -640,7 +642,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
               <dt className="text-stone-600">總計{taxMode === '含稅' ? '（含稅）' : ''}</dt>
               <dd className="text-2xl font-bold tabular-nums text-brand-700">{formatMoney(totals.total)}</dd>
             </div>
-            <p className="text-right text-[11px] text-stone-400">{amountInChinese(totals.total)}</p>
+            <p className="text-right text-xs text-stone-500">{amountInChinese(totals.total)}</p>
           </dl>
         </div>
 
@@ -674,7 +676,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
             <button type="button" onClick={previewPdf} disabled={previewing} className={`button-secondary py-3 lg:w-full ${showDraftButton ? '' : 'col-span-2'}`}>
               {previewing ? '產生中…' : '預覽 PDF'}
             </button>
-            <button type="button" onClick={close} className="hidden py-2 text-sm text-stone-400 hover:text-stone-600 lg:block lg:w-full">取消</button>
+            <button type="button" onClick={close} className="hidden py-2 text-sm text-stone-500 hover:text-stone-600 lg:block lg:w-full">取消</button>
           </div>
         </div>
       </aside>

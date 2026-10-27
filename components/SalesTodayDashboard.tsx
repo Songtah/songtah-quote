@@ -11,7 +11,6 @@ import {
   PackageCheck,
   Search,
 } from 'lucide-react'
-import { AnimatedList } from '@/components/ui/animated-list'
 import { MagicCard } from '@/components/ui/magic-card'
 import { NumberTicker } from '@/components/ui/number-ticker'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
@@ -109,12 +108,12 @@ export function SalesTodayDashboard({
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-7 sm:py-9 lg:px-10">
           <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-stone-400">{displayDate(data.date)}</p>
+              <p className="text-sm font-medium text-stone-500">{displayDate(data.date)}</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl">{userName || '夥伴'}，{greeting}</h1>
             </div>
             {visibleModules.crm && (
               <form onSubmit={submitSearch} className="relative w-full sm:w-72">
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-stone-500" />
                 <input value={query} onChange={(event) => setQuery(event.target.value)} className="input-soft h-12 w-full rounded-full pl-11 pr-4" placeholder="搜尋客戶名稱" aria-label="搜尋客戶名稱" />
               </form>
             )}
@@ -219,21 +218,23 @@ export function SalesTodayDashboard({
               {visibleModules.bd && <Link href="/bd" className="text-sm font-semibold text-brand-600 hover:text-brand-700">查看全部</Link>}
             </div>
             {data.workItems.length > 0 ? (
-              <AnimatedList delay={140} className="gap-3">
+              // 一開始就全部顯示：原本 AnimatedList 每 0.14 秒才多冒一筆（30 筆約 4 秒），
+              // 初始只有第一筆存在，鍵盤與螢幕閱讀器也只讀得到它（2026-10-27 impeccable audit）
+              <ul className="flex flex-col gap-3">
                 {data.workItems.map((item) => (
-                  <Link key={`${item.kind}-${item.id}`} href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] sm:px-6">
+                  <li key={`${item.kind}-${item.id}`}><Link href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:px-6">
                     <span className={`w-20 shrink-0 text-sm font-bold ${item.overdue ? 'text-rose-600' : 'text-brand-600'}`}>{item.time}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-stone-800 sm:text-base">{item.customer}</span>
-                      <span className="mt-0.5 block truncate text-sm text-stone-400">{item.action}</span>
+                      <span className="mt-0.5 block truncate text-sm text-stone-500">{item.action}</span>
                     </span>
                     <span className="hidden rounded-full bg-stone-50 px-3 py-1.5 text-xs font-semibold text-stone-500 sm:block">{kindLabel[item.kind]}</span>
-                    <ArrowRight className="size-4 text-stone-300 transition-transform group-hover:translate-x-1 group-hover:text-brand-500" />
-                  </Link>
+                    <ArrowRight aria-hidden="true" className="size-4 text-stone-500 transition-transform group-hover:translate-x-1 group-hover:text-brand-500 motion-reduce:transition-none" />
+                  </Link></li>
                 ))}
-              </AnimatedList>
+              </ul>
             ) : (
-              <div className="rounded-3xl bg-white px-6 py-10 text-center text-sm text-stone-400 shadow-sm ring-1 ring-stone-900/[0.05]">目前沒有待辦工作，從下方快速建立一筆。</div>
+              <div className="rounded-3xl bg-white px-6 py-10 text-center text-sm text-stone-500 shadow-sm ring-1 ring-stone-900/[0.05]">目前沒有待辦工作，從下方快速建立一筆。</div>
             )}
           </section>
 

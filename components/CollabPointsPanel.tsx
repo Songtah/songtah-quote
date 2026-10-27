@@ -149,7 +149,7 @@ export function CollabPointsPanel() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">COLLABORATION POINTS</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">COLLABORATION POINTS</p>
           <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-stone-800">
             <Trophy className="size-4.5 text-brand-600" />協作積分
             {data && <span className="text-sm font-semibold text-brand-700">{data.focus}</span>}
@@ -215,7 +215,7 @@ export function CollabPointsPanel() {
         </div>
       )}
 
-      {loading && <p className="px-6 py-10 text-center text-sm text-stone-400 sm:px-7">讀取協作積分…</p>}
+      {loading && <p className="px-6 py-10 text-center text-sm text-stone-500 sm:px-7">讀取協作積分…</p>}
       {error && <p className="mx-6 my-5 rounded-2xl bg-red-50 p-4 text-sm text-red-600 sm:mx-7">{error}</p>}
 
       {!loading && !error && data && s && (
@@ -224,22 +224,22 @@ export function CollabPointsPanel() {
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">{data.periodLabel}積分</p>
               <p className="mt-1 text-3xl font-bold tabular-nums text-brand-700">{s.totalPoints}</p>
-              <p className="mt-1 text-[11px] text-stone-400">{data.items.length} 筆已認列</p>
+              <p className="mt-1 text-xs text-stone-500">{data.items.length} 筆已認列</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">本輪累計</p>
-              <p className="mt-1 text-3xl font-bold tabular-nums text-stone-900">{s.cyclePoints}<span className="text-base font-medium text-stone-400"> / 12</span></p>
-              <p className="mt-1 text-[11px] text-stone-400">達 12 點後歸零重算</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums text-stone-900">{s.cyclePoints}<span className="text-base font-medium text-stone-500"> / 12</span></p>
+              <p className="mt-1 text-xs text-stone-500">達 12 點後歸零重算</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">距下個獎勵</p>
               <p className="mt-1 text-3xl font-bold tabular-nums text-stone-900">{s.nextTier ? s.pointsToNextTier : '—'}</p>
-              <p className="mt-1 text-[11px] text-stone-400">{s.nextTier ? `再 ${s.pointsToNextTier} 點達 ${s.nextTier.points} 點` : '本輪已達頂'}</p>
+              <p className="mt-1 text-xs text-stone-500">{s.nextTier ? `再 ${s.pointsToNextTier} 點達 ${s.nextTier.points} 點` : '本輪已達頂'}</p>
             </div>
             <div className="rounded-2xl bg-stone-50 p-4">
               <p className="text-xs text-stone-500">已完成輪次</p>
               <p className="mt-1 text-3xl font-bold tabular-nums text-stone-900">{s.completedCycles}</p>
-              <p className="mt-1 text-[11px] text-stone-400">每輪 12 點</p>
+              <p className="mt-1 text-xs text-stone-500">每輪 12 點</p>
             </div>
           </div>
 
@@ -262,12 +262,12 @@ export function CollabPointsPanel() {
                       <p className="text-sm font-semibold text-stone-800">
                         {item.helper}｜{correction[item.id] || item.item}
                         {' '}<span className="text-brand-700">+{data.itemOptions.find((o) => o.name === (correction[item.id] || item.item))?.points ?? item.points}</span>
-                        {item.autoClassified && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">系統判定・請複核</span>}
+                        {item.autoClassified && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700">系統判定・請複核</span>}
                       </p>
-                      <p className="mt-0.5 text-xs text-stone-400">
+                      <p className="mt-0.5 text-xs text-stone-500">
                         {item.customerName || '未指定客戶'}{item.note ? `・${item.note}` : ''}
                         {!item.customerMatched && picking !== item.id && (
-                          <button onClick={() => { setPicking(item.id); setNotice('') }} className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white active:scale-95">
+                          <button onClick={() => { setPicking(item.id); setNotice('') }} className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-semibold text-white active:scale-95">
                             <Link2 className="size-2.5" />指定客戶
                           </button>
                         )}
@@ -281,7 +281,7 @@ export function CollabPointsPanel() {
                       <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '駁回')} className="flex min-h-9 items-center gap-1 rounded-full bg-stone-100 px-3 text-xs font-semibold text-stone-600 active:scale-95 disabled:opacity-50"><X className="size-3.5" />駁回</button>
                     </div>
                     </div>
-                    <label className="mt-2 block text-[11px] font-semibold text-stone-500">
+                    <label className="mt-2 block text-xs font-semibold text-stone-500">
                       項目判定{item.autoClassified ? '（系統依回報內容判定，可更正）' : ''}
                       <select
                         className="select-soft mt-1 block w-full text-xs"
@@ -305,10 +305,10 @@ export function CollabPointsPanel() {
                   <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-stone-50/80 p-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-stone-800">助攻 {item.helped}｜{item.item} <span className="text-brand-700">+{item.points}</span></p>
-                      <p className="mt-0.5 text-xs text-stone-400">{item.customerName || '未指定客戶'}</p>
+                      <p className="mt-0.5 text-xs text-stone-500">{item.customerName || '未指定客戶'}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="chip text-[11px]">{item.status}</span>
+                      <span className="chip text-xs">{item.status}</span>
                       {item.status === '已確認' && (
                         <button disabled={busy === item.id} onClick={() => changeStatus(item.id, '已認列')} className="min-h-9 rounded-full bg-stone-900 px-3 text-xs font-semibold text-white active:scale-95 disabled:opacity-50" title="須由總經理或管理層執行">認列</button>
                       )}
@@ -322,12 +322,12 @@ export function CollabPointsPanel() {
           <div className="mt-5">
             <h3 className="text-sm font-bold text-stone-700">{data.periodLabel}全體排行</h3>
             {data.ranking.length === 0 ? (
-              <p className="mt-3 rounded-2xl bg-stone-50 py-8 text-center text-sm text-stone-400">{data.periodLabel}尚無已認列的協作積分</p>
+              <p className="mt-3 rounded-2xl bg-stone-50 py-8 text-center text-sm text-stone-500">{data.periodLabel}尚無已認列的協作積分</p>
             ) : (
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[360px] text-sm">
                   <thead>
-                    <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-stone-400">
+                    <tr className="text-left text-xs font-bold uppercase tracking-widest text-stone-500">
                       <th className="pb-2 pr-3 font-bold">#</th>
                       <th className="pb-2 pr-3 font-bold">業務</th>
                       <th className="pb-2 pr-3 text-right font-bold">積分</th>
@@ -337,7 +337,7 @@ export function CollabPointsPanel() {
                   <tbody className="divide-y divide-stone-900/[0.06]">
                     {data.ranking.map((row, index) => (
                       <tr key={row.name} className={row.name === data.me ? 'bg-brand-50/50' : ''}>
-                        <td className="py-2.5 pr-3 tabular-nums text-stone-400">{index + 1}</td>
+                        <td className="py-2.5 pr-3 tabular-nums text-stone-500">{index + 1}</td>
                         <td className="py-2.5 pr-3 font-semibold text-stone-800">{row.name}</td>
                         <td className="py-2.5 pr-3 text-right font-bold tabular-nums text-brand-700">{row.points}</td>
                         <td className="py-2.5 text-right tabular-nums text-stone-500">{row.entries}</td>
@@ -349,7 +349,7 @@ export function CollabPointsPanel() {
             )}
           </div>
 
-          <p className="mt-4 text-[11px] leading-relaxed text-stone-400">
+          <p className="mt-4 text-xs leading-relaxed text-stone-500">
             依《業務客戶分區管理辦法》第八章：助攻者主動提出，經受助業務確認、總經理於業務會議認列後計分。
             同一案件的協作積分原則僅認列一次；累積積分最高者於客戶重新分配時有優先認領權。
           </p>

@@ -109,7 +109,7 @@ export function EventCustomersPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">行銷活動足跡</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">行銷活動足跡</p>
           <h2 className="mt-1 text-lg font-bold text-stone-800">課程／活動客戶</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
@@ -126,7 +126,7 @@ export function EventCustomersPanel() {
         )}
       </div>
 
-      {items === null && <p className="mt-4 text-sm text-stone-400">讀取中…</p>}
+      {items === null && <p className="mt-4 text-sm text-stone-500">讀取中…</p>}
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
       {done && <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">{done}</p>}
 
@@ -169,7 +169,7 @@ export function EventCustomersPanel() {
                     <p className="mt-0.5 text-xs text-stone-500">{[i.type, `${i.city}${i.district}`].filter(Boolean).join('・')}</p>
                   </div>
                   {viewingAll && (
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${SCOPE_STYLE[i.scope]}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${SCOPE_STYLE[i.scope]}`}>
                       {i.scope === 'other' ? i.owner || i.territoryOwner : SCOPE_LABEL[i.scope]}
                     </span>
                   )}
@@ -184,16 +184,16 @@ export function EventCustomersPanel() {
                   </span>
                 </p>
                 {i.overdue && (
-                  <p className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                  <p className="mt-1.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
                     課後超過 60 天仍未拜訪（逾期 {-(i.daysLeft ?? 0)} 天）
                   </p>
                 )}
                 {isExpiring(i) && (
-                  <p className="mt-1.5 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                  <p className="mt-1.5 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">
                     {i.daysLeft === 0 ? '今天到期' : `剩 ${i.daysLeft} 天到期`}，拜訪後自動消失
                   </p>
                 )}
-                <p className="mt-1 text-[11px] text-stone-400">
+                <p className="mt-1 text-xs text-stone-500">
                   {i.lastVisit ? `上次拜訪 ${i.lastVisit}` : '尚無拜訪紀錄'}
                   {viewingAll && i.scope === 'unowned' && i.territoryOwner && `・轄區 ${i.territoryOwner}（不承接新客戶）`}
                 </p>

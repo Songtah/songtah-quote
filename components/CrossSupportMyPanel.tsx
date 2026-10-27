@@ -94,13 +94,13 @@ export function CrossSupportMyPanel() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">CROSS-TERRITORY SUPPORT</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">CROSS-TERRITORY SUPPORT</p>
           <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-stone-800">
             <Handshake className="size-4.5 text-brand-600" />跨區支援
             {data && <span className="text-sm font-semibold text-brand-700">{data.salesperson}</span>}
           </h2>
         </div>
-        {data && <p className="text-xs text-stone-400">{data.range.label}</p>}
+        {data && <p className="text-xs text-stone-500">{data.range.label}</p>}
       </div>
 
       <div className="flex gap-1 overflow-x-auto px-6 pt-4 sm:px-7">
@@ -118,7 +118,7 @@ export function CrossSupportMyPanel() {
       </div>
 
       {notice && <p className="mx-6 mt-4 rounded-2xl bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 sm:mx-7">{notice}</p>}
-      {loading && <p className="px-6 py-10 text-center text-sm text-stone-400 sm:px-7">讀取跨區支援名單…</p>}
+      {loading && <p className="px-6 py-10 text-center text-sm text-stone-500 sm:px-7">讀取跨區支援名單…</p>}
       {error && <p className="mx-6 my-5 rounded-2xl bg-red-50 p-4 text-sm text-red-600 sm:mx-7">{error}</p>}
 
       {!loading && !error && data && (
@@ -137,7 +137,7 @@ export function CrossSupportMyPanel() {
           {data.items.length === 0 ? (
             <div className="mt-4 rounded-2xl bg-stone-50 py-8 text-center">
               <p className="text-sm text-stone-500">{data.periodLabel}沒有跨區支援紀錄</p>
-              <p className="mt-1 text-xs text-stone-400">在 Slack「業務開發-討論區」用「跨區支援」格式回報後會出現在這裡</p>
+              <p className="mt-1 text-xs text-stone-500">在 Slack「業務開發-討論區」用「跨區支援」格式回報後會出現在這裡</p>
             </div>
           ) : (
             <div className="mt-3 space-y-2">
@@ -146,7 +146,7 @@ export function CrossSupportMyPanel() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="font-bold text-stone-800">{item.customerName}</h3>
-                      <p className="mt-0.5 text-xs text-stone-400">
+                      <p className="mt-0.5 text-xs text-stone-500">
                         {item.supportDate}
                         {item.customerCity ? `・${item.customerCity}` : ''}
                         {data.scope === 'team' ? `・報備：${item.reportingSalesperson}` : ''}
@@ -154,24 +154,24 @@ export function CrossSupportMyPanel() {
                     </div>
                     {item.trackingDaysLeft !== null && (
                       item.trackingActive ? (
-                        <span className="shrink-0 rounded-full bg-brand-500 px-2.5 py-1 text-[11px] font-bold text-white">
+                        <span className="shrink-0 rounded-full bg-brand-500 px-2.5 py-1 text-xs font-bold text-white">
                           追蹤期剩 {item.trackingDaysLeft} 天
                         </span>
                       ) : (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-stone-200 px-2.5 py-1 text-[11px] font-semibold text-stone-500">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-500">
                           <AlertTriangle className="size-3" />已過追蹤期
                         </span>
                       )
                     )}
                   </div>
                   {item.reason && <p className="mt-2 text-sm leading-relaxed text-stone-600">{item.reason}</p>}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-stone-500">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-stone-500">
                     <span className="rounded-full bg-white px-2.5 py-1">{item.status || '狀態未標示'}</span>
                     {item.originalSalesperson && <span className="rounded-full bg-white px-2.5 py-1">原負責：{item.originalSalesperson}</span>}
                     {!item.customerMatched && picking !== item.id && (
                       <button
                         onClick={() => { setPicking(item.id); setNotice('') }}
-                        className="flex min-h-8 items-center gap-1 rounded-full bg-brand-500 px-3 text-[11px] font-semibold text-white transition-all hover:bg-brand-600 active:scale-95"
+                        className="flex min-h-8 items-center gap-1 rounded-full bg-brand-500 px-3 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95"
                       >
                         <Link2 className="size-3" />指定客戶
                       </button>
@@ -190,7 +190,7 @@ export function CrossSupportMyPanel() {
             </div>
           )}
 
-          <p className="mt-4 text-[11px] leading-relaxed text-stone-400">
+          <p className="mt-4 text-xs leading-relaxed text-stone-500">
             依《業務客戶分區管理辦法》第四章：活動現場或 14 日內成交，設備訂單業績歸支援業務；
             第 15 日起客戶正式回歸當區業務接續服務。耗材、配件與後續服務一律由當區業務認列。
           </p>

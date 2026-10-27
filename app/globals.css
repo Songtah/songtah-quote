@@ -154,7 +154,7 @@ input[type="date"] {
   }
 
   .input {
-    @apply w-full rounded-xl border-0 bg-stone-100/80 px-4 py-2.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-400/60;
+    @apply w-full rounded-xl border-0 bg-stone-100/80 px-4 py-2.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-500 focus:bg-white focus:ring-2 focus:ring-brand-400/60;
   }
 
   .panel {
@@ -216,7 +216,7 @@ input[type="date"] {
   /* 柔和輸入框 */
   .input-soft {
     @apply w-full rounded-xl border-0 bg-stone-100/80 px-4 py-2.5 text-sm text-stone-900
-           outline-none transition placeholder:text-stone-400
+           outline-none transition placeholder:text-stone-500
            focus:bg-white focus:ring-2 focus:ring-brand-400/60;
   }
 

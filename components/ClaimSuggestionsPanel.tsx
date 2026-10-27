@@ -143,7 +143,7 @@ export function ClaimSuggestionsPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">客情回報後續</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">客情回報後續</p>
           <h2 className="mt-1 text-lg font-bold text-stone-800">待認領建議</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
@@ -176,7 +176,7 @@ export function ClaimSuggestionsPanel() {
                 {bulkPreview.total > bulkPreview.willClaim && `（共 ${bulkPreview.total} 家，單次上限 100，剩下的可再按一次）`}
                 {bulkPreview.excludedContested > 0 && `；另有 ${bulkPreview.excludedContested} 家因歸屬有爭議已排除，需主管逐筆處理`}
               </p>
-              <p className="mt-1.5 text-[11px] leading-5 text-stone-400">
+              <p className="mt-1.5 text-xs leading-5 text-stone-500">
                 {bulkPreview.sample.map((x) => `${x.name}（${x.area}）`).join('、')}
                 {bulkPreview.willClaim > bulkPreview.sample.length && ` …等 ${bulkPreview.willClaim} 家`}
               </p>
@@ -195,7 +195,7 @@ export function ClaimSuggestionsPanel() {
 
       {done && <p className="mt-3 rounded-2xl bg-stone-50 px-4 py-2.5 text-sm text-stone-600">{done}</p>}
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
-      {items === null && <p className="mt-4 text-sm text-stone-400">載入中…</p>}
+      {items === null && <p className="mt-4 text-sm text-stone-500">載入中…</p>}
 
       {viewingAll && owners.length > 1 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -222,30 +222,30 @@ export function ClaimSuggestionsPanel() {
             <div key={key} className="rounded-2xl bg-white p-4 ring-1 ring-stone-900/[0.06]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-stone-800">{s.customerName}</span>
-                {viewingAll && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">{s.salesperson}</span>}
-                {s.customerType && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">{s.customerType}</span>}
+                {viewingAll && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-600">{s.salesperson}</span>}
+                {s.customerType && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">{s.customerType}</span>}
                 {s.looksDeveloping && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
                     <UserRoundPlus className="size-3" />{who}回報過 {s.visitCount} 次
                   </span>
                 )}
                 {s.tier === 'no-territory' && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
                     <MapPinOff className="size-3" />{who}尚未設定轄區
                   </span>
                 )}
                 {s.tier === 'in-territory-backlog' && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
                     <MapPin className="size-3" />這區現在是{whose}轄區
                   </span>
                 )}
                 {s.tier === 'territory-visited-by-others' && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
                     <Users className="size-3" />同事跑過，轄區是{whose.replace(/的$/, '')}的
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-stone-400">
+              <p className="mt-1 text-xs text-stone-500">
                 {s.customerCity}{s.customerDistrict}
                 {s.lastVisitDate && ` · 最後回報 ${s.lastVisitDate}`}
                 {s.tier === 'outside-territory' && ` · 不在${whose}轄區內`}
@@ -308,7 +308,7 @@ export function ClaimSuggestionsPanel() {
         </button>
       )}
 
-      <p className="mt-3 text-[11px] leading-5 text-stone-400">
+      <p className="mt-3 text-xs leading-5 text-stone-500">
         {canAssign
           ? '指派會把客戶主檔的負責業務寫成所選的業務，只在該客戶仍無人負責時生效，並留下稽核紀錄；清單上的「（建議）」是系統依回報與轄區推薦的人選，可改派給其他業務。'
           : '標為「只是支援」會同時建立一筆跨區支援報備，之後不會再問你這家。認領則會把客戶主檔的負責業務寫成你，只在該客戶仍無人負責時生效。'}

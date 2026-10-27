@@ -68,7 +68,7 @@ export function TerritoryNewOpeningsPanel() {
     <div className="card-soft p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">醫事資料庫比對</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">醫事資料庫比對</p>
           <h2 className="mt-1 text-lg font-bold text-stone-800">轄區新機構</h2>
           <p className="mt-1 text-sm leading-6 text-stone-500">
             {viewingAll
@@ -87,7 +87,7 @@ export function TerritoryNewOpeningsPanel() {
       </div>
 
       {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
-      {items === null && <p className="mt-4 text-sm text-stone-400">比對中…</p>}
+      {items === null && <p className="mt-4 text-sm text-stone-500">比對中…</p>}
 
       {viewingAll && owners.length > 1 && (
         <div className="mt-4">
@@ -111,11 +111,11 @@ export function TerritoryNewOpeningsPanel() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {i.isNewThisMonth && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">
                       <Sparkles className="h-3 w-3" />本月新增
                     </span>
                   )}
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${i.source === 'notInDb' ? 'bg-white text-stone-600 ring-1 ring-stone-900/10' : 'bg-brand-50 text-brand-700'}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${i.source === 'notInDb' ? 'bg-white text-stone-600 ring-1 ring-stone-900/10' : 'bg-brand-50 text-brand-700'}`}>
                     <Building2 className="h-3 w-3" />{i.source === 'notInDb' ? '尚未建檔' : '已建檔待認領'}
                   </span>
                 </div>
@@ -127,7 +127,7 @@ export function TerritoryNewOpeningsPanel() {
                 </a>
               )}
               {viewingAll && (
-                <p className="mt-2 text-[11px] text-stone-400">轄區：<span className="font-semibold text-stone-600">{i.owner || '不在任何轄區'}</span></p>
+                <p className="mt-2 text-xs text-stone-500">轄區：<span className="font-semibold text-stone-600">{i.owner || '不在任何轄區'}</span></p>
               )}
             </li>
           ))}
@@ -141,7 +141,7 @@ export function TerritoryNewOpeningsPanel() {
         </button>
       )}
 
-      {computedLabel && <p className="mt-3 text-[11px] text-stone-400">比對結果更新於 {computedLabel}，每晚自動重算</p>}
+      {computedLabel && <p className="mt-3 text-xs text-stone-500">比對結果更新於 {computedLabel}，每晚自動重算</p>}
     </div>
   )
 }
