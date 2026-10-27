@@ -93,10 +93,7 @@ export function SalesPerformancePeriods() {
     <section className="card-soft overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3 px-6 pt-6 sm:px-7">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
-            {data?.scope === 'team' ? 'TEAM PERFORMANCE' : 'MY PERFORMANCE'}
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-stone-800">
+          <h2 className="text-lg font-bold text-stone-800">
             業績狀況
             {data && <span className="ml-2 text-sm font-semibold text-brand-700">{data.salesperson}</span>}
           </h2>

@@ -39,7 +39,7 @@ export function SalesPerformanceCard() {
       <div className="p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">本月業績</p>
+            <p className="text-xs font-bold text-stone-500">本月業績</p>
             <p className="mt-1 text-3xl font-bold tabular-nums text-stone-900">NT$ {amount.toLocaleString()}</p>
             {data.lastMonthAmount > 0 && (
               <p className={`mt-1 flex items-center gap-1 text-sm font-semibold ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
