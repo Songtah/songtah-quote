@@ -18,6 +18,7 @@ import {
   GENDERS, DIETS, INFO_SOURCES, PAYMENT_METHODS,
 } from '@/lib/online-registration'
 import { parseArea, normalizeCity } from '@/lib/event-import'
+import { isValidDistrict } from '@/lib/tw-districts'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   const institution = clip(body?.institution, 100)
   let unitType = (UNIT_TYPES as readonly string[]).includes(body?.unitType) ? body.unitType : ''
   let cityInput = clip(body?.city, 10)
+  let districtInput = clip(body?.district, 10)
   let address = clip(body?.address, 200)
   let note = clip(body?.note, 500)
   let gender = oneOf(GENDERS, body?.gender)
@@ -70,12 +72,14 @@ export async function POST(req: NextRequest) {
   if (cfg.diet === 'off') diet = ''
   if (cfg.unitType === 'off') unitType = ''
   if (cfg.city === 'off') cityInput = ''
+  // 鄉鎮市區必須屬於所選縣市（選單送來的值也驗，不信任前端）
+  if (cfg.city === 'off' || cfg.district === 'off' || !isValidDistrict(normalizeCity(cityInput), districtInput)) districtInput = ''
   if (cfg.address === 'off') address = ''
   if (cfg.infoSource === 'off') infoSource = ''
   if (cfg.note === 'off') note = ''
   const missing = ([
     ['email', email, '請填寫 Email'], ['jobTitle', jobTitle, '請選擇職稱'], ['gender', gender, '請選擇性別'],
-    ['diet', diet, '請選擇飲食需求'], ['unitType', unitType, '請選擇單位類型'], ['city', cityInput, '請選擇縣市'],
+    ['diet', diet, '請選擇飲食需求'], ['unitType', unitType, '請選擇單位類型'], ['city', cityInput, '請選擇縣市'], ['district', districtInput, '請選擇鄉鎮市區'],
     ['address', address, '請填寫單位地址'], ['infoSource', infoSource, '請選擇如何得知這堂課'], ['note', note, '請填寫備註'],
   ] as const).find(([k, v]) => cfg[k] === 'required' && !v)
   if (missing) return NextResponse.json({ error: missing[2] }, { status: 400 })
@@ -124,10 +128,11 @@ export async function POST(req: NextRequest) {
     // 區域：有地址以地址為準；否則用選的縣市（行政區不明）
     const fromAddress = parseArea(address)
     const city = fromAddress.city || normalizeCity(cityInput)
+    const district = fromAddress.city ? fromAddress.district : districtInput
 
     await createRegistration({
       eventId, institution, contact: name, phone, email,
-      city, district: fromAddress.city ? fromAddress.district : '', address,
+      city, district, address,
       attendees, status: '已報名', source: '報名表單',
       jobTitle, unitType, note,
       paymentStatus: amount > 0 ? '未付款' : '免費',

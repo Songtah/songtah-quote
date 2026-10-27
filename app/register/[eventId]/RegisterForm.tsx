@@ -12,10 +12,9 @@ import {
   MAX_ATTENDEES_PER_SIGNUP, JOB_TITLES, GENDERS, DIETS, INFO_SOURCES, PAYMENT_METHODS,
   formatNT, type RegistrationPlan, type FormConfig, type FormFieldKey,
 } from '@/lib/online-registration'
+import { TW_CITIES, TW_DISTRICTS } from '@/lib/tw-districts'
 
 const UNIT_TYPES = ['牙醫診所', '牙體技術所', '醫院', '學校', '其他']
-const CITIES = ['台北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '苗栗縣', '台中市', '彰化縣', '南投縣', '雲林縣',
-  '嘉義市', '嘉義縣', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '金門縣', '連江縣']
 
 type Done = { amount: number; paymentNote: string; duplicate?: boolean }
 
@@ -28,7 +27,7 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote
   const star = (k: FormFieldKey) => (req(k) ? ' *' : '')
   const [f, setF] = useState({
     name: '', phone: '', email: '', jobTitle: '', gender: '', diet: '不限',
-    institution: '', unitType: '', city: '', address: '',
+    institution: '', unitType: '', city: '', district: '', address: '',
     attendees: 1, note: '', consent: false, website: '',
     infoSource: '', referrer: '',
     paymentMethod: '', transferLast5: '', paidDate: '',
@@ -180,9 +179,16 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote
             </select>
           </label>}
           {show('city') && <label className={label}>縣市{star('city')}
-            <select required={req('city')} value={f.city} onChange={set('city')} className="select-soft mt-1 w-full font-normal">
+            {/* 換縣市就清空鄉鎮市區，避免留著別縣市的區 */}
+            <select required={req('city')} value={f.city} onChange={(e) => setF((s) => ({ ...s, city: e.target.value, district: '' }))} className="select-soft mt-1 w-full font-normal">
               <option value="">請選擇</option>
-              {CITIES.map((c) => <option key={c}>{c}</option>)}
+              {TW_CITIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </label>}
+          {show('city') && show('district') && <label className={label}>鄉鎮市區{star('district')}
+            <select required={req('district')} disabled={!f.city} value={f.district} onChange={set('district')} className="select-soft mt-1 w-full font-normal disabled:opacity-50">
+              <option value="">{f.city ? '請選擇' : '請先選縣市'}</option>
+              {(TW_DISTRICTS[f.city] ?? []).map((d) => <option key={d}>{d}</option>)}
             </select>
           </label>}
           {show('address') && <label className={`${label} sm:col-span-2`}>單位地址{star('address')}<input required={req('address')} maxLength={200} value={f.address} onChange={set('address')} placeholder="例：台中市北屯區崇德路三段100號" autoComplete="street-address" className="input-soft mt-1 w-full font-normal" /></label>}

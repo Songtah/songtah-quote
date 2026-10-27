@@ -91,6 +91,7 @@ export const FORM_FIELDS = [
   { key: 'diet', label: '飲食需求', default: 'optional' },
   { key: 'unitType', label: '單位類型', default: 'required', hint: '用於客戶配對，建議必填' },
   { key: 'city', label: '縣市', default: 'required', hint: '用於客戶配對，建議必填' },
+  { key: 'district', label: '鄉鎮市區', default: 'required', hint: '依縣市自動帶出選項；用於客戶配對' },
   { key: 'address', label: '單位地址', default: 'off', hint: '預設隱藏（2026-10-27 使用者指定）' },
   { key: 'paymentMethod', label: '付款方式', default: 'required', hint: '收費活動才顯示' },
   { key: 'transferLast5', label: '匯款後五碼', default: 'optional', hint: '選「銀行匯款」時顯示' },
