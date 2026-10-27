@@ -39,17 +39,16 @@ export async function POST(req: NextRequest) {
   const eventId = clip(body?.eventId, 64)
   const name = clip(body?.name, 50)
   const phone = clip(body?.phone, 30)
-  const email = clip(body?.email, 100)
-  const jobTitle = (JOB_TITLES as readonly string[]).includes(body?.jobTitle) ? body.jobTitle : ''
+  let email = clip(body?.email, 100)
+  let jobTitle = (JOB_TITLES as readonly string[]).includes(body?.jobTitle) ? body.jobTitle : ''
   const institution = clip(body?.institution, 100)
-  const unitType = (UNIT_TYPES as readonly string[]).includes(body?.unitType) ? body.unitType : ''
-  const cityInput = clip(body?.city, 10)
-  const address = clip(body?.address, 200)
-  const note = clip(body?.note, 500)
-  const gender = oneOf(GENDERS, body?.gender)
-  const diet = oneOf(DIETS, body?.diet)
-  const infoSource = oneOf(INFO_SOURCES, body?.infoSource)
-  const referrer = infoSource === '業務介紹' ? clip(body?.referrer, 30) : ''
+  let unitType = (UNIT_TYPES as readonly string[]).includes(body?.unitType) ? body.unitType : ''
+  let cityInput = clip(body?.city, 10)
+  let address = clip(body?.address, 200)
+  let note = clip(body?.note, 500)
+  let gender = oneOf(GENDERS, body?.gender)
+  let diet = oneOf(DIETS, body?.diet)
+  let infoSource = oneOf(INFO_SOURCES, body?.infoSource)
   const companionList: string[] = Array.isArray(body?.companions)
     ? body.companions.map((c: unknown) => clip(c, 50)).slice(0, MAX_ATTENDEES_PER_SIGNUP - 1)
     : []
@@ -58,12 +57,30 @@ export async function POST(req: NextRequest) {
   if (digits(phone).length < 9) return NextResponse.json({ error: '請填寫正確的手機或聯絡電話' }, { status: 400 })
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: 'Email 格式不正確' }, { status: 400 })
   if (institution.replace(/\s/g, '').length < 2) return NextResponse.json({ error: '請填寫單位名稱' }, { status: 400 })
-  if (!unitType) return NextResponse.json({ error: '請選擇單位類型' }, { status: 400 })
   if (!body?.consent) return NextResponse.json({ error: '請勾選同意個人資料使用說明' }, { status: 400 })
-  if (infoSource === '業務介紹' && !referrer) return NextResponse.json({ error: '請填寫介紹您的業務稱呼' }, { status: 400 })
 
   const event = await getEventById(eventId)
   if (!event) return NextResponse.json({ error: '找不到此活動' }, { status: 404 })
+
+  // 報名表欄位設定：隱藏的欄位一律丟掉（不信任前端），必填的缺值就擋
+  const cfg = event.formConfig
+  if (cfg.email === 'off') email = ''
+  if (cfg.jobTitle === 'off') jobTitle = ''
+  if (cfg.gender === 'off') gender = ''
+  if (cfg.diet === 'off') diet = ''
+  if (cfg.unitType === 'off') unitType = ''
+  if (cfg.city === 'off') cityInput = ''
+  if (cfg.address === 'off') address = ''
+  if (cfg.infoSource === 'off') infoSource = ''
+  if (cfg.note === 'off') note = ''
+  const missing = ([
+    ['email', email, '請填寫 Email'], ['jobTitle', jobTitle, '請選擇職稱'], ['gender', gender, '請選擇性別'],
+    ['diet', diet, '請選擇飲食需求'], ['unitType', unitType, '請選擇單位類型'], ['city', cityInput, '請選擇縣市'],
+    ['address', address, '請填寫單位地址'], ['infoSource', infoSource, '請選擇如何得知這堂課'], ['note', note, '請填寫備註'],
+  ] as const).find(([k, v]) => cfg[k] === 'required' && !v)
+  if (missing) return NextResponse.json({ error: missing[2] }, { status: 400 })
+  const referrer = infoSource === '業務介紹' ? clip(body?.referrer, 30) : ''
+  if (infoSource === '業務介紹' && !referrer) return NextResponse.json({ error: '請填寫介紹您的業務稱呼' }, { status: 400 })
 
   // 方案決定人數與金額；沒有方案時沿用自選人數
   const plan = event.plans.length ? event.plans[Math.floor(Number(body?.planIndex))] : undefined
@@ -94,12 +111,15 @@ export async function POST(req: NextRequest) {
     }
     const amount = plan ? (event.paid ? plan.price : 0) : registrationAmount(event, attendees)
     // 付款資訊只在需要付費時收；後五碼必須剛好 5 碼數字，日期須為 YYYY-MM-DD
-    const paymentMethod = amount > 0 ? oneOf(PAYMENT_METHODS, body?.paymentMethod) : ''
-    if (amount > 0 && !paymentMethod) return NextResponse.json({ error: '請選擇付款方式' }, { status: 400 })
-    const last5 = paymentMethod === '匯款' ? digits(clip(body?.transferLast5, 10)) : ''
+    const paymentMethod = amount > 0 && cfg.paymentMethod !== 'off' ? oneOf(PAYMENT_METHODS, body?.paymentMethod) : ''
+    if (amount > 0 && cfg.paymentMethod === 'required' && !paymentMethod) return NextResponse.json({ error: '請選擇付款方式' }, { status: 400 })
+    const isTransfer = paymentMethod === '匯款'
+    const last5 = isTransfer && cfg.transferLast5 !== 'off' ? digits(clip(body?.transferLast5, 10)) : ''
+    if (isTransfer && cfg.transferLast5 === 'required' && !last5) return NextResponse.json({ error: '請填寫匯款後五碼' }, { status: 400 })
     if (last5 && last5.length !== 5) return NextResponse.json({ error: '匯款後五碼請填 5 位數字' }, { status: 400 })
-    const paidDateRaw = paymentMethod === '匯款' ? clip(body?.paidDate, 10) : ''
+    const paidDateRaw = isTransfer && cfg.paidDate !== 'off' ? clip(body?.paidDate, 10) : ''
     const paidDate = /^\d{4}-\d{2}-\d{2}$/.test(paidDateRaw) && !Number.isNaN(Date.parse(paidDateRaw)) ? paidDateRaw : ''
+    if (isTransfer && cfg.paidDate === 'required' && !paidDate) return NextResponse.json({ error: '請填寫匯款日期' }, { status: 400 })
 
     // 區域：有地址以地址為準；否則用選的縣市（行政區不明）
     const fromAddress = parseArea(address)

@@ -33,7 +33,7 @@ const PLAN = [
   },
   {
     db: process.env.NOTION_EVENTS_DB || '36dc5ca6467a46c299e2fe6efe5ab05e',
-    props: { 報名方案: text },   // JSON：[{ name, price, people }]
+    props: { 報名方案: text, 報名表欄位: text },   // JSON：方案 [{ name, price, people }]；欄位 { 欄位: off|optional|required }
   },
 ]
 

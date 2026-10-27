@@ -11,7 +11,7 @@ import {
   getRedisValue, setRedisValue, deleteRedisValue,
   getProp, getTitle, getText, getSelect, getNumber, getDate,
 } from './shared'
-import { parsePlans, type RegistrationPlan } from '@/lib/online-registration'
+import { parsePlans, parseFormConfig, compactFormConfig, type RegistrationPlan, type FormConfig } from '@/lib/online-registration'
 
 export type EventItem = {
   id:          string
@@ -33,6 +33,7 @@ export type EventItem = {
   bannerUrl:   string     // 廣告圖
   capacity:    number     // 名額；0＝不限
   plans:       RegistrationPlan[]   // 報名方案；空＝沿用報名費 × 人數
+  formConfig:  FormConfig           // 報名表各欄位 隱藏／選填／必填
 }
 
 export type EventRegistration = {
@@ -94,6 +95,7 @@ function mapEvent(page: any): EventItem {
     bannerUrl:   getProp(page, '廣告圖')?.url ?? '',
     capacity:    getNumber(page, '名額'),
     plans:       parsePlans(getText(page, '報名方案')),
+    formConfig:  parseFormConfig(getText(page, '報名表欄位')),
   }
 }
 
@@ -248,6 +250,7 @@ export async function updateEvent(id: string, data: Partial<{
   bannerUrl:   string
   capacity:    number
   plans:       RegistrationPlan[]
+  formConfig:  FormConfig
 }>): Promise<void> {
   const props: Record<string, any> = {}
   if (data.name)        props['活動名稱'] = { title: [{ text: { content: data.name } }] }
@@ -264,6 +267,10 @@ export async function updateEvent(id: string, data: Partial<{
   if (data.paymentNote !== undefined) props['付款說明'] = { rich_text: [{ text: { content: data.paymentNote.slice(0, 1900) } }] }
   if (data.bannerUrl !== undefined)   props['廣告圖']   = { url: data.bannerUrl || null }
   if (data.capacity !== undefined)    props['名額']     = { number: data.capacity > 0 ? data.capacity : null }
+  if (data.formConfig !== undefined) {
+    const json = JSON.stringify(compactFormConfig(data.formConfig))
+    props['報名表欄位'] = { rich_text: json === '{}' ? [] : [{ text: { content: json } }] }
+  }
   if (data.plans !== undefined)       props['報名方案'] = { rich_text: data.plans.length ? [{ text: { content: JSON.stringify(data.plans).slice(0, 1900) } }] : [] }
   if (!Object.keys(props).length) return
 

@@ -7,9 +7,9 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import type { EventItem } from '@/lib/notion/events'
-import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP, shortCodeOf } from '@/lib/online-registration'
+import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP, shortCodeOf, FORM_FIELDS, FIELD_MODES } from '@/lib/online-registration'
 
-type Settings = Pick<EventItem, 'onlineRegistration' | 'paid' | 'fee' | 'paymentNote' | 'bannerUrl' | 'capacity' | 'deadline' | 'plans'>
+type Settings = Pick<EventItem, 'onlineRegistration' | 'paid' | 'fee' | 'paymentNote' | 'bannerUrl' | 'capacity' | 'deadline' | 'plans' | 'formConfig'>
 
 export function EventRegistrationPageSettings({
   event, seatsTaken, onSaved,
@@ -17,7 +17,7 @@ export function EventRegistrationPageSettings({
   const [s, setS] = useState<Settings>({
     onlineRegistration: event.onlineRegistration, paid: event.paid, fee: event.fee,
     paymentNote: event.paymentNote, bannerUrl: event.bannerUrl, capacity: event.capacity, deadline: event.deadline,
-    plans: event.plans,
+    plans: event.plans, formConfig: event.formConfig,
   })
   const [busy, setBusy] = useState<'' | 'save' | 'upload'>('')
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -34,7 +34,7 @@ export function EventRegistrationPageSettings({
 
   const dirty = s.onlineRegistration !== event.onlineRegistration || s.paid !== event.paid || s.fee !== event.fee ||
     s.paymentNote !== event.paymentNote || s.capacity !== event.capacity || (s.deadline || '') !== (event.deadline || '') ||
-    JSON.stringify(s.plans) !== JSON.stringify(event.plans)
+    JSON.stringify(s.plans) !== JSON.stringify(event.plans) || JSON.stringify(s.formConfig) !== JSON.stringify(event.formConfig)
   const setPlan = (i: number, patch: Partial<Settings['plans'][number]>) =>
     setS((x) => ({ ...x, plans: x.plans.map((p, j) => (j === i ? { ...p, ...patch } : p)) }))
 
@@ -49,6 +49,7 @@ export function EventRegistrationPageSettings({
           onlineRegistration: s.onlineRegistration, paid: s.paid, fee: s.paid ? s.fee : 0,
           paymentNote: s.paymentNote, capacity: s.capacity || 0,
           plans: s.plans.map((p) => ({ ...p, name: p.name.trim() })),
+          formConfig: s.formConfig,
           ...(s.deadline ? { deadline: s.deadline } : {}),
         }),
       })
@@ -167,6 +168,33 @@ export function EventRegistrationPageSettings({
             ) : (
               <p className="mt-1 text-xs text-stone-500">{s.paid ? '未設定方案：報名者自選人數，金額＝每人報名費 × 人數。' : '未設定方案：報名者自選人數。'}</p>
             )}
+          </div>
+
+          <div>
+            <span className={label}>報名表欄位（姓名、手機、單位名稱固定必填）</span>
+            <ul className="mt-2 divide-y divide-stone-900/[0.06] rounded-2xl bg-cream-50 px-3">
+              {FORM_FIELDS.map((fd) => (
+                <li key={fd.key} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="text-sm text-stone-700">
+                    {fd.label}
+                    {'hint' in fd && fd.key !== 'address' && <span className="ml-2 text-xs text-stone-500">{fd.hint}</span>}
+                  </span>
+                  <span role="radiogroup" aria-label={`${fd.label}設定`} className="inline-flex rounded-full bg-white p-0.5 ring-1 ring-stone-900/10">
+                    {FIELD_MODES.map((m) => {
+                      const on = s.formConfig[fd.key] === m.value
+                      return (
+                        <button key={m.value} type="button" role="radio" aria-checked={on}
+                          onClick={() => setS((x) => ({ ...x, formConfig: { ...x.formConfig, [fd.key]: m.value } }))}
+                          className={`min-h-9 rounded-full px-3 text-xs font-semibold transition-all active:scale-95 ${
+                            on ? (m.value === 'off' ? 'bg-stone-200 text-stone-700' : 'bg-brand-500 text-white') : 'text-stone-500 hover:text-stone-700'}`}>
+                          {m.label}
+                        </button>
+                      )
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {s.paid && (

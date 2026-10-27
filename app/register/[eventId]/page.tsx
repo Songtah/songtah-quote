@@ -93,6 +93,7 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
                   fee={event.fee}
                   plans={event.plans}
                   paymentNote={event.paid ? event.paymentNote : ''}
+                  formConfig={event.formConfig}
                   seatsLeft={gate.seatsLeft}
                 />
               ) : (

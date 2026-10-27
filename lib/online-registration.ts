@@ -74,3 +74,46 @@ export const formatNT = (n: number) => `NT$ ${n.toLocaleString('zh-TW')}`
  * 不另存代碼、不用外部短網址服務；只對「開放線上報名」的活動有效，前綴撞號時不轉址（見 app/r/[code]）。
  */
 export const shortCodeOf = (eventId: string) => eventId.replace(/-/g, '').slice(0, 6).toLowerCase()
+
+/**
+ * 報名表欄位設定（2026-10-27）：每個活動可決定各欄位「隱藏／選填／必填」，存活動 DB「報名表欄位」（JSON）。
+ * 姓名、手機、單位名稱固定必填、不可關：客戶配對（名稱字根＋電話末 8 碼）靠這三欄。
+ * 沒設定的欄位用 default（＝整合 SurveyCake 時的原本行為）。前端照設定顯示，伺服器照設定驗證並丟掉隱藏欄位的值。
+ */
+export type FieldMode = 'off' | 'optional' | 'required'
+export const FIELD_MODES: { value: FieldMode; label: string }[] = [
+  { value: 'off', label: '隱藏' }, { value: 'optional', label: '選填' }, { value: 'required', label: '必填' },
+]
+export const FORM_FIELDS = [
+  { key: 'email', label: 'Email', default: 'optional' },
+  { key: 'jobTitle', label: '職稱', default: 'optional' },
+  { key: 'gender', label: '性別', default: 'optional' },
+  { key: 'diet', label: '飲食需求', default: 'optional' },
+  { key: 'unitType', label: '單位類型', default: 'required', hint: '用於客戶配對，建議必填' },
+  { key: 'city', label: '縣市', default: 'required', hint: '用於客戶配對，建議必填' },
+  { key: 'address', label: '單位地址', default: 'off', hint: '預設隱藏（2026-10-27 使用者指定）' },
+  { key: 'paymentMethod', label: '付款方式', default: 'required', hint: '收費活動才顯示' },
+  { key: 'transferLast5', label: '匯款後五碼', default: 'optional', hint: '選「銀行匯款」時顯示' },
+  { key: 'paidDate', label: '匯款日期', default: 'optional', hint: '選「銀行匯款」時顯示' },
+  { key: 'infoSource', label: '如何得知課程', default: 'optional' },
+  { key: 'note', label: '備註', default: 'optional' },
+] as const satisfies readonly { key: string; label: string; default: FieldMode; hint?: string }[]
+export type FormFieldKey = (typeof FORM_FIELDS)[number]['key']
+export type FormConfig = Record<FormFieldKey, FieldMode>
+
+export const DEFAULT_FORM_CONFIG = Object.fromEntries(FORM_FIELDS.map((f) => [f.key, f.default])) as FormConfig
+
+/** JSON → 完整設定（缺的、不認得的值補預設） */
+export function parseFormConfig(raw: unknown): FormConfig {
+  let obj: any = raw
+  if (typeof raw === 'string') {
+    try { obj = raw.trim() ? JSON.parse(raw) : {} } catch { obj = {} }
+  }
+  const modes = new Set(FIELD_MODES.map((m) => m.value))
+  return Object.fromEntries(FORM_FIELDS.map((f) => [f.key, modes.has(obj?.[f.key]) ? obj[f.key] : f.default])) as FormConfig
+}
+
+/** 只存與預設不同的欄位，JSON 短、日後改預設也跟得上 */
+export function compactFormConfig(cfg: FormConfig): Partial<FormConfig> {
+  return Object.fromEntries(FORM_FIELDS.filter((f) => cfg[f.key] !== f.default).map((f) => [f.key, cfg[f.key]]))
+}

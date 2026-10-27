@@ -10,7 +10,7 @@ import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audi
 import { processRegistrations, invalidateEventFootprints } from '@/lib/registration-footprint'
 import { signCheckinToken, isCheckinOpen } from '@/lib/checkin-token'
 import { canEdit } from '@/lib/permissions'
-import { parsePlans, MAX_PLANS } from '@/lib/online-registration'
+import { parsePlans, parseFormConfig, MAX_PLANS } from '@/lib/online-registration'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -145,6 +145,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const plans = parsePlans(body.plans)
     if (plans.length !== body.plans.length) return NextResponse.json({ error: '報名方案請填寫名稱、金額與人數（1～10 位）' }, { status: 400 })
     patch.plans = plans
+  }
+  if (body.formConfig !== undefined) {
+    if (!body.formConfig || typeof body.formConfig !== 'object' || Array.isArray(body.formConfig)) return NextResponse.json({ error: '報名表欄位設定格式錯誤' }, { status: 400 })
+    patch.formConfig = parseFormConfig(body.formConfig)
   }
   // 收費活動：有方案時以方案計價；沒有方案才需要每人報名費
   const plansAfter = patch.plans ?? event.plans
