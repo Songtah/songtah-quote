@@ -179,9 +179,9 @@ export function SalesTodayDashboard({
               <h2 id="up-next-title" className="text-lg font-bold text-stone-800">接下來的工作</h2>
               {visibleModules.bd && <Link href="/bd" className="tap-target inline-flex items-center text-sm font-semibold text-brand-600 hover:text-brand-700">查看全部</Link>}
             </div>
+            {/* 一開始就全部顯示：原本 AnimatedList 每 0.14 秒才多冒一筆（30 筆約 4 秒），
+                初始只有第一筆存在，鍵盤與螢幕閱讀器也只讀得到它（2026-10-27 impeccable audit） */}
             {data.workItems.length > 0 ? (<>
-              // 一開始就全部顯示：原本 AnimatedList 每 0.14 秒才多冒一筆（30 筆約 4 秒），
-              // 初始只有第一筆存在，鍵盤與螢幕閱讀器也只讀得到它（2026-10-27 impeccable audit）
               <ul className="flex flex-col gap-3">
                 {(showAllWork ? data.workItems : data.workItems.slice(0, WORK_FIRST)).map((item) => (
                   <li key={`${item.kind}-${item.id}`}><Link href={item.href} className="group flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-stone-900/[0.05] transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:px-6">
