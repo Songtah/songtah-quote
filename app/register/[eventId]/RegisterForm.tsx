@@ -1,7 +1,16 @@
 'use client'
 
+/**
+ * 課程線上報名表（公開）。2026-10-27 依 SurveyCake 報名表整合：
+ * 報名方案、多人同行姓名、性別、飲食需求、付款方式＋匯款後五碼／日期、如何得知課程（業務介紹填業務稱呼）。
+ * 原本已有的欄位（姓名、手機、Email、職稱、單位、縣市地址、備註、同意條款）沿用。
+ * 付款說明（匯款帳號、退費規則）送出前就顯示，已匯款的人可以直接填後五碼。
+ */
 import { useState } from 'react'
-import { MAX_ATTENDEES_PER_SIGNUP, JOB_TITLES, formatNT } from '@/lib/online-registration'
+import {
+  MAX_ATTENDEES_PER_SIGNUP, JOB_TITLES, GENDERS, DIETS, INFO_SOURCES, PAYMENT_METHODS,
+  formatNT, type RegistrationPlan,
+} from '@/lib/online-registration'
 
 const UNIT_TYPES = ['牙醫診所', '牙體技術所', '醫院', '學校', '其他']
 const CITIES = ['台北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '苗栗縣', '台中市', '彰化縣', '南投縣', '雲林縣',
@@ -9,28 +18,43 @@ const CITIES = ['台北市', '新北市', '基隆市', '桃園市', '新竹市',
 
 type Done = { amount: number; paymentNote: string; duplicate?: boolean }
 
-export function RegisterForm({ eventId, paid, fee, seatsLeft }: { eventId: string; paid: boolean; fee: number; seatsLeft: number | null }) {
+export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote }: {
+  eventId: string; paid: boolean; fee: number; seatsLeft: number | null
+  plans: RegistrationPlan[]; paymentNote: string
+}) {
   const [f, setF] = useState({
-    name: '', phone: '', email: '', jobTitle: '',
+    name: '', phone: '', email: '', jobTitle: '', gender: '', diet: '不限',
     institution: '', unitType: '', city: '', address: '',
     attendees: 1, note: '', consent: false, website: '',
+    infoSource: '', referrer: '',
+    paymentMethod: '', transferLast5: '', paidDate: '',
   })
+  // 只有一個方案時直接選好
+  const [planIndex, setPlanIndex] = useState<number | null>(plans.length === 1 ? 0 : null)
+  const [companions, setCompanions] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState<Done | null>(null)
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((s) => ({ ...s, [k]: e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value }))
 
-  const maxAttendees = Math.min(MAX_ATTENDEES_PER_SIGNUP, seatsLeft ?? MAX_ATTENDEES_PER_SIGNUP)
-  const total = paid ? fee * Number(f.attendees || 1) : 0
+  const seatCap = seatsLeft ?? MAX_ATTENDEES_PER_SIGNUP
+  const plan = planIndex !== null ? plans[planIndex] : undefined
+  const attendees = plans.length ? (plan?.people ?? 1) : Number(f.attendees || 1)
+  const total = !paid ? 0 : plans.length ? (plan?.price ?? 0) : fee * attendees
+  const needPayment = paid && total > 0
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (plans.length && planIndex === null) { setError('請選擇報名方案'); return }
     setBusy(true); setError('')
     try {
       const res = await fetch('/api/public/register', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, attendees: Number(f.attendees), eventId }),
+        body: JSON.stringify({
+          ...f, eventId, attendees, planIndex,
+          companions: companions.slice(0, attendees - 1),
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error ?? '報名失敗')
@@ -61,15 +85,53 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft }: { eventId: strin
   }
 
   const label = 'block text-sm font-semibold text-stone-700'
+  const legend = 'mb-1 text-base font-bold text-stone-800'
+  const radio = (on: boolean) =>
+    `flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1 transition-all active:scale-95 ${
+      on ? 'bg-brand-50 text-brand-700 ring-brand-400' : 'bg-white text-stone-600 ring-stone-900/10 hover:bg-stone-50'}`
+
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} className="space-y-8">
       <h2 className="text-lg font-bold text-stone-800">填寫報名資料</h2>
 
+      {plans.length > 0 && (
+        <fieldset className="space-y-3">
+          <legend className={legend}>報名方案 *</legend>
+          <div className="grid gap-2">
+            {plans.map((p, i) => {
+              const full = p.people > seatCap
+              const on = planIndex === i
+              return (
+                <label key={i} className={`flex min-h-14 items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 transition-all ${
+                  full ? 'cursor-not-allowed bg-stone-50 text-stone-400 ring-stone-900/5'
+                    : on ? 'cursor-pointer bg-brand-50 ring-2 ring-brand-400' : 'cursor-pointer bg-white ring-stone-900/10 hover:bg-stone-50'}`}>
+                  <span className="flex items-center gap-3">
+                    <input type="radio" name="plan" checked={on} disabled={full} onChange={() => setPlanIndex(i)} className="size-4 accent-brand-500" />
+                    <span>
+                      <span className="block text-sm font-semibold text-stone-800">{p.name}</span>
+                      <span className="block text-xs text-stone-500">{p.people} 位{full ? '・名額不足' : ''}</span>
+                    </span>
+                  </span>
+                  {paid && <span className="text-base font-bold tabular-nums text-stone-800">{formatNT(p.price)}</span>}
+                </label>
+              )
+            })}
+          </div>
+        </fieldset>
+      )}
+
       <fieldset className="space-y-3">
-        <legend className="mb-1 text-xs font-bold uppercase tracking-widest text-brand-500">基本資料</legend>
+        <legend className={legend}>參加者</legend>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>姓名 *<input required maxLength={50} value={f.name} onChange={set('name')} autoComplete="name" className="input-soft mt-1 w-full font-normal" /></label>
+          <label className={label}>{attendees > 1 ? '報名人姓名 *' : '姓名 *'}<input required maxLength={50} value={f.name} onChange={set('name')} autoComplete="name" className="input-soft mt-1 w-full font-normal" /></label>
           <label className={label}>手機 *<input required type="tel" inputMode="tel" maxLength={30} value={f.phone} onChange={set('phone')} autoComplete="tel" className="input-soft mt-1 w-full font-normal" /></label>
+          {Array.from({ length: Math.max(attendees - 1, 0) }, (_, i) => (
+            <label key={i} className={label}>同行者 {i + 1} 姓名 *
+              <input required maxLength={50} value={companions[i] ?? ''}
+                onChange={(e) => setCompanions((c) => { const n = [...c]; n[i] = e.target.value; return n })}
+                className="input-soft mt-1 w-full font-normal" />
+            </label>
+          ))}
           <label className={label}>Email<input type="email" maxLength={100} value={f.email} onChange={set('email')} autoComplete="email" className="input-soft mt-1 w-full font-normal" /></label>
           <label className={label}>職稱
             <select value={f.jobTitle} onChange={set('jobTitle')} className="select-soft mt-1 w-full font-normal">
@@ -77,11 +139,33 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft }: { eventId: strin
               {JOB_TITLES.map((t) => <option key={t}>{t}</option>)}
             </select>
           </label>
+          <div className={label}>性別
+            <div className="mt-1 flex gap-2">
+              {GENDERS.map((g) => (
+                <label key={g} className={radio(f.gender === g)}>
+                  <input type="radio" name="gender" value={g} checked={f.gender === g} onChange={set('gender')} className="sr-only" />{g}
+                </label>
+              ))}
+            </div>
+          </div>
+          <label className={label}>飲食需求
+            <select value={f.diet} onChange={set('diet')} className="select-soft mt-1 w-full font-normal">
+              {DIETS.map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </label>
+          {!plans.length && (
+            <label className={label}>報名人數
+              <select value={f.attendees} onChange={set('attendees')} className="select-soft mt-1 w-full font-normal">
+                {Array.from({ length: Math.max(Math.min(MAX_ATTENDEES_PER_SIGNUP, seatCap), 1) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} 位</option>)}
+              </select>
+            </label>
+          )}
         </div>
+        {attendees > 1 && <p className="text-xs text-stone-500">飲食需求有不同時，請寫在最下方備註。</p>}
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="mb-1 text-xs font-bold uppercase tracking-widest text-brand-500">單位資訊</legend>
+        <legend className={legend}>服務單位</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className={`${label} sm:col-span-2`}>單位名稱 *<input required minLength={2} maxLength={100} value={f.institution} onChange={set('institution')} placeholder="例：崧達牙醫診所" className="input-soft mt-1 w-full font-normal" /></label>
           <label className={label}>單位類型 *
@@ -100,35 +184,65 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft }: { eventId: strin
         </div>
       </fieldset>
 
-      <fieldset className="space-y-3">
-        <legend className="mb-1 text-xs font-bold uppercase tracking-widest text-brand-500">報名</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>報名人數
-            <select value={f.attendees} onChange={set('attendees')} className="select-soft mt-1 w-full font-normal">
-              {Array.from({ length: Math.max(maxAttendees, 1) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} 位</option>)}
-            </select>
-          </label>
-          {paid && (
-            <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm ring-1 ring-amber-600/15">
-              <p className="text-amber-700">報名費 {formatNT(fee)} × {f.attendees} 位</p>
-              <p className="text-lg font-bold text-amber-800">合計 {formatNT(total)}</p>
+      {needPayment && (
+        <fieldset className="space-y-3">
+          <legend className={legend}>付款</legend>
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-600/15">
+            <p className="text-sm text-amber-700">{plan ? plan.name : `報名費 ${formatNT(fee)} × ${attendees} 位`}</p>
+            <p className="text-lg font-bold tabular-nums text-amber-800">應繳 {formatNT(total)}</p>
+            {paymentNote && <p className="mt-2 whitespace-pre-line border-t border-amber-600/15 pt-2 text-sm leading-7 text-amber-900">{paymentNote}</p>}
+          </div>
+          <div className={label}>付款方式 *
+            <div className="mt-1 flex flex-wrap gap-2">
+              {PAYMENT_METHODS.map((m) => (
+                <label key={m} className={radio(f.paymentMethod === m)}>
+                  <input type="radio" name="paymentMethod" value={m} checked={f.paymentMethod === m} onChange={set('paymentMethod')} required className="sr-only" />
+                  {m === '現金交業務' ? '現金（交由當區業務）' : '銀行匯款'}
+                </label>
+              ))}
+            </div>
+          </div>
+          {f.paymentMethod === '匯款' && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={label}>匯款帳號後五碼
+                <input inputMode="numeric" pattern="\d{5}" maxLength={5} value={f.transferLast5} onChange={set('transferLast5')} placeholder="已匯款請填寫" className="input-soft mt-1 w-full font-normal tabular-nums" />
+              </label>
+              <label className={label}>匯款日期
+                <input type="date" value={f.paidDate} onChange={set('paidDate')} className="input-soft mt-1 w-full font-normal" />
+              </label>
+              <p className="text-xs leading-5 text-stone-500 sm:col-span-2">還沒匯款可以先留白送出，匯款後依上方說明告知我們。</p>
             </div>
           )}
-          <label className={`${label} sm:col-span-2`}>備註<textarea rows={3} maxLength={500} value={f.note} onChange={set('note')} placeholder="同行人員姓名、飲食需求等" className="input-soft mt-1 w-full font-normal" /></label>
+        </fieldset>
+      )}
+
+      <fieldset className="space-y-3">
+        <legend className={legend}>其他</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className={label}>如何得知這堂課
+            <select value={f.infoSource} onChange={set('infoSource')} className="select-soft mt-1 w-full font-normal">
+              <option value="">請選擇</option>
+              {INFO_SOURCES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </label>
+          {f.infoSource === '業務介紹' && (
+            <label className={label}>介紹的業務 *<input required maxLength={30} value={f.referrer} onChange={set('referrer')} placeholder="業務的名字或稱呼" className="input-soft mt-1 w-full font-normal" /></label>
+          )}
+          <label className={`${label} sm:col-span-2`}>備註<textarea rows={3} maxLength={500} value={f.note} onChange={set('note')} placeholder="其他需求或想讓我們知道的事" className="input-soft mt-1 w-full font-normal" /></label>
         </div>
       </fieldset>
 
       <input tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} className="hidden" aria-hidden="true" name="website" />
 
       <label className="flex items-start gap-2 text-sm leading-6 text-stone-600">
-        <input type="checkbox" checked={f.consent} onChange={set('consent')} required className="mt-1" />
-        <span>我同意崧達企業使用以上資料辦理本活動報名與後續活動、產品資訊聯繫。</span>
+        <input type="checkbox" checked={f.consent} onChange={set('consent')} required className="mt-1 accent-brand-500" />
+        <span>我同意崧達企業蒐集、處理及利用以上資料，用於本活動的報名、保險、課程聯繫，以及後續活動與產品資訊通知；資料將依個人資料保護法妥善保存。</span>
       </label>
 
-      {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
       <button type="submit" disabled={busy}
         className="w-full rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50">
-        {busy ? '送出中…' : paid ? `送出報名（${formatNT(total)}）` : '送出報名'}
+        {busy ? '送出中…' : needPayment ? `送出報名（${formatNT(total)}）` : '送出報名'}
       </button>
     </form>
   )

@@ -10,6 +10,7 @@ import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audi
 import { processRegistrations, invalidateEventFootprints } from '@/lib/registration-footprint'
 import { signCheckinToken, isCheckinOpen } from '@/lib/checkin-token'
 import { canEdit } from '@/lib/permissions'
+import { parsePlans, MAX_PLANS } from '@/lib/online-registration'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -139,8 +140,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     patch.bannerUrl = body.bannerUrl
   }
-  if (patch.paid && (patch.fee ?? event.fee) <= 0) {
-    return NextResponse.json({ error: '收費活動請填寫報名費' }, { status: 400 })
+  if (body.plans !== undefined) {
+    if (!Array.isArray(body.plans) || body.plans.length > MAX_PLANS) return NextResponse.json({ error: `報名方案最多 ${MAX_PLANS} 個` }, { status: 400 })
+    const plans = parsePlans(body.plans)
+    if (plans.length !== body.plans.length) return NextResponse.json({ error: '報名方案請填寫名稱、金額與人數（1～10 位）' }, { status: 400 })
+    patch.plans = plans
+  }
+  // 收費活動：有方案時以方案計價；沒有方案才需要每人報名費
+  const plansAfter = patch.plans ?? event.plans
+  const touchesPricing = patch.paid !== undefined || patch.fee !== undefined || patch.plans !== undefined
+  if (touchesPricing && (patch.paid ?? event.paid) && !plansAfter.length && (patch.fee ?? event.fee) <= 0) {
+    return NextResponse.json({ error: '收費活動請填寫報名費，或設定報名方案' }, { status: 400 })
   }
 
   await updateEvent(id, patch)

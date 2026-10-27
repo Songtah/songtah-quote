@@ -64,7 +64,9 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
                 <div className="flex flex-wrap items-center gap-2">
                   {event.type && <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{event.type}</span>}
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${event.paid ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                    {event.paid ? `報名費 ${formatNT(event.fee)}／人` : '免費參加'}
+                    {!event.paid ? '免費參加'
+                      : event.plans.length ? `報名費 ${formatNT(Math.min(...event.plans.map((p) => p.price)))}${event.plans.length > 1 ? ' 起' : ''}`
+                      : `報名費 ${formatNT(event.fee)}／人`}
                   </span>
                   {gate?.seatsLeft !== null && gate?.open && (
                     <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">剩餘名額 {gate?.seatsLeft}</span>
@@ -87,6 +89,8 @@ export default async function RegisterPage({ params }: { params: { eventId: stri
                   eventId={params.eventId}
                   paid={event.paid}
                   fee={event.fee}
+                  plans={event.plans}
+                  paymentNote={event.paid ? event.paymentNote : ''}
                   seatsLeft={gate.seatsLeft}
                 />
               ) : (

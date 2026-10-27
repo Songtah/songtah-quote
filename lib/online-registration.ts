@@ -37,4 +37,34 @@ export function registrationAmount(event: { paid: boolean; fee: number }, attend
 
 export const JOB_TITLES = ['牙醫師', '牙體技術師', '牙體技術生', '助理', '學生', '其他'] as const
 
+/**
+ * 報名方案（2026-10-27 整合 SurveyCake 報名表）：一個活動可設多個方案，例「台北場單人 NT$15,000」「雙人 NT$28,000」。
+ * 方案決定金額與人數（people＝這個方案含幾位）；活動沒設方案時沿用「報名費 × 人數」。
+ * 存在活動 DB「報名方案」文字欄（JSON），伺服器以方案序號重算金額，不採用前端送來的數字。
+ */
+export type RegistrationPlan = { name: string; price: number; people: number }
+export const MAX_PLANS = 10
+
+/** 方案 JSON → 驗證過的方案清單；格式錯誤的項目略過 */
+export function parsePlans(raw: unknown): RegistrationPlan[] {
+  let list: unknown = raw
+  if (typeof raw === 'string') {
+    try { list = raw.trim() ? JSON.parse(raw) : [] } catch { return [] }
+  }
+  if (!Array.isArray(list)) return []
+  return list.flatMap((p: any) => {
+    const name = typeof p?.name === 'string' ? p.name.trim().slice(0, 40) : ''
+    const price = Math.round(Number(p?.price))
+    const people = Math.floor(Number(p?.people))
+    if (!name || !Number.isFinite(price) || price < 0 || price > 1_000_000) return []
+    if (!Number.isFinite(people) || people < 1 || people > MAX_ATTENDEES_PER_SIGNUP) return []
+    return [{ name, price, people }]
+  }).slice(0, MAX_PLANS)
+}
+
+export const GENDERS = ['男', '女'] as const
+export const DIETS = ['不限', '不吃牛', '蛋奶素', '其他'] as const
+export const INFO_SOURCES = ['臉書粉絲團', 'LINE 官方帳號', '業務介紹', '其他'] as const
+export const PAYMENT_METHODS = ['匯款', '現金交業務'] as const
+
 export const formatNT = (n: number) => `NT$ ${n.toLocaleString('zh-TW')}`

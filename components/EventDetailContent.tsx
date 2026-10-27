@@ -306,6 +306,7 @@ export function EventDetailContent({ id }: { id: string }) {
                       <p className="font-medium text-stone-900">{reg.institution}</p>
                       {(reg.city || reg.unitType) && <p className="text-[11px] text-stone-400">{[`${reg.city}${reg.district}`, reg.unitType].filter(Boolean).join('・')}</p>}
                       {reg.source && <p className="text-[11px] text-stone-400">來源：{reg.source}</p>}
+                      {reg.infoSource && <p className="text-[11px] text-stone-500">得知：{reg.infoSource}{reg.referrer ? `（${reg.referrer}）` : ''}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <RegistrationCustomerCell
@@ -317,7 +318,9 @@ export function EventDetailContent({ id }: { id: string }) {
                     </td>
                     <td className="px-4 py-3 text-stone-600">
                       {reg.contact || '—'}
-                      {reg.jobTitle && <p className="text-[11px] text-stone-400">{reg.jobTitle}</p>}
+                      {(reg.jobTitle || reg.gender) && <p className="text-[11px] text-stone-400">{[reg.jobTitle, reg.gender].filter(Boolean).join('・')}</p>}
+                      {reg.companions && <p className="text-[11px] text-stone-500">同行：{reg.companions}</p>}
+                      {reg.diet && reg.diet !== '不限' && <p className="text-[11px] text-amber-700">飲食：{reg.diet}</p>}
                     </td>
                     <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{reg.phone || '—'}</td>
                     <td className="px-4 py-3 text-stone-600">
@@ -325,10 +328,14 @@ export function EventDetailContent({ id }: { id: string }) {
                         ? <a href={`mailto:${reg.email}`} className="text-brand-600 hover:underline">{reg.email}</a>
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-center text-stone-900">{reg.attendees || 1}</td>
+                    <td className="px-4 py-3 text-center text-stone-900">
+                      {reg.attendees || 1}
+                      {reg.plan && <p className="text-[11px] text-stone-500">{reg.plan}</p>}
+                    </td>
                     {showPayment && (
                       <td className="px-4 py-3 whitespace-nowrap">
                         {reg.amount > 0 && <p className="text-xs font-semibold text-stone-700">NT$ {reg.amount.toLocaleString('zh-TW')}</p>}
+                        {reg.paymentMethod && <p className="text-[11px] text-stone-500">{reg.paymentMethod}{reg.transferLast5 ? `・後五碼 ${reg.transferLast5}` : ''}{reg.paidDate ? `・${reg.paidDate.slice(5).replace('-', '/')}` : ''}</p>}
                         {reg.paymentStatus && reg.paymentStatus !== '免費' ? (
                           <select
                             className={`mt-0.5 rounded-full border-0 px-2 py-0.5 text-xs font-medium ${PAY_STYLE[reg.paymentStatus] ?? 'bg-stone-100 text-stone-600'}`}

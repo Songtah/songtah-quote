@@ -2,14 +2,14 @@
 
 /**
  * 活動詳情 →「線上報名頁」設定：一個活動一個報名頁（/register/[活動 id]）。
- * 開關、收費與報名費、付款說明、名額、廣告圖；儲存後即時生效，並提供連結、QR code 與預覽。
+ * 開關、收費與報名費／報名方案、付款說明、名額、廣告圖；儲存後即時生效，並提供連結、QR code 與預覽。
  */
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import type { EventItem } from '@/lib/notion/events'
-import { formatNT } from '@/lib/online-registration'
+import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP } from '@/lib/online-registration'
 
-type Settings = Pick<EventItem, 'onlineRegistration' | 'paid' | 'fee' | 'paymentNote' | 'bannerUrl' | 'capacity' | 'deadline'>
+type Settings = Pick<EventItem, 'onlineRegistration' | 'paid' | 'fee' | 'paymentNote' | 'bannerUrl' | 'capacity' | 'deadline' | 'plans'>
 
 export function EventRegistrationPageSettings({
   event, seatsTaken, onSaved,
@@ -17,6 +17,7 @@ export function EventRegistrationPageSettings({
   const [s, setS] = useState<Settings>({
     onlineRegistration: event.onlineRegistration, paid: event.paid, fee: event.fee,
     paymentNote: event.paymentNote, bannerUrl: event.bannerUrl, capacity: event.capacity, deadline: event.deadline,
+    plans: event.plans,
   })
   const [busy, setBusy] = useState<'' | 'save' | 'upload'>('')
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -31,17 +32,22 @@ export function EventRegistrationPageSettings({
   }, [event.id])
 
   const dirty = s.onlineRegistration !== event.onlineRegistration || s.paid !== event.paid || s.fee !== event.fee ||
-    s.paymentNote !== event.paymentNote || s.capacity !== event.capacity || (s.deadline || '') !== (event.deadline || '')
+    s.paymentNote !== event.paymentNote || s.capacity !== event.capacity || (s.deadline || '') !== (event.deadline || '') ||
+    JSON.stringify(s.plans) !== JSON.stringify(event.plans)
+  const setPlan = (i: number, patch: Partial<Settings['plans'][number]>) =>
+    setS((x) => ({ ...x, plans: x.plans.map((p, j) => (j === i ? { ...p, ...patch } : p)) }))
 
   async function save() {
     setBusy('save'); setMsg(null)
     try {
-      if (s.paid && !(s.fee > 0)) throw new Error('收費活動請填寫報名費')
+      if (s.plans.some((p) => !p.name.trim() || !(p.people >= 1))) throw new Error('報名方案請填寫名稱與人數')
+      if (s.paid && !s.plans.length && !(s.fee > 0)) throw new Error('收費活動請填寫報名費，或新增報名方案')
       const res = await fetch(`/api/events/${event.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           onlineRegistration: s.onlineRegistration, paid: s.paid, fee: s.paid ? s.fee : 0,
           paymentNote: s.paymentNote, capacity: s.capacity || 0,
+          plans: s.plans.map((p) => ({ ...p, name: p.name.trim() })),
           ...(s.deadline ? { deadline: s.deadline } : {}),
         }),
       })
@@ -116,7 +122,7 @@ export function EventRegistrationPageSettings({
               <input type="checkbox" checked={s.paid} onChange={(e) => setS({ ...s, paid: e.target.checked })} />
               收費活動
             </label>
-            {s.paid && (
+            {s.paid && !s.plans.length && (
               <label className="flex items-center gap-2 text-sm text-stone-600">
                 每人報名費 NT$
                 <input type="number" min={1} step={100} value={s.fee || ''} onChange={(e) => setS({ ...s, fee: Number(e.target.value) })} className="input-soft w-32" />
@@ -125,8 +131,45 @@ export function EventRegistrationPageSettings({
             {!s.paid && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">免費參加</span>}
           </div>
 
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className={label}>報名方案（選填；設定後報名者從方案中選一個，金額與人數依方案）</span>
+              {s.plans.length < MAX_PLANS && (
+                <button type="button" onClick={() => setS((x) => ({ ...x, plans: [...x.plans, { name: '', price: x.fee || 0, people: 1 }] }))}
+                  className="min-h-10 rounded-full bg-stone-100 px-4 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
+                  ＋ 新增方案
+                </button>
+              )}
+            </div>
+            {s.plans.length > 0 ? (
+              <ul className="mt-2 space-y-2">
+                {s.plans.map((p, i) => (
+                  <li key={i} className="grid grid-cols-[1fr_auto] gap-2 rounded-2xl bg-cream-50 p-3 sm:grid-cols-[1fr_9rem_6rem_auto] sm:items-center">
+                    <input value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} maxLength={40}
+                      placeholder="例：台北場單人" aria-label={`方案 ${i + 1} 名稱`} className="input-soft col-span-2 text-sm sm:col-span-1" />
+                    {s.paid && (
+                      <label className="flex items-center gap-1 text-xs text-stone-500">NT$
+                        <input type="number" min={0} step={100} value={p.price || ''} onChange={(e) => setPlan(i, { price: Number(e.target.value) })}
+                          aria-label={`方案 ${i + 1} 金額`} className="input-soft w-full text-sm" />
+                      </label>
+                    )}
+                    <label className="flex items-center gap-1 text-xs text-stone-500">
+                      <select value={p.people} onChange={(e) => setPlan(i, { people: Number(e.target.value) })} aria-label={`方案 ${i + 1} 人數`} className="select-soft text-sm">
+                        {Array.from({ length: MAX_ATTENDEES_PER_SIGNUP }, (_, n) => n + 1).map((n) => <option key={n} value={n}>{n} 位</option>)}
+                      </select>
+                    </label>
+                    <button type="button" onClick={() => setS((x) => ({ ...x, plans: x.plans.filter((_, j) => j !== i) }))}
+                      className="min-h-10 rounded-full px-3 text-xs font-semibold text-stone-500 transition-all hover:bg-stone-200 active:scale-95">刪除</button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-xs text-stone-500">{s.paid ? '未設定方案：報名者自選人數，金額＝每人報名費 × 人數。' : '未設定方案：報名者自選人數。'}</p>
+            )}
+          </div>
+
           {s.paid && (
-            <label className={label}>付款說明（報名完成後顯示給報名者）
+            <label className={label}>付款說明（報名表上與報名完成後都會顯示：匯款帳號、匯款期限、退費規則等）
               <textarea rows={3} maxLength={1900} value={s.paymentNote} onChange={(e) => setS({ ...s, paymentNote: e.target.value })}
                 placeholder={'例：請於 3 日內匯款\n銀行：○○銀行（000）帳號：0000-000-000000\n匯款後請告知帳號末 5 碼'}
                 className="input-soft mt-1 w-full text-sm font-normal" />
@@ -170,7 +213,7 @@ export function EventRegistrationPageSettings({
               {busy === 'save' ? '儲存中…' : '儲存設定'}
             </button>
             {msg && <span className={`text-sm ${msg.ok ? 'text-emerald-700' : 'text-red-600'}`}>{msg.text}</span>}
-            {s.paid && s.fee > 0 && <span className="text-xs text-stone-400">報名頁顯示：報名費 {formatNT(s.fee)}／人</span>}
+            {s.paid && !s.plans.length && s.fee > 0 && <span className="text-xs text-stone-500">報名頁顯示：報名費 {formatNT(s.fee)}／人</span>}
           </div>
         </div>
 

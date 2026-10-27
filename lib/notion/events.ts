@@ -11,6 +11,7 @@ import {
   getRedisValue, setRedisValue, deleteRedisValue,
   getProp, getTitle, getText, getSelect, getNumber, getDate,
 } from './shared'
+import { parsePlans, type RegistrationPlan } from '@/lib/online-registration'
 
 export type EventItem = {
   id:          string
@@ -31,6 +32,7 @@ export type EventItem = {
   paymentNote: string     // 付款方式說明（匯款帳號等），報名完成後顯示
   bannerUrl:   string     // 廣告圖
   capacity:    number     // 名額；0＝不限
+  plans:       RegistrationPlan[]   // 報名方案；空＝沿用報名費 × 人數
 }
 
 export type EventRegistration = {
@@ -55,6 +57,16 @@ export type EventRegistration = {
   unitType:      string   // 牙醫診所／牙體技術所／醫院／學校／其他
   paymentStatus: string   // 免費／未付款／已付款／已退款
   amount:        number   // 應繳金額
+  // 2026-10-27 整合 SurveyCake 報名表
+  plan:          string   // 報名方案名稱
+  companions:    string   // 同行人員姓名（多人方案）
+  gender:        string
+  diet:          string   // 飲食需求
+  infoSource:    string   // 如何得知課程
+  referrer:      string   // 介紹業務（資訊來源＝業務介紹）
+  paymentMethod: string   // 匯款／現金交業務
+  transferLast5: string   // 匯款帳號後五碼
+  paidDate:      string   // 付款日期
 }
 
 export const PAYMENT_STATUSES = ['免費', '未付款', '已付款', '已退款'] as const
@@ -81,6 +93,7 @@ function mapEvent(page: any): EventItem {
     paymentNote: getText(page, '付款說明'),
     bannerUrl:   getProp(page, '廣告圖')?.url ?? '',
     capacity:    getNumber(page, '名額'),
+    plans:       parsePlans(getText(page, '報名方案')),
   }
 }
 
@@ -112,6 +125,15 @@ function mapRegistration(page: any): EventRegistration {
     unitType:      getSelect(page, '單位類型'),
     paymentStatus: getSelect(page, '付款狀態'),
     amount:        getNumber(page, '應繳金額'),
+    plan:          getText(page, '報名方案'),
+    companions:    getText(page, '同行人員'),
+    gender:        getSelect(page, '性別'),
+    diet:          getSelect(page, '飲食需求'),
+    infoSource:    getSelect(page, '資訊來源'),
+    referrer:      getText(page, '介紹業務'),
+    paymentMethod: getSelect(page, '付款方式'),
+    transferLast5: getText(page, '匯款後五碼'),
+    paidDate:      getDate(page, '付款日期'),
   }
 }
 
@@ -225,6 +247,7 @@ export async function updateEvent(id: string, data: Partial<{
   paymentNote: string
   bannerUrl:   string
   capacity:    number
+  plans:       RegistrationPlan[]
 }>): Promise<void> {
   const props: Record<string, any> = {}
   if (data.name)        props['活動名稱'] = { title: [{ text: { content: data.name } }] }
@@ -241,6 +264,7 @@ export async function updateEvent(id: string, data: Partial<{
   if (data.paymentNote !== undefined) props['付款說明'] = { rich_text: [{ text: { content: data.paymentNote.slice(0, 1900) } }] }
   if (data.bannerUrl !== undefined)   props['廣告圖']   = { url: data.bannerUrl || null }
   if (data.capacity !== undefined)    props['名額']     = { number: data.capacity > 0 ? data.capacity : null }
+  if (data.plans !== undefined)       props['報名方案'] = { rich_text: data.plans.length ? [{ text: { content: JSON.stringify(data.plans).slice(0, 1900) } }] : [] }
   if (!Object.keys(props).length) return
 
   await notionCallWithRetry('updateEvent', () =>
@@ -354,6 +378,15 @@ export async function createRegistration(data: {
   unitType?: string
   paymentStatus?: string
   amount?: number
+  plan?: string
+  companions?: string
+  gender?: string
+  diet?: string
+  infoSource?: string
+  referrer?: string
+  paymentMethod?: string
+  transferLast5?: string
+  paidDate?: string
 }): Promise<EventRegistration> {
   if (!DB.registrations) throw new Error('NOTION_REGISTRATIONS_DB not set')
   const page: any = await notionCallWithRetry('createRegistration', () =>
@@ -376,6 +409,15 @@ export async function createRegistration(data: {
         ...(data.unitType ? { '單位類型': { select: { name: data.unitType } } } : {}),
         ...(data.paymentStatus ? { '付款狀態': { select: { name: data.paymentStatus } } } : {}),
         ...(typeof data.amount === 'number' ? { '應繳金額': { number: data.amount } } : {}),
+        ...(data.plan ? { '報名方案': rt(data.plan) } : {}),
+        ...(data.companions ? { '同行人員': rt(data.companions) } : {}),
+        ...(data.gender ? { '性別': { select: { name: data.gender } } } : {}),
+        ...(data.diet ? { '飲食需求': { select: { name: data.diet } } } : {}),
+        ...(data.infoSource ? { '資訊來源': { select: { name: data.infoSource } } } : {}),
+        ...(data.referrer ? { '介紹業務': rt(data.referrer) } : {}),
+        ...(data.paymentMethod ? { '付款方式': { select: { name: data.paymentMethod } } } : {}),
+        ...(data.transferLast5 ? { '匯款後五碼': rt(data.transferLast5) } : {}),
+        ...(data.paidDate ? { '付款日期': { date: { start: data.paidDate } } } : {}),
       } as any,
     })
   )
