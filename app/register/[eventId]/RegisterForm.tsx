@@ -172,25 +172,27 @@ export function RegisterForm({ eventId, paid, fee, seatsLeft, plans, paymentNote
         <legend className={legend}>服務單位</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className={`${label} sm:col-span-2`}>單位名稱 *<input required minLength={2} maxLength={100} value={f.institution} onChange={set('institution')} placeholder="例：崧達牙醫診所" className="input-soft mt-1 w-full font-normal" /></label>
-          {show('unitType') && <label className={label}>單位類型{star('unitType')}
+          {show('unitType') && <label className={`${label} sm:col-span-2`}>單位類型{star('unitType')}
             <select required={req('unitType')} value={f.unitType} onChange={set('unitType')} className="select-soft mt-1 w-full font-normal">
               <option value="">請選擇</option>
               {UNIT_TYPES.map((t) => <option key={t}>{t}</option>)}
             </select>
           </label>}
-          {show('city') && <label className={label}>縣市{star('city')}
+          {show('city') && <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+          <label className={label}>縣市{star('city')}
             {/* 換縣市就清空鄉鎮市區，避免留著別縣市的區 */}
             <select required={req('city')} value={f.city} onChange={(e) => setF((s) => ({ ...s, city: e.target.value, district: '' }))} className="select-soft mt-1 w-full font-normal">
               <option value="">請選擇</option>
               {TW_CITIES.map((c) => <option key={c}>{c}</option>)}
             </select>
-          </label>}
-          {show('city') && show('district') && <label className={label}>鄉鎮市區{star('district')}
+          </label>
+          {show('district') && <label className={label}>鄉鎮市區{star('district')}
             <select required={req('district')} disabled={!f.city} value={f.district} onChange={set('district')} className="select-soft mt-1 w-full font-normal disabled:opacity-50">
               <option value="">{f.city ? '請選擇' : '請先選縣市'}</option>
               {(TW_DISTRICTS[f.city] ?? []).map((d) => <option key={d}>{d}</option>)}
             </select>
           </label>}
+          </div>}
           {show('address') && <label className={`${label} sm:col-span-2`}>單位地址{star('address')}<input required={req('address')} maxLength={200} value={f.address} onChange={set('address')} placeholder="例：台中市北屯區崇德路三段100號" autoComplete="street-address" className="input-soft mt-1 w-full font-normal" /></label>}
         </div>
       </fieldset>
