@@ -96,7 +96,8 @@ const CONTEXT_TTL = 10 * 60_000
 
 /** 轄區與帳號承接模式的組合快照；兩者都不常變，快取 10 分鐘。 */
 export async function loadClaimContext(): Promise<ClaimContext> {
-  const cached = getCachedValue<{ t: [string, string[]][]; o: [string, string][]; c: [string, boolean][] }>(CONTEXT_CACHE_KEY)
+  // L1＋L2（Redis）：首頁多個區塊都會讀，只放 L1 時換實例就重查轄區與帳號（2026-10-27 首頁載入過慢）
+  const cached = await getRedisValue<{ t: [string, string[]][]; o: [string, string][]; c: [string, boolean][] }>(CONTEXT_CACHE_KEY)
   if (cached) {
     return {
       territoriesBy: new Map(cached.t.map(([k, v]) => [k, new Set(v)])),
@@ -122,7 +123,7 @@ export async function loadClaimContext(): Promise<ClaimContext> {
   }
   const canClaimBy = new Map(users.map((u) => [u.name, canAcceptNewBusiness(u)]))
 
-  setCachedValue(CONTEXT_CACHE_KEY, {
+  await setRedisValue(CONTEXT_CACHE_KEY, {
     t: Array.from(territoriesBy, ([k, v]) => [k, Array.from(v)] as [string, string[]]),
     o: Array.from(ownerByTerritory),
     c: Array.from(canClaimBy),

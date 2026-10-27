@@ -7,6 +7,7 @@
  */
 import { Client } from '@notionhq/client'
 import { Redis } from '@upstash/redis'
+import { waitUntil } from '@vercel/functions'
 
 export const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
@@ -237,6 +238,50 @@ export async function runExclusiveScan<T>(
     if (Date.now() > deadline) throw new Error('另一個比對／重算正在進行，請稍候再試')
     await sleep(3000)
   }
+}
+
+/**
+ * 先回快取、過期才在背景重算（stale-while-revalidate），跨 serverless 實例共用（Redis）。
+ * - 快取未滿 freshMs：直接回
+ * - 介於 freshMs 與 maxAgeMs：直接回舊值，背景重算一次（同一時間只會有一個重算）
+ * - 沒有快取或超過 maxAgeMs：當場算
+ * 2026-10-27 首頁載入過慢：今日資料每次即時查 Notion（未結案待追蹤要解析關聯，實測 3～4 秒）。
+ * 沒有 Redis（本機）就直接算。
+ */
+export async function cachedSWR<T>(key: string, compute: () => Promise<T>, opts: { freshMs: number; maxAgeMs: number; dirtyKey?: string; shouldCache?: (value: T) => boolean }): Promise<T> {
+  const r = getRedis()
+  if (!r) return compute()
+  const refresh = async () => {
+    const value = await compute()
+    if (opts.shouldCache && !opts.shouldCache(value)) return value   // 不完整的結果不存（例：資料來源逾時退回 0）
+    try { await r.set(key, { at: Date.now(), value }, { px: opts.maxAgeMs }) } catch (e) { console.warn(`[swr] set "${key}" failed:`, e) }
+    return value
+  }
+  let hit: { at: number; value: T } | null = null
+  try { hit = await r.get<{ at: number; value: T }>(key) } catch { hit = null }
+  if (!hit) return refresh()
+  const age = Date.now() - hit.at
+  // dirtyKey：資料有寫入時記下的時間；快取比它舊就視為過期（仍先回舊值、背景重算）
+  const dirtyAt = opts.dirtyKey ? Number(await r.get(opts.dirtyKey).catch(() => 0)) || 0 : 0
+  if (age > opts.freshMs || hit.at < dirtyAt) {
+    // 背景重算：鎖住避免同時多個請求一起重查
+    const locked = await r.set(`${key}:refreshing`, 1, { nx: true, ex: 60 }).catch(() => null)
+    if (locked) waitUntil(refresh().catch((e) => console.warn(`[swr] refresh "${key}" failed:`, e)).finally(() => r.del(`${key}:refreshing`).catch(() => {})))
+  }
+  return hit.value
+}
+
+/** 首頁今日資料（lib/dashboard-today.ts）的「資料已更新」標記：客情寫入時呼叫 */
+export const TODAY_DASHBOARD_DIRTY_KEY = 'dashboard-today:dirty-at'
+/** 轄區新機構清單（lib/territory-new-openings.ts）的「資料已更新」標記：客戶認領／指派、醫事比對更新時呼叫 */
+export const TERRITORY_NEW_OPENINGS_DIRTY_KEY = 'territory-new-openings:dirty-at'
+export function markTerritoryNewOpeningsDirty() {
+  const r = getRedis()
+  if (r) r.set(TERRITORY_NEW_OPENINGS_DIRTY_KEY, Date.now(), { ex: 7 * 86400 }).catch(() => {})
+}
+export function markTodayDashboardDirty() {
+  const r = getRedis()
+  if (r) r.set(TODAY_DASHBOARD_DIRTY_KEY, Date.now(), { ex: 86400 }).catch(() => {})
 }
 
 export async function notionCallWithRetry<T>(

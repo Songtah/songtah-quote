@@ -4,6 +4,7 @@ import { listOpenFollowUps, listVisits } from '@/lib/notion/visits'
 import { listSystemTickets } from '@/lib/notion/tickets'
 import { getSystemUserById, canAcceptNewBusiness } from '@/lib/notion/accounts'
 import { listTerritoryNewOpenings } from '@/lib/territory-new-openings'
+import { cachedSWR, TODAY_DASHBOARD_DIRTY_KEY } from '@/lib/notion/shared'
 
 export type TodayWorkItem = {
   id: string
@@ -42,17 +43,21 @@ function sameOwner(value: string, owner: string) {
  * 要 3.8s、工單 2.1s，用 2.5s 會全部退回 fallback，首頁就變成一排 0
  * （這正是 2026-09-09 之前中央管理帳號看到全 0 的直接原因）。
  */
+// 退回 fallback 的次數：這次計算若有任何資料來源逾時／失敗，結果就不放進首頁快取
+let fallbackCount = 0
+
 async function withDashboardTimeout<T>(promise: Promise<T>, fallback: T, ms = 2500): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       promise,
       new Promise<T>((resolve) => {
-        timeout = setTimeout(() => resolve(fallback), ms)
+        timeout = setTimeout(() => { fallbackCount++; resolve(fallback) }, ms)
       }),
     ])
   } catch (error) {
     console.error('dashboard data source unavailable:', error)
+    fallbackCount++
     return fallback
   } finally {
     if (timeout) clearTimeout(timeout)
@@ -91,7 +96,7 @@ async function listOwnerTickets(owner: string) {
   }
 }
 
-export async function getTodayDashboard(
+async function computeTodayDashboard(
   owner: string,
   salespersonId: string,
   access: { bd: boolean; quote: boolean; rma: boolean },
@@ -216,7 +221,7 @@ export async function getBdTodayDashboard(owner: string, salespersonId: string, 
 /** 全體視角的逾時：實測最慢的待追蹤 3.8s，留一倍餘裕 */
 const TEAM_TIMEOUT_MS = 10_000
 
-export async function getTeamTodayDashboard(
+async function computeTeamTodayDashboard(
   access: { bd: boolean; quote: boolean; rma: boolean },
 ): Promise<TodayDashboardData> {
   const date = todayTW()
@@ -275,4 +280,30 @@ export async function getTeamTodayDashboard(
     nextAction: null,
     workItems,
   }
+}
+
+// ── 首頁快取（2026-10-27 首頁載入過慢）────────────────────────────────────────
+// 今日資料每次即時查 Notion，未結案待追蹤要解析關聯，實測 3～4 秒，首頁整頁等它。
+// 改為先回快取（1 分鐘內視為最新），過期或有客情寫入（markTodayDashboardDirty）就先回舊值、背景重算；
+// 換日（key 含日期）或 30 分鐘沒人看才當場算。
+const accessKey = (a: { bd: boolean; quote: boolean; rma: boolean }) => `${+a.bd}${+a.quote}${+a.rma}`
+const SWR = { freshMs: 60_000, maxAgeMs: 30 * 60_000, dirtyKey: TODAY_DASHBOARD_DIRTY_KEY }
+
+/** 計算並記下這次有沒有資料來源退回 fallback（同實例並行請求會互相影響，只會讓快取更保守） */
+async function tracked(compute: () => Promise<TodayDashboardData>) {
+  const before = fallbackCount
+  const data = await compute()
+  return { data, complete: fallbackCount === before }
+}
+
+export async function getTodayDashboard(owner: string, salespersonId: string, access: { bd: boolean; quote: boolean; rma: boolean }) {
+  const out = await cachedSWR(`dashboard-today:v2:${todayTW()}:${owner}:${salespersonId}:${accessKey(access)}`,
+    () => tracked(() => computeTodayDashboard(owner, salespersonId, access)), { ...SWR, shouldCache: (v) => v.complete })
+  return out.data
+}
+
+export async function getTeamTodayDashboard(access: { bd: boolean; quote: boolean; rma: boolean }) {
+  const out = await cachedSWR(`dashboard-today:v2:${todayTW()}:team:${accessKey(access)}`,
+    () => tracked(() => computeTeamTodayDashboard(access)), { ...SWR, shouldCache: (v) => v.complete })
+  return out.data
 }

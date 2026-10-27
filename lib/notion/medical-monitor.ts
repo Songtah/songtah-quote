@@ -5,6 +5,7 @@
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
   getRedisValue, setRedisValue, getText, getRedis,
+  markTerritoryNewOpeningsDirty,
 } from './shared'
 
 // ── 最近一次比對結果（伺服器端共用，跨裝置/不受清快取影響）──────────
@@ -20,6 +21,7 @@ export async function setCachedMonitorResult(value: unknown): Promise<void> {
   const r = getRedis()
   if (!r) return
   try { await r.set(MONITOR_RESULT_KEY, value, { px: 30 * 24 * 60 * 60_000 }) } catch (e) { console.warn('[medical-monitor] save result failed:', e) } // 30 天
+  markTerritoryNewOpeningsDirty()   // 轄區新機構清單由比對結果推導
 }
 
 // ── 比對紀錄（每月摘要趨勢，供對照；伺服器端持久、刷新不消失）──────────

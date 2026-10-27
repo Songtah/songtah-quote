@@ -4,7 +4,7 @@
  */
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
-  getRedis, getRedisValue, setRedisValue, deleteRedisValue, richText,
+  getRedis, getRedisValue, setRedisValue, deleteRedisValue, markTodayDashboardDirty, richText,
   getProp, getTitle, getText, getSelect, getDate, getRelationIds, getRollupText,
 } from './shared'
 import { resolveCustomerInfo, resolveProductNames } from './relations'
@@ -182,6 +182,7 @@ const VISITS_PAGE1_TTL = 2 * 60 * 1000 // 2 minutes
 
 function invalidateVisitsCache() {
   deleteRedisValue(VISITS_PAGE1_CACHE_KEY)
+  markTodayDashboardDirty()   // 首頁今日拜訪／待追蹤：下次開頁背景重算
 }
 
 /** Resolve names and build final Visit[] from raw mapped items. */

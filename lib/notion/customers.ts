@@ -6,6 +6,7 @@ import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry, querySummary,
   getCachedValue, setCachedValue, getRedisValue, setRedisValue, deleteRedisValue,
   getProp, getTitle, getText, getSelect, getNumber,
+  markTerritoryNewOpeningsDirty,
 } from './shared'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 import { canonicalSalespersonName, salespersonNameVariants } from '@/lib/salesperson-name'
@@ -465,6 +466,7 @@ async function invalidateCustomerCaches() {
   // 課程／活動客戶清單（lib/event-customers.ts，快取 10 分鐘）帶著負責業務；認領／指派後不清，
   // 剛認領的客戶會繼續顯示「轄區未認領／無人負責」最多 10 分鐘。只刪鍵、不 import 組合層。
   deleteRedisValue('event-customers-v2')
+  markTerritoryNewOpeningsDirty()   // 轄區新機構清單含「尚未有人負責的已建檔新開業」
 }
 
 /**

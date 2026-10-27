@@ -5,7 +5,7 @@
 import bcrypt from 'bcryptjs'
 import {
   notion, DB, transientCache, normalizeDatabaseId, notionCallWithRetry,
-  getCachedValue, setCachedValue, richText, getTitle, getText, getSelect,
+  getCachedValue, setCachedValue, getRedisValue, setRedisValue, deleteRedisValue, richText, getTitle, getText, getSelect,
 } from './shared'
 import {
   MODULE_NOTION_FIELDS, mapUserPermissions,
@@ -73,12 +73,16 @@ async function ensureUserDbFields() {
   _userFieldsEnsured = true
 }
 
+/**
+ * 帳號清單：L1 記憶體＋L2 Redis（跨 serverless 實例共用，10 分鐘；新增／修改／刪除帳號即失效）。
+ * 2026-10-27 首頁載入過慢：原本只有 L1，Vercel 一換實例就重查 Notion，且每個新實例第一次讀帳號
+ * 都會先跑 ensureUserDbFields（databases.update 改 schema）——讀取路徑不得改 schema，已移到寫入路徑。
+ * 清單不含密碼，可放快取。
+ */
 export async function getSystemUsers(): Promise<SystemUser[]> {
   const cacheKey = 'users:all'
-  const cached = getCachedValue<SystemUser[]>(cacheKey)
+  const cached = await getRedisValue<SystemUser[]>(cacheKey)
   if (cached) return cached
-
-  await ensureUserDbFields()
 
   const response: any = await notionCallWithRetry('getSystemUsers', () =>
     notion.databases.query({
@@ -97,8 +101,15 @@ export async function getSystemUsers(): Promise<SystemUser[]> {
     permissions: mapUserPermissions(page),
   }))
 
-  setCachedValue(cacheKey, items, 600_000) // 10 min
+  await setRedisValue(cacheKey, items, 600_000) // 10 min
   return items
+}
+
+function invalidateUsersCache() {
+  transientCache.delete('users:all')
+  deleteRedisValue('users:all')
+  // 轄區認領脈絡（lib/notion/visit-claim.ts）含各帳號的業務承接模式；只刪鍵、不 import（葉領域不互依）
+  deleteRedisValue('visit-claim-context-v1')
 }
 
 // ── 密碼雜湊（bcrypt，含舊版明文資料的登入時遷移）─────────────────────────────
@@ -122,7 +133,6 @@ export async function getSystemUserByCredentials(
   username: string,
   password: string
 ): Promise<SystemUser | null> {
-  await ensureUserDbFields()
   const response: any = await notionCallWithRetry('getSystemUserByCredentials', () =>
     notion.databases.query({
       database_id: normalizeDatabaseId(DB.users),
@@ -190,7 +200,7 @@ export async function createSystemUser(data: {
       } as any,
     })
   )
-  transientCache.delete('users:all')
+  invalidateUsersCache()
 
   return {
     id: response.id,
@@ -204,7 +214,10 @@ export async function createSystemUser(data: {
 }
 
 export async function getSystemUserById(id: string): Promise<SystemUser> {
-  await ensureUserDbFields()
+  // 先從快取的帳號清單找（首頁每個區塊都會讀一次自己的帳號），找不到才直接讀頁面
+  const norm = (x: string) => (x ?? '').replace(/-/g, '')
+  const hit = (await getSystemUsers().catch(() => [] as SystemUser[])).find((u) => norm(u.id) === norm(id))
+  if (hit) return hit
   const page: any = await notionCallWithRetry('getSystemUserById', () =>
     notion.pages.retrieve({ page_id: id })
   )
@@ -231,6 +244,7 @@ export async function updateSystemUser(
     permissions?: UserPermissions
   }
 ): Promise<void> {
+  await ensureUserDbFields()   // 寫入路徑才確保欄位（讀取路徑不改 schema）
   const properties: Record<string, any> = {}
   if (data.name !== undefined) properties['帳號名稱'] = { title: richText(data.name) }
   if (data.password !== undefined) properties['密碼'] = { rich_text: richText(await hashPassword(data.password)) }
@@ -247,12 +261,12 @@ export async function updateSystemUser(
   await notionCallWithRetry('updateSystemUser', () =>
     notion.pages.update({ page_id: id, properties } as any)
   )
-  transientCache.delete('users:all')
+  invalidateUsersCache()
 }
 
 export async function deleteSystemUser(id: string): Promise<void> {
   await notionCallWithRetry('deleteSystemUser', () =>
     notion.pages.update({ page_id: id, archived: true })
   )
-  transientCache.delete('users:all')
+  invalidateUsersCache()
 }

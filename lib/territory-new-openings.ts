@@ -26,6 +26,7 @@ import { getCachedMonitorResult, setCachedMonitorResult } from '@/lib/notion/med
 import { listTerritories } from '@/lib/notion/territories'
 import { listPipelineCustomers } from '@/lib/notion/customers'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { cachedSWR, TERRITORY_NEW_OPENINGS_DIRTY_KEY } from '@/lib/notion/shared'
 
 export type TerritoryNewOpening = {
   key: string
@@ -71,14 +72,30 @@ async function loadTerritoryOwners() {
     byArea.get(`${tw(city)}|${tw(district)}`) ?? byCity.get(tw(city)) ?? ''
 }
 
+/**
+ * 全體清單共用快取（2026-10-27 首頁載入過慢：每位業務開首頁都要讀整份醫事比對結果＋轄區＋開發中客戶，
+ * 實測 3.4 秒）。結果與看的人無關，算一次、10 分鐘內共用；客戶認領／指派或醫事比對更新時標記過期，
+ * 先回舊值、背景重算。醫事比對結果還不存在時不快取（避免把空清單存起來）。
+ */
 export async function listTerritoryNewOpenings(params: {
   /** 指定業務只回他的；不帶＝全體（主管檢視，含不在任何轄區者） */
   salesperson?: string
   /** 快取不存在時是否當場重算（約 60 秒）。首頁數字卡傳 false，避免每次開首頁都觸發全庫比對 */
   allowCompute?: boolean
 } = {}): Promise<{ items: TerritoryNewOpening[]; computedAt: string; snapshotFetched: string }> {
+  const all = await cachedSWR('territory-new-openings:v1', () => computeAllTerritoryNewOpenings(params.allowCompute ?? true), {
+    freshMs: 10 * 60_000, maxAgeMs: 24 * 3600_000, dirtyKey: TERRITORY_NEW_OPENINGS_DIRTY_KEY,
+    shouldCache: (v) => Boolean(v.computedAt),
+  })
+  return {
+    ...all,
+    items: params.salesperson ? all.items.filter((i) => i.owner === params.salesperson) : all.items,
+  }
+}
+
+async function computeAllTerritoryNewOpenings(allowCompute: boolean): Promise<{ items: TerritoryNewOpening[]; computedAt: string; snapshotFetched: string }> {
   const [result, ownerOf, pipeline] = await Promise.all([
-    getMonitorResultForNewOpenings(params.allowCompute ?? true),
+    getMonitorResultForNewOpenings(allowCompute),
     loadTerritoryOwners(),
     listPipelineCustomers().catch(() => []),
   ])
@@ -111,7 +128,7 @@ export async function listTerritoryNewOpenings(params: {
       })),
   ]
 
-  const scoped = params.salesperson ? items.filter((i) => i.owner === params.salesperson) : items
+  const scoped = items
   // 本月新增排最前，其次尚未建檔（最需要趕快聯絡），再依縣市行政區聚在一起方便排路線
   scoped.sort((a, b) =>
     Number(b.isNewThisMonth) - Number(a.isNewThisMonth) ||
