@@ -6,8 +6,15 @@ import { FloatingFontSizeToggle } from '@/components/FontSizeToggle'
 export const metadata: Metadata = {
   title: '崧達企業管理系統',
   description: 'SONGTAH TRADING CO.,LTD. 內部營運平台',
+  // 手機瀏覽器（尤其 iPhone Safari）不吃 SVG 小圖示，另給 PNG／ICO；加到主畫面用 apple-touch-icon
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
     apple: '/apple-touch-icon.png',
   },
   // 加到 iPhone 主畫面時以 App 樣式開啟（網頁推播在 iPhone 上需要這樣開）
