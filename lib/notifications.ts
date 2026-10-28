@@ -50,7 +50,9 @@ let vapidReady: boolean | null = null
 function pushReady(): boolean {
   if (vapidReady !== null) return vapidReady
   const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY
-  vapidReady = !!(pub && priv)
+  // 格式檢查：公鑰 87 字、私鑰 43 字（base64url）。值填錯（例如把變數名稱當成值）時視為未設定，不讓裝置訂閱到壞金鑰
+  vapidReady = !!pub && !!priv && /^[A-Za-z0-9_-]{80,90}$/.test(pub) && /^[A-Za-z0-9_-]{40,46}$/.test(priv)
+  if (!vapidReady && (pub || priv)) console.warn('[push] VAPID 金鑰格式不正確，推播停用；請確認 Vercel 環境變數的值')
   if (vapidReady) webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://songtah-quote.vercel.app', pub!, priv!)
   return vapidReady
 }
