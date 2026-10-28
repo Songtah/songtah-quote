@@ -198,6 +198,8 @@ export interface Order {
   requestedDate?:  string   // 希望到貨日
   paymentMethod?:  string   // 付款方式
   deliveryMethod?: string   // 送貨方式
+  /** 由報價單轉出時的來源報價（「報價 id|報價單號」） */
+  sourceQuote?: { id: string; number: string }
   /** 清單摘要用（不必載入品項）；舊單沒有時由品項推算 */
   itemCount?: number
   totalQty?:  number
@@ -386,6 +388,10 @@ function parseOrderPage(page: any, items: OrderItem[] = []): Order {
     requestedDate:   getDate(page, '希望到貨日'),
     paymentMethod:   getText(page, '付款方式'),
     deliveryMethod:  getText(page, '送貨方式'),
+    ...(() => {
+      const [id, number] = getText(page, '來源報價').split('|')
+      return id ? { sourceQuote: { id, number: number ?? '' } } : {}
+    })(),
     itemCount:       page.properties?.['品項數']?.number ?? (items.length || undefined),
     totalQty:        page.properties?.['總件數']?.number ?? (items.length ? items.reduce((a, i) => a + i.quantity, 0) : undefined),
   }
@@ -597,6 +603,7 @@ export async function createOrder(data: {
   requestedDate?:  string
   paymentMethod?:  string
   deliveryMethod?: string
+  sourceQuote?: { id: string; number: string }
 }): Promise<Order> {
   await validateOrderItems(data.items)
   await assertPromotionValid(data.promotionId, data.items)
@@ -625,6 +632,7 @@ export async function createOrder(data: {
       付款方式:     { rich_text: richText(data.paymentMethod ?? '') },
       送貨方式:     { rich_text: richText(data.deliveryMethod ?? '') },
       ...(data.requestedDate ? { 希望到貨日: { date: { start: data.requestedDate } } } : {}),
+      ...(data.sourceQuote ? { 來源報價: { rich_text: richText(`${data.sourceQuote.id}|${data.sourceQuote.number}`) } } : {}),
       ...countsOf(data.items),
     } as any,
   })

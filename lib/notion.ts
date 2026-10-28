@@ -144,4 +144,4 @@ export async function searchCustomers(query: string): Promise<Customer[]> {
 }
 
 // ── quotes：已抽到 lib/notion/quotes.ts（2026-10-07），此處轉出口維持既有 import 路徑 ──
-export { createQuote, updateQuote, listQuotes, listQuotesByCustomer, getQuote, updateQuoteStatus, deleteQuote } from './notion/quotes'
+export { createQuote, updateQuote, listQuotes, listQuotesByCustomer, getQuote, updateQuoteStatus, deleteQuote, setQuoteConvertedOrder } from './notion/quotes'

@@ -943,8 +943,10 @@ interface OrderFormProps {
     note?: string
     paymentMethod?: string
     deliveryMethod?: string
-    /** 「再訂一次」：已由伺服器套用當下有效售價、排除停售品與贈品 */
+    /** 「再訂一次」：已由伺服器套用當下有效售價、排除停售品與贈品；「轉訂單」：報價核准價與數量 */
     items?: OrderItem[]
+    /** 由報價單轉出：送出時帶給伺服器重驗並互相記錄（一張報價單只轉一次） */
+    sourceQuoteId?: string
   }
 }
 
@@ -1376,6 +1378,7 @@ export default function OrderForm({ initialOrder, canEdit = true, lockedNote, pr
       const body: Record<string, unknown> = { ...payload() }
       if (!isEdit || status === '草稿' || itemsChanged) body.items = items
       if (nonDraftItemEdit) body.confirmNonDraftEdit = true
+      if (!isEdit && prefill?.sourceQuoteId) body.sourceQuoteId = prefill.sourceQuoteId
       if (targetStatus && (!isEdit || targetStatus !== status)) body.status = targetStatus
       const res = await fetch(isEdit ? `/api/orders/${initialOrder!.id}` : '/api/orders', {
         method: isEdit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),

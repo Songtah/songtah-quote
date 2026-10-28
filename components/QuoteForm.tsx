@@ -225,6 +225,16 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
     setItems((prev) => [...prev, item]); setFlashId(item.tempId); markDirty()
     if (item.isCustom) setOpenDetail((prev) => [...prev, item.tempId])
     setTimeout(() => setFlashId(''), 1600)
+    if (!item.isCustom && item.productId) fillSpec(item.tempId, item.productId, item.spec)
+  }
+  // 從產品資料庫選的品項：背景帶入技術規格（逐行）；使用者已經改過規格就不覆蓋（lib/product-spec-lines.ts）
+  async function fillSpec(id: string, code: string, initial: string) {
+    try {
+      const res = await fetch(`/api/products/spec?code=${encodeURIComponent(code)}`)
+      const lines: string[] = res.ok ? (await res.json()).lines ?? [] : []
+      if (!lines.length) return
+      setItems((prev) => prev.map((i) => (i.tempId === id && i.spec === initial ? { ...i, spec: lines.join('\n') } : i)))
+    } catch { /* 帶不出來就維持原樣，可手動填 */ }
   }
   function updateItem(id: string, patch: Partial<QuoteItem>) {
     setItems((prev) => prev.map((i) => (i.tempId === id ? { ...i, ...patch } : i))); markDirty()
@@ -543,7 +553,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                             className={`input-soft py-2 ${showError(!item.name.trim())}`} placeholder="品名（必填）" />
                           {!detail && (item.brand || item.spec || item.note) && (
                             <button type="button" onClick={() => toggleDetail(item.tempId)} className="mt-1 block max-w-full truncate px-1 text-left text-xs text-stone-500 hover:text-stone-600">
-                              {[item.brand, item.spec, item.note && `備註：${item.note}`].filter(Boolean).join('　·　')}
+                              {[item.brand, item.spec.replace(/\n+/g, '、'), item.note && `備註：${item.note}`].filter(Boolean).join('　·　')}
                             </button>
                           )}
                         </div>
@@ -591,7 +601,7 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
                       {detail && (
                         <div className="mt-2 grid grid-cols-1 gap-3 rounded-xl bg-stone-50 p-3 sm:grid-cols-2 xl:ml-[36px]">
                           <Field label="品牌"><input value={item.brand} onChange={(e) => updateItem(item.tempId, { brand: e.target.value })} className="input-soft bg-white py-2" /></Field>
-                          <Field label="規格"><input value={item.spec} onChange={(e) => updateItem(item.tempId, { spec: e.target.value })} className="input-soft bg-white py-2" placeholder="例：98×14 mm" /></Field>
+                          <Field label="規格"><textarea value={item.spec} onChange={(e) => updateItem(item.tempId, { spec: e.target.value })} rows={Math.min(Math.max(item.spec.split('\n').length, 1), 8)} className="input-soft resize-y bg-white py-2" placeholder={'一行一項，例：\n抗彎強度：> 100 MPa\n硬度：> 50 Shore-D'} /></Field>
                           <Field label="品項備註" hint="印在品名下方" className="sm:col-span-2">
                             <input value={item.note} onChange={(e) => updateItem(item.tempId, { note: e.target.value })} className="input-soft bg-white py-2" placeholder="例：限量促銷品項" />
                           </Field>

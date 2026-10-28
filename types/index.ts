@@ -132,6 +132,8 @@ export interface Quote {
   approvalNote?: string
   createdAt: string
   items?: QuoteItem[]
+  /** 已轉出的訂貨單（一張報價單只轉一次） */
+  convertedOrder?: { id: string; number: string }
 }
 
 export interface CreateQuotePayload {

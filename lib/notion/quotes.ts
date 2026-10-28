@@ -92,6 +92,10 @@ function mapQuote(page: any, items?: QuoteItem[]): Quote {
     note:            getText(page, '備註'),
     approvalNote:    getText(page, '審核意見'),
     createdAt,
+    ...(() => {
+      const [id, number] = getText(page, '轉出訂單').split('|')
+      return id ? { convertedOrder: { id, number: number ?? '' } } : {}
+    })(),
     ...(items ? { items } : {}),
   }
 }
@@ -102,7 +106,7 @@ function mapItem(p: any): QuoteItem & { seq: number } {
   const brand = getText(p, '品牌')
   return {
     seq:       num(p, '序號') ?? Number.MAX_SAFE_INTEGER,
-    productId: '',
+    productId: getText(p, '貨號'),   // 從產品資料庫選的品項才有；自訂品項空白
     name:      getTitle(p, '品名'),
     brand:     brand === '客製化' ? '' : brand,
     category:  getText(p, '品類'),
@@ -248,6 +252,7 @@ async function writeItems(quoteId: string, items: QuoteItem[]) {
       parent: { database_id: ITEMS_DB() },
       properties: {
         品名:   { title: longText(item.name) },
+        ...(item.productId && !item.isCustom ? { 貨號: { rich_text: longText(item.productId) } } : {}),
         報價單: { relation: [{ id: quoteId }] },
         序號:   { number: i + 1 },
         品牌:   { rich_text: longText(item.isCustom ? (item.brand || '客製化') : item.brand) },
@@ -316,4 +321,12 @@ export async function deleteQuote(pageId: string): Promise<void> {
   const items = await listItemPages(id)
   for (const p of items) await notion.pages.update({ page_id: p.id, archived: true })
   await notion.pages.update({ page_id: id, archived: true })
+}
+
+/** 報價單轉出訂貨單後記下訂單（「訂單 id|訂單編號」），報價單列表據此顯示「已轉訂單」並防止重複轉 */
+export async function setQuoteConvertedOrder(quoteId: string, order: { id: string; number: string }): Promise<void> {
+  await notionCallWithRetry('quotes:converted', () => notion.pages.update({
+    page_id: quoteId,
+    properties: { 轉出訂單: { rich_text: longText(`${order.id}|${order.number}`) } } as any,
+  }))
 }

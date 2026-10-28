@@ -472,7 +472,11 @@ export default function QuoteListContent() {
                         <button onClick={() => copyShare(quote)} className={`${chip} bg-brand-50 text-brand-700 hover:bg-brand-100`}>
                           {copiedId === quote.id ? '✓ 已複製' : '複製分享連結'}
                         </button>
-                        <Link href={`/orders/new?fromQuote=${quote.id}`} className={`${chip} bg-brand-50 text-brand-700 hover:bg-brand-100`}>轉訂單</Link>
+                        {quote.convertedOrder ? (
+                          <Link href={`/orders/${quote.convertedOrder.id}`} className={`${chip} bg-pine-50 text-pine-700 hover:bg-pine-100`}>已轉訂單 {quote.convertedOrder.number}</Link>
+                        ) : (
+                          <Link href={`/orders/new?fromQuote=${quote.id}`} className={`${chip} bg-brand-50 text-brand-700 hover:bg-brand-100`}>轉訂單</Link>
+                        )}
                       </>
                     )}
 

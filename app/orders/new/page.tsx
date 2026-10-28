@@ -8,6 +8,9 @@ import { getQuote } from '@/lib/notion'
 import { getOrderById } from '@/lib/orders-notion'
 import { getAvailableCatalog } from '@/lib/products-availability'
 import { orderActorOf } from '@/lib/order-status'
+import { redirect } from 'next/navigation'
+import { computeQuoteTotals } from '@/lib/quote-model'
+import type { OrderItem } from '@/lib/orders-notion'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,14 +29,40 @@ export default async function NewOrderPage({
   let prefill: ComponentProps<typeof OrderForm>['prefill']
   let description = '選擇品項建立訂貨單'
 
-  // 從已核准報價單「轉訂單」：只帶客戶資料與品項清單當備註參考，
-  // 品項仍須經訂貨頁選品器重新加入(才能走完整促銷/庫存驗證)，不直接寫入訂單品項。
+  // 從已核准報價單「轉訂單」（2026-10-28 改版）：品項直接帶入，單價沿用報價核准價（議價已由報價審核把關）。
+  // 有貨號（或品名完全對到目錄）的品項以目錄品項帶入；手打的規格／設備內容與已停售品轉成自訂品項，原文保留。
+  // 整單折讓與稅別訂貨單沒有對應欄位，寫進備註請行政確認。一張報價單只轉一次（送出時伺服器再驗）。
   if (searchParams.fromQuote) {
     const quote = await getQuote(searchParams.fromQuote).catch(() => null)
-    if (quote) {
-      const itemsNote = (quote.items ?? [])
-        .map((it) => `・${it.name}　${it.spec ? `(${it.spec})　` : ''}x${it.quantity}`)
-        .join('\n')
+    if (quote?.convertedOrder) redirect(`/orders/${quote.convertedOrder.id}`)
+    if (quote && quote.status !== '已核准') {
+      description = `報價單 ${quote.quoteNumber} 目前為「${quote.status}」，核准後才能轉訂單`
+    } else if (quote) {
+      const catalog = await getAvailableCatalog()
+      const byCode = new Map(catalog.map((p) => [p.code, p]))
+      const nameCount = new Map<string, number>()
+      for (const p of catalog) nameCount.set(p.name, (nameCount.get(p.name) ?? 0) + 1)
+      const byName = new Map(catalog.filter((p) => nameCount.get(p.name) === 1).map((p) => [p.name, p]))
+      const custom: string[] = []
+      const items: OrderItem[] = (quote.items ?? []).filter((it) => it.quantity > 0).map((it, idx) => {
+        const p = (it.productId ? byCode.get(it.productId) : undefined) ?? (it.isCustom ? undefined : byName.get(it.name.trim()))
+        const base = { id: `q-${idx}`, quantity: it.quantity, unitPrice: it.unitPrice, itemType: 'normal' as const }
+        if (p) {
+          return { ...base, skuCode: p.code, skuName: p.name, brand: p.brand || it.brand, seriesName: p.category, seriesId: '', note: it.note }
+        }
+        custom.push(it.name)
+        const stopped = it.productId ? '（目錄已停售，請確認）' : ''
+        return {
+          ...base, skuCode: '', skuName: `${it.name}${stopped}`, brand: it.brand, seriesName: it.category, seriesId: '',
+          note: [it.spec.replace(/\n+/g, '；'), it.note].filter(Boolean).join('；').slice(0, 500),
+        }
+      })
+      const t = computeQuoteTotals({ items: quote.items ?? [], taxMode: quote.taxMode, discount: quote.discount })
+      const checks = [
+        t.discount > 0 ? `報價有整單折讓 NT$ ${t.discount.toLocaleString('zh-TW')}` : '',
+        quote.taxMode === '未稅' ? `報價為未稅，另計營業稅 NT$ ${t.tax.toLocaleString('zh-TW')}` : '',
+        custom.length ? `自訂品項（無貨號）：${custom.join('、')}` : '',
+      ].filter(Boolean)
       prefill = {
         customerId:      quote.customerId,
         customerName:    quote.customerName,
@@ -42,9 +71,12 @@ export default async function NewOrderPage({
         customerPhone:   quote.customerPhone,
         contactPerson:   quote.contactPerson,
         customerTaxId:   quote.customerTaxId,
-        note: `轉自報價單 ${quote.quoteNumber}，原報價品項供對照(請至下方重新選品，以套用正確促銷/庫存驗證)：\n${itemsNote}`,
+        items,
+        sourceQuoteId:   quote.id,
+        note: [`轉自報價單 ${quote.quoteNumber}（報價應付 NT$ ${t.total.toLocaleString('zh-TW')}）`,
+          ...(checks.length ? [`請行政確認：${checks.join('；')}`] : [])].join('\n'),
       }
-      description = `轉自報價單 ${quote.quoteNumber}`
+      description = `轉自報價單 ${quote.quoteNumber}：品項與報價核准價已帶入，可修改後再送出`
     }
   }
 

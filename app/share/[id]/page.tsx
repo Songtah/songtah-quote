@@ -130,11 +130,11 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                     <td className="px-3 py-3">
                       <div>{item.name}</div>
                       {(layout.showBrand && item.brand) || (!layout.showSpec && item.spec) ? (
-                        <div className="text-xs text-stone-400">{[layout.showBrand ? item.brand : '', layout.showSpec ? '' : item.spec].filter(Boolean).join('　')}</div>
+                        <div className="whitespace-pre-line text-xs text-stone-500">{[layout.showBrand ? item.brand : '', layout.showSpec ? '' : item.spec].filter(Boolean).join('　')}</div>
                       ) : null}
                       {item.note && <div className="text-xs text-stone-400">{item.note}</div>}
                     </td>
-                    {layout.showSpec && <td className="px-3 py-3 text-stone-500">{item.spec}</td>}
+                    {layout.showSpec && <td className="whitespace-pre-line px-3 py-3 text-stone-500">{item.spec}</td>}
                     <td className="px-3 py-3 text-right tabular-nums">{item.quantity}</td>
                     {layout.showUnit && <td className="px-3 py-3 text-center text-stone-500">{item.unit}</td>}
                     <td className="px-3 py-3 text-right tabular-nums">{item.unitPrice.toLocaleString('zh-TW')}</td>
@@ -149,7 +149,7 @@ export default async function SharePage({ params }: { params: { id: string } }) 
                   <span className="w-5 shrink-0 pt-0.5 text-xs text-stone-400">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm">{item.name}</div>
-                    <div className="text-xs text-stone-400">
+                    <div className="whitespace-pre-line text-xs text-stone-500">
                       {[layout.showBrand ? item.brand : '', item.spec, item.note].filter(Boolean).join('　·　')}
                     </div>
                     <div className="mt-1 flex justify-between text-xs text-stone-500">
