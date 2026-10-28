@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
-import { fadeUp } from '@/lib/motion'
 import { AppSidebar, AppMobileNav, AppBottomNav, type SessionUserLike } from '@/components/AppNav'
 import {
   BadgeDollarSign,
@@ -108,7 +107,8 @@ export function AppShell({
       <AppMobileNav sessionUser={sessionUser} />
 
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 sm:px-7 sm:pt-8 lg:ml-60 lg:px-10 lg:pb-10">
-        <motion.div key={pathname} variants={fadeUp} initial="hidden" animate="show">
+        {/* 換頁只淡入、不位移：原本 fadeUp 往上滑 12px，手機上與載入骨架接不起來（2026-10-28） */}
+        <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
           <div className="mb-6 sm:mb-8">
             <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-brand-500">{getPageTitle(pathname)}</p>
             <h1 className="text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl">{title}</h1>
