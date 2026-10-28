@@ -21,7 +21,7 @@
 import 'server-only'
 import webpush from 'web-push'
 import crypto from 'crypto'
-import { getRedis } from '@/lib/notion/shared'
+import { getRedis, hitRateLimit } from '@/lib/notion/shared'
 
 export type NotificationItem = {
   id: string
@@ -165,3 +165,6 @@ async function sendPush(channels: string[], item: NotificationItem): Promise<voi
     }
   }))
 }
+
+/** 測試通知限流：每人 10 分鐘 5 次 */
+export const hitRateLimitForUser = (userId: string) => hitRateLimit(`notif-test:${userId}`, 5, 10 * 60_000)

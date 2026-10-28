@@ -122,6 +122,20 @@ export function NotificationBell() {
     }
   }
 
+  async function sendTest() {
+    setBusy(true); setMsg('')
+    try {
+      const res = await fetch('/api/notifications/test', { method: 'POST' })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? '傳送失敗')
+      setMsg('已送出，幾秒內這台裝置應該會跳出「測試通知」')
+      setTimeout(load, 2000)
+    } catch (e: any) {
+      setMsg(e?.message ?? '傳送失敗')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function disablePush() {
     setBusy(true); setMsg('')
     try {
@@ -144,7 +158,10 @@ export function NotificationBell() {
       case 'on': return (
         <div className="flex items-center justify-between gap-2 text-xs text-stone-600">
           <span className="flex items-center gap-1.5"><BellRing aria-hidden="true" className="size-3.5 text-pine-600" />這台裝置已開啟通知</span>
-          <button type="button" onClick={disablePush} disabled={busy} className="tap-target rounded-full px-3 py-1.5 font-semibold text-stone-500 hover:bg-stone-100 disabled:opacity-40">關閉</button>
+          <span className="flex items-center gap-1">
+            <button type="button" onClick={sendTest} disabled={busy} className="tap-target rounded-full px-3 py-1.5 font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-40">傳送測試</button>
+            <button type="button" onClick={disablePush} disabled={busy} className="tap-target rounded-full px-3 py-1.5 font-semibold text-stone-500 hover:bg-stone-100 disabled:opacity-40">關閉</button>
+          </span>
         </div>)
       case 'off': return pushKey ? (
         <button type="button" onClick={enablePush} disabled={busy}
