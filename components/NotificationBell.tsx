@@ -38,6 +38,7 @@ export function NotificationBell() {
   const [items, setItems] = useState<Item[]>([])
   const [unread, setUnread] = useState(0)
   const [pushKey, setPushKey] = useState('')
+  const [pushIssue, setPushIssue] = useState('')
   const [push, setPush] = useState<PushState>('loading')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
@@ -52,6 +53,7 @@ export function NotificationBell() {
       setItems(json.items ?? [])
       setUnread(json.unread ?? 0)
       setPushKey(json.pushKey ?? '')
+      setPushIssue(json.pushIssue ?? '')
     } catch { /* 網路斷線時下次再試 */ }
   }, [])
 
@@ -167,7 +169,7 @@ export function NotificationBell() {
         <button type="button" onClick={enablePush} disabled={busy}
           className="tap-target flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">
           <BellRing aria-hidden="true" className="size-4" />{busy ? '開啟中…' : '開啟這台裝置的通知'}
-        </button>) : null
+        </button>) : pushIssue ? <p className="text-xs leading-5 text-rose-700">推播尚未開通：{pushIssue}。改好 Vercel 環境變數後需重新部署。</p> : null
       case 'denied': return <p className="text-xs leading-5 text-stone-500">這個瀏覽器已封鎖本系統的通知。請到瀏覽器的網站設定，把「通知」改為允許後重新整理。</p>
       case 'ios-install': return (
         <p className="text-xs leading-5 text-stone-600">

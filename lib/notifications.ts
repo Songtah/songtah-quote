@@ -58,6 +58,20 @@ function pushReady(): boolean {
 }
 export const pushPublicKey = () => (pushReady() ? process.env.VAPID_PUBLIC_KEY! : '')
 
+/** 推播設定哪裡有問題（給通知面板顯示；只回原因，不回金鑰內容） */
+export function pushConfigIssue(): string {
+  if (pushReady()) return ''
+  const check = (name: string, v: string | undefined, len: [number, number]) => {
+    if (!v) return `${name} 沒有設定`
+    if (/^VAPID_/.test(v) || v.includes('=')) return `${name} 的值填成了變數名稱或整行文字，只要貼「=」後面那一串`
+    if (/^["'\s]|["'\s]$/.test(v)) return `${name} 的值前後多了引號或空白`
+    if (!/^[A-Za-z0-9_-]+$/.test(v) || v.length < len[0] || v.length > len[1]) return `${name} 的值長度或字元不對（目前 ${v.length} 字，應約 ${len[0] + 3} 字）`
+    return ''
+  }
+  return check('VAPID_PUBLIC_KEY', process.env.VAPID_PUBLIC_KEY, [80, 90])
+    || check('VAPID_PRIVATE_KEY', process.env.VAPID_PRIVATE_KEY, [40, 46]) || '推播設定不完整'
+}
+
 /**
  * 發通知給一或多個頻道：寫入通知中心並推播到訂閱的裝置。永不 throw（通知失敗不能讓主流程失敗）。
  * 同一個 resolveKey 已有未收掉的通知時不重發（例：報價改了又送審，不會疊兩則）。
