@@ -1,21 +1,23 @@
 {
   "month": "2026-10",
-  "fetchedAt": "2026-10-20T07:32:59.762Z",
+  "fetchedAt": "2026-10-31T17:41:51.141Z",
   "source": "mohw-bas",
-  "totalClinics": 7150,
+  "totalClinics": 7148,
   "totalLabs": 1104,
   "totalHospitals": 188,
   "labsStale": false,
-  "pendingRemaining": 1,
-  "prevTotalClinics": 7149,
-  "prevTotalLabs": 1103,
+  "pendingRemaining": 0,
+  "prevTotalClinics": 7150,
+  "prevTotalLabs": 1104,
   "prevTotalHospitals": 188,
-  "totalCustomers": 8164,
+  "totalCustomers": 8161,
   "newCodes": [
-    "3707300564",
-    "竣禾顯微牙醫診所__新北市__板橋區",
-    "2Y01100394",
-    "2Y31010670"
+    "3701029453",
+    "3701029462",
+    "3703250223",
+    "3707310257",
+    "3731015547",
+    "2Y32020312"
   ],
   "codes": {
     "1101010012": {
@@ -4959,15 +4961,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3701029373": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "舒芙美牙醫診所",
-      "address": "臺北市大安區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3701029391": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -5017,6 +5010,24 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "敦化一日誠臻牙醫診所",
+      "address": "臺北市大安區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3701029453": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "橙品牙醫診所",
+      "address": "臺北市大安區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3701029462": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "舒芙美牙醫診所",
       "address": "臺北市大安區",
       "specialty": "",
       "termDate": "",
@@ -11848,15 +11859,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "清川牙醫診所",
-      "address": "臺北市中正區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3701183407": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "橙品牙醫診所",
       "address": "臺北市中正區",
       "specialty": "",
       "termDate": "",
@@ -18792,15 +18794,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3703250198": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "冠威牙醫診所",
-      "address": "臺中市南區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3703250205": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -18814,6 +18807,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "樂維牙醫診所",
+      "address": "臺中市南區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3703250223": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "冠威牙醫診所",
       "address": "臺中市南區",
       "specialty": "",
       "termDate": "",
@@ -22242,7 +22244,7 @@
     "3707010207": {
       "source": "mohw",
       "kind": "牙醫診所",
-      "name": "Abc鳳山牙醫診所",
+      "name": "鳳山維新牙醫診所",
       "address": "高雄市鳳山區",
       "specialty": "",
       "termDate": "",
@@ -23647,6 +23649,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "品森牙醫診所",
+      "address": "高雄市楠梓區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3707310257": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "欣楠牙醫診所",
       "address": "高雄市楠梓區",
       "specialty": "",
       "termDate": "",
@@ -29457,15 +29468,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3717080257": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "泉生牙醫診所",
-      "address": "臺中市北屯區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3717080266": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -34902,6 +34904,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3731015547": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "竣禾顯微牙醫診所",
+      "address": "新北市板橋區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3731020048": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -37030,15 +37041,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "瑞祥牙醫診所",
-      "address": "新北市中和區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3731040086": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "景平牙醫診所",
       "address": "新北市中和區",
       "specialty": "",
       "termDate": "",
@@ -48981,7 +48983,7 @@
     "3732101828": {
       "source": "mohw",
       "kind": "牙醫診所",
-      "name": "光采牙醫診所",
+      "name": "英格蘭牙醫診所",
       "address": "桃園市平鎮區",
       "specialty": "",
       "termDate": "",
@@ -64251,15 +64253,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3745010345": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "安全牙醫診所",
-      "address": "花蓮縣花蓮市",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3745010381": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -65645,15 +65638,6 @@
       "specialty": "",
       "termDate": "",
       "status": "開業"
-    },
-    "竣禾顯微牙醫診所__新北市__板橋區": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "竣禾顯微牙醫診所",
-      "address": "新北市板橋區",
-      "specialty": "",
-      "termDate": "",
-      "status": ""
     },
     "0633030010": {
       "source": "mohw",
@@ -69201,6 +69185,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "2Y32020312": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "卡爾牙體技術所",
+      "address": "桃園市中壢區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "2Y45010062": {
       "source": "mohw",
       "kind": "牙體技術所",
@@ -69701,15 +69694,6 @@
       "kind": "牙體技術所",
       "name": "翰齡牙體技術所",
       "address": "桃園市楊梅區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "2Y31060287": {
-      "source": "mohw",
-      "kind": "牙體技術所",
-      "name": "諮園牙體技術所",
-      "address": "新北市新莊區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
