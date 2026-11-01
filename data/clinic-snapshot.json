@@ -1,24 +1,17 @@
 {
-  "month": "2026-10",
-  "fetchedAt": "2026-10-31T17:41:51.141Z",
+  "month": "2026-11",
+  "fetchedAt": "2026-11-01T15:54:00.814Z",
   "source": "mohw-bas",
   "totalClinics": 7148,
   "totalLabs": 1104,
   "totalHospitals": 188,
   "labsStale": false,
   "pendingRemaining": 0,
-  "prevTotalClinics": 7150,
+  "prevTotalClinics": 7148,
   "prevTotalLabs": 1104,
   "prevTotalHospitals": 188,
   "totalCustomers": 8161,
-  "newCodes": [
-    "3701029453",
-    "3701029462",
-    "3703250223",
-    "3707310257",
-    "3731015547",
-    "2Y32020312"
-  ],
+  "newCodes": [],
   "codes": {
     "1101010012": {
       "source": "mohw",
