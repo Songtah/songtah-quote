@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 900" width="1240" height="900" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a7458"/>
+    </marker>
+    <style>
+      .layer { fill:#fbf8f2; stroke:#d9cfbf; stroke-width:1.5; rx:14; }
+      .layer-title { font-size:15px; font-weight:700; fill:#5c4a33; letter-spacing:1px; }
+      .box { fill:#ffffff; stroke:#cdbfa6; stroke-width:1.2; rx:10; }
+      .box-brand { fill:#f3ead8; stroke:#b8975f; stroke-width:1.4; rx:10; }
+      .box-pine { fill:#f3f6f2; stroke:#344a33; stroke-width:1.4; rx:10; }
+      .box-ext { fill:#f7f5f1; stroke:#b7aa94; stroke-dasharray:5 4; stroke-width:1.2; rx:10; }
+      .t { font-size:14px; font-weight:600; fill:#2f2a24; }
+      .s { font-size:11.5px; fill:#6b6257; }
+      .edge { stroke:#8a7458; stroke-width:1.6; fill:none; marker-end:url(#arr); }
+      .edge-soft { stroke:#b7aa94; stroke-width:1.3; fill:none; stroke-dasharray:4 4; marker-end:url(#arr); }
+      .lbl { font-size:11px; fill:#8a7458; }
+    </style>
+  </defs>
+  <rect width="1240" height="900" fill="#fdfcf9"/>
+  <text x="40" y="44" font-size="22" font-weight="700" fill="#2f2a24">崧達企業管理系統 — 系統架構圖</text>
+  <text x="40" y="66" class="s">2026-11-03 依程式碼盤點。實線＝主要資料流；虛線＝事件／通知；虛框＝外部服務</text>
+
+  <!-- 使用者層 -->
+  <rect x="40" y="90" width="1160" height="110" class="layer"/>
+  <text x="56" y="114" class="layer-title">使用者</text>
+  <rect x="60" y="126" width="200" height="58" class="box"/>
+  <text x="74" y="150" class="t">業務（手機為主）</text><text x="74" y="170" class="s">首頁工作清單、客情回報、報價</text>
+  <rect x="280" y="126" width="200" height="58" class="box"/>
+  <text x="294" y="150" class="t">主管／總經理</text><text x="294" y="170" class="s">老闆頁、簽核、例外視圖</text>
+  <rect x="500" y="126" width="200" height="58" class="box"/>
+  <text x="514" y="150" class="t">行政／中央管理</text><text x="514" y="170" class="s">訂單受理、報名、醫事監控</text>
+  <rect x="720" y="126" width="220" height="58" class="box-brand"/>
+  <text x="734" y="150" class="t">客戶（不用登入）</text><text x="734" y="170" class="s">報名・報到・看報價（/register /checkin /share）</text>
+  <rect x="960" y="126" width="220" height="58" class="box-brand"/>
+  <text x="974" y="150" class="t">LINE 日報群組</text><text x="974" y="170" class="s">業務唯一手動義務：回報客情</text>
+
+  <!-- 應用層 -->
+  <rect x="40" y="230" width="1160" height="300" class="layer"/>
+  <text x="56" y="254" class="layer-title">應用層　Next.js 14 ＠ Vercel（公司帳號）</text>
+
+  <text x="60" y="282" class="s" font-weight="700">功能模組（38 頁）</text>
+  <g>
+    <rect x="60" y="290" width="128" height="40" class="box"/><text x="70" y="308" class="t">客戶主檔</text><text x="70" y="323" class="s">轄區・公司客戶</text>
+    <rect x="196" y="290" width="128" height="40" class="box"/><text x="206" y="308" class="t">客情拜訪</text><text x="206" y="323" class="s">配對・AI 判讀</text>
+    <rect x="332" y="290" width="128" height="40" class="box"/><text x="342" y="308" class="t">業務開發</text><text x="342" y="323" class="s">漏斗・建議・標案</text>
+    <rect x="468" y="290" width="128" height="40" class="box"/><text x="478" y="308" class="t">報價 → 訂貨</text><text x="478" y="323" class="s">簽核・促銷・PDF</text>
+    <rect x="604" y="290" width="128" height="40" class="box"/><text x="614" y="308" class="t">產品與促銷</text><text x="614" y="323" class="s">系列・規格・價格</text>
+    <rect x="60" y="338" width="128" height="40" class="box"/><text x="70" y="356" class="t">課程活動</text><text x="70" y="371" class="s">報名・報到・成本</text>
+    <rect x="196" y="338" width="128" height="40" class="box"/><text x="206" y="356" class="t">技術支援</text><text x="206" y="371" class="s">工單・設備履歷</text>
+    <rect x="332" y="338" width="128" height="40" class="box"/><text x="342" y="356" class="t">醫事監控</text><text x="342" y="371" class="s">新開業・歇業</text>
+    <rect x="468" y="338" width="128" height="40" class="box"/><text x="478" y="356" class="t">行銷 Campaign</text><text x="478" y="371" class="s">名單・歸因</text>
+    <rect x="604" y="338" width="128" height="40" class="box"/><text x="614" y="356" class="t">儀表板</text><text x="614" y="371" class="s">今日工作・老闆頁</text>
+  </g>
+
+  <rect x="60" y="400" width="672" height="40" class="box"/>
+  <text x="72" y="418" class="t">API 層（約 150 支）　lib/api-auth 統一授權閘道・權限模組・稽核紀錄</text>
+  <text x="72" y="433" class="s">公開 API 另有防線：簽章、限流（Redis 原子計數）、honeypot、不回傳客戶資料</text>
+
+  <rect x="60" y="452" width="672" height="60" class="box"/>
+  <text x="72" y="472" class="t">資料層　lib/notion/&lt;領域&gt;（葉領域不互相引用）　組合層 dashboard・notification-events</text>
+  <text x="72" y="490" class="s">lib/notion/shared：Notion client、L1 記憶體＋L2 Redis 雙層快取、cachedSWR、限流重試、分區掃描（避開 1 萬筆截斷）</text>
+  <text x="72" y="505" class="s">lib/notifications：站內通知中心＋網頁推播，依頻道投遞（個人／姓名／帳號類型／admin），事件處理完自動收掉</text>
+
+  <!-- 自動化 -->
+  <rect x="760" y="282" width="420" height="230" class="box-pine"/>
+  <text x="774" y="304" class="t" fill="#344a33">自動化（系統代替人做的事）</text>
+  <text x="774" y="326" class="s">GitHub Actions（7 支）＋ Vercel cron → /api/cron/*</text>
+  <text x="774" y="348" class="s">• 衛福部 BAS 每月比對 → 新開業／歇業 → 轄區新機構</text>
+  <text x="774" y="366" class="s">• LINE 日報擷取 → 客戶配對 → AI 判讀反應・競品</text>
+  <text x="774" y="384" class="s">• 客情觸發：維修工單自動建立、歇業自動偵測</text>
+  <text x="774" y="402" class="s">• 追蹤到期自動結案、Campaign 自動結案</text>
+  <text x="774" y="420" class="s">• 認領建議／拜訪建議重算、區域統計、類型趨勢</text>
+  <text x="774" y="438" class="s">• 線上報名自動配對客戶、建立活動足跡</text>
+  <text x="774" y="456" class="s">• 標案抓取與決標、跨區支援提醒、日報漏抓補跑</text>
+  <text x="774" y="484" class="s" font-weight="700" fill="#344a33">規劃中：排程健康告警、月報自動產生、統一工作佇列、</text>
+  <text x="774" y="500" class="s" font-weight="700" fill="#344a33">工單 SLA、設備保養預警、行政例外工作台</text>
+
+  <!-- 資料與外部 -->
+  <rect x="40" y="560" width="1160" height="300" class="layer"/>
+  <text x="56" y="584" class="layer-title">資料儲存與外部服務</text>
+
+  <rect x="60" y="600" width="250" height="110" class="box-brand"/>
+  <text x="74" y="622" class="t">Notion（正式資料）</text>
+  <text x="74" y="642" class="s">客戶 10,655 家・客情・報價・訂單</text>
+  <text x="74" y="659" class="s">產品・活動・報名・工單・設備・帳號</text>
+  <text x="74" y="676" class="s">⚠ 單庫 1 萬筆查詢上限，客情庫已接近</text>
+  <text x="74" y="693" class="s">欄位只增不刪，經 scripts/add-*.mjs</text>
+
+  <rect x="330" y="600" width="230" height="110" class="box"/>
+  <text x="344" y="622" class="t">Upstash Redis</text>
+  <text x="344" y="642" class="s">L2 快取・dirty key・掃描鎖</text>
+  <text x="344" y="659" class="s">限流計數・通知中心・推播訂閱</text>
+  <text x="344" y="676" class="s">規劃：排程履歷、月度指標快照</text>
+  <text x="344" y="693" class="s">免費方案約 50 萬指令／月</text>
+
+  <rect x="580" y="600" width="180" height="110" class="box"/>
+  <text x="594" y="622" class="t">Vercel Blob</text>
+  <text x="594" y="642" class="s">產品圖片與文件</text>
+  <text x="594" y="659" class="s">活動 banner</text>
+  <text x="594" y="676" class="s">資產庫檔案</text>
+
+  <rect x="780" y="600" width="190" height="110" class="box-ext"/>
+  <text x="794" y="622" class="t">Anthropic API</text>
+  <text x="794" y="642" class="s">客情反應判讀</text>
+  <text x="794" y="659" class="s">維修需求偵測</text>
+  <text x="794" y="676" class="s">欄位建議</text>
+
+  <rect x="990" y="600" width="190" height="110" class="box-ext"/>
+  <text x="1004" y="622" class="t">Web Push（VAPID）</text>
+  <text x="1004" y="642" class="s">手機／電腦推播</text>
+  <text x="1004" y="659" class="s">PWA・service worker</text>
+  <text x="1004" y="676" class="s">iPhone 需加到主畫面</text>
+
+  <rect x="60" y="730" width="250" height="110" class="box-ext"/>
+  <text x="74" y="752" class="t">LINE Messaging API</text>
+  <text x="74" y="772" class="s">群組 webhook 收日報（簽章驗證）</text>
+  <text x="74" y="789" class="s">歷史訊息匯入</text>
+  <text x="74" y="806" class="s">個人通知：已決定不做</text>
+
+  <rect x="330" y="730" width="230" height="110" class="box-ext"/>
+  <text x="344" y="752" class="t">Slack webhook</text>
+  <text x="344" y="772" class="s">跨區支援、協作點數</text>
+  <text x="344" y="789" class="s">提醒排程</text>
+
+  <rect x="580" y="730" width="180" height="110" class="box-ext"/>
+  <text x="594" y="752" class="t">衛福部 BAS</text>
+  <text x="594" y="772" class="s">醫事機構主檔</text>
+  <text x="594" y="789" class="s">每月下載比對</text>
+
+  <rect x="780" y="730" width="190" height="110" class="box-ext"/>
+  <text x="794" y="752" class="t">政府電子採購網</text>
+  <text x="794" y="772" class="s">標案與決標</text>
+  <text x="794" y="789" class="s">產業情報來源</text>
+
+  <rect x="990" y="730" width="190" height="110" class="box-ext"/>
+  <text x="1004" y="752" class="t">GitHub（公開 repo）</text>
+  <text x="1004" y="772" class="s">推 main 即自動部署</text>
+  <text x="1004" y="789" class="s">Actions 排程觸發</text>
+  <text x="1004" y="806" class="s">不得含金鑰、客戶資料</text>
+
+  <!-- 連線 -->
+  <path class="edge" d="M160,184 L160,290"/>
+  <path class="edge" d="M380,184 L380,290"/>
+  <path class="edge" d="M600,184 L600,290"/>
+  <path class="edge" d="M830,184 L830,282"/>
+  <text x="838" y="236" class="lbl">公開頁 → 簽章／限流 → API</text>
+  <path class="edge" d="M1070,184 L1070,282"/>
+  <text x="1078" y="236" class="lbl">webhook</text>
+
+  <path class="edge" d="M185,512 L185,600"/>
+  <text x="192" y="560" class="lbl">讀寫（分區掃描）</text>
+  <path class="edge" d="M445,512 L445,600"/>
+  <text x="452" y="560" class="lbl">快取／限流／通知</text>
+  <path class="edge" d="M670,512 L670,600"/>
+  <path class="edge" d="M875,512 L875,600"/>
+  <text x="882" y="560" class="lbl">AI 判讀</text>
+  <path class="edge-soft" d="M1085,512 L1085,600"/>
+  <text x="1092" y="560" class="lbl">通知事件 → 推播</text>
+  <path class="edge-soft" d="M1180,655 L1192,655 L1192,200"/>
+  <text x="1214" y="380" class="lbl" transform="rotate(90 1214 380)">推播到業務／主管的手機與電腦</text>
+  <path class="edge-soft" d="M732,330 L760,330"/>
+</svg>
