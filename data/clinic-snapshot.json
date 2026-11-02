@@ -1,8 +1,8 @@
 {
   "month": "2026-11",
-  "fetchedAt": "2026-11-01T15:54:00.814Z",
+  "fetchedAt": "2026-11-02T07:32:44.372Z",
   "source": "mohw-bas",
-  "totalClinics": 7148,
+  "totalClinics": 7149,
   "totalLabs": 1104,
   "totalHospitals": 188,
   "labsStale": false,
@@ -11,7 +11,9 @@
   "prevTotalLabs": 1104,
   "prevTotalHospitals": 188,
   "totalCustomers": 8161,
-  "newCodes": [],
+  "newCodes": [
+    "3731110038"
+  ],
   "codes": {
     "1101010012": {
       "source": "mohw",
@@ -41229,6 +41231,15 @@
       "kind": "牙醫診所",
       "name": "村上椿樹牙醫診所",
       "address": "新北市淡水區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3731110038": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "永琦牙醫診所",
+      "address": "新北市汐止區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
