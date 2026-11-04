@@ -37,7 +37,7 @@ const TYPE_STYLE: Record<string, string> = {
   '其他': 'bg-stone-50 text-stone-600',
 }
 
-export function EventDetailContent({ id }: { id: string }) {
+export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit?: boolean }) {
   const [event, setEvent]           = useState<EventItem | null>(null)
   const [regs, setRegs]             = useState<EventRegistration[]>([])
   const [loading, setLoading]       = useState(true)
@@ -48,6 +48,7 @@ export function EventDetailContent({ id }: { id: string }) {
   const [copied, setCopied]         = useState(false)
   const [matching, setMatching]     = useState(false)
   const [matchResult, setMatchResult] = useState('')
+  const [actionError, setActionError] = useState('')
 
   const loadRegs = useCallback(() =>
     fetch(`/api/events/${id}?registrations=1`).then(r => r.json())
@@ -99,25 +100,30 @@ export function EventDetailContent({ id }: { id: string }) {
       .catch(() => {})
   }, [id])
 
-  async function changePayment(regId: string, paymentStatus: string) {
-    setUpdatingId(regId)
-    const res = await fetch(`/api/events/${regId}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _type: 'registration-payment', paymentStatus }),
-    })
-    if (res.ok) setRegs(prev => prev.map(r => r.id === regId ? { ...r, paymentStatus } : r))
-    setUpdatingId(null)
+  // 報名紀錄更新共用：失敗（含 403 無權限）要讓使用者看到原因，不能默默不動
+  async function patchRegistration(regId: string, body: Record<string, string>, patch: Partial<EventRegistration>, fallback: string) {
+    setUpdatingId(regId); setActionError('')
+    try {
+      const res = await fetch(`/api/events/${regId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? fallback)
+      setRegs(prev => prev.map(r => r.id === regId ? { ...r, ...patch } : r))
+    } catch (e: any) {
+      setActionError(e?.message ?? fallback)
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
-  async function changeStatus(regId: string, status: string) {
-    setUpdatingId(regId)
-    await fetch(`/api/events/${regId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _type: 'registration', status }),
-    })
-    setRegs(prev => prev.map(r => r.id === regId ? { ...r, status } : r))
-    setUpdatingId(null)
+  function changePayment(regId: string, paymentStatus: string) {
+    return patchRegistration(regId, { _type: 'registration-payment', paymentStatus }, { paymentStatus }, '付款狀態更新失敗')
+  }
+
+  function changeStatus(regId: string, status: string) {
+    return patchRegistration(regId, { _type: 'registration', status }, { status }, '報名狀態更新失敗')
   }
 
   if (loading) {
@@ -248,7 +254,9 @@ export function EventDetailContent({ id }: { id: string }) {
             </button>
           </div>
         </div>
+        {!canEdit && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">你的帳號只有活動管理的檢視權限，付款與報名狀態無法修改；需要調整請聯絡中央管理開啟「活動管理編輯」。</p>}
         {matchResult && <p className="mt-3 rounded-2xl bg-stone-50 px-4 py-2.5 text-sm text-stone-600">{matchResult}</p>}
+        {actionError && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{actionError}</p>}
         {checkinError && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{checkinError}</p>}
         {checkin && (
           <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl bg-cream-50 p-4 sm:flex-row sm:items-start">
@@ -340,7 +348,7 @@ export function EventDetailContent({ id }: { id: string }) {
                           <select
                             className={`mt-0.5 rounded-full border-0 px-2 py-0.5 text-xs font-medium ${PAY_STYLE[reg.paymentStatus] ?? 'bg-stone-100 text-stone-600'}`}
                             value={reg.paymentStatus}
-                            disabled={updatingId === reg.id}
+                            disabled={!canEdit || updatingId === reg.id}
                             onChange={e => changePayment(reg.id, e.target.value)}
                           >
                             {['未付款', '已付款', '已退款'].map(s => <option key={s}>{s}</option>)}
@@ -352,7 +360,7 @@ export function EventDetailContent({ id }: { id: string }) {
                       <select
                         className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${STATUS_STYLE[reg.status] ?? 'bg-stone-100 text-stone-600'}`}
                         value={reg.status}
-                        disabled={updatingId === reg.id}
+                        disabled={!canEdit || updatingId === reg.id}
                         onChange={e => changeStatus(reg.id, e.target.value)}
                       >
                         <option value="已報名">已報名</option>
