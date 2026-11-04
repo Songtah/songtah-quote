@@ -7821,7 +7821,7 @@
   "address": "臺南市東區",
   "kind": "牙醫診所",
   "fetchedAt": "2026-09-21T07:14:40.145Z",
-  "statusCheckedAt": "2026-10-14T09:37:48.052Z"
+  "statusCheckedAt": "2026-11-04T01:20:35.786Z"
  },
  "RCoydD0MEXl6NtFSvKE67A%253D%253D__RCoydD0MEXl6NtFSvKE67A%253D%253D": {
   "code": "3721010745",
@@ -10789,11 +10789,12 @@
  },
  "fjQEiCwrj5r9J%252Brzp94A9A%253D%253D__fjQEiCwrj5r9J%252Brzp94A9A%253D%253D": {
   "code": "3701020094",
-  "status": "開業",
+  "status": "歇業",
   "name": "天仁牙醫診所",
   "address": "臺北市大安區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-10-01T16:12:25.719Z"
+  "fetchedAt": "2026-10-01T16:12:25.719Z",
+  "statusCheckedAt": "2026-11-04T01:20:33.439Z"
  },
  "jVFn047mVvwdeD9fWH6KDA%253D%253D__jVFn047mVvwdeD9fWH6KDA%253D%253D": {
   "code": "3701020138",
@@ -22599,11 +22600,12 @@
  },
  "HoU%252FVwM61oIVpDto8so38Q%253D%253D__%252BMgS4U1XnFEWOJHBDSRFSQ%253D%253D": {
   "code": "3731132516",
-  "status": "開業",
+  "status": "歇業",
   "name": "超泓牙醫診所",
   "address": "新北市土城區",
   "kind": "牙醫診所",
-  "fetchedAt": "2026-10-07T02:34:56.930Z"
+  "fetchedAt": "2026-10-07T02:34:56.930Z",
+  "statusCheckedAt": "2026-11-04T01:20:33.439Z"
  },
  "b%252B%252FBqu90B5RBs%252BNjCwxt3w%253D%253D__vMRyGPE%252BPgkB9ydErMnU7w%253D%253D": {
   "code": "3701092616",
@@ -37197,7 +37199,7 @@
   "address": "臺北市松山區",
   "kind": "牙醫診所",
   "fetchedAt": "2026-06-21T05:23:14.766Z",
-  "statusCheckedAt": "2026-10-14T09:37:48.052Z"
+  "statusCheckedAt": "2026-11-04T01:20:35.786Z"
  },
  "a8YBah9lLym81uiOoZfwCw%253D%253D__eGMBKtz8xV1WMikMovcZPQ%253D%253D": {
   "code": "3731270075",
@@ -59902,7 +59904,7 @@
   "name": "昱安牙體技術所",
   "address": "臺南市南區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "1wLJmcpm%252FTT8abni6iYd8Q%253D%253D__EKNFT70JmMpF2IYxB0UcKw%253D%253D": {
   "code": "2Y01200086",
@@ -60046,7 +60048,7 @@
   "name": "凡代牙體技術所",
   "address": "新北市淡水區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "uD2ExoooTQsmbgNTNy%252BTnQ%253D%253D__w7216of6AxLQ7uVOKIzifA%253D%253D": {
   "code": "2Y03260197",
@@ -60118,7 +60120,7 @@
   "name": "紐曼牙體技術所",
   "address": "臺中市西區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "YaUacNNDoVoB%252BCZWy0MudQ%253D%253D__Rl2m5EReTXiBQ0MgGiJjDQ%253D%253D": {
   "code": "2Y31110013",
@@ -60543,7 +60545,7 @@
   "name": "佑昇牙體技術所",
   "address": "新北市板橋區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "UI9Rl7K77392T7uno1peXQ%253D%253D__MA%252Fuj2gx9%252FRo2xbBdJzlWQ%253D%253D": {
   "code": "2Y31010492",
@@ -60879,7 +60881,7 @@
   "name": "力儀牙體技術所",
   "address": "臺北市信義區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "VHAbDkNztoYPphGbMTbsyw%253D%253D__XP0IMn%252F5kueeily5fxEp7A%253D%253D": {
   "code": "2Y12040112",
@@ -60975,7 +60977,7 @@
   "name": "群昇牙體技術所",
   "address": "桃園市中壢區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "SRwI74cxftA2U%252BwaGV4bGw%253D%253D__34m8VCmDibriuVEP1huSxw%253D%253D": {
   "code": "2Y07360125",
@@ -61015,7 +61017,7 @@
   "name": "冠緯牙體技術所",
   "address": "新北市永和區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "0kfP%252BEl1x2IKgg4NfzUMFA%253D%253D__YF0FEEIC0eV%252BszDtQl0K7g%253D%253D": {
   "code": "2Y31010607",
@@ -61023,7 +61025,7 @@
   "name": "品欣牙體技術所",
   "address": "新北市板橋區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "3mbQrgzRgKpxtpVzEyrUvg%253D%253D__TydsD9NSwqaIM1F7R%252BG3Wg%253D%253D": {
   "code": "2Y03190109",
@@ -61039,7 +61041,7 @@
   "name": "美加牙體技術所",
   "address": "新北市板橋區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "qY7qdj%252Bwo4cAMZRXwGvQ6Q%253D%253D__DV7RC3rnuOByicy9gFdubA%253D%253D": {
   "code": "2Y07160027",
@@ -61047,7 +61049,7 @@
   "name": "宏恩牙體技術所",
   "address": "高雄市湖內區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "9%252Bx7GKpAJtVc2q32ibJMPw%253D%253D__lINiSir0S3VCPCfQSBw9Tw%253D%253D": {
   "code": "2Y31060152",
@@ -61055,7 +61057,7 @@
   "name": "慶宜牙體技術所",
   "address": "新北市新莊區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "VmghsiI0A7HALWtimTpmrg%253D%253D__NErzcUSXjXik6yWcMOBxdw%253D%253D": {
   "code": "2Y37150048",
@@ -61063,7 +61065,7 @@
   "name": "星耀牙體技術所",
   "address": "彰化縣大村鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "QiVbuHr4a%252B%252F0m7G9snDsbw%253D%253D__Q1dqOAAeEXJg4zy4AnTSaA%253D%253D": {
   "code": "2Y32100011",
@@ -61199,7 +61201,7 @@
   "name": "松川牙體技術所",
   "address": "臺北市南港區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "5UVgFGNbWtYWbTf4BwH%252BLg%253D%253D__dCxvjL1PWpffVoybqooJwA%253D%253D": {
   "code": "2Y03270264",
@@ -61255,7 +61257,7 @@
   "name": "聖隆牙體技術所",
   "address": "高雄市大寮區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "AbCfMh0RQpsBIBl3RWRTxg%253D%253D__LdQX34QkySzsjkk6ufYlHw%253D%253D": {
   "code": "2Y32010218",
@@ -61263,7 +61265,7 @@
   "name": "京巧牙體技術所",
   "address": "桃園市桃園區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "32UokikwM7rtWRpDklf1gg%253D%253D__iE8Z6p1iPi34qNIVK1G9Gg%253D%253D": {
   "code": "2Y03260035",
@@ -61343,7 +61345,7 @@
   "name": "雅坊牙體技術所",
   "address": "新北市中和區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "iwk4IO2V63Kh5RcuZqqilg%253D%253D__LPj%252BJerrNGFhuM%252BqOnUyUw%253D%253D": {
   "code": "2Y03290293",
@@ -61399,7 +61401,7 @@
   "name": "正興牙體技術所",
   "address": "嘉義縣中埔鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "toTO54%252BTCK7upynhw4570Q%253D%253D__%252FpwiBzEjbjP9O0WHkoGbNQ%253D%253D": {
   "code": "2Y31040150",
@@ -61568,7 +61570,7 @@
   "name": "至將牙體技術所",
   "address": "臺中市東區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "3n2qzD%252BoE9hisEJF7mWKKA%253D%253D__Alakyveem7JXUQAawrozZQ%253D%253D": {
   "code": "2Y01110201",
@@ -61704,7 +61706,7 @@
   "name": "健美牙體技術所",
   "address": "臺中市南區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "%252BJPLwnoRt2Si1fCTkmOXKg%253D%253D__LZC0ingdEUDwjgnSGwqvUg%253D%253D": {
   "code": "2Y31020390",
@@ -61752,7 +61754,7 @@
   "name": "銓聖牙體技術所",
   "address": "臺南市東區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "LQOJxfCtNakArlRhPTmr5Q%253D%253D__eIwk7F%252FkxKs%252BfKgOvaJWgQ%253D%253D": {
   "code": "2Y07010031",
@@ -61857,7 +61859,7 @@
   "name": "藝澄牙體技術所",
   "address": "花蓮縣花蓮市",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "vg13Dk%252BinjI7Sq7SxXDn4A%253D%253D__%252Bl34jjxVHJ7yBOurWa5sMg%253D%253D": {
   "code": "2Y11030032",
@@ -61890,7 +61892,7 @@
   "address": "新北市永和區",
   "kind": "牙體技術所",
   "fetchedAt": "2026-06-21T05:23:14.766Z",
-  "statusCheckedAt": "2026-10-13T11:55:18.883Z"
+  "statusCheckedAt": "2026-11-04T01:20:35.786Z"
  },
  "Ov%252FCr%252Bcn2ERHNrS%252FB4%252BdBQ%253D%253D__pReg8FzlNlvriVGT6bz%252BCg%253D%253D": {
   "code": "2Y01100232",
@@ -61954,7 +61956,7 @@
   "name": "寶星牙體技術所",
   "address": "新北市中和區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "ILW%252FW8Fl680T%252BN3RCq5f%252Bw%253D%253D__F8aJopNC82RpPVGStP2%252Fbg%253D%253D": {
   "code": "2Y32070116",
@@ -61994,7 +61996,7 @@
   "name": "宏鑫牙體技術所",
   "address": "雲林縣北港鎮",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "SFhPO5V5s0mJeTgcy%252BpsVw%253D%253D__boh3I4M57cj%252BEkulADW%252BTw%253D%253D": {
   "code": "2Y31010429",
@@ -64252,7 +64254,7 @@
   "name": "喆強牙體技術所",
   "address": "新北市永和區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "5Dfuk%252FvQY5LBCETlLY%252F9tQ%253D%253D__xLgZMmNSK91z6OrBs8ek%252Bw%253D%253D": {
   "code": "2Y31050101",
@@ -64284,7 +64286,7 @@
   "name": "彩奕牙體技術所",
   "address": "桃園市平鎮區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "hHUCeXAQh32SH%252Bt92DEsbA%253D%253D__pKcCETeMo3J8QYNBlhqKxg%253D%253D": {
   "code": "2Y03200208",
@@ -64388,7 +64390,7 @@
   "name": "威呈牙體技術所",
   "address": "臺中市太平區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "YykZt667IFkM%252Bm8oV8GWBg%253D%253D__4Tol02mpgK9EzooJA%252FLUzA%253D%253D": {
   "code": "2Y03240168",
@@ -64404,7 +64406,7 @@
   "name": "禾沐牙體技術所",
   "address": "花蓮縣吉安鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "IOJdTkhyKkiqG7eDTfZkHg%253D%253D__nQNHlHeeKtoUpi3i76ileQ%253D%253D": {
   "code": "2Y45010071",
@@ -64429,7 +64431,7 @@
   "address": "臺北市松山區",
   "kind": "牙體技術所",
   "fetchedAt": "2026-06-21T05:23:14.766Z",
-  "statusCheckedAt": "2026-10-14T09:37:48.052Z"
+  "statusCheckedAt": "2026-11-04T01:20:36.503Z"
  },
  "dtqxfr1b2us5NnttiU9PkQ%253D%253D__74izG2JaAKlOuoLRN7GXhA%253D%253D": {
   "code": "2Y11030023",
@@ -64741,7 +64743,7 @@
   "name": "上昱牙體技術所",
   "address": "臺中市烏日區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "efQYdVXxn2FzTQz0BOowqw%253D%253D__TEcPIg8WeFMp98lFyFXG3w%253D%253D": {
   "code": "2Y31060223",
@@ -64765,7 +64767,7 @@
   "name": "若思威牙體技術所",
   "address": "桃園市龍潭區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "QaEV6EhKYY7QWlRk7Anzbw%253D%253D__iaBWQUsUZn7gvze9wKLVBw%253D%253D": {
   "code": "2Y03240159",
@@ -65534,7 +65536,7 @@
   "name": "家宏牙體技術所",
   "address": "彰化縣埤頭鄉",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "najamMPyGWb3vp1slEsKjA%253D%253D__roAiiybfkQcsEwo%252B4koteA%253D%253D": {
   "code": "2Y32010601",
@@ -66928,7 +66930,7 @@
   "name": "旭冠牙體技術所",
   "address": "臺中市大里區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "T1X1CwNXqEjO%252FjFB0HnQsA%253D%253D__1CsDxGcKJSvviapL3SzLgw%253D%253D": {
   "code": "2Y31060134",
@@ -66992,7 +66994,7 @@
   "name": "丹緹牙體技術所",
   "address": "臺中市北區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "ydK5JOeMPHlfkpvHQosLWQ%253D%253D__M%252Fa5JjQVnsOLy5qzVP6XTg%253D%253D": {
   "code": "2Y01090197",
@@ -67040,7 +67042,7 @@
   "name": "華盛牙體技術所",
   "address": "新北市三重區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "0clmERD9oR0whFRmrMkZuA%253D%253D__aulyfl%252BlQ3xD1DMub6s6Sw%253D%253D": {
   "code": "2Y31020309",
@@ -67072,7 +67074,7 @@
   "name": "龍記牙體技術所",
   "address": "新北市三重區",
   "kind": "牙體技術所",
-  "fetchedAt": "2026-06-21T05:23:14.766Z"
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  },
  "ovnbdqO0a2noKbc8zUuQhw%253D%253D__rziLrsBXnQ8kIB2bDTxO9Q%253D%253D": {
   "code": "2Y43010019",
@@ -68553,5 +68555,29 @@
   "address": "桃園市中壢區",
   "kind": "牙體技術所",
   "fetchedAt": "2026-10-31T17:41:51.141Z"
+ },
+ "iTdtVcI1DA5fr5ey7znERg%253D%253D__8c7H0qZfHi%252FT13B5vN2ZZg%253D%253D": {
+  "code": "3734011729",
+  "status": "開業",
+  "name": "築禾牙醫診所",
+  "address": "宜蘭縣宜蘭市",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
+ },
+ "1V2zHiTognp9YFk0mZGXGw%253D%253D__HRdKOriv2e8xJRkxoUy%252FHQ%253D%253D": {
+  "code": "3731132632",
+  "status": "開業",
+  "name": "土城一日誠臻牙醫診所",
+  "address": "新北市土城區",
+  "kind": "牙醫診所",
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
+ },
+ "4hMquhqmEIDaYphAtydF0Q%253D%253D__gpOjaroAH6Npdm5PSrOsTQ%253D%253D": {
+  "code": "2Y03190181",
+  "status": "開業",
+  "name": "偉德牙體技術所",
+  "address": "臺中市太平區",
+  "kind": "牙體技術所",
+  "fetchedAt": "2026-11-04T01:18:51.317Z"
  }
 }

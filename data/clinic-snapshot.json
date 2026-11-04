@@ -1,18 +1,20 @@
 {
   "month": "2026-11",
-  "fetchedAt": "2026-11-02T07:32:44.372Z",
+  "fetchedAt": "2026-11-04T01:18:51.317Z",
   "source": "mohw-bas",
   "totalClinics": 7149,
-  "totalLabs": 1104,
+  "totalLabs": 1105,
   "totalHospitals": 188,
   "labsStale": false,
   "pendingRemaining": 0,
-  "prevTotalClinics": 7148,
+  "prevTotalClinics": 7149,
   "prevTotalLabs": 1104,
   "prevTotalHospitals": 188,
   "totalCustomers": 8161,
   "newCodes": [
-    "3731110038"
+    "3731132632",
+    "3734011729",
+    "2Y03190181"
   ],
   "codes": {
     "1101010012": {
@@ -2269,15 +2271,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "蔡牙醫診所",
-      "address": "臺北市大安區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3701020094": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "天仁牙醫診所",
       "address": "臺北市大安區",
       "specialty": "",
       "termDate": "",
@@ -39906,7 +39899,7 @@
     "3731063794": {
       "source": "mohw",
       "kind": "牙醫診所",
-      "name": "輔園牙醫診所",
+      "name": "新莊德威牙醫診所",
       "address": "新北市新莊區",
       "specialty": "",
       "termDate": "",
@@ -42216,15 +42209,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3731132516": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "超泓牙醫診所",
-      "address": "新北市土城區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3731132525": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -42319,6 +42303,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "旭城牙醫診所",
+      "address": "新北市土城區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3731132632": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "土城一日誠臻牙醫診所",
       "address": "新北市土城區",
       "specialty": "",
       "termDate": "",
@@ -50743,6 +50736,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "杏宜牙醫診所",
+      "address": "宜蘭縣宜蘭市",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3734011729": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "築禾牙醫診所",
       "address": "宜蘭縣宜蘭市",
       "specialty": "",
       "termDate": "",
@@ -73982,6 +73984,15 @@
       "kind": "牙體技術所",
       "name": "威信牙體技術所",
       "address": "臺中市大雅區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "2Y03190181": {
+      "source": "mohw",
+      "kind": "牙體技術所",
+      "name": "偉德牙體技術所",
+      "address": "臺中市太平區",
       "specialty": "",
       "termDate": "",
       "status": "開業"
