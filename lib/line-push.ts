@@ -12,6 +12,13 @@ const LINE_PUSH_URL   = 'https://api.line.me/v2/bot/message/push'
 const LINE_MULTICAST  = 'https://api.line.me/v2/bot/message/multicast'
 
 /**
+ * 【LINE 推播總開關】2026-11-06 起依老闆決定全面停用（團隊改在企業系統內接收通知）。
+ * 為 true 時 pushLineMessage／multicastLineMessage 一律不打 LINE API，只留 log。
+ * 要恢復：改成 false，並確認下方白名單的環境變數都填的是公司內部群組。
+ */
+export const LINE_PUSH_DISABLED = true
+
+/**
  * 推播白名單（2026-11-05 事故後的鐵則）
  * 官方帳號同時在公司內部群組與客戶群組裡。推播收件人一律只能是環境變數明確寫死的 ID：
  *   LINE_GROUP_ID（業務日報群）、TECH_MANAGER_LINE_ID（售後服務／報修群）、LINE_USER_IDS（個別業務）。
@@ -53,6 +60,7 @@ export async function pushLineMessage(
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) throw new Error('LINE_CHANNEL_ACCESS_TOKEN 尚未設定')
   if (!to)    throw new Error('LINE 收件人 ID 尚未設定')
+  if (LINE_PUSH_DISABLED) { console.info('[line-push] 推播已停用，略過:', text.slice(0, 40)); return }
   assertAllowed([to])
 
   const res = await fetch(LINE_PUSH_URL, {
@@ -84,6 +92,7 @@ export async function multicastLineMessage(
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) throw new Error('LINE_CHANNEL_ACCESS_TOKEN 尚未設定')
   if (!userIds.length) throw new Error('沒有設定任何 LINE User ID')
+  if (LINE_PUSH_DISABLED) { console.info('[line-push] 推播已停用，略過 multicast:', text.slice(0, 40)); return }
   assertAllowed(userIds)
 
   const res = await fetch(LINE_MULTICAST, {
@@ -108,6 +117,7 @@ export async function multicastLineMessage(
  * Smart send: tries group first, falls back to individual user IDs
  */
 export async function sendDailyReport(text: string): Promise<string> {
+  if (LINE_PUSH_DISABLED) return 'LINE 推播已停用（通知改在企業系統內查看）'
   const groupId  = process.env.LINE_GROUP_ID
   const userIds  = (process.env.LINE_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
 
