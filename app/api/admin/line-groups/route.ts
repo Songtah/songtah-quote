@@ -6,10 +6,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { notifyManager } from '@/lib/visit-repair-tickets'
 import { withApiAuth } from '@/lib/api-auth'
 import { listLineGroups } from '@/lib/line-groups'
+import { isAllowedLineRecipient } from '@/lib/line-push'
 
 export const dynamic = 'force-dynamic'
 
-export const GET = withApiAuth('central-management', async () => NextResponse.json({ groups: await listLineGroups() }))
+// 回傳時標出哪個群組是目前環境變數指定的通知對象，方便核對；未標記的群組系統永遠不會主動推播
+export const GET = withApiAuth('central-management', async () => {
+  const groups = (await listLineGroups()).map((g) => ({
+    ...g,
+    role: g.groupId === (process.env.TECH_MANAGER_LINE_ID ?? '').trim() ? '維修工單通知'
+      : g.groupId === (process.env.LINE_GROUP_ID ?? '').trim() ? '業務日報'
+      : isAllowedLineRecipient(g.groupId) ? '白名單' : '',
+  }))
+  return NextResponse.json({ groups, techManagerConfigured: Boolean((process.env.TECH_MANAGER_LINE_ID ?? '').trim()) })
+})
 
 export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   const body = await req.json().catch(() => ({}))

@@ -2,7 +2,8 @@
  * lib/line-groups.ts —— 記下公司 LINE 官方帳號所在的群組（ID＋名稱）
  *
  * LINE 推播要用群組 ID（C 開頭），在 App 裡看不到；webhook 收到群組事件時順手記下，
- * 讓功能可以用群組名稱找收件人（例：維修工單通知 → 名稱含「售後服務／報修」的群組）。
+ * 只供中央管理在 /api/admin/line-groups 查看、再把正確的 ID 填進環境變數。
+ * 【禁止】拿這份清單自動決定推播收件人（2026-11-05 曾因名稱比對把工單推到客戶群組）。
  * 名稱由 LINE API group summary 取得，同一群組一天查一次。
  */
 import { getRedis } from '@/lib/notion/shared'
@@ -33,9 +34,3 @@ export async function listLineGroups(): Promise<{ groupId: string; name: string;
   return Object.entries(all).map(([groupId, g]) => ({ groupId, name: g.name, seenAt: g.seenAt }))
 }
 
-/** 依名稱找群組 ID（找不到回 ''）；同名多個取最近有動靜的 */
-export async function findLineGroupByName(pattern: RegExp): Promise<string> {
-  const groups = (await listLineGroups()).filter((g) => pattern.test(g.name))
-  groups.sort((a, b) => b.seenAt.localeCompare(a.seenAt))
-  return groups[0]?.groupId ?? ''
-}

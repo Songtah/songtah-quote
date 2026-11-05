@@ -11,6 +11,33 @@
 const LINE_PUSH_URL   = 'https://api.line.me/v2/bot/message/push'
 const LINE_MULTICAST  = 'https://api.line.me/v2/bot/message/multicast'
 
+/**
+ * 推播白名單（2026-11-05 事故後的鐵則）
+ * 官方帳號同時在公司內部群組與客戶群組裡。推播收件人一律只能是環境變數明確寫死的 ID：
+ *   LINE_GROUP_ID（業務日報群）、TECH_MANAGER_LINE_ID（售後服務／報修群）、LINE_USER_IDS（個別業務）。
+ * 不得用群組名稱、最近活動時間或 webhook 記到的任何 ID 推導收件人；白名單外一律拒送（fail-closed）。
+ */
+function allowedRecipients(): Set<string> {
+  const ids = [
+    process.env.LINE_GROUP_ID,
+    process.env.TECH_MANAGER_LINE_ID,
+    ...(process.env.LINE_USER_IDS ?? '').split(','),
+  ].map((s) => (s ?? '').trim()).filter(Boolean)
+  return new Set(ids)
+}
+
+export function isAllowedLineRecipient(id: string): boolean {
+  return allowedRecipients().has(id)
+}
+
+function assertAllowed(ids: string[]) {
+  const allowed = allowedRecipients()
+  const bad = ids.filter((id) => !allowed.has(id))
+  if (bad.length) {
+    throw new Error(`LINE 推播收件人不在白名單（僅允許環境變數明確指定的 ID），拒送：${bad.map((b) => b.slice(0, 6) + '…').join(', ')}`)
+  }
+}
+
 export interface LineTextMessage {
   type: 'text'
   text: string
@@ -26,6 +53,7 @@ export async function pushLineMessage(
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) throw new Error('LINE_CHANNEL_ACCESS_TOKEN 尚未設定')
   if (!to)    throw new Error('LINE 收件人 ID 尚未設定')
+  assertAllowed([to])
 
   const res = await fetch(LINE_PUSH_URL, {
     method:  'POST',
@@ -56,6 +84,7 @@ export async function multicastLineMessage(
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
   if (!token) throw new Error('LINE_CHANNEL_ACCESS_TOKEN 尚未設定')
   if (!userIds.length) throw new Error('沒有設定任何 LINE User ID')
+  assertAllowed(userIds)
 
   const res = await fetch(LINE_MULTICAST, {
     method:  'POST',

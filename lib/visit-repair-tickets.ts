@@ -17,7 +17,6 @@ import { createTicket, updateTicket, listCustomerTickets, getSystemTicketById } 
 import { listCustomerEquipment } from '@/lib/notion/equipment'
 import { getRedis } from '@/lib/notion/shared'
 import { pushLineMessage } from '@/lib/line-push'
-import { findLineGroupByName } from '@/lib/line-groups'
 import type { RepairFinding } from '@/lib/visit-reaction-ai'
 import { repairTicketCreated } from '@/lib/notification-events'
 
@@ -72,12 +71,16 @@ const reportDateOf = (d?: string) => {
 const daysBetween = (a: string, b: string) => Math.abs(Date.parse(a.slice(0, 10)) - Date.parse(b.slice(0, 10))) / 86400_000
 
 /**
- * 主管通知：發到「崧達售後服務報修詢問群組」（官方帳號已加入；群組 ID 由 webhook 記錄，見 lib/line-groups.ts）。
- * TECH_MANAGER_LINE_ID 有設定時以它為準；群組還沒被記錄到（群組裡還沒人發過言）就略過。
+ * 主管通知：只發到 TECH_MANAGER_LINE_ID 明確指定的群組（售後服務／報修群）。
+ * 2026-11-05 事故：原本用群組名稱模糊比對＋取最近有動靜的群組，官方帳號也在客戶群組裡，
+ * 工單（含別家客戶名稱）被推到客戶的群組。此後收件人只能來自環境變數，沒設定就不發、只留站內通知。
  */
 export async function notifyManager(text: string): Promise<boolean> {
-  const to = process.env.TECH_MANAGER_LINE_ID || await findLineGroupByName(/售後服務|報修/).catch(() => '')
-  if (!to) return false
+  const to = (process.env.TECH_MANAGER_LINE_ID ?? '').trim()
+  if (!to) {
+    console.warn('[repair-ticket] TECH_MANAGER_LINE_ID 未設定，略過 LINE 通知（站內通知仍會發）')
+    return false
+  }
   try {
     await pushLineMessage(to, text)
     return true

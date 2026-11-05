@@ -89,7 +89,7 @@ async function processEvents(events: any[]) {
 
   for (const event of events) {
     try {
-      // 記下官方帳號所在的群組（ID＋名稱），供維修工單通知找「售後服務」群組（lib/line-groups.ts）
+      // 記下官方帳號所在的群組（ID＋名稱），只供中央管理查看、填環境變數用；不得用來自動選收件人（lib/line-groups.ts）
       if (event.source?.type === 'group' && event.source.groupId) await rememberLineGroup(event.source.groupId)
       if (event.type !== 'message' || event.message?.type !== 'text') continue
       if (event.source?.type !== 'group') continue
