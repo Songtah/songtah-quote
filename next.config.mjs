@@ -12,6 +12,8 @@ const nextConfig = {
     outputFileTracingIncludes: {
       '/support/manual': ['./content/support/**'],
       '/**/*': ['./data/catalog/**'],
+      // 牙科類醫療器材許可證索引（食藥署開放資料），法規合規監測比對用
+      '/api/admin/compliance/**': ['./data/compliance/**'],
     },
   },
   async headers() {

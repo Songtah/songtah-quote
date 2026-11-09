@@ -42,6 +42,7 @@ function getPageTitle(pathname: string): string {
     '/settings/audit':    '操作紀錄',
     '/admin':             '行政管理',
     '/admin/clinic-monitor': '客戶資料監控',
+    '/admin/compliance':     '法規監測',
     '/dashboard/ceo':         '業績總覽',
     '/dashboard/performance': '我的業績明細',
     '/admin/trip-planner':   '行程規劃',
