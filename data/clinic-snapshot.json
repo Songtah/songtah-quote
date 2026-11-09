@@ -1,20 +1,19 @@
 {
   "month": "2026-11",
-  "fetchedAt": "2026-11-04T01:18:51.317Z",
+  "fetchedAt": "2026-11-09T03:55:00.148Z",
   "source": "mohw-bas",
-  "totalClinics": 7149,
+  "totalClinics": 7148,
   "totalLabs": 1105,
   "totalHospitals": 188,
   "labsStale": false,
-  "pendingRemaining": 0,
+  "pendingRemaining": 1,
   "prevTotalClinics": 7149,
-  "prevTotalLabs": 1104,
+  "prevTotalLabs": 1105,
   "prevTotalHospitals": 188,
   "totalCustomers": 8161,
   "newCodes": [
-    "3731132632",
-    "3734011729",
-    "2Y03190181"
+    "3705200089",
+    "豐和美牙醫診所__臺北市__萬華區"
   ],
   "codes": {
     "1101010012": {
@@ -14399,15 +14398,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3702040125": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "曾牙醫診所",
-      "address": "高雄市楠梓區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3702040134": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -20775,6 +20765,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "伊森美學牙醫診所",
+      "address": "臺南市新市區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3705200089": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "昕潔牙醫診所",
       "address": "臺南市新市區",
       "specialty": "",
       "termDate": "",
@@ -50696,15 +50695,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3734011676": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "雅德思牙醫診所",
-      "address": "宜蘭縣宜蘭市",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3734011685": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -58841,15 +58831,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3739041147": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "名冠牙醫診所",
-      "address": "雲林縣西螺鎮",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3739041156": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -65347,6 +65328,15 @@
       "specialty": "",
       "termDate": "",
       "status": "開業"
+    },
+    "豐和美牙醫診所__臺北市__萬華區": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "豐和美牙醫診所",
+      "address": "臺北市萬華區",
+      "specialty": "",
+      "termDate": "",
+      "status": ""
     },
     "0135010016": {
       "source": "mohw",
