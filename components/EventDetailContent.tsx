@@ -5,6 +5,8 @@ import QRCode from 'qrcode'
 import Link from 'next/link'
 import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
 import { PromotionsContent } from '@/components/PromotionsContent'
+import { EventFormPanel } from '@/components/EventFormPanel'
+import { EventBudgetPanel } from '@/components/EventBudgetPanel'
 import { EventRegistrationPageSettings } from '@/components/EventRegistrationPageSettings'
 import { RegistrationCustomerCell } from '@/components/RegistrationCustomerCell'
 
@@ -204,24 +206,9 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
 
       {tab === '促銷' && <PromotionsContent isAdmin={canEditPromotions} eventId={id} />}
 
-      {tab === '活動問卷' && (
-        <div className="card-soft p-6">
-          <h3 className="font-semibold text-stone-900">活動問卷</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：現場訪客掃 QR code 填問卷，填完手機顯示兌換畫面，同事在這裡的名單按「已領」發贈品，同一支手機只能領一次。</p>
-        </div>
-      )}
-      {tab === '滿意度調查' && (
-        <div className="card-soft p-6">
-          <h3 className="font-semibold text-stone-900">滿意度調查</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：活動結束提供調查連結給參加者，結果在這裡彙總。</p>
-        </div>
-      )}
-      {tab === '預算核銷' && (
-        <div className="card-soft p-6">
-          <h3 className="font-semibold text-stone-900">預算核銷</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：先編這場活動的預算，之後逐筆登記支出並附憑證，送審、核准、付款都在這裡，隨時看得到超支或節餘。</p>
-        </div>
-      )}
+      {tab === '活動問卷' && <EventFormPanel key="survey" eventId={id} kind="survey" canEdit={canEdit} />}
+      {tab === '滿意度調查' && <EventFormPanel key="satisfaction" eventId={id} kind="satisfaction" canEdit={canEdit} />}
+      {tab === '預算核銷' && <EventBudgetPanel eventId={id} />}
 
       {/* Stats */}
       {tab === '總覽' && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

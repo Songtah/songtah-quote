@@ -1,0 +1,305 @@
+'use client'
+
+/**
+ * 活動底下的「活動問卷」「滿意度調查」分頁（kind 決定是哪一份）。
+ * 上方：填寫連結與 QR code、開放狀態、回覆數；「題目設定」收在按鈕裡。
+ * 下方：各題彙總與回覆名單。活動問卷的名單可按「已領」發贈品（同一支手機只收一筆）。
+ */
+import { useCallback, useEffect, useState } from 'react'
+import QRCode from 'qrcode'
+import {
+  FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
+  type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity,
+} from '@/lib/event-forms-model'
+
+type Draft = { title: string; intro: string; gift: string; identity: FormIdentity; questions: FormQuestion[]; open: boolean }
+const emptyDraft = (kind: FormKind): Draft => ({ title: '', intro: '', gift: '', identity: kind === 'survey' ? 'required' : 'none', questions: [], open: false })
+const newQuestion = (): FormQuestion => ({ id: `q_${Math.random().toString(36).slice(2, 9)}`, label: '', type: 'single', options: ['', ''], required: true })
+const fmt = (iso: string) => iso ? new Date(iso).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
+const btn2 = 'min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 disabled:opacity-40'
+const btn1 = 'min-h-11 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40'
+
+export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; kind: FormKind; canEdit: boolean }) {
+  const label = FORM_KIND_LABEL[kind]
+  const [form, setForm] = useState<EventForm | null>(null)
+  const [responses, setResponses] = useState<FormResponse[]>([])
+  const [summary, setSummary] = useState<QuestionSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<Draft>(emptyDraft(kind))
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [qr, setQr] = useState('')
+  const [url, setUrl] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [claiming, setClaiming] = useState('')
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/events/${eventId}/forms?kind=${kind}`)
+    const json = await res.json().catch(() => ({}))
+    if (res.ok) {
+      setForm(json.form ?? null); setResponses(json.responses ?? []); setSummary(json.summary ?? [])
+      if (json.form) setDraft({ title: json.form.title, intro: json.form.intro, gift: json.form.gift, identity: json.form.identity, questions: json.form.questions, open: json.form.open })
+    } else setMsg({ ok: false, text: json.error ?? '載入失敗' })
+    setLoading(false)
+  }, [eventId, kind])
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!form) { setUrl(''); setQr(''); return }
+    const link = `${window.location.origin}/f/${form.id}`
+    setUrl(link)
+    QRCode.toDataURL(link, { width: 480, margin: 1 }).then(setQr).catch(() => {})
+  }, [form])
+
+  async function save(next: Draft = draft) {
+    setSaving(true); setMsg(null)
+    try {
+      const res = await fetch(`/api/events/${eventId}/forms`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, ...next, questions: next.questions.map((q) => ({ ...q, options: q.options.filter((o) => o.trim()) })) }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? '儲存失敗')
+      setMsg({ ok: true, text: json.form.open ? '已儲存，目前開放填寫' : '已儲存（目前未開放）' })
+      setEditing(false)
+      await load()
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.message ?? '儲存失敗' })
+    } finally { setSaving(false) }
+  }
+
+  async function claim(r: FormResponse, claimed: boolean) {
+    setClaiming(r.id)
+    try {
+      const res = await fetch(`/api/events/${eventId}/forms`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, responseId: r.id, claimed }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? '更新失敗')
+      setResponses((prev) => prev.map((x) => (x.id === r.id ? json.response : x)))
+    } catch (e: any) {
+      setMsg({ ok: false, text: e?.message ?? '更新失敗' })
+    } finally { setClaiming('') }
+  }
+
+  const setQ = (i: number, patch: Partial<FormQuestion>) => setDraft((d) => ({ ...d, questions: d.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)) }))
+  const move = (i: number, dir: -1 | 1) => setDraft((d) => {
+    const qs = [...d.questions]; const j = i + dir
+    if (j < 0 || j >= qs.length) return d
+    ;[qs[i], qs[j]] = [qs[j], qs[i]]
+    return { ...d, questions: qs }
+  })
+
+  if (loading) return <div className="card-soft py-16 text-center text-sm text-stone-400">載入中…</div>
+
+  const claimedCount = responses.filter((r) => r.giftClaimedAt).length
+  const showIdentity = form ? form.identity !== 'none' : false
+
+  return (
+    <div className="space-y-5">
+      {/* 狀態列＋設定按鈕 */}
+      <div className="card-soft p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-stone-900">{label}</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              {!form ? `還沒建立。${kind === 'survey' ? '訂好題目與贈品後開放，訪客現場掃 QR code 填寫，填完出示畫面領贈品。' : '訂好題目後開放，把連結或 QR code 發給參加者。'}`
+                : `${form.open ? '目前開放填寫' : '目前未開放'}・${form.questions.length} 題・已收 ${responses.length} 份${kind === 'survey' ? `・贈品已領 ${claimedCount}` : ''}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {form && canEdit && (
+              <button onClick={() => save({ ...draft, open: !form.open })} disabled={saving} className={btn2}>
+                {form.open ? '關閉填寫' : '開放填寫'}
+              </button>
+            )}
+            {canEdit && (
+              <button onClick={() => setEditing((v) => !v)} aria-expanded={editing} className={form ? btn2 : btn1}>
+                {editing ? '收起題目設定' : form ? '題目設定' : `建立${label}`}
+              </button>
+            )}
+          </div>
+        </div>
+        {msg && <p className={`mt-3 rounded-2xl px-4 py-2.5 text-sm ${msg.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{msg.text}</p>}
+
+        {form && url && (
+          <div className="mt-4 flex flex-col items-center gap-4 rounded-2xl bg-cream-50 p-4 sm:flex-row sm:items-start">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {qr && <img src={qr} alt={`${label} QR code`} className="size-36 rounded-xl bg-white p-2 ring-1 ring-stone-900/5" />}
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">填寫連結</p>
+              <p className="mt-1 break-all text-xs text-stone-600">{url}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) }} className={btn2}>{copied ? '已複製' : '複製連結'}</button>
+                {qr && <a href={qr} download={`${label}QR.png`} className={`${btn2} inline-flex items-center`}>下載 QR 圖檔</a>}
+                <a href={url} target="_blank" rel="noreferrer" className={`${btn2} inline-flex items-center`}>預覽</a>
+              </div>
+              {!form.open && <p className="mt-2 text-xs text-amber-700">目前未開放，訪客打開會看到「沒有開放填寫」。</p>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 題目設定（收在按鈕裡） */}
+      {editing && (
+        <div className="card-soft space-y-5 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-stone-700">標題
+              <input className="input-soft mt-1 w-full" value={draft.title} maxLength={100} placeholder={label} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+            </label>
+            {kind === 'survey' ? (
+              <label className="block text-sm font-medium text-stone-700">贈品
+                <input className="input-soft mt-1 w-full" value={draft.gift} maxLength={200} placeholder="例：崧達環保杯一個" onChange={(e) => setDraft({ ...draft, gift: e.target.value })} />
+              </label>
+            ) : (
+              <label className="block text-sm font-medium text-stone-700">填答者基本資料
+                <select className="select-soft mt-1 w-full" value={draft.identity} onChange={(e) => setDraft({ ...draft, identity: e.target.value as FormIdentity })}>
+                  <option value="none">不收（匿名）</option>
+                  <option value="optional">可填可不填</option>
+                  <option value="required">姓名、手機、單位必填</option>
+                </select>
+              </label>
+            )}
+          </div>
+          <label className="block text-sm font-medium text-stone-700">開頭說明
+            <textarea className="input-soft mt-1 w-full" rows={2} value={draft.intro} maxLength={1000} onChange={(e) => setDraft({ ...draft, intro: e.target.value })} />
+          </label>
+          {kind === 'survey' && <p className="text-xs text-stone-400">活動問卷固定要填姓名、手機、單位名稱，才能確認一人領一份贈品。</p>}
+
+          <div className="space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">題目（{draft.questions.length}/{MAX_QUESTIONS}）</p>
+            {draft.questions.map((q, i) => (
+              <div key={q.id} className="rounded-2xl bg-cream-50 p-4">
+                <div className="flex flex-wrap items-start gap-2">
+                  <span className="pt-2.5 text-sm tabular-nums text-stone-400">{i + 1}.</span>
+                  <input className="input-soft min-w-0 flex-1" value={q.label} maxLength={200} placeholder="題目" aria-label={`第 ${i + 1} 題題目`} onChange={(e) => setQ(i, { label: e.target.value })} />
+                  <select className="select-soft w-28" value={q.type} aria-label="題型" onChange={(e) => {
+                    const type = e.target.value as FormQuestion['type']
+                    setQ(i, { type, options: type === 'single' || type === 'multi' ? (q.options.length >= 2 ? q.options : ['', '']) : [] })
+                  }}>
+                    {QUESTION_TYPES.map((t) => <option key={t} value={t}>{QUESTION_TYPE_LABEL[t]}</option>)}
+                  </select>
+                </div>
+                {(q.type === 'single' || q.type === 'multi') && (
+                  <div className="mt-3 space-y-2 pl-6">
+                    {q.options.map((o, j) => (
+                      <div key={j} className="flex gap-2">
+                        <input className="input-soft min-w-0 flex-1" value={o} maxLength={100} placeholder={`選項 ${j + 1}`} aria-label={`第 ${i + 1} 題選項 ${j + 1}`}
+                          onChange={(e) => setQ(i, { options: q.options.map((x, k) => (k === j ? e.target.value : x)) })} />
+                        {q.options.length > 2 && <button type="button" onClick={() => setQ(i, { options: q.options.filter((_, k) => k !== j) })} className="rounded-full px-3 text-xs text-stone-400 transition-all hover:bg-white hover:text-red-600 active:scale-95">移除</button>}
+                      </div>
+                    ))}
+                    {q.options.length < MAX_OPTIONS && <button type="button" onClick={() => setQ(i, { options: [...q.options, ''] })} className="rounded-full px-3 py-1.5 text-xs font-medium text-brand-700 transition-all hover:bg-white active:scale-95">＋ 新增選項</button>}
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-3 pl-6 text-xs text-stone-500">
+                  <label className="inline-flex items-center gap-1.5"><input type="checkbox" className="accent-brand-500" checked={q.required} onChange={(e) => setQ(i, { required: e.target.checked })} />必填</label>
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded-full px-2 py-1 transition-all hover:bg-white active:scale-95 disabled:opacity-30">上移</button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === draft.questions.length - 1} className="rounded-full px-2 py-1 transition-all hover:bg-white active:scale-95 disabled:opacity-30">下移</button>
+                  <button type="button" onClick={() => setDraft((d) => ({ ...d, questions: d.questions.filter((_, k) => k !== i) }))} className="rounded-full px-2 py-1 transition-all hover:bg-white hover:text-red-600 active:scale-95">刪除這題</button>
+                </div>
+              </div>
+            ))}
+            {draft.questions.length < MAX_QUESTIONS && (
+              <button type="button" onClick={() => setDraft((d) => ({ ...d, questions: [...d.questions, newQuestion()] }))} className={btn2}>＋ 新增題目</button>
+            )}
+          </div>
+
+          {responses.length > 0 && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-xs text-amber-700">已經有 {responses.length} 份回覆。刪除或更換題目後，舊回覆裡那一題的答案不會再顯示在彙總裡。</p>}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => save()} disabled={saving} className={btn1}>{saving ? '儲存中…' : '儲存'}</button>
+            <button onClick={() => { setEditing(false); if (form) setDraft({ title: form.title, intro: form.intro, gift: form.gift, identity: form.identity, questions: form.questions, open: form.open }) }} className={btn2}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* 各題彙總 */}
+      {form && responses.length > 0 && (
+        <div className="card-soft p-5">
+          <h3 className="font-semibold text-stone-900">各題結果</h3>
+          <div className="mt-4 space-y-5">
+            {summary.map((s, i) => (
+              <div key={s.id}>
+                <p className="text-sm font-medium text-stone-700">{i + 1}. {s.label}<span className="ml-2 text-xs font-normal text-stone-400">{s.answered} 人回答{s.type === 'rating' && s.answered ? `・平均 ${s.average} 分` : ''}</span></p>
+                {s.counts && (
+                  <div className="mt-2 space-y-1.5">
+                    {Object.entries(s.counts).map(([k, n]) => {
+                      const pct = s.answered ? Math.round((n / s.answered) * 100) : 0
+                      return (
+                        <div key={k} className="flex items-center gap-3 text-xs">
+                          <span className="w-32 shrink-0 truncate text-stone-600" title={k}>{s.type === 'rating' ? `${k} 分` : k}</span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
+                          <span className="w-16 shrink-0 text-right tabular-nums text-stone-500">{n}（{pct}%）</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {s.texts && s.texts.length > 0 && (
+                  <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-stone-600">
+                    {s.texts.map((t, k) => <li key={k} className="rounded-xl bg-cream-50 px-3 py-1.5">{t}</li>)}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 回覆名單 */}
+      {form && (
+        <div className="card-soft overflow-hidden">
+          <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
+            <h3 className="font-semibold text-stone-900">回覆名單</h3>
+            <span className="text-sm text-stone-400">{responses.length} 份</span>
+          </div>
+          {responses.length === 0 ? (
+            <div className="py-12 text-center text-sm text-stone-400">還沒有人填寫</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-cream-50 text-xs text-stone-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">填寫時間</th>
+                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">單位</th><th className="px-4 py-3 text-left font-medium">手機</th></>}
+                    {form.questions.map((q) => <th key={q.id} className="max-w-[12rem] truncate px-4 py-3 text-left font-medium" title={q.label}>{q.label}</th>)}
+                    {kind === 'survey' && <th className="px-4 py-3 text-left font-medium">贈品</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-900/[0.06]">
+                  {responses.map((r) => (
+                    <tr key={r.id} className="align-top transition-colors hover:bg-brand-50/50">
+                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-stone-400">{fmt(r.createdAt)}<br />{r.id.slice(0, 6).toUpperCase()}</td>
+                      {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}</td><td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
+                      {form.questions.map((q) => {
+                        const v = r.answers?.[q.id]
+                        return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>
+                      })}
+                      {kind === 'survey' && (
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {r.giftClaimedAt ? (
+                            <div className="text-xs">
+                              <span className="rounded-full bg-stone-100 px-2.5 py-1 font-medium text-stone-600">已領</span>
+                              <p className="mt-1 text-stone-400">{fmt(r.giftClaimedAt)}・{r.giftClaimedBy}</p>
+                              {canEdit && <button onClick={() => claim(r, false)} disabled={claiming === r.id} className="mt-1 rounded-full px-2 py-0.5 text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-600 active:scale-95">取消</button>}
+                            </div>
+                          ) : canEdit ? (
+                            <button onClick={() => claim(r, true)} disabled={claiming === r.id}
+                              className="min-h-9 rounded-full bg-brand-500 px-4 text-xs font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">
+                              {claiming === r.id ? '處理中…' : '已領'}
+                            </button>
+                          ) : <span className="text-xs text-stone-400">未領</span>}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
