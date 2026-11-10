@@ -4,9 +4,8 @@
  * Status is computed from dates; no manual toggle needed.
  */
 
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB = process.env.NOTION_PROMOTIONS_DB!
 
 // ── Helpers ───────────────────────────────────────────────────

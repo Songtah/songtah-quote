@@ -9,13 +9,12 @@
  */
 import { readFromDb } from '@/lib/db/read-source'
 import { dbVisitStatsInRange, dbOpenFollowUpStats, dbVisitCountInRange } from '@/lib/db/visits-read'
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
 import { listOpenTicketsForSla } from '@/lib/notion/tickets'
 import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
 import { INACTIVE_SALESPERSONS, resolveSalesperson } from '@/lib/line-salesperson-map'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 const ORDERS_DB = process.env.NOTION_ORDERS_DB!
 const VISITS_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'

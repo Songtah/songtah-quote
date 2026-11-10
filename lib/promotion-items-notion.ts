@@ -4,9 +4,8 @@
  * Linked to 促銷活動 via 活動ID (rich_text).
  */
 
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB = process.env.NOTION_PROMOTION_ITEMS_DB!
 
 // ── Helpers ───────────────────────────────────────────────────

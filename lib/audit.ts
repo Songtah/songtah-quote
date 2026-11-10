@@ -1,7 +1,6 @@
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 import type { NextRequest } from 'next/server'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 const AUDIT_DB_TITLE = '系統操作紀錄'
 const AUDIT_FALLBACK_SOURCE_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'

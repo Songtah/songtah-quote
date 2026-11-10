@@ -4,9 +4,8 @@
  * Requires NOTION_ASSETS_DB env var to be set (see setup instructions).
  */
 
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_ASSETS = process.env.NOTION_ASSETS_DB ?? ''
 
 export const ASSET_CATEGORIES = [

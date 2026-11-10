@@ -1,10 +1,9 @@
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 import type { Product, Customer, Quote, QuoteItem } from '@/types'
 import { getCatalogProduct } from '@/lib/products-catalog'
 import { listProductPriceOverrides } from '@/lib/products-notion'
 import { notionActiveCustomerClauses } from './customer-status'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 const DB = {
   products:  process.env.NOTION_PRODUCTS_DB!,

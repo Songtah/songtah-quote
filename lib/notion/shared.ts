@@ -6,10 +6,12 @@
  * 一律從這裡 import，system-notion.ts 則 re-export 之以維持既有 import 路徑相容。
  */
 import { Client } from '@notionhq/client'
+import { createNotionProxy } from '@/lib/db/notion-store'
 import { Redis } from '@upstash/redis'
 import { waitUntil } from '@vercel/functions'
 
-export const notion = new Client({ auth: process.env.NOTION_TOKEN })
+// 2026-11-10：已搬進 Supabase 的資料庫／頁面由 lib/db/notion-store 代理，其餘照舊打 Notion
+export const notion: Client = createNotionProxy(new Client({ auth: process.env.NOTION_TOKEN }))
 
 // ── In-memory cache (L1) ─────────────────────────────────────────────────────
 // Fast but resets on every Vercel cold start.

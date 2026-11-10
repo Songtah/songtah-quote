@@ -34,6 +34,9 @@ function getFormula(page: any, field: string): number {
 }
 
 function mapCourseCost(page: any): CourseCost {
+  const fees = ['場地費', '講師費', '教材費', '行銷費', '餐飲費', '交通費', '其他費用'].map((f) => getNumber(page, f) || 0)
+  const totalCost = fees.reduce((a, b) => a + b, 0)
+  const totalRevenue = (getNumber(page, '報名費_人') || 0) * (getNumber(page, '預計人數') || 0)
   return {
     id:           page.id,
     name:         getTitle(page, '課程名稱'),
@@ -46,10 +49,11 @@ function mapCourseCost(page: any): CourseCost {
     otherFee:     getNumber(page, '其他費用'),
     feePerPerson: getNumber(page, '報名費_人'),
     headcount:    getNumber(page, '預計人數'),
-    totalCost:    getFormula(page, '總成本'),
-    totalRevenue: getFormula(page, '總收入'),
-    netProfit:    getFormula(page, '淨利'),
-    marginPct:    getFormula(page, '利潤率%'),
+    // 2026-11-10 搬離 Notion 後 formula 不再重算，四個合計一律由程式計算（與原 Notion 公式同義）
+    totalCost:    totalCost,
+    totalRevenue: totalRevenue,
+    netProfit:    totalRevenue - totalCost,
+    marginPct:    totalRevenue > 0 ? Math.round(((totalRevenue - totalCost) / totalRevenue) * 1000) / 10 : 0,
     status:       getSelect(page, '狀態'),
     note:         getText(page, '備註'),
     eventId:      (getProp(page, '關聯活動')?.relation ?? [])[0]?.id ?? '',

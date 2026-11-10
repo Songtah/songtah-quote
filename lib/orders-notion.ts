@@ -1,4 +1,4 @@
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 import { getCatalogProduct } from './products-catalog'
 import { listItemsByPromotion } from './promotion-items-notion'
 import { validateOrderPromotions, type PromoRule } from './order-pricing'
@@ -6,7 +6,6 @@ import { getUnavailableSkuCodes } from './products-availability'
 import { listProductPriceOverrides } from './products-notion'
 import { salespersonNameVariants } from './salesperson-name'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 /**
  * 伺服器端促銷把關：依訂單綁定的 promotionId 重抓「已確認」促銷品項，
