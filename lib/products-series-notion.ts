@@ -13,9 +13,8 @@
  *   備註      (text)
  */
 
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 
 function getSeriesDb(): string {
   const id = process.env.NOTION_SERIES_DB

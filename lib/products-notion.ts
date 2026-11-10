@@ -7,11 +7,10 @@
  * for 貨號, 品名, 品牌, 分類. Notion stores the enrichment layer.
  */
 
-import { Client } from '@notionhq/client'
+import { notion } from '@/lib/notion/shared'
 import { get, head, put } from '@vercel/blob'
 import { deleteRedisValue, getRedis, getRedisValue, setRedisValue } from '@/lib/notion/shared'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
 const DB_PRODUCTS = process.env.NOTION_PRODUCTS_DB!
 
 // ── Helpers ──────────────────────────────────────────────────

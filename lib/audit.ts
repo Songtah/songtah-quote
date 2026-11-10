@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 
 
 const AUDIT_DB_TITLE = '系統操作紀錄'
+const AUDIT_DB_ID = '348dcdaafb2a81508712f7e6eebb6363'
 const AUDIT_FALLBACK_SOURCE_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'
 const REDACTED = '[REDACTED]'
 
@@ -239,6 +240,9 @@ async function ensureAuditDb() {
   if (process.env.NOTION_AUDIT_LOGS_DB) {
     return normalizeDatabaseId(process.env.NOTION_AUDIT_LOGS_DB)
   }
+  // 2026-11-10：稽核紀錄已搬到資料庫（notion_pages），固定用原資料庫 id，不再搜尋／建立 Notion 庫
+  // （Notion 端已改名封存，用標題搜尋會找不到而另建新庫）
+  return AUDIT_DB_ID
 
   // 2. In-memory cache
   if (auditDbIdCache) return auditDbIdCache
