@@ -40,6 +40,7 @@ function getPageTitle(pathname: string): string {
     '/quotes':            '報價單管理',
     '/settings/accounts': '帳號管理',
     '/settings/audit':    '操作紀錄',
+    '/settings/db-sync':  '資料庫同步',
     '/admin':             '行政管理',
     '/admin/clinic-monitor': '客戶資料監控',
     '/admin/compliance':     '法規監測',

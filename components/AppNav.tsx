@@ -19,8 +19,7 @@ import {
   BadgeDollarSign, BriefcaseBusiness, Building2, CircleUserRound, FileText,
   Headphones, Home, LifeBuoy, Menu, PackageCheck, Settings2, ShoppingBag, TrendingUp,
   UsersRound, X, type LucideIcon,
-  ShieldCheck,
-} from 'lucide-react'
+  ShieldCheck, Database } from 'lucide-react'
 
 export type SessionUserLike = {
   role?: string
@@ -57,6 +56,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/admin', label: '行政管理', group: '管理', module: 'admin', adminOrStaff: true, icon: Settings2 },
   { href: '/settings/accounts', label: '帳號權限', group: '管理', module: 'accounts', icon: CircleUserRound },
   { href: '/settings/audit', label: '操作紀錄', group: '管理', module: null, adminOnly: true, icon: FileText },
+  { href: '/settings/db-sync', label: '資料庫同步', group: '管理', module: null, adminOnly: true, icon: Database },
   // 法規監測：監測名單與證據屬敏感資料，僅中央管理（role=admin）可見
   { href: '/admin/compliance', label: '法規監測', group: '管理', module: null, adminOnly: true, icon: ShieldCheck },
   // 操作手冊與問題回報，所有帳號都看得到
