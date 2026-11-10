@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { Ticket } from '@/types'
-import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
+import { ticketDueState } from '@/lib/ticket-validation'
 
 const STATUS_STYLES: Record<string, string> = {
   '尚未處理':      'bg-orange-100 text-orange-700 border-orange-200',
@@ -38,15 +38,11 @@ function formatDate(d?: string) {
 
 // 逾期視覺提醒：超過 SLA 天數視為逾期、到期當天視為即將逾期，不擋任何操作。
 function slaBadge(ticket: Ticket): { label: string; cls: string } | null {
-  if (!ticket.priority || !ticket.createdDate || ticket.status === '✅ 結案') return null
-  const slaDays = TICKET_SLA_DAYS[ticket.priority]
-  if (!slaDays) return null
-  const created = new Date(ticket.createdDate)
-  if (Number.isNaN(created.getTime())) return null
-  const daysElapsed = Math.floor((Date.now() - created.getTime()) / (24 * 60 * 60 * 1000))
-  if (daysElapsed > slaDays) return { label: `⏰ 逾期 ${daysElapsed - slaDays} 天`, cls: 'bg-red-100 text-red-700 border-red-200' }
-  if (daysElapsed === slaDays) return { label: '⏰ 即將逾期', cls: 'bg-amber-100 text-amber-700 border-amber-200' }
-  return null
+  const due = ticketDueState(ticket)
+  if (!due) return null
+  if (due.state === 'overdue') return { label: `逾期 ${Math.max(due.days - due.limit, 1)} 天`, cls: 'bg-red-100 text-red-700 border-red-200' }
+  if (due.state === 'due') return { label: '今天到期', cls: 'bg-amber-100 text-amber-700 border-amber-200' }
+  return { label: `久未處理 ${due.days} 天`, cls: 'bg-stone-100 text-stone-600 border-stone-200' }
 }
 
 const ALL = '全部'

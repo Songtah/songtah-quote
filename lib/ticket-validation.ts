@@ -8,6 +8,37 @@ export const TICKET_STATUSES = ['尚未處理', '👌 已受理', '🔍 診斷�
 export const TICKET_SLA_DAYS: Record<string, number> = { P1: 1, P2: 3, P3: 7, P4: 14 }
 
 /**
+ * 工單逾期判定（2026-11-10 使用者定義；首頁、業績總覽、工單列表共用，禁止各處另寫一套）。
+ * 舊定義靠「預計維修日」與「優先級」，但 339 張工單這兩欄填答率都是 0，逾期數永遠是 0。
+ * 新定義只靠系統一定有的建立日期，不要求任何人補欄位：
+ *   - 未結案且建立超過期限天數 → 逾期（overdue）。期限＝有優先級用 TICKET_SLA_DAYS，沒有就 14 天；
+ *     有填預計維修日且已過也算逾期。
+ *   - 未結案且建立超過 90 天 → 久未處理（stale），不計入逾期數——舊單多半早已處理只是沒結案，
+ *     混進逾期會把真正該追的案件淹沒（改定義當下：逾期 12 張、久未處理 144 張）。
+ */
+export const TICKET_DEFAULT_DUE_DAYS = 14
+export const TICKET_STALE_DAYS = 90
+const TICKET_CLOSED = new Set(['✅ 結案', '已結案', '結案', '完成'])
+export type TicketDueState = { state: 'overdue' | 'due' | 'stale'; days: number; limit: number } | null
+
+export function ticketDueState(
+  t: { status?: string; priority?: string; createdDate?: string; scheduledDate?: string },
+  now: Date = new Date(),
+): TicketDueState {
+  if (TICKET_CLOSED.has(t.status ?? '')) return null
+  const created = t.createdDate ? new Date(t.createdDate) : null
+  if (!created || Number.isNaN(created.getTime())) return null
+  const days = Math.floor((now.getTime() - created.getTime()) / 86_400_000)
+  const limit = TICKET_SLA_DAYS[t.priority ?? ''] ?? TICKET_DEFAULT_DUE_DAYS
+  if (days > TICKET_STALE_DAYS) return { state: 'stale', days, limit }
+  const today = new Date(now.getTime() + 8 * 3600_000).toISOString().slice(0, 10)
+  if (t.scheduledDate && t.scheduledDate.slice(0, 10) < today) return { state: 'overdue', days, limit }
+  if (days > limit) return { state: 'overdue', days, limit }
+  if (days === limit) return { state: 'due', days, limit }
+  return null
+}
+
+/**
  * 工單狀態轉換防呆：只允許往後推進（可跳步，如簡單案件可直接受理即結案）
  * 或從「✅ 結案」重開回「🔍 後續追蹤」；禁止其他任何倒退（例如結案後誤點回維修中）。
  */

@@ -1,3 +1,4 @@
+import { ticketDueState } from '@/lib/ticket-validation'
 import { todayTW } from '@/lib/ceo-stats'
 import { listQuotes } from '@/lib/notion'
 import { listOpenFollowUps, listVisits } from '@/lib/notion/visits'
@@ -138,9 +139,7 @@ async function computeTodayDashboard(
   const followUps = allFollowUps.filter((visit) => sameOwner(visit.salesperson, owner))
   const quotes = quoteResult.items.filter((quote) => ACTIVE_QUOTE_STATUSES.has(quote.status))
   const openTickets = ticketResult.items.filter((ticket) => !CLOSED_TICKET_STATUSES.has(ticket.status))
-  const overdueTickets = openTickets.filter(
-    (ticket) => ticket.scheduledDate && ticket.scheduledDate < date,
-  )
+  const overdueTickets = openTickets.filter((ticket) => ticketDueState(ticket)?.state === 'overdue')
 
   const visitItems: TodayWorkItem[] = visits.map((visit) => ({
     id: visit.id,
@@ -173,7 +172,7 @@ async function computeTodayDashboard(
   const ticketItems: TodayWorkItem[] = overdueTickets.slice(0, 2).map((ticket) => ({
     id: ticket.id,
     kind: 'ticket',
-    time: ticket.scheduledDate,
+    time: ticket.scheduledDate || ticket.createdDate || '',
     customer: ticket.customerName || '未命名客戶',
     action: '確認技術支援進度',
     href: `/tickets/${ticket.id}`,
@@ -243,7 +242,7 @@ async function computeTeamTodayDashboard(
 
   const quotes = quoteResult.items.filter((q) => ACTIVE_QUOTE_STATUSES.has(q.status))
   const openTickets = ticketResult.items.filter((t) => !CLOSED_TICKET_STATUSES.has(t.status))
-  const overdueTickets = openTickets.filter((t) => t.scheduledDate && t.scheduledDate < date)
+  const overdueTickets = openTickets.filter((t) => ticketDueState(t)?.state === 'overdue')
 
   // 全體視角的工作佇列要標上是誰的，否則看不出來這筆該找誰
   const workItems: TodayWorkItem[] = [

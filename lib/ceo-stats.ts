@@ -12,7 +12,7 @@ import { dbVisitStatsInRange, dbOpenFollowUpStats, dbVisitCountInRange } from '@
 import { notion } from '@/lib/notion/shared'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
 import { listOpenTicketsForSla } from '@/lib/notion/tickets'
-import { TICKET_SLA_DAYS } from '@/lib/ticket-validation'
+import { ticketDueState } from '@/lib/ticket-validation'
 import { INACTIVE_SALESPERSONS, resolveSalesperson } from '@/lib/line-salesperson-map'
 
 
@@ -490,14 +490,7 @@ export async function getCEOStats(): Promise<CEOStats> {
 
   const today = new Date()
   const overdueTickets = (openTickets as { priority: string; createdDate: string }[])
-    .filter((t) => {
-      const slaDays = TICKET_SLA_DAYS[t.priority]
-      if (!slaDays || !t.createdDate) return false
-      const created = new Date(t.createdDate)
-      if (Number.isNaN(created.getTime())) return false
-      const daysElapsed = Math.floor((today.getTime() - created.getTime()) / (24 * 60 * 60 * 1000))
-      return daysElapsed > slaDays
-    }).length
+    .filter((t) => ticketDueState(t, today)?.state === 'overdue').length
 
   const stats: CEOStats = {
     thisMonth: {
