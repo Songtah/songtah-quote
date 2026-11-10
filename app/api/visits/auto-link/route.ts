@@ -16,6 +16,7 @@
  *   - hasMore     : 是否還有更多
  */
 
+import { mirrorVisitPage } from '@/lib/db/mirror'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
@@ -91,13 +92,14 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
       }
 
       if (!dryRun) {
-        await notion.pages.update({
+        const linkedPage: any = await notion.pages.update({
           page_id: page.id,
           properties: {
             // 只補關聯、不覆寫單位名稱：業務原本的叫法要留著，夜間「慣用稱呼記憶」才學得到
             '🏥 牙科單位資料': { relation: [{ id: match.id }] },
           } as any,
         })
+        await mirrorVisitPage(linkedPage)
         await recordVisitBump(match.id, page.properties?.['日期']?.date?.start ?? '')
       }
       linked++

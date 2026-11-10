@@ -11,6 +11,9 @@ import {
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 import { canonicalSalespersonName, salespersonNameVariants } from '@/lib/salesperson-name'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { readFromDb } from '@/lib/db/read-source'
+import * as dbc from '@/lib/db/customers-read'
+import { mirrorCustomerPage } from '@/lib/db/mirror'
 
 // ── 全庫掃描(分區版)──────────────────────────────────────────────────────
 // ⚠️ Notion API 無過濾的 databases.query 分頁在 10,000 筆處「靜默截斷」
@@ -83,6 +86,7 @@ export type SystemCustomerDetail = {
 
 export async function getSystemCustomerById(id: string): Promise<SystemCustomerDetail | null> {
   if (!DB.customers) return null
+  if (readFromDb()) return dbc.dbGetSystemCustomerById(id)
   try {
     const page: any = await notionCallWithRetry('getSystemCustomerById', () =>
       notion.pages.retrieve({ page_id: id })
@@ -125,6 +129,7 @@ export async function searchSystemCustomers(
   const keyword = query.trim()
   const hasFilters = !!(filters?.city || filters?.district || filters?.salesperson || filters?.type)
   if (!keyword && !hasFilters) return []
+  if (readFromDb()) return dbc.dbSearchSystemCustomers(keyword, filters)
 
   const cacheKey = `sys-customers:${keyword}:${JSON.stringify(filters ?? {})}`.toLowerCase()
   const cached = getCachedValue<CustomerSearchResult[]>(cacheKey)
@@ -203,6 +208,11 @@ export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   const cacheKey = 'all-system-customers-v2' // v2=分區掃描修正 10k 截斷
   const cached = getCachedValue<CustomerListItem[]>(cacheKey)
   if (cached) return cached
+  if (readFromDb()) {
+    const items = await dbc.dbGetAllSystemCustomers()
+    setCachedValue(cacheKey, items, 300_000)
+    return items
+  }
   if (allSystemCustomersInFlight) return allSystemCustomersInFlight
 
   const request = (async () => {
@@ -239,6 +249,7 @@ export async function listSystemCustomersPaginated(options?: {
   cursor?: string
 }): Promise<{ items: CustomerListItem[]; hasMore: boolean; nextCursor: string | null }> {
   if (!DB.customers) return { items: [], hasMore: false, nextCursor: null }
+  if (readFromDb()) return dbc.dbListSystemCustomersPaginated(options)
   const limit = options?.limit ?? 10
   const startCursor = options?.cursor
 
@@ -349,6 +360,7 @@ export async function listCustomersByArea(f: {
   excludePersonal?: boolean  // 排除客戶類型=個人
 }): Promise<AreaCustomer[]> {
   if (!DB.customers) return []
+  if (readFromDb()) return dbc.dbListCustomersByArea(f)
   const clauses: any[] = []
   if (f.city) clauses.push(cityAreaFilter(f.city))
   if (f.district) clauses.push(districtAreaFilter(f.district))
@@ -410,6 +422,7 @@ export async function getSalespersonAreaBreakdown(salesperson: string): Promise<
 
 /** 合併查詢多個轄區；每 20 區一批，避免逐區 N+1 與過大的複合 filter。 */
 export async function listCustomersByAreas(areas: { city: string; district: string }[]): Promise<AreaCustomer[]> {
+  if (readFromDb()) return dbc.dbListCustomersByAreas(areas)
   const uniqueAreas = Array.from(new Map(
     areas.filter((area) => area.city && area.district).map((area) => [`${area.city}|${area.district}`, area])
   ).values())
@@ -449,9 +462,10 @@ export async function assignSalesperson(
     if (targetDb !== customersDb) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: '(非客戶主檔)' }); continue }
     const current = getSelect(page, '負責業務')
     if (current) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current }); continue } // 已有值→不動
-    await notionCallWithRetry('assignSalesperson:write', () =>
+    const __mirror1: any = await notionCallWithRetry('assignSalesperson:write', () =>
       notion.pages.update({ page_id: id, properties: { '負責業務': { select: { name: salesperson } } } as any })
     )
+    await mirrorCustomerPage(__mirror1)
     assigned++
   }
   // 失效受影響快取
@@ -491,9 +505,10 @@ export async function reassignSalesperson(
     if (targetDb !== customersDb) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: '(非客戶主檔)' }); continue }
     const current = getSelect(page, '負責業務')
     if (current !== from) { skipped.push({ id, name: getTitle(page, '客戶名稱'), current: current || '(空白)' }); continue } // 已非離職者→不動
-    await notionCallWithRetry('reassignSalesperson:write', () =>
+    const __mirror2: any = await notionCallWithRetry('reassignSalesperson:write', () =>
       notion.pages.update({ page_id: id, properties: { '負責業務': to ? { select: { name: to } } : { select: null } } as any })
     )
+    await mirrorCustomerPage(__mirror2)
     reassigned++
   }
   if (reassigned > 0) await invalidateCustomerCaches()
@@ -524,6 +539,11 @@ export async function getCustomersWithCodes(): Promise<CustomerWithCode[]> {
   const cacheKey = 'customers-with-codes-v5' // v5=加 牙體技術師/生數(未往來名單規模);v4=加 開發狀態/負責業務(已往來客戶數改以實證判斷);v3=加 devStage;v2=分區掃描修正 10k 截斷
   const cached = await getRedisValue<CustomerWithCode[]>(cacheKey)
   if (cached) return cached
+  if (readFromDb()) {
+    const items = await dbc.dbGetCustomersWithCodes()
+    await setRedisValue(cacheKey, items, 10 * 60_000) // 資料庫讀取快，快取縮到 10 分鐘
+    return items
+  }
 
   const items: CustomerWithCode[] = []
   await scanAllCustomerPages((page) => {
@@ -570,6 +590,7 @@ const REGION_STATS_TTL = 24 * 60 * 60_000 // 24 hr:配合每晚 cron 重算,使�
 /** 只讀快取、絕不觸發全庫掃描(供頁面 SSR 即時注入;cache miss 回 null,由前端補抓)。 */
 export async function peekRegionStatsRows(): Promise<RegionStatsResult | null> {
   if (!DB.customers) return null
+  if (readFromDb()) return dbc.dbGetRegionStatsRows()   // 資料庫直接彙總（<1 秒），不需快取
   return (await getRedisValue<RegionStatsResult>(REGION_STATS_CACHE_KEY)) ?? null
 }
 
@@ -590,6 +611,7 @@ export async function peekCustomerCountBySalesperson(name: string): Promise<numb
  */
 export async function getRegionStatsRows(forceRefresh = false): Promise<RegionStatsResult> {
   if (!DB.customers) return { rows: [], updatedAt: '' }
+  if (readFromDb()) return dbc.dbGetRegionStatsRows()
   if (!forceRefresh) {
     const cached = await peekRegionStatsRows()
     if (cached) return cached
@@ -667,6 +689,11 @@ export async function listPipelineCustomers(): Promise<PipelineCustomer[]> {
   const cacheKey = 'pipeline-customers-v1'
   const cached = getCachedValue<PipelineCustomer[]>(cacheKey)
   if (cached) return cached
+  if (readFromDb()) {
+    const items = await dbc.dbListPipelineCustomers()
+    setCachedValue(cacheKey, items, 60_000)
+    return items
+  }
 
   const items: PipelineCustomer[] = []
   let cursor: string | undefined
@@ -741,9 +768,10 @@ export async function updateCustomerDevStage(
   }
 
   if (Object.keys(properties).length === 0) return { salespersonSkipped, currentSalesperson }
-  await notionCallWithRetry('updateCustomerDevStage', () =>
+  const __mirror3: any = await notionCallWithRetry('updateCustomerDevStage', () =>
     notion.pages.update({ page_id: id, properties })
   )
+  await mirrorCustomerPage(__mirror3)
   setCachedValue('pipeline-customers-v1', null as any, 1) // 失效看板快取
   if (properties['負責業務']) await invalidateCustomerCaches() // 認領成功時比照 assignSalesperson 失效相關快取
   return { salespersonSkipped, currentSalesperson }
@@ -810,7 +838,7 @@ export async function claimTerritoryCustomers(
     eligible.push(item)
     if (dryRun) continue
 
-    await notionCallWithRetry('claimTerritoryCustomers:write', () =>
+    const __mirror4: any = await notionCallWithRetry('claimTerritoryCustomers:write', () =>
       notion.pages.update({
         page_id: id,
         properties: {
@@ -820,6 +848,7 @@ export async function claimTerritoryCustomers(
         } as any,
       })
     )
+    await mirrorCustomerPage(__mirror4)
     claimed++
   }
 
@@ -857,9 +886,10 @@ export async function advanceCustomerDevStage(
   if (current === '流失' || current === '已成交') return false
   if (current && DEV_STAGE_RANK[current as Exclude<DevStage, '流失'>] >= DEV_STAGE_RANK[target]) return false
 
-  await notionCallWithRetry('advanceCustomerDevStage', () =>
+  const __mirror5: any = await notionCallWithRetry('advanceCustomerDevStage', () =>
     notion.pages.update({ page_id: id, properties: { '開發階段': { select: { name: target } } } })
   )
+  await mirrorCustomerPage(__mirror5)
   setCachedValue('pipeline-customers-v1', null as any, 1)
   return true
 }
@@ -910,6 +940,7 @@ export async function createSystemCustomer(data: {
       } as any,
     })
   )
+  await mirrorCustomerPage(page)
   // invalidate cache
   try { await setRedisValue('customers-with-codes-v5', null, 1) } catch {}
   return { id: page.id }
@@ -926,10 +957,11 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
   if (!targetDb || targetDb !== customersDb) {
     throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
   }
-  await notionCallWithRetry('updateCustomerStatus', () =>
+  const __mirror6: any = await notionCallWithRetry('updateCustomerStatus', () =>
     // 空字串＝清空（客情歇業偵測復原時，原值可能是空白）
     notion.pages.update({ page_id: id, properties: { '機構狀態': { select: status ? { name: status } : null } } as any })
   )
+  await mirrorCustomerPage(__mirror6)
   // 失效客戶快取，使下次比對讀到新狀態
   deleteRedisValue('customers-with-codes-v5')
 }
@@ -949,9 +981,10 @@ export async function updateCustomerInstitutionCode(id: string, code: string): P
   const targetDb = (page?.parent?.database_id ?? '').replace(/-/g, '')
   const customersDb = (DB.customers ?? '').replace(/-/g, '')
   if (!targetDb || targetDb !== customersDb) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
-  await notionCallWithRetry('updateCustomerInstitutionCode', () =>
+  const __mirror7: any = await notionCallWithRetry('updateCustomerInstitutionCode', () =>
     notion.pages.update({ page_id: id, properties: { '機構代碼': { rich_text: [{ text: { content: clean } }] } } as any })
   )
+  await mirrorCustomerPage(__mirror7)
   deleteRedisValue('customers-with-codes-v5')
 }
 
@@ -1000,9 +1033,10 @@ export async function updateCustomerBasFields(id: string, patch: BasSyncPatch): 
   if (patch.deptUrl)      { props['診療科別連結'] = { url: patch.deptUrl }; changed.push('診療科別連結') }
   if (changed.length === 0) return []
 
-  await notionCallWithRetry('updateCustomerBasFields', () =>
+  const __mirror8: any = await notionCallWithRetry('updateCustomerBasFields', () =>
     notion.pages.update({ page_id: id, properties: props as any })
   )
+  await mirrorCustomerPage(__mirror8)
   deleteRedisValue('customers-with-codes-v5')
   return changed
 }

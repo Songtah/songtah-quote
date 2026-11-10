@@ -7,6 +7,8 @@
  * - orders / quotes 筆數少（個位數），直接全撈
  * - 結果快取 30 分鐘
  */
+import { readFromDb } from '@/lib/db/read-source'
+import { dbVisitStatsInRange, dbOpenFollowUpStats, dbVisitCountInRange } from '@/lib/db/visits-read'
 import { Client } from '@notionhq/client'
 import { listRecentHighRiskAuditLogs, type AuditLogRow } from '@/lib/audit'
 import { listOpenTicketsForSla } from '@/lib/notion/tickets'
@@ -193,6 +195,7 @@ function mapVisitPage(p: any): VisitStat {
  * 本月資料量 ≈ 178 筆 = 2 頁 ≈ 2.2s，可接受
  */
 async function fetchVisitsFull(from: string, to: string): Promise<VisitStat[]> {
+  if (readFromDb()) return dbVisitStatsInRange(from, to)
   const pages = await queryPaged(VISITS_DB, {
     and: [
       { property: '日期', date: { on_or_after: from } },
@@ -207,6 +210,7 @@ async function fetchVisitsFull(from: string, to: string): Promise<VisitStat[]> {
  * 修復舊版只看本月、月初整批消失的缺陷。
  */
 async function fetchOpenFollowUps(): Promise<VisitStat[]> {
+  if (readFromDb()) return dbOpenFollowUpStats()
   const pages = await queryPaged(VISITS_DB, {
     and: [
       { property: '是否需追蹤', checkbox: { equals: true } },
@@ -222,6 +226,7 @@ async function fetchOpenFollowUps(): Promise<VisitStat[]> {
  * 多個月份用 Promise.all 並行，總耗時 ≈ 單月最慢者 ≈ 2–3s
  */
 async function fetchVisitCount(from: string, to: string): Promise<number> {
+  if (readFromDb()) return dbVisitCountInRange(from, to)
   const pages = await queryPaged(
     VISITS_DB,
     {
@@ -239,6 +244,7 @@ async function fetchVisitCount(from: string, to: string): Promise<number> {
 /** 今日拜訪（日報用）。未指定日期時以「業務日」為準（03:00 前算前一天）。 */
 export async function fetchTodayVisits(date?: string): Promise<VisitStat[]> {
   const d = date ?? businessDayTW()
+  if (readFromDb()) return dbVisitStatsInRange(d, d)
   const pages = await queryPaged(VISITS_DB, {
     and: [
       { property: '日期', date: { on_or_after: d } },

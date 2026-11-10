@@ -4,6 +4,9 @@
  * 這是「組合層」：跨多個 DB 做計數/摘要彙總。依架構原則，跨領域彙總只放這裡，
  * 不滲回各葉領域。彙總用輕量計數查詢（querySummary，shared），不需引入各葉領域的完整邏輯。
  */
+import { readFromDb } from '@/lib/db/read-source'
+import { dbActiveCustomersInRange } from '@/lib/db/visits-read'
+import { dbCustomersSummary } from '@/lib/db/customers-read'
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry, querySummary,
   getRedisValue, setRedisValue,
@@ -40,6 +43,7 @@ async function getActiveCustomersThisMonth(): Promise<number> {
   const now = new Date()
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
   const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+  if (readFromDb()) return dbActiveCustomersInRange(firstOfMonth, lastOfMonth)
 
   const uniqueCustomers = new Set<string>()
   let cursor: string | undefined
@@ -78,6 +82,10 @@ async function getActiveCustomersThisMonth(): Promise<number> {
 }
 
 async function getCustomersSummary(): Promise<ModuleSummary> {
+  if (readFromDb()) {
+    const [summary, activeThisMonth] = await Promise.all([dbCustomersSummary(), getActiveCustomersThisMonth()])
+    return { total: summary.total, hasMore: summary.total > summary.recent.length, activeThisMonth, recent: summary.recent }
+  }
   const [{ rows, total, hasMore }, activeThisMonth] = await Promise.all([
     querySummary(DB.customers),
     getActiveCustomersThisMonth(),

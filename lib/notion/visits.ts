@@ -9,6 +9,9 @@ import {
 } from './shared'
 import { resolveCustomerInfo, resolveProductNames } from './relations'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
+import { readFromDb } from '@/lib/db/read-source'
+import * as dbv from '@/lib/db/visits-read'
+import { mirrorVisitPage, mirrorVisitArchived } from '@/lib/db/mirror'
 
 export type Visit = {
   id: string
@@ -101,7 +104,12 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
     const allSalespersonSet = new Set<string>(salespersonOptions)
 
     // Paginate through all records to also collect values from actual data
-    for await (const page of scanVisitPages('getVisitFormOptions-scan')) {
+    if (readFromDb()) {
+      const dv = await dbv.dbVisitDistinctValues()
+      dv.tags.forEach((t) => allTagsSet.add(t))
+      dv.competitors.forEach((t) => allCompetitorSet.add(t))
+      dv.salespersons.forEach((t) => allSalespersonSet.add(t))
+    } else for await (const page of scanVisitPages('getVisitFormOptions-scan')) {
       for (const item of getProp(page, '客戶標籤')?.multi_select ?? []) {
         if (item?.name) allTagsSet.add(item.name)
       }
@@ -238,6 +246,11 @@ export async function listVisits(options?: {
     const cached = await getRedisValue<VisitListResult>(VISITS_PAGE1_CACHE_KEY)
     if (cached) return cached
   }
+  if (readFromDb()) {
+    const result = await dbv.dbListVisits(options)
+    if (isFirstPage) await setRedisValue(VISITS_PAGE1_CACHE_KEY, result, VISITS_PAGE1_TTL)
+    return result
+  }
 
   // Build Notion filter
   const filters: any[] = []
@@ -309,6 +322,10 @@ export async function listVisits(options?: {
 }
 
 export async function getVisitById(id: string): Promise<Visit> {
+  if (readFromDb()) {
+    const hit = await dbv.dbGetVisitById(id)
+    if (hit) return hit   // 資料庫還沒有（剛建立且鏡像失敗）才退回 Notion
+  }
   const page: any = await notionCallWithRetry('getVisitById', () =>
     notion.pages.retrieve({ page_id: id })
   )
@@ -431,6 +448,7 @@ export async function createVisit(data: {
     })
   )
 
+  await mirrorVisitPage(response)
   if (data.customerId) await recordVisitBump(data.customerId, data.date)
 
   return {
@@ -465,6 +483,7 @@ export async function createVisit(data: {
 const FOLLOW_UP_COMPLETE_STATUS = new Set(['結案', '沒興趣'])
 
 export async function listOpenFollowUps(salesperson?: string): Promise<Visit[]> {
+  if (readFromDb()) return dbv.dbListOpenFollowUps(salesperson)
   const allResults: any[] = []
   let cur: string | undefined
   do {
@@ -562,7 +581,8 @@ export async function autoCloseStaleFollowUps(
 
   type Row = { id: string; name: string; sp: string; date: string; need: boolean; done: boolean; status: string }
   const rows: Row[] = []
-  for await (const page of scanVisitPages('autoCloseStaleFollowUps:scan')) {
+  if (readFromDb()) rows.push(...await dbv.dbFollowUpRows())
+  else for await (const page of scanVisitPages('autoCloseStaleFollowUps:scan')) {
     rows.push({
       id: page.id,
       name: getTitle(page, '單位名稱'),
@@ -598,9 +618,10 @@ export async function autoCloseStaleFollowUps(
       // 狀態原本是 追蹤中 的，一併移到 Complete 群組。
       const properties: any = { '追蹤已結案': { checkbox: true } }
       if (item.row.status === '追蹤中') properties['狀態'] = { status: { name: '結案' } }
-      await notionCallWithRetry('autoCloseStaleFollowUps:close', () =>
+      const closed: any = await notionCallWithRetry('autoCloseStaleFollowUps:close', () =>
         notion.pages.update({ page_id: item.row.id, properties })
       )
+      await mirrorVisitPage(closed)
     }
   }
 
@@ -625,9 +646,10 @@ export async function autoCloseStaleFollowUps(
 /** 結案一筆追蹤（可逆：Notion 勾選框取消即可復原，無資料遺失） */
 export async function closeFollowUp(id: string): Promise<void> {
   invalidateVisitsCache()
-  await notionCallWithRetry('closeFollowUp', () =>
+  const closed: any = await notionCallWithRetry('closeFollowUp', () =>
     notion.pages.update({ page_id: id, properties: { '追蹤已結案': { checkbox: true } } as any })
   )
+  await mirrorVisitPage(closed)
 }
 
 export async function updateVisit(id: string, data: {
@@ -686,9 +708,10 @@ export async function updateVisit(id: string, data: {
   if (data.followUpDone !== undefined) properties['追蹤已結案'] = { checkbox: data.followUpDone }
 
   invalidateVisitsCache()
-  await notionCallWithRetry('updateVisit', () =>
+  const updated: any = await notionCallWithRetry('updateVisit', () =>
     notion.pages.update({ page_id: id, properties } as any)
   )
+  await mirrorVisitPage(updated)
 }
 
 export async function deleteVisit(id: string): Promise<void> {
@@ -696,6 +719,7 @@ export async function deleteVisit(id: string): Promise<void> {
   await notionCallWithRetry('deleteVisit', () =>
     notion.pages.update({ page_id: id, archived: true })
   )
+  await mirrorVisitArchived(id)
 }
 
 // ── 客情庫全掃（分區）─────────────────────────────────────────────────────────
@@ -748,6 +772,7 @@ function visitDatePartitions(): any[] {
  * 走 scanVisitPages 分區全掃(鐵則 #0)。
  */
 export async function scanVisitRecency(): Promise<Record<string, string>> {
+  if (readFromDb()) return dbv.dbScanVisitRecency()
   const map: Record<string, string> = {}
   for await (const page of scanVisitPages('scanVisitRecency')) {
     const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
@@ -778,6 +803,7 @@ export type CustomerVisitSignal = {
 }
 
 export async function scanCustomerVisitSignals(): Promise<Record<string, CustomerVisitSignal>> {
+  if (readFromDb()) return dbv.dbScanCustomerVisitSignals()
   const map: Record<string, CustomerVisitSignal> = {}
   for await (const page of scanVisitPages('scanCustomerVisitSignals')) {
     const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
@@ -824,6 +850,7 @@ export async function scanCustomerVisitSignals(): Promise<Record<string, Custome
 export type VisitClaimSignal = { visitors: Record<string, number>; lastDate: string }
 
 export async function scanVisitClaimSignals(): Promise<Record<string, VisitClaimSignal>> {
+  if (readFromDb()) return dbv.dbScanVisitClaimSignals()
   const map: Record<string, VisitClaimSignal> = {}
   for await (const page of scanVisitPages('scanVisitClaimSignals')) {
     const relId = ((page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id as string) ?? '').replace(/-/g, '')
@@ -848,6 +875,7 @@ export async function scanVisitClaimSignals(): Promise<Record<string, VisitClaim
 export async function listVisitTallies(
   from: string, to: string, salesperson?: string,
 ): Promise<{ date: string; salesperson: string }[]> {
+  if (readFromDb()) return dbv.dbListVisitTallies(from, to, salesperson)
   const filters: any[] = [
     { property: '日期', date: { on_or_after: from } },
     { property: '日期', date: { on_or_before: to } },

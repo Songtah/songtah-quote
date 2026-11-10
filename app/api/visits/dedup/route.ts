@@ -12,6 +12,7 @@
  * Response: { groups, duplicates, deleted, examples, total }
  */
 
+import { mirrorVisitArchived } from '@/lib/db/mirror'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
@@ -93,6 +94,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
       for (const r of toDelete) {
         try {
           await notion.pages.update({ page_id: r.id, archived: true })
+          await mirrorVisitArchived(r.id)
           deleted++
           await sleep(350) // 刪除節流，避免 rate limit
         } catch {

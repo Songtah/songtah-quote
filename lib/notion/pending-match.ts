@@ -13,6 +13,8 @@
  * 全掃拜訪庫 + 逐名稱查客戶庫很重，一律由夜間排程重算後存 Redis；
  * 請求路徑只讀快取（比照待認領建議）。
  */
+import { readFromDb } from '@/lib/db/read-source'
+import { dbUnlinkedVisits } from '@/lib/db/visits-read'
 import { getRedisValue, setRedisValue, deleteRedisValue, notionCallWithRetry, notion, DB, normalizeDatabaseId, getTitle, getSelect, getDate, getText } from './shared'
 import { searchSystemCustomers } from './customers'
 import { type MatchCandidate } from '@/lib/customer-name-match'
@@ -66,8 +68,9 @@ export async function computePendingMatches(options?: { autoLink?: boolean; budg
   if (!DB.visits) return []
   type Row = { id: string; name: string; sp: string; date: string }
   const rows: Row[] = []
+  if (readFromDb()) rows.push(...await dbUnlinkedVisits())
   let cursor: string | undefined
-  do {
+  if (!readFromDb()) do {
     const res: any = await notionCallWithRetry('computePendingMatches', () =>
       notion.databases.query({
         database_id: normalizeDatabaseId(DB.visits),

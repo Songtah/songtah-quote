@@ -10,6 +10,8 @@ import {
   notion, notionCallWithRetry, getCachedValue, setCachedValue,
   getTitle, getText, getSelect,
 } from './shared'
+import { readFromDb } from '@/lib/db/read-source'
+import { dbResolveCustomerInfo } from '@/lib/db/customers-read'
 
 /** Batch-fetch product names for a set of relation IDs (cached 10 min). */
 export async function resolveProductNames(relIds: string[]): Promise<Record<string, string>> {
@@ -42,6 +44,7 @@ export async function resolveCustomerInfo(relIds: string[]): Promise<Record<stri
   const infoMap: Record<string, { name: string; city: string; district: string }> = {}
   const unique = Array.from(new Set(relIds.filter(Boolean)))
   if (!unique.length) return infoMap
+  if (readFromDb()) return dbResolveCustomerInfo(unique)
 
   await Promise.all(
     unique.map(async (id) => {

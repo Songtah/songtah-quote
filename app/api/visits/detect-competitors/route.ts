@@ -13,6 +13,7 @@
  *   - examples   : 成功案例（前 5 筆）{ customerName, detected[] }
  */
 
+import { mirrorVisitPage } from '@/lib/db/mirror'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
@@ -86,12 +87,13 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
       // 填入競品
       if (!dryRun) {
-        await notion.pages.update({
+        const updatedPage: any = await notion.pages.update({
           page_id: page.id,
           properties: {
             競品: { multi_select: detected.map((name) => ({ name })) },
           } as any,
         })
+        await mirrorVisitPage(updatedPage)
       }
 
       filled++
