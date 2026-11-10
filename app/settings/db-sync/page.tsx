@@ -9,7 +9,7 @@ export default async function DbSyncPage() {
   return (
     <AppShell
       title="資料庫同步"
-      description="客戶主檔與客情紀錄每晚從 Notion 鏡像到新資料庫。這裡只看筆數是否一致；系統仍以 Notion 為主，尚未切換。"
+      description="客戶主檔：讀新資料庫、寫 Notion 後即時鏡像，每 15 分鐘增量、每晚全量校正。客情紀錄：2026-11-10 起只存新資料庫，Notion 已封存。"
       hidePhaseNote
     >
       <DbSyncContent />
