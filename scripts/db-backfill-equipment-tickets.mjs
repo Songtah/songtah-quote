@@ -41,7 +41,7 @@ const trows = tk.map((p) => { const P = p.properties; const fa = files(P, '影�
 const noNum = trows.filter((r) => r.number == null).length
 let maxNum = Math.max(0, ...trows.map((r) => r.number ?? 0))
 for (const r of trows) if (r.number == null) r.number = ++maxNum
-for (let i = 0; i < trows.length; i += 200) { const part = trows.slice(i, i + 200); const cols = Object.keys(part[0]); await sql`insert into tickets ${sql(part, ...cols)} on conflict (notion_page_id) do update set ${sql.unsafe(cols.filter((c) => c !== 'notion_page_id').map((c) => `"${c}" = excluded."${c}"`).join(', '))}` }
+for (let i = 0; i < trows.length; i += 200) { const part = trows.slice(i, i + 200); const cols = Object.keys(part[0]); await sql`insert into tickets ${sql(part, ...cols)} on conflict (notion_page_id) do update set ${sql.unsafe(cols.filter((c) => c !== 'notion_page_id' && c !== 'files_after' && c !== 'files_customer').map((c) => `"${c}" = excluded."${c}"`).join(', '))}` }
 await sql`select setval('ticket_number_seq', ${maxNum}, true)`
 console.log(`工單：Notion ${tk.length} 筆已寫入；最大編號 RMA-${maxNum}（無編號補發 ${noNum}）；Notion 代管檔案 ${notionFiles} 個（網址會過期，需另搬）；無客戶關聯 ${trows.filter((r) => !r.customer_notion_id).length}`)
 const extras = new Set([...erows, ...trows].flatMap((r) => Object.keys(r.extra))); console.log('未對應欄位：', [...extras].join('、') || '無')

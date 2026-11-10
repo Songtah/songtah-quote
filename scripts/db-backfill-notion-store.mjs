@@ -15,7 +15,7 @@ for (const key of process.argv.slice(2)) {
   const id = DB[key] ?? process.env[key] ?? key
   if (!id) { console.log(`${key}: 沒有 id，跳過`); continue }
   const db = await notion.databases.retrieve({ database_id: id })
-  const title = db.title.map((t) => t.plain_text).join('')
+  const title = db.title.map((t) => t.plain_text).join('').replace(/（2026-11-10 已封存.*$/, '')
   await sql`insert into notion_databases (db_id, title, schema) values (${bare(db.id)}, ${title}, ${sql.json(db.properties)}) on conflict (db_id) do update set title = excluded.title, schema = excluded.schema`
   let c, n = 0, rows = []
   do { const r = await q({ database_id: id, page_size: 100, ...(c ? { start_cursor: c } : {}) }); for (const p of r.results) { n++; rows.push({ page_id: bare(p.id), db_id: bare(db.id), properties: p.properties, created_time: p.created_time, last_edited_time: p.last_edited_time, archived: !!p.archived, cover: p.cover ?? null, icon: p.icon ?? null }) } c = r.has_more ? r.next_cursor : undefined } while (c)
