@@ -2,6 +2,8 @@
  * lib/notion/medical-monitor.ts — 醫事監控（葉領域，從 system-notion.ts 抽出）
  * 最近比對結果（Redis）、每月趨勢紀錄（Redis + Notion 永久 DB）、本月異動、診所監控紀錄。
  */
+import { readFromDb } from '@/lib/db/read-source'
+import { dbMonitorRecordsForMonth, dbMonitorRecordsSince, dbCodeNotFoundLatest, dbUpsertMedicalTrend } from '@/lib/db/monitor'
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry,
   getRedisValue, setRedisValue, getText, getRedis,
@@ -65,6 +67,10 @@ export interface MonthlyChange {
   type: string; name: string; code: string; address: string; customer: string; customerUrl: string
 }
 export async function getMonthlyMonitorChanges(month: string): Promise<MonthlyChange[]> {
+  if (readFromDb()) {
+    const recs = await dbMonitorRecordsForMonth(month, ['新開業', '新增停業', '停業', '恢復開業'])
+    return recs.map((r) => ({ type: r.type, name: r.nhiName, code: r.institutionCode, address: r.address, customer: r.customerName, customerUrl: r.customerUrl }))
+  }
   if (!DB.monitor) return []
   const dbId = normalizeDatabaseId(DB.monitor)
   const WANT = new Set(['新開業', '新增停業', '停業', '恢復開業'])
@@ -98,6 +104,7 @@ export async function getMonthlyMonitorChanges(month: string): Promise<MonthlyCh
 
 /** 寫入「醫事數量趨勢」Notion DB（永久紀錄，一月一列；以月份 title upsert）*/
 export async function upsertMedicalTrend(e: MonitorHistoryEntry): Promise<void> {
+  if (readFromDb()) { await dbUpsertMedicalTrend(e); return }
   if (!DB.medicalTrend) return
   const dbId = normalizeDatabaseId(DB.medicalTrend)
   const props: any = {
@@ -198,6 +205,12 @@ export async function getClinicMonitorRecords(months = 3): Promise<ClinicMonitor
   const cutoff = new Date()
   cutoff.setMonth(cutoff.getMonth() - months)
   const cutoffDate = cutoff.toISOString().slice(0, 10)
+
+  if (readFromDb()) {
+    const recs = await dbMonitorRecordsSince(cutoffDate)
+    await setRedisValue(cacheKey, recs, 10 * 60_000)
+    return recs
+  }
 
   const records: ClinicMonitorRecord[] = []
   let cursor: string | undefined
@@ -340,8 +353,9 @@ export async function computeMonitorKindTrend(months = 6): Promise<{ trend: Moni
   for (const month of monthKeys) {
     const kinds = emptyKinds()
     const monthRecords: ClinicMonitorRecord[] = []
+    if (readFromDb()) monthRecords.push(...await dbMonitorRecordsForMonth(month, ['新開業', '恢復開業', '停業', '新增停業']))
     let cursor: string | undefined
-    do {
+    if (!readFromDb()) do {
       const res: any = await notionCallWithRetry('computeMonitorKindTrend', () =>
         notion.databases.query({
           database_id: normalizeDatabaseId(dbId),
@@ -426,8 +440,9 @@ export async function getCodeNotFoundList(options?: { refresh?: boolean }): Prom
     if (cached) return cached
   }
   const seen = new Map<string, CodeNotFoundRow>()
+  if (readFromDb()) for (const r of await dbCodeNotFoundLatest()) seen.set(r.code, { code: r.code, name: r.name, customerName: r.customerName, kind: guessInstitutionKind(r.code, r.name || r.customerName), recordedAt: r.recordedAt })
   let cursor: string | undefined
-  do {
+  if (!readFromDb()) do {
     const res: any = await notionCallWithRetry('getCodeNotFoundList', () =>
       notion.databases.query({
         database_id: normalizeDatabaseId(dbId),

@@ -358,7 +358,26 @@ const custUrl = id => `https://songtah-quote.vercel.app/customers/${id}`
 const DELAY_MS = 340
 const richText = t => [{ type: 'text', text: { content: String(t ?? '').slice(0, 2000) } }]
 
+// 2026-11-10 起：監控紀錄與數量趨勢不再寫 Notion，改經正式站 /api/cron/monitor-ingest 寫入資料庫（x-cron-secret）
+const INGEST_URL = process.env.MONITOR_INGEST_URL || 'https://songtah-quote.vercel.app/api/cron/monitor-ingest'
+const CRON_SECRET = process.env.CRON_SECRET || process.env.DAILY_REPORT_SECRET || ''
+const pendingRecords = []
+async function postIngest(body) {
+  if (!CRON_SECRET) throw new Error('缺少 CRON_SECRET（DAILY_REPORT_SECRET），無法寫入資料庫')
+  const res = await fetch(INGEST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET }, body: JSON.stringify(body), signal: AbortSignal.timeout(110_000) })
+  if (!res.ok) throw new Error(`monitor-ingest → ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  return res.json()
+}
+async function flushRecords() {
+  let total = 0
+  while (pendingRecords.length) { const part = pendingRecords.splice(0, 1000); const r = await postIngest({ records: part }); total += r.inserted ?? 0 }
+  return total
+}
 async function writeRecord(rec) {
+  if (DRY_RUN) { log(`  [DRY] ${rec.type} | ${rec.name || rec.customer}`); return }
+  pendingRecords.push({ type: rec.type, month: rec.month, code: rec.code, key: rec.key, name: rec.name, customer: rec.customer, address: rec.address, specialty: rec.specialty, kind: rec.kind, customerUrl: rec.customerUrl, termDate: rec.termDate })
+}
+async function writeRecordNotionLegacy(rec) {
   if (DRY_RUN) { log(`  [DRY] ${rec.type} | ${rec.name || rec.customer}`); return }
   const title = {
     '新增停業': `🚨 ${rec.name}（${rec.customer}）`,
@@ -420,6 +439,10 @@ async function notionPatch(path, body) {
 
 /** 寫入「醫事數量趨勢」DB（一月一列，依月份 upsert）。只寫有提供的數值欄（diff 指標屬比對頁，月排程留空）*/
 async function upsertTrendRow(rec) {
+  const trend = { month: rec.month, computedAt: new Date().toISOString(), totalClinics: rec.totalClinics, totalLabs: rec.totalLabs, totalHospitals: rec.totalHospitals, totalSchools: rec.totalSchools, custClinics: rec.custClinics, custLabs: rec.custLabs, custHospitals: rec.custHospitals, custSchools: rec.custSchools, customerWithCode: rec.customerWithCode, inBasOpen: rec.inBasOpen, toDevelop: rec.toDevelop, suspectedClosures: rec.suspectedClosures, hospitalUnverified: rec.hospitalUnverified, codeChanged: rec.codeChanged, inconsistentData: rec.inconsistentData }
+  await postIngest({ trend })
+}
+async function upsertTrendRowNotionLegacy(rec) {
   const props = {
     '月份':     { title: [{ text: { content: rec.month } }] },
     '紀錄時間': { date: { start: new Date().toISOString() } },
@@ -448,7 +471,7 @@ const cacheKeyOf = (basSeq, zoneSeq) => `${basSeq}__${zoneSeq}`
 
 async function main() {
   if (!NOTION_TOKEN)      throw new Error('缺少 NOTION_TOKEN')
-  if (!CLINIC_MONITOR_DB) throw new Error('缺少 NOTION_CLINIC_MONITOR_DB')
+  if (!CRON_SECRET)       throw new Error('缺少 CRON_SECRET（DAILY_REPORT_SECRET）')
 
   const startedAt = Date.now()
   const deadline  = startedAt + TOTAL_BUDGET_MS
@@ -631,8 +654,9 @@ async function main() {
     for (const c of [...stopped, ...restored]) await writeRecord(c)
     for (const c of newOpen) await writeRecord(c)
     for (const c of notFound) await writeRecord(c)
+    if (!DRY_RUN) log(`監控紀錄 → 資料庫寫入 ${await flushRecords()} 筆`)
   } catch (e) {
-    warn('寫入 Notion 失敗（不影響快照）：', e.message)
+    warn('寫入監控紀錄失敗（不影響快照）：', e.message)
   }
 
   // 7. 寫出快照 + 快取（永遠寫，確保 Action 綠燈且可續跑）
