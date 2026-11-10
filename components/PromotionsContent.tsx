@@ -1080,9 +1080,11 @@ interface DrawerProps {
   copyOf?:  Promotion | null
   onClose:  () => void
   onSaved:  (p: Promotion, copySourceId?: string) => void
+  /** 在活動底下新增時帶入，建立的促銷直接掛到這場活動 */
+  eventId?: string
 }
 
-function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
+function PromotionDrawer({ initial, copyOf, onClose, onSaved, eventId }: DrawerProps) {
   const isCopy = !!copyOf
   const isEdit = !!initial && !isCopy
   const src    = copyOf ?? initial    // 用來預填的資料來源
@@ -1116,7 +1118,7 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved }: DrawerProps) {
     if (!name.trim()) { setError('請填寫活動名稱'); return }
     setError(''); setSaving(true)
     try {
-      const body = { name: name.trim(), type: type || undefined, startDate: startDate || undefined, endDate: endDate || undefined, description, dmUrl: dmUrl || undefined, campaignIds }
+      const body = { name: name.trim(), type: type || undefined, startDate: startDate || undefined, endDate: endDate || undefined, description, dmUrl: dmUrl || undefined, campaignIds, ...(!isEdit && eventId ? { eventId } : {}) }
       const res = isEdit
         ? await fetch(`/api/promotions/${initial!.id}`, { method: 'PUT',  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         : await fetch('/api/promotions',                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -1303,8 +1305,26 @@ const STATUS_LABEL: Record<PromotionStatus, string> = {
   '已結束': '⚪ 已結束',
 }
 
-export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
-  const [promos,  setPromos]  = useState<Promotion[]>([])
+const bareId = (id: string) => (id ?? '').replace(/-/g, '')
+
+/**
+ * eventId 有值＝活動底下的「促銷」分頁：只列這場活動的促銷，新增時自動掛上；
+ * 另列出尚未掛到任何活動的舊促銷，可一鍵掛到這場活動（2026-11-10：促銷一律掛活動）。
+ */
+export function PromotionsContent({ isAdmin = false, eventId }: { isAdmin?: boolean; eventId?: string }) {
+  const [allPromos, setPromos]  = useState<Promotion[]>([])
+  const [attaching, setAttaching] = useState('')
+  const promos = eventId ? allPromos.filter((p) => bareId(p.eventId) === bareId(eventId)) : allPromos
+  const unassigned = eventId ? allPromos.filter((p) => !p.eventId) : []
+  const attach = async (p: Promotion) => {
+    if (!eventId) return
+    setAttaching(p.id)
+    try {
+      const res = await fetch(`/api/promotions/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId }) })
+      if (!res.ok) throw new Error()
+      setPromos((prev) => prev.map((x) => (x.id === p.id ? { ...x, eventId } : x)))
+    } catch { alert('掛到活動失敗，請再試一次') } finally { setAttaching('') }
+  }
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState<Promotion | null>(null)
   const [editing, setEditing] = useState<Promotion | null | 'new'>(null)
@@ -1390,9 +1410,9 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
     <>
       <section className="card-soft mb-6 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="促銷活動摘要">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">活動概況</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">促銷概況</p>
           <p className="mt-1 text-sm font-medium text-stone-600">
-          共 {promos.length} 個活動
+          共 {promos.length} 個促銷方案
           {promos.filter((p) => p.status === '進行中').length > 0 && (
             <span className="ml-2 text-green-600 font-medium">
               · {promos.filter((p) => p.status === '進行中').length} 個進行中
@@ -1403,10 +1423,29 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
         {isAdmin && (
           <button onClick={() => setEditing('new')} className="min-h-11 shrink-0 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">
-            + 新增活動
+            + 新增促銷
           </button>
         )}
       </section>
+
+      {unassigned.length > 0 && (
+        <section className="card-soft mb-6 p-4 sm:p-5" aria-label="尚未掛到活動的促銷">
+          <p className="text-sm font-semibold text-stone-800">有 {unassigned.length} 個舊促銷還沒掛到任何活動</p>
+          <p className="mt-1 text-xs text-stone-500">促銷現在一律歸在活動底下。屬於這場活動的，按「掛到這場活動」；不屬於的留著，到對的活動再掛。</p>
+          <ul className="mt-3 divide-y divide-stone-900/[0.06]">
+            {unassigned.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <span className="text-sm text-stone-700">{p.name}<span className="ml-2 text-xs text-stone-400">{p.startDate}{p.endDate ? ` — ${p.endDate}` : ''}・{p.status}</span></span>
+                {isAdmin && (
+                  <button onClick={() => attach(p)} disabled={attaching === p.id} className="min-h-9 rounded-full border border-stone-200 bg-white px-4 text-xs font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 disabled:opacity-40">
+                    {attaching === p.id ? '處理中…' : '掛到這場活動'}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {loading && (
         <div className="space-y-3">
@@ -1417,7 +1456,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
       {!loading && promos.length === 0 && (
         <div className="card-soft px-5 py-20 text-center text-stone-400">
           <div className="text-5xl mb-3">🎪</div>
-          <p className="text-sm">尚未建立任何促銷活動</p>
+          <p className="text-sm">{eventId ? '這場活動還沒有促銷方案' : '尚未建立任何促銷'}</p>
           {isAdmin && (
             <button onClick={() => setEditing('new')} className="mt-4 min-h-11 rounded-full bg-brand-50 px-5 text-xs font-semibold text-brand-700 transition-all hover:bg-brand-100 active:scale-95">立即新增</button>
           )}
@@ -1469,6 +1508,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
         {isAdmin && editing !== null && (
           <PromotionDrawer
             initial={editing === 'new' ? null : editing}
+            eventId={eventId}
             onClose={() => setEditing(null)}
             onSaved={handleSaved}
           />
@@ -1479,6 +1519,7 @@ export function PromotionsContent({ isAdmin = false }: { isAdmin?: boolean }) {
         {isAdmin && copyOf !== null && (
           <PromotionDrawer
             copyOf={copyOf}
+            eventId={eventId}
             onClose={() => setCopyOf(null)}
             onSaved={handleSaved}
           />

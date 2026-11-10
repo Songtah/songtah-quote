@@ -15,7 +15,7 @@ export default async function MarketingPage() {
   return (
     <AppShell
       title="行銷管理"
-      description="統合促銷活動、活動管理與活動規劃。"
+      description="所有展會、課程與說明會都在這裡。點進一場活動，處理它的促銷、報名、問卷、滿意度與預算。"
       hidePhaseNote
       sessionUser={{
         role:        user?.role,

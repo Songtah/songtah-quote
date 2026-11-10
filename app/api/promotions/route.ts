@@ -30,6 +30,7 @@ export const POST = withApiAuth({ roles: ['行政', '中央管理'] }, async (re
       description: body.description ?? '',
       dmUrl:       body.dmUrl       || undefined,
       campaignIds: Array.isArray(body.campaignIds) ? body.campaignIds : undefined,
+      eventId:     typeof body.eventId === 'string' && body.eventId ? body.eventId : undefined,
     })
     return NextResponse.json(promotion)
   } catch (err: any) {

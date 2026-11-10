@@ -9,14 +9,15 @@ export default async function EventDetailPage({ params }: { params: { id: string
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
   const editable = canEdit(session, 'events')
+  const promoEditable = canEdit(session, 'promotions')
 
   return (
     <AppShell
       title="活動詳情"
-      description="查看活動資訊與報名名單。"
+      description="這場活動的促銷、報名、問卷、滿意度與預算。"
       hidePhaseNote
     >
-      <EventDetailContent id={params.id} canEdit={editable} />
+      <EventDetailContent id={params.id} canEdit={editable} canEditPromotions={promoEditable} />
     </AppShell>
   )
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import Link from 'next/link'
 import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
-import type { CourseCost } from '@/lib/system-notion'
+import { PromotionsContent } from '@/components/PromotionsContent'
 import { EventRegistrationPageSettings } from '@/components/EventRegistrationPageSettings'
 import { RegistrationCustomerCell } from '@/components/RegistrationCustomerCell'
 
@@ -37,12 +37,16 @@ const TYPE_STYLE: Record<string, string> = {
   '其他': 'bg-stone-50 text-stone-600',
 }
 
-export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit?: boolean }) {
+const TABS = ['總覽', '促銷', '報名表單', '活動問卷', '滿意度調查', '預算核銷'] as const
+type Tab = (typeof TABS)[number]
+
+export function EventDetailContent({ id, canEdit = true, canEditPromotions = false }: { id: string; canEdit?: boolean; canEditPromotions?: boolean }) {
+  const [tab, setTab] = useState<Tab>('總覽')
+  const [showFormSettings, setShowFormSettings] = useState(false)
   const [event, setEvent]           = useState<EventItem | null>(null)
   const [regs, setRegs]             = useState<EventRegistration[]>([])
   const [loading, setLoading]       = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [courseCost, setCourseCost] = useState<CourseCost | null>(null)
   const [checkin, setCheckin]       = useState<{ url: string; open: boolean; qr: string } | null>(null)
   const [checkinError, setCheckinError] = useState('')
   const [copied, setCopied]         = useState(false)
@@ -94,10 +98,6 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
       setRegs(Array.isArray(regList) ? regList : [])
       setLoading(false)
     }).catch(() => setLoading(false))
-
-    fetch('/api/course-costs').then(r => r.json())
-      .then((all) => { if (Array.isArray(all)) setCourseCost(all.find((c: CourseCost) => c.eventId === id) ?? null) })
-      .catch(() => {})
   }, [id])
 
   // 報名紀錄更新共用：失敗（含 403 無權限）要讓使用者看到原因，不能默默不動
@@ -144,7 +144,7 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
   return (
     <div className="space-y-6">
       {/* Back */}
-      <Link href="/events" className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm text-stone-500 transition-all hover:bg-white hover:text-brand-600 active:scale-95">
+      <Link href="/marketing" className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm text-stone-500 transition-all hover:bg-white hover:text-brand-600 active:scale-95">
         ← 返回活動列表
       </Link>
 
@@ -192,8 +192,39 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
         )}
       </div>
 
+      {/* 第二階分頁 */}
+      <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-stone-100/80 p-1 sm:inline-flex sm:w-auto sm:rounded-full" role="tablist" aria-label="活動功能">
+        {TABS.map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+            className={`min-h-11 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all active:scale-95 ${tab === t ? 'bg-white text-stone-800 shadow-sm ring-1 ring-stone-900/[0.04]' : 'text-stone-500 hover:bg-white/60 hover:text-stone-700'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === '促銷' && <PromotionsContent isAdmin={canEditPromotions} eventId={id} />}
+
+      {tab === '活動問卷' && (
+        <div className="card-soft p-6">
+          <h3 className="font-semibold text-stone-900">活動問卷</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：現場訪客掃 QR code 填問卷，填完手機顯示兌換畫面，同事在這裡的名單按「已領」發贈品，同一支手機只能領一次。</p>
+        </div>
+      )}
+      {tab === '滿意度調查' && (
+        <div className="card-soft p-6">
+          <h3 className="font-semibold text-stone-900">滿意度調查</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：活動結束提供調查連結給參加者，結果在這裡彙總。</p>
+        </div>
+      )}
+      {tab === '預算核銷' && (
+        <div className="card-soft p-6">
+          <h3 className="font-semibold text-stone-900">預算核銷</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">尚未開放。完成後：先編這場活動的預算，之後逐筆登記支出並附憑證，送審、核准、付款都在這裡，隨時看得到超支或節餘。</p>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {tab === '總覽' && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: '報名總數', value: regs.length, color: 'text-stone-900' },
           { label: '已確認／到場', value: confirmed.length, color: 'text-green-600' },
@@ -205,41 +236,40 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
             <p className="text-xs text-stone-500 mt-1">{s.label}</p>
           </div>
         ))}
-      </div>
+      </div>}
 
-      {/* 關聯課程成本試算 */}
-      {courseCost && (
-        <div className="card-soft p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-stone-900">💰 課程成本試算</h3>
-            <Link href="/course-costs" className="text-xs text-brand-600 hover:underline">查看明細 →</Link>
+      {/* 報名表單：設定收在按鈕裡 */}
+      {tab === '報名表單' && (
+        <div className="card-soft flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <h3 className="font-semibold text-stone-900">線上報名頁</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              {event.onlineRegistration ? '目前開放報名' : '目前關閉'}
+              {event.capacity ? `・名額 ${seatsTaken}/${event.capacity}` : `・已報名 ${seatsTaken} 人`}
+              {event.paid ? '・收費活動' : '・免費活動'}
+            </p>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div><p className="text-xs text-stone-400">總成本</p><p className="font-semibold text-red-600">${courseCost.totalCost.toLocaleString()}</p></div>
-            <div><p className="text-xs text-stone-400">總收入</p><p className="font-semibold text-blue-600">${courseCost.totalRevenue.toLocaleString()}</p></div>
-            <div>
-              <p className="text-xs text-stone-400">淨利</p>
-              <p className={`font-semibold ${courseCost.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${courseCost.netProfit.toLocaleString()}{courseCost.marginPct ? ` (${courseCost.marginPct.toFixed(1)}%)` : ''}
-              </p>
-            </div>
-          </div>
+          <button onClick={() => setShowFormSettings((v) => !v)} aria-expanded={showFormSettings}
+            className="min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95">
+            {showFormSettings ? '收起表單設定' : '表單設定'}
+          </button>
         </div>
       )}
-
-      <EventRegistrationPageSettings
-        event={event}
-        seatsTaken={seatsTaken}
-        onSaved={(patch) => setEvent(prev => prev ? { ...prev, ...patch } : prev)}
-      />
+      {tab === '報名表單' && showFormSettings && (
+        <EventRegistrationPageSettings
+          event={event}
+          seatsTaken={seatsTaken}
+          onSaved={(patch) => setEvent(prev => prev ? { ...prev, ...patch } : prev)}
+        />
+      )}
 
       {/* 客戶足跡：展會簽到 QR ＋ 自動配對說明 */}
-      <div className="card-soft p-5">
+      {tab === '總覽' && <div className="card-soft p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold text-stone-900">客戶足跡</h3>
             <p className="mt-1 text-sm leading-6 text-stone-500">
-              課程報名（外掛表單）與展會簽到都寫進這份名單，系統每小時自動配對客戶，
+              線上報名與展會簽到都寫進報名名單，系統每小時自動配對客戶，
               配對到的客戶會出現在負責業務的拜訪建議，不需要人工轉交。
             </p>
           </div>
@@ -280,10 +310,10 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Registrations table */}
-      <div className="card-soft overflow-hidden">
+      {tab === '報名表單' && <div className="card-soft overflow-hidden">
         <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
           <h3 className="font-semibold text-stone-900">報名名單</h3>
           <span className="text-sm text-stone-400">{regs.length} 筆</span>
@@ -384,7 +414,7 @@ export function EventDetailContent({ id, canEdit = true }: { id: string; canEdit
             另有 {cancelled.length} 筆已取消報名未顯示於統計
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

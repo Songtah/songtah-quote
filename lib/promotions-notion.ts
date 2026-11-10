@@ -55,6 +55,8 @@ export interface Promotion {
   status:      PromotionStatus
   createdTime: string
   campaignIds: string[]   // 關聯追蹤名單(可選,供業務準備↔執行互查)
+  /** 所屬活動（2026-11-10：促銷一律掛在活動底下；空字串＝尚未指定，舊資料） */
+  eventId:     string
 }
 
 export const PROMOTION_TYPES: PromotionType[] = ['季度展場', '月度促銷', '課程', '其他']
@@ -92,6 +94,7 @@ function parsePage(page: any): Promotion {
     status:      computeStatus(startDate, endDate),
     createdTime: page.created_time ?? '',
     campaignIds: (page.properties?.['關聯追蹤名單']?.relation ?? []).map((r: any) => r.id),
+    eventId:     page.properties?.['所屬活動']?.relation?.[0]?.id ?? '',
   }
 }
 
@@ -138,6 +141,7 @@ export async function createPromotion(data: {
   description?: string
   dmUrl?:       string
   campaignIds?: string[]
+  eventId?:     string
 }): Promise<Promotion> {
   const props: any = {
     '活動名稱': { title: richText(data.name) },
@@ -148,6 +152,7 @@ export async function createPromotion(data: {
   if (data.description !== undefined) props['說明'] = { rich_text: richText(data.description) }
   if (data.dmUrl)                 props['DM附件']  = { url: data.dmUrl }
   if (data.campaignIds?.length)   props['關聯追蹤名單'] = { relation: data.campaignIds.map((id) => ({ id })) }
+  if (data.eventId)               props['所屬活動'] = { relation: [{ id: data.eventId }] }
 
   const page: any = await notion.pages.create({
     parent: { database_id: DB },
@@ -164,6 +169,7 @@ export async function updatePromotion(id: string, data: {
   description?: string
   dmUrl?:       string | null
   campaignIds?: string[]
+  eventId?:     string | null
 }): Promise<void> {
   const props: any = {}
   if (data.name        !== undefined) props['活動名稱'] = { title: richText(data.name ?? '') }
@@ -173,6 +179,7 @@ export async function updatePromotion(id: string, data: {
   if (data.description !== undefined) props['說明']     = { rich_text: richText(data.description) }
   if (data.dmUrl       !== undefined) props['DM附件']   = data.dmUrl ? { url: data.dmUrl } : { url: null }
   if (data.campaignIds !== undefined) props['關聯追蹤名單'] = { relation: data.campaignIds.map((id) => ({ id })) }
+  if (data.eventId     !== undefined) props['所屬活動'] = { relation: data.eventId ? [{ id: data.eventId }] : [] }
 
   await notion.pages.update({ page_id: formatId(id), properties: props })
 }

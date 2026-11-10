@@ -1,20 +1,6 @@
-import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import { authOptions } from '@/lib/auth'
-import { AppShell } from '@/components/AppShell'
-import { CourseCostsContent } from '@/components/CourseCostsContent'
 
-export default async function CourseCostsPage() {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect('/login')
-
-  return (
-    <AppShell
-      title="辦課成本試算"
-      description="試算每場課程的成本、收入與利潤，輔助辦課決策。"
-      hidePhaseNote
-    >
-      <CourseCostsContent />
-    </AppShell>
-  )
+// 2026-11-10：活動規劃（辦課成本試算）依使用者指示移除；既有資料保留在資料庫
+export default function CourseCostsPage() {
+  redirect('/marketing')
 }
