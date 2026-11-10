@@ -16,6 +16,14 @@ const nextConfig = {
       '/api/admin/compliance/**': ['./data/compliance/**'],
     },
   },
+  // 用戶端元件會從 lib/system-notion 等檔案 import 常數與型別，連帶把伺服器端的資料庫驅動（postgres）拉進瀏覽器包。
+  // 瀏覽器端一律以空模組取代 Node 內建模組；資料庫連線只在伺服器端建立（lib/db/client.ts）。
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.resolve.fallback = { ...(config.resolve.fallback ?? {}), net: false, tls: false, fs: false, perf_hooks: false, crypto: false, stream: false, os: false, dns: false, child_process: false }
+    }
+    return config
+  },
   async headers() {
     return [
       {
