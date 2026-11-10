@@ -197,12 +197,129 @@ async function loadSchema(dbId: string): Promise<{ title: string; schema: Record
   return { title: r[0].title, schema: r[0].schema }
 }
 
+// ── SQL 下推：常見的 filter／sort 直接在資料庫做，避免每次查詢把整庫載回來（稽核 8 千多筆、標案近千筆）──
+// 任何一個節點翻不成 SQL 就回 null，整個查詢退回「全載入後在程式過濾」，結果一律與 matchFilter 相同。
+function filterToSql(f: any, params: any[]): string | null {
+  if (!f) return 'true'
+  const P = (v: any) => { params.push(v); return '$' + params.length }
+  if (f.and || f.or) {
+    const parts: string[] = []
+    for (const x of (f.and ?? f.or)) { const t = filterToSql(x, params); if (t == null) return null; parts.push('(' + t + ')') }
+    return parts.length ? parts.join(f.and ? ' and ' : ' or ') : 'true'
+  }
+  const ts = (expr: string, cond: any): string | null => {
+    const key = Object.keys(cond)[0], b = cond[key]
+    if (key === 'is_empty') return b ? expr + ' is null' : expr + ' is not null'
+    if (key === 'is_not_empty') return b ? expr + ' is not null' : expr + ' is null'
+    if (typeof b !== 'string') return null
+    const op = ({ before: '<', after: '>', on_or_before: '<=', on_or_after: '>=' } as Record<string, string>)[key]
+    if (op) return '(' + expr + ')::timestamptz ' + op + ' ' + P(b) + '::timestamptz'
+    if (key === 'equals') return 'left(' + expr + ', 10) = ' + P(b.slice(0, 10))
+    return null
+  }
+  if (f.timestamp) {
+    const col = f.timestamp === 'created_time' ? 'created_time' : 'last_edited_time'
+    return ts("to_char(" + col + " at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')", f[f.timestamp])
+  }
+  const kind = Object.keys(f).find((k) => !['property', 'type'].includes(k))
+  if (!kind || typeof f.property !== 'string') return null
+  const cond = f[kind]; if (!cond || typeof cond !== 'object') return null
+  const prop = 'properties->' + P(f.property)
+  const key = Object.keys(cond)[0], val = cond[key]
+  const textOps = (expr: string): string | null => {
+    switch (key) {
+      case 'equals': return expr + ' = ' + P(String(val))
+      case 'does_not_equal': return expr + ' <> ' + P(String(val))
+      case 'contains': return 'position(lower(' + P(String(val)) + ') in lower(' + expr + ')) > 0'
+      case 'does_not_contain': return 'position(lower(' + P(String(val)) + ') in lower(' + expr + ')) = 0'
+      case 'is_empty': return val ? expr + " = ''" : expr + " <> ''"
+      case 'is_not_empty': return val ? expr + " <> ''" : expr + " = ''"
+      default: return null
+    }
+  }
+  const countOf = (arrKey: string) => "(select count(*) from jsonb_array_elements(coalesce(" + prop + "->'" + arrKey + "', '[]'::jsonb)) e"
+  switch (kind) {
+    case 'title': case 'rich_text':
+      return textOps("(select coalesce(string_agg(coalesce(e->>'plain_text', e->'text'->>'content', ''), '' order by o), '') from jsonb_array_elements(coalesce(" + prop + "->'title', " + prop + "->'rich_text', '[]'::jsonb)) with ordinality as t(e, o))")
+    case 'select': case 'status':
+      return textOps("coalesce(" + prop + "->'select'->>'name', " + prop + "->'status'->>'name', '')")
+    case 'url': case 'phone_number': case 'email':
+      return textOps("coalesce(" + prop + "->>'" + kind + "', '')")
+    case 'checkbox':
+      if (key === 'equals') return "coalesce((" + prop + "->>'checkbox')::boolean, false) = " + P(!!val)
+      if (key === 'does_not_equal') return "coalesce((" + prop + "->>'checkbox')::boolean, false) <> " + P(!!val)
+      return null
+    case 'date': return ts(prop + "->'date'->>'start'", cond)
+    case 'relation': {
+      const c = countOf('relation')
+      if (key === 'contains') return c + " where replace(e->>'id', '-', '') = " + P(bare(String(val))) + ') > 0'
+      if (key === 'does_not_contain') return c + " where replace(e->>'id', '-', '') = " + P(bare(String(val))) + ') = 0'
+      if (key === 'is_empty') return val ? c + ') = 0' : c + ') > 0'
+      if (key === 'is_not_empty') return val ? c + ') > 0' : c + ') = 0'
+      return null
+    }
+    case 'multi_select': {
+      const c = countOf('multi_select')
+      if (key === 'contains') return c + " where e->>'name' = " + P(String(val)) + ') > 0'
+      if (key === 'does_not_contain') return c + " where e->>'name' = " + P(String(val)) + ') = 0'
+      if (key === 'is_empty') return val ? c + ') = 0' : c + ') > 0'
+      if (key === 'is_not_empty') return val ? c + ') > 0' : c + ') = 0'
+      return null
+    }
+    case 'number': {
+      const n = "(" + prop + "->>'number')::numeric"
+      const op = ({ equals: '=', does_not_equal: '<>', greater_than: '>', less_than: '<', greater_than_or_equal_to: '>=', less_than_or_equal_to: '<=' } as Record<string, string>)[key]
+      if (op) return n + ' ' + op + ' ' + P(Number(val))
+      if (key === 'is_empty') return val ? n + ' is null' : n + ' is not null'
+      if (key === 'is_not_empty') return val ? n + ' is not null' : n + ' is null'
+      return null
+    }
+    default: return null
+  }
+}
+/** 只下推「值在 SQL 與程式排序一定相同」的排序：時間戳、日期欄、數字欄 */
+function sortsToSql(sorts: any[], schema: Record<string, any>, params: any[]): string | null {
+  const P = (v: any) => { params.push(v); return '$' + params.length }
+  const out: string[] = []
+  for (const s of sorts) {
+    const dir = s.direction === 'descending' ? 'desc' : 'asc'
+    let expr: string | null = null
+    if (s.timestamp === 'created_time' || s.property === 'created_time') expr = 'created_time'
+    else if (s.timestamp === 'last_edited_time' || s.property === 'last_edited_time') expr = 'last_edited_time'
+    else if (s.property && schema[s.property]?.type === 'date') expr = "coalesce(properties->" + P(s.property) + "->'date'->>'start', '')"
+    else if (s.property && schema[s.property]?.type === 'number') expr = "coalesce((properties->" + P(s.property) + "->>'number')::numeric, '-Infinity'::numeric)"
+    if (!expr) return null
+    out.push(expr + ' ' + dir)
+  }
+  return out.join(', ')
+}
+async function querySqlPushdown(args: any, dbId: string, size: number, offset: number): Promise<any | null> {
+  if (process.env.NOTION_STORE_NO_PUSHDOWN === '1') return null   // 比對／除錯用
+  const params: any[] = [dbId]
+  const where = filterToSql(args.filter, params)
+  if (where == null) return null
+  const sorts: any[] = args.sorts ?? []
+  const order = sorts.length ? sortsToSql(sorts, (await loadSchema(dbId)).schema, params) : 'created_time desc'
+  if (order == null) return null
+  const text = 'select * from notion_pages where db_id = $1 and not archived and (' + where + ') order by ' + order + ', page_id limit ' + (size + 1) + ' offset ' + offset
+  const rows = (await sql().unsafe(text, params)) as any[]
+  const hasMore = rows.length > size
+  return { object: 'list', results: rows.slice(0, size).map(toPage), has_more: hasMore, next_cursor: hasMore ? 'o:' + (offset + size) : null, type: 'page_or_database', page_or_database: {} }
+}
+
 // ── 對外介面（與 @notionhq/client 同形狀）────────────────────────────────
 export const store = {
   databases: {
     async query(args: any) {
       const dbId = bare(args.database_id)
-      const rows = await sql()`select * from notion_pages where db_id = ${dbId} and not archived`
+      // 能整個翻成 SQL 的查詢：在資料庫過濾、排序、分頁；翻不了或出錯就走下面的全載入
+      try {
+        const pushed = await querySqlPushdown(args, dbId, Math.min(Number(args.page_size) || 100, 100), args.start_cursor ? Number(String(args.start_cursor).replace(/^o:/, '')) || 0 : 0)
+        if (pushed) return pushed
+      } catch (e) {
+        console.warn('[notion-store] SQL 下推失敗，改用全載入：', (e as Error).message)
+      }
+      const rows = await sql()`select * from notion_pages where db_id = ${dbId} and not archived order by page_id`   // 固定基底順序，同值時分頁才穩定
       let pages = rows.map(toPage).filter((p) => matchFilter(p, args.filter))
       const sorts: any[] = args.sorts ?? []
       if (sorts.length) pages.sort((a, b) => {
