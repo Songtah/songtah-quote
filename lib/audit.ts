@@ -243,52 +243,6 @@ async function ensureAuditDb() {
   // 2026-11-10：稽核紀錄已搬到資料庫（notion_pages），固定用原資料庫 id，不再搜尋／建立 Notion 庫
   // （Notion 端已改名封存，用標題搜尋會找不到而另建新庫）
   return AUDIT_DB_ID
-
-  // 2. In-memory cache
-  if (auditDbIdCache) return auditDbIdCache
-
-  // 3. Search workspace by title — works even without knowing the parent page
-  const existing = await findExistingAuditDb()
-  if (existing?.id) {
-    auditDbIdCache = normalizeDatabaseId(existing.id)
-    return auditDbIdCache
-  }
-
-  // 4. DB not found → try to create it under the parent of the visits DB
-  const parentPageId =
-    process.env.NOTION_AUDIT_PARENT_PAGE_ID ??
-    (await resolveAuditParentPageId())
-
-  if (!parentPageId) {
-    throw new Error('Cannot resolve Notion page for audit database')
-  }
-
-  const created: any = await notionCallWithRetry('audit.createDb', () =>
-    notion.databases.create({
-      parent: {
-        type: 'page_id',
-        page_id: parentPageId,
-      },
-      title: richText(AUDIT_DB_TITLE),
-      properties: {
-        事件標題: { title: {} },
-        發生時間: { date: {} },
-        模組: { rich_text: {} },
-        操作: { rich_text: {} },
-        實體類型: { rich_text: {} },
-        實體ID: { rich_text: {} },
-        實體名稱: { rich_text: {} },
-        執行者: { rich_text: {} },
-        角色: { rich_text: {} },
-        摘要: { rich_text: {} },
-        路徑: { rich_text: {} },
-        請求方法: { rich_text: {} },
-      } as any,
-    })
-  )
-
-  auditDbIdCache = normalizeDatabaseId(created.id)
-  return auditDbIdCache
 }
 
 export function getAuditActor(session: any): AuditActor {
