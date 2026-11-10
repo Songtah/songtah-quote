@@ -8,7 +8,8 @@
  *   4. applyRerun：核可後分段寫入（offset/limit），每筆改前的值存進還原紀錄；undoRerun 可整批還原
  * 寫入規則：「客戶反應」以新判讀為準（含改成留白）；「聯絡人」只補原本空白的，不覆蓋。判讀失敗的不動。
  */
-import { scanVisitPages } from '@/lib/notion/visits'
+import { updateVisit } from '@/lib/notion/visits'
+import { dbAllVisitRaw } from '@/lib/db/visits-write'
 import { notion, notionCallWithRetry, getRedis, getText, getTitle, getSelect, getDate, richText } from '@/lib/notion/shared'
 import { reactionRequestParams, parseReactionMessage, getReactionClient, type ReactionResult } from '@/lib/visit-reaction-ai'
 
@@ -23,14 +24,10 @@ const key = (id: string) => id.replace(/-/g, '')
 
 async function loadVisits(): Promise<Map<string, VisitRow>> {
   const map = new Map<string, VisitRow>()
-  for await (const p of scanVisitPages('visit-reaction-rerun')) {
-    const text = getText(p, '拜訪內容').trim()
+  for (const r of await dbAllVisitRaw({ withTextOnly: true })) {
+    const text = r.text.trim()
     if (!text) continue
-    map.set(key(p.id), {
-      id: p.id, date: getDate(p, '日期'), name: getTitle(p, '單位名稱'),
-      sp: getSelect(p, '業務人員') || getText(p, '業務人員'), text,
-      old: getSelect(p, '客戶反應'), oldContact: getText(p, '聯絡人').trim(),
-    })
+    map.set(key(r.id), { id: r.id, date: r.date, name: r.name, sp: r.sp, text, old: r.reaction, oldContact: r.contact.trim() })
   }
   return map
 }
@@ -152,10 +149,10 @@ export async function applyRerun(options: { offset: number; limit: number }) {
     if (!ch.reaction && !ch.contact) continue
     try {
       await r.hsetnx(UNDO_KEY, key(row.id), { r: row.old || '', c: row.oldContact || '' })
-      const props: Record<string, any> = {}
-      if (ch.reaction) props['客戶反應'] = { select: row.result!.reaction ? { name: row.result!.reaction } : null }
-      if (ch.contact) props['聯絡人'] = { rich_text: richText(row.result!.contact) }
-      await notionCallWithRetry('visit-reaction-rerun:apply', () => notion.pages.update({ page_id: row.id, properties: props as any }))
+      await updateVisit(row.id, {
+        ...(ch.reaction ? { customerReaction: row.result!.reaction ?? '' } : {}),
+        ...(ch.contact ? { contactPerson: row.result!.contact ?? '' } : {}),
+      })
       if (ch.reaction) reactions++
       if (ch.contact) contacts++
     } catch (e) {
@@ -174,13 +171,7 @@ export async function undoRerun(options: { limit: number }) {
   const entries = Object.entries(all).slice(0, options.limit)
   let restored = 0
   for (const [id, prev] of entries) {
-    await notionCallWithRetry('visit-reaction-rerun:undo', () => notion.pages.update({
-      page_id: id,
-      properties: {
-        '客戶反應': { select: prev.r ? { name: prev.r } : null },
-        '聯絡人': { rich_text: prev.c ? richText(prev.c) : [] },
-      } as any,
-    }))
+    await updateVisit(id, { customerReaction: prev.r ?? '', contactPerson: prev.c ?? '' })
     await r.hdel(UNDO_KEY, id)
     restored++
   }

@@ -13,11 +13,12 @@
  *   - examples   : 成功案例（前 5 筆）{ customerName, detected[] }
  */
 
-import { mirrorVisitPage } from '@/lib/db/mirror'
+import { dbVisitsWithoutCompetitors } from '@/lib/db/visits-write'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
 import { getVisitFormOptions } from '@/lib/system-notion'
+import { updateVisit } from '@/lib/notion/visits'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -43,20 +44,11 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     }
 
     // ── 2. 抓取競品欄位為空的拜訪紀錄 ────────────────────────────
-    const response: any = await notion.databases.query({
-      database_id: normId(VISITS_DB),
-      page_size: batchSize,
-      filter: {
-        property: '競品',
-        multi_select: { is_empty: true },
-      },
-      sorts: [{ property: '日期', direction: 'descending' }],
-      ...(cursor ? { start_cursor: cursor } : {}),
-    })
-
-    const pages     = response.results ?? []
-    const hasMore   = response.has_more ?? false
-    const nextCursor = response.next_cursor ?? null
+    const offset = cursor?.startsWith('o:') ? Number(cursor.slice(2)) || 0 : 0
+    const page1 = await dbVisitsWithoutCompetitors(batchSize, offset)
+    const pages     = page1.rows
+    const hasMore   = page1.hasMore
+    const nextCursor = hasMore ? `o:${offset + batchSize}` : null
 
     // ── 3. 逐筆偵測 ───────────────────────────────────────────────
     let filled = 0, skipped = 0, noContent = 0
@@ -64,14 +56,8 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
     for (const page of pages) {
       // 取得客戶名稱（for logging）
-      const titleProp = page.properties?.['單位名稱']
-      const customerName: string = (titleProp?.title ?? [])
-        .map((t: any) => t.plain_text).join('').trim()
-
-      // 取得內文（拜訪內容欄位）
-      const contentProp = page.properties?.['拜訪內容']
-      const content: string = (contentProp?.rich_text ?? [])
-        .map((t: any) => t.plain_text).join('').trim()
+      const customerName: string = page.name.trim()
+      const content: string = page.text.trim()
 
       if (!content) {
         noContent++
@@ -87,13 +73,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
 
       // 填入競品
       if (!dryRun) {
-        const updatedPage: any = await notion.pages.update({
-          page_id: page.id,
-          properties: {
-            競品: { multi_select: detected.map((name) => ({ name })) },
-          } as any,
-        })
-        await mirrorVisitPage(updatedPage)
+        await updateVisit(page.id, { competitorEquipment: detected })
       }
 
       filled++

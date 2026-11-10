@@ -12,7 +12,8 @@
  * Response: { groups, duplicates, deleted, examples, total }
  */
 
-import { mirrorVisitArchived } from '@/lib/db/mirror'
+import { dbVisitsForDedup } from '@/lib/db/visits-write'
+import { deleteVisit } from '@/lib/notion/visits'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
@@ -47,18 +48,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     const dryRun = Boolean(body.dryRun)
 
     // 分頁讀取（只讀必要欄位，頁間節流避免 rate limit）
-    const rows: Row[] = []
-    let cursor: string | undefined
-    do {
-      const res: any = await notion.databases.query({
-        database_id: VISITS_DB,
-        page_size: 100,
-        ...(cursor ? { start_cursor: cursor } : {}),
-      })
-      for (const p of res.results ?? []) rows.push(readRow(p))
-      cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined
-      if (cursor) await sleep(350)
-    } while (cursor)
+    const rows: Row[] = await dbVisitsForDedup()
 
     // 以 客戶+日期+業務 分組
     const groups = new Map<string, Row[]>()
@@ -93,10 +83,8 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     if (!dryRun) {
       for (const r of toDelete) {
         try {
-          await notion.pages.update({ page_id: r.id, archived: true })
-          await mirrorVisitArchived(r.id)
+          await deleteVisit(r.id)
           deleted++
-          await sleep(350) // 刪除節流，避免 rate limit
         } catch {
           // 單筆失敗略過
         }

@@ -24,7 +24,7 @@ import {
   getTitle, getSelect,
 } from './shared'
 import { customerNameStem } from '@/lib/customer-name-match'
-import { scanVisitPages } from './visits'
+import { dbAllVisitRaw } from '@/lib/db/visits-write'
 
 export type AliasEntry = { id: string; city: string; name?: string }
 type Store = Record<string, AliasEntry>
@@ -97,12 +97,11 @@ export async function rebuildLearnedAliases(
     votes.set(k, m)
   }
   // 客情庫全掃走 scanVisitPages 分區（Notion 1 萬筆靜默截斷，鐵則 #0）
-  for await (const page of scanVisitPages('rebuildLearnedAliases', { property: '🏥 牙科單位資料', relation: { is_not_empty: true } })) {
-    const id = normId(page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id ?? '')
-    const stem = customerNameStem(getTitle(page, '單位名稱'))
+  for (const row of await dbAllVisitRaw({ linkedOnly: true })) {
+    const id = normId(row.customerNotionId)
+    const stem = customerNameStem(row.name)
     if (!id || !stem) continue
-    const sp = getSelect(page, '業務人員')
-    if (sp) vote(`${sp}|${stem}`, id)
+    if (row.sp) vote(`${row.sp}|${stem}`, id)
     vote(`*|${stem}`, id)
   }
 

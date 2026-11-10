@@ -12,5 +12,14 @@ export function readFromDb(): boolean {
   return hasDb()
 }
 
+/**
+ * 客情紀錄是否以資料庫為唯一來源（2026-11-10 起預設是；Notion 客情庫已封存、不再寫入）。
+ * 退回：VISITS_SOURCE=notion 並重新部署；但系統產生的客情（origin='db'）要先用 scripts/db-visits-backfill-notion.mjs 回填 Notion。
+ */
+export function visitsInDb(): boolean {
+  if (process.env.VISITS_SOURCE === 'notion') return false
+  return hasDb()
+}
+
 /** Notion 頁面 id 去連字號（兩種寫法在系統內並存） */
 export const bareId = (id: string) => (id ?? '').replace(/-/g, '').toLowerCase()

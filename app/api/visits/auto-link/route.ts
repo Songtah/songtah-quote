@@ -16,13 +16,13 @@
  *   - hasMore     : 是否還有更多
  */
 
-import { mirrorVisitPage } from '@/lib/db/mirror'
+import { dbVisitsUnlinked } from '@/lib/db/visits-write'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { Client } from '@notionhq/client'
 import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
 import { loadAliases } from '@/lib/notion/visit-alias'
-import { recordVisitBump } from '@/lib/notion/visits'
+import { recordVisitBump, updateVisit } from '@/lib/notion/visits'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN })
@@ -40,23 +40,14 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     const dryRun   = Boolean(body.dryRun)
 
     // ── 1. 抓取沒有客戶關聯的拜訪紀錄 ─────────────────────────────────
-    const response: any = await notion.databases.query({
-      database_id: normId(VISITS_DB),
-      page_size: batchSize,
-      filter: {
-        property: '🏥 牙科單位資料',
-        relation: { is_empty: true },
-      },
-      sorts: [{ property: '日期', direction: 'descending' }],
-      ...(cursor ? { start_cursor: cursor } : {}),
-    })
-
-    const pages = response.results ?? []
+    const offset = cursor?.startsWith('o:') ? Number(cursor.slice(2)) || 0 : 0
+    const page1 = await dbVisitsUnlinked(batchSize, offset)
+    const pages = page1.rows
     // 消歧義脈絡：同一批次共用一份（快取），避免逐筆重算
     const matchCtx = await loadMatchContext()
     const aliases = await loadAliases().catch(() => ({ manual: {}, learned: {} }))
-    const hasMore: boolean = response.has_more ?? false
-    const nextCursor: string | null = response.next_cursor ?? null
+    const hasMore: boolean = page1.hasMore
+    const nextCursor: string | null = hasMore ? `o:${offset + batchSize}` : null
 
     // ── 2. 對每筆搜尋客戶 ────────────────────────────────────────────
     let linked = 0, noMatchCount = 0, multiMatchCount = 0
@@ -64,16 +55,11 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     const multiMatchNames: string[] = []
 
     for (const page of pages) {
-      const titleProp = page.properties?.['單位名稱']
-      const rawName: string = (titleProp?.title ?? [])
-        .map((t: any) => t.plain_text)
-        .join('')
-        .trim()
-
+      const rawName: string = page.name.trim()
       if (!rawName) continue
 
       // 與建檔、夜間補關聯同一套規則（慣用稱呼記憶 → 名稱字根＋業務脈絡），見 matchVisitCustomer
-      const salesperson: string = page.properties?.['業務人員']?.select?.name ?? ''
+      const salesperson: string = page.sp
       const res = await matchVisitCustomer({
         name: rawName, salesperson, ctx: matchCtx, aliases,
         search: (q) => searchSystemCustomers(q),
@@ -92,15 +78,9 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
       }
 
       if (!dryRun) {
-        const linkedPage: any = await notion.pages.update({
-          page_id: page.id,
-          properties: {
-            // 只補關聯、不覆寫單位名稱：業務原本的叫法要留著，夜間「慣用稱呼記憶」才學得到
-            '🏥 牙科單位資料': { relation: [{ id: match.id }] },
-          } as any,
-        })
-        await mirrorVisitPage(linkedPage)
-        await recordVisitBump(match.id, page.properties?.['日期']?.date?.start ?? '')
+        // 只補關聯、不覆寫單位名稱：業務原本的叫法要留著，夜間「慣用稱呼記憶」才學得到
+        await updateVisit(page.id, { customerId: match.id })
+        await recordVisitBump(match.id, page.date)
       }
       linked++
     }

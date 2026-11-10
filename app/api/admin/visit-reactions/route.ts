@@ -19,7 +19,7 @@ import { classifyVisitReaction } from '@/lib/visit-reaction-ai'
 import { getAuditActor, logAuditEvent } from '@/lib/audit'
 import { createRerunBatch, rerunStatus, rerunReport, rerunCsv, applyRerun, undoRerun } from '@/lib/visit-reaction-rerun'
 import { createRepairTicketFromVisit } from '@/lib/visit-repair-tickets'
-import { scanVisitPages } from '@/lib/notion/visits'
+import { dbAllVisitRaw, dbVisitRaw } from '@/lib/db/visits-write'
 import { getRelationIds } from '@/lib/notion/shared'
 import { getSystemCustomerById } from '@/lib/notion/customers'
 
@@ -68,9 +68,9 @@ export const POST = withApiAuth('central-management', async (req: NextRequest, _
         case 'rerun-undo': return NextResponse.json(await undoRerun({ limit }))
         case 'repair-candidates': {
           const ids: string[] = []; let unlinked = 0
-          for await (const p of scanVisitPages('repair-candidates')) {
-            if (!REPAIR_HINT.test(getText(p, '拜訪內容'))) continue
-            if (getRelationIds(p, '🏥 牙科單位資料')[0]) ids.push(p.id); else unlinked++
+          for (const r of await dbAllVisitRaw({ withTextOnly: true })) {
+            if (!REPAIR_HINT.test(r.text)) continue
+            if (r.customerNotionId) ids.push(r.id); else unlinked++
           }
           return NextResponse.json({ ids, unlinked })
         }
@@ -80,17 +80,16 @@ export const POST = withApiAuth('central-management', async (req: NextRequest, _
           const out: any[] = []
           for (const id of ids) {
             try {
-              const page: any = await notionCallWithRetry('repair-apply:get', () => notion.pages.retrieve({ page_id: id }))
-              const text = getText(page, '拜訪內容')
-              const judged = await classifyVisitReaction(text)
+              const row = await dbVisitRaw(id)
+              if (!row) { out.push({ id, action: 'error', reason: '找不到這筆客情' }); continue }
+              const judged = await classifyVisitReaction(row.text)
               if (!judged?.repair) { out.push({ id, action: 'none' }); continue }
-              const cid = getRelationIds(page, '🏥 牙科單位資料')[0]
-              const c = cid ? await getSystemCustomerById(cid) : null
+              const c = row.customerNotionId ? await getSystemCustomerById(row.customerNotionId) : null
               const res = await createRepairTicketFromVisit({
-                visitId: id, visitDate: getDate(page, '日期'), salesperson: getSelect(page, '業務人員') || getText(page, '業務人員'),
-                customerId: c?.id, customerName: c?.name || getTitle(page, '單位名稱'), repair: judged.repair,
+                visitId: id, visitDate: row.date, salesperson: row.sp,
+                customerId: c?.id, customerName: c?.name || row.name, repair: judged.repair,
               }, { dryRun })
-              out.push({ id, date: getDate(page, '日期'), name: c?.name || getTitle(page, '單位名稱'), repair: judged.repair, ...res })
+              out.push({ id, date: row.date, name: c?.name || row.name, repair: judged.repair, ...res })
             } catch (e: any) { out.push({ id, action: 'error', reason: e?.message }) }
           }
           if (!dryRun) await logAuditEvent({ module: 'tickets', action: 'create', entityType: 'repair-ticket-backfill', entityId: ids[0] ?? '',
@@ -112,12 +111,12 @@ export const POST = withApiAuth('central-management', async (req: NextRequest, _
   for (let i = 0; i < ids.length; i += 5) {
     const batch = await Promise.all(ids.slice(i, i + 5).map(async (id) => {
       try {
-        const page: any = await notionCallWithRetry('visit-reactions:get', () => notion.pages.retrieve({ page_id: id }))
-        const text = getText(page, '拜訪內容')
-        const r = await classifyVisitReaction(text)
+        const row = await dbVisitRaw(id)
+        if (!row) return { id, error: '找不到這筆客情' }
+        const r = await classifyVisitReaction(row.text)
         return {
-          id, date: getDate(page, '日期'), name: getTitle(page, '單位名稱'),
-          old: getSelect(page, '客戶反應'), oldContact: getText(page, '聯絡人'),
+          id, date: row.date, name: row.name,
+          old: row.reaction, oldContact: row.contact,
           ...(r ? { reaction: r.reaction, evidence: r.evidence, confidence: r.confidence, contact: r.contact, note: r.note } : { error: '判讀失敗' }),
         }
       } catch (e: any) {

@@ -9,6 +9,7 @@
  */
 import { DB, notion, normalizeDatabaseId, notionCallWithRetry } from '@/lib/notion/shared'
 import { sql } from '@/lib/db/client'
+import { visitsInDb } from '@/lib/db/read-source'
 
 const txt = (p: any) => ((p?.rich_text ?? p?.title ?? []) as any[]).map((t) => t.plain_text).join('').trim() || null
 const sel = (p: any) => p?.select?.name ?? p?.status?.name ?? null
@@ -93,12 +94,14 @@ export async function syncFromNotion(opts: { mode: SyncMode; sinceMinutes?: numb
   // ---- 讀 Notion ----
   const customers = new Map<string, ReturnType<typeof mapCustomer>>()
   const visits = new Map<string, ReturnType<typeof mapVisit>>()
+  const syncVisits = !visitsInDb()   // 客情已以資料庫為唯一來源：Notion 客情庫封存，不再同步（否則全量會把系統新增的客情當成「Notion 已刪」移除）
+  if (!syncVisits) warnings.push('客情以資料庫為唯一來源，本次未同步客情')
   if (mode === 'full') {
     const meta: any = await notionCallWithRetry('db-sync:schema', () => notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) }))
     const counties: string[] = (meta.properties?.['縣市']?.select?.options ?? []).map((o: any) => o.name)
     for (const c of counties) await scan(DB.customers, { property: '縣市', select: { equals: c } }, (p) => customers.set(p.id, mapCustomer(p)))
     await scan(DB.customers, { property: '縣市', select: { is_empty: true } }, (p) => customers.set(p.id, mapCustomer(p)))
-    for (const f of [
+    if (syncVisits) for (const f of [
       { property: '日期', date: { before: '2026-06-01' } },
       { property: '日期', date: { on_or_after: '2026-06-01' } },
       { property: '日期', date: { is_empty: true } },
@@ -106,7 +109,7 @@ export async function syncFromNotion(opts: { mode: SyncMode; sinceMinutes?: numb
   } else {
     const edited = { timestamp: 'last_edited_time', last_edited_time: { on_or_after: since } }
     await scan(DB.customers, edited, (p) => customers.set(p.id, mapCustomer(p)))
-    await scan(DB.visits, edited, (p) => visits.set(p.id, mapVisit(p)))
+    if (syncVisits) await scan(DB.visits, edited, (p) => visits.set(p.id, mapVisit(p)))
   }
 
   // ---- 客情連到的客戶若不在這批也不在資料庫：從 Notion 單頁補抓（連結不可遺失）----
@@ -154,7 +157,7 @@ export async function syncFromNotion(opts: { mode: SyncMode; sinceMinutes?: numb
   // ---- 全量才移除 Notion 已不存在的列（防呆：>5% 不刪）----
   const removed = { customers: 0, visits: 0 }
   if (mode === 'full') {
-    for (const [table, seen] of [['customers', customers], ['visits', visits]] as const) {
+    for (const [table, seen] of ([['customers', customers], ...(syncVisits ? [['visits', visits]] : [])] as [('customers' | 'visits'), Map<string, any>][])) {
       const have = await db`select notion_page_id from ${db(table)}`
       const gone = have.map((r: any) => r.notion_page_id as string).filter((id) => !seen.has(id))
       if (gone.length > have.length * 0.05) { warnings.push(`${table} 有 ${gone.length} 筆未在 Notion 出現（超過 5%），未刪除`); continue }

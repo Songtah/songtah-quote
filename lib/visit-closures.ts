@@ -12,6 +12,7 @@
  * 每次寫入都留在 Redis hash（醫事監控頁「客情回報歇業」區塊列出、可一鍵復原）並記操作稽核。
  * 這是 CLAUDE.md 醫事監控鐵則 2「狀態回寫須逐筆人工操作」的明確例外：依據是業務親眼確認，且可復原。
  */
+import { dbAllVisitRaw } from '@/lib/db/visits-write'
 import { scanVisitPages } from '@/lib/notion/visits'
 import { getSystemCustomerById, updateCustomerStatus } from '@/lib/notion/customers'
 import { getVisitSignals } from '@/lib/notion/visit-suggestions'
@@ -70,20 +71,15 @@ export async function runVisitClosureDetection(options: { days?: number; dryRun?
   // 每家客戶只取最新一筆歇業回報
   const hits = new Map<string, { visitId: string; date: string; reporter: string; name: string; hit: NonNullable<ReturnType<typeof detectClosure>> }>()
   let scanned = 0
-  for await (const page of scanVisitPages('visit-closures', {
-    and: [
-      { property: '日期', date: { on_or_after: since } },
-      { property: '🏥 牙科單位資料', relation: { is_not_empty: true } },
-    ],
-  })) {
+  for (const row of await dbAllVisitRaw({ linkedOnly: true, sinceDate: since })) {
     scanned++
-    const cid = norm(page.properties?.['🏥 牙科單位資料']?.relation?.[0]?.id ?? '')
-    const hit = detectClosure(`${getTitle(page, '單位名稱')} ${getText(page, '拜訪內容')}`)
+    const cid = norm(row.customerNotionId)
+    const hit = detectClosure(`${row.name} ${row.text}`)
     if (!cid || !hit) continue
-    const date = getDate(page, '日期')
+    const date = row.date
     const prev = hits.get(cid)
     if (!prev || date > prev.date) {
-      hits.set(cid, { visitId: page.id, date, reporter: getSelect(page, '業務人員') || getText(page, '業務人員'), name: getTitle(page, '單位名稱'), hit })
+      hits.set(cid, { visitId: row.id, date, reporter: row.sp, name: row.name, hit })
     }
   }
 

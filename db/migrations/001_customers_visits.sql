@@ -89,3 +89,6 @@ create unique index if not exists customers_code_name_uidx on customers (institu
 
 -- 2026-11-10：同步模式（full／incremental）
 alter table sync_runs add column if not exists mode text not null default 'full';
+
+-- 2026-11-10：客情搬離 Notion。新客情 origin='db'（id 由系統產生 uuid）；既有列 origin='notion'
+alter table visits add column if not exists origin text not null default 'notion';

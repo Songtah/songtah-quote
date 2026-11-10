@@ -9,8 +9,10 @@ import {
 } from './shared'
 import { resolveCustomerInfo, resolveProductNames } from './relations'
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
-import { readFromDb } from '@/lib/db/read-source'
+import { readFromDb, visitsInDb } from '@/lib/db/read-source'
 import * as dbv from '@/lib/db/visits-read'
+import * as dbw from '@/lib/db/visits-write'
+import { VISIT_OPTIONS } from '@/lib/visit-options'
 import { mirrorVisitPage, mirrorVisitArchived } from '@/lib/db/mirror'
 
 export type Visit = {
@@ -69,6 +71,24 @@ export async function getVisitFormOptions(): Promise<VisitFormOptions> {
   // Return from cache if available (L1 → L2)
   const cached = await getRedisValue<VisitFormOptions>(VISIT_FORM_OPTIONS_CACHE_KEY)
   if (cached) return cached
+
+  if (visitsInDb()) {
+    // 客情已搬離 Notion：選項＝匯出的清單（lib/visit-options.ts）∪ 資料裡實際出現過的值
+    const dv = await dbv.dbVisitDistinctValues()
+    const merge = (a: readonly string[], b: string[]) => Array.from(new Set([...a, ...b])).filter(Boolean).sort()
+    const result: VisitFormOptions = {
+      salespersons: merge(VISIT_OPTIONS.salespersons, dv.salespersons).filter((s) => !INACTIVE_SALESPERSONS.has(s)),
+      statuses: [...VISIT_OPTIONS.statuses],
+      tagOptions: merge(VISIT_OPTIONS.tags, dv.tags),
+      competitorOptions: merge(VISIT_OPTIONS.competitors, dv.competitors),
+      interactionTypes: [...VISIT_OPTIONS.interactionTypes],
+      interactionPurposes: [...VISIT_OPTIONS.interactionPurposes],
+      customerReactions: [...VISIT_OPTIONS.customerReactions],
+      products: [],
+    }
+    await setRedisValue(VISIT_FORM_OPTIONS_CACHE_KEY, result, VISIT_FORM_OPTIONS_TTL)
+    return result
+  }
 
   try {
     // Read DB schema for salesperson / status options
@@ -324,7 +344,8 @@ export async function listVisits(options?: {
 export async function getVisitById(id: string): Promise<Visit> {
   if (readFromDb()) {
     const hit = await dbv.dbGetVisitById(id)
-    if (hit) return hit   // 資料庫還沒有（剛建立且鏡像失敗）才退回 Notion
+    if (hit) return hit
+    if (visitsInDb()) throw new Error('找不到這筆客情')
   }
   const page: any = await notionCallWithRetry('getVisitById', () =>
     notion.pages.retrieve({ page_id: id })
@@ -409,6 +430,13 @@ export async function createVisit(data: {
   nextFollowUpDate?: string
 }): Promise<Visit> {
   invalidateVisitsCache()
+  if (visitsInDb()) {
+    const id = await dbw.dbCreateVisit(data)
+    if (data.customerId) await recordVisitBump(data.customerId, data.date)
+    const created = await dbv.dbGetVisitById(id)
+    if (created) return created
+    return { id, customerId: data.customerId ?? '', customerName: data.customerName, date: data.date, salesperson: data.salesperson, status: data.status ?? '', content: data.content, address: data.address, city: data.city, district: data.district, tags: data.tags ?? [], competitorEquipment: data.competitorEquipment ?? [], interestedProducts: [], interactionType: data.interactionType ?? '', interactionPurpose: data.interactionPurpose ?? '', customerReaction: data.customerReaction ?? '', followUpAction: data.followUpAction ?? '', needsFollowUp: data.needsFollowUp ?? false, nextFollowUpDate: data.nextFollowUpDate ?? '', followUpDone: false }
+  }
   await ensureVisitDbFields()
 
   const response: any = await notionCallWithRetry('createVisit', () =>
@@ -618,6 +646,7 @@ export async function autoCloseStaleFollowUps(
       // 狀態原本是 追蹤中 的，一併移到 Complete 群組。
       const properties: any = { '追蹤已結案': { checkbox: true } }
       if (item.row.status === '追蹤中') properties['狀態'] = { status: { name: '結案' } }
+      if (visitsInDb()) { await dbw.dbUpdateVisit(item.row.id, { followUpDone: true, ...(item.row.status === '追蹤中' ? { status: '結案' } : {}) }); continue }
       const closed: any = await notionCallWithRetry('autoCloseStaleFollowUps:close', () =>
         notion.pages.update({ page_id: item.row.id, properties })
       )
@@ -646,6 +675,7 @@ export async function autoCloseStaleFollowUps(
 /** 結案一筆追蹤（可逆：Notion 勾選框取消即可復原，無資料遺失） */
 export async function closeFollowUp(id: string): Promise<void> {
   invalidateVisitsCache()
+  if (visitsInDb()) { await dbw.dbUpdateVisit(id, { followUpDone: true }); return }
   const closed: any = await notionCallWithRetry('closeFollowUp', () =>
     notion.pages.update({ page_id: id, properties: { '追蹤已結案': { checkbox: true } } as any })
   )
@@ -672,7 +702,10 @@ export async function updateVisit(id: string, data: {
   needsFollowUp?: boolean
   nextFollowUpDate?: string
   followUpDone?: boolean
+  /** 對口（聯絡人） */
+  contactPerson?: string
 }): Promise<void> {
+  if (visitsInDb()) { invalidateVisitsCache(); await dbw.dbUpdateVisit(id, data); return }
   const properties: Record<string, any> = {}
   if (data.customerName !== undefined) properties['單位名稱'] = { title: richText(data.customerName) }
   // ⚠️ date / salesperson 不能傳空值給 Notion（select 空名稱、date 空字串均會 400）
@@ -706,6 +739,7 @@ export async function updateVisit(id: string, data: {
   if (data.needsFollowUp !== undefined) properties['是否需追蹤'] = { checkbox: data.needsFollowUp }
   if (data.nextFollowUpDate !== undefined) properties['下次追蹤日'] = data.nextFollowUpDate ? { date: { start: data.nextFollowUpDate } } : { date: null }
   if (data.followUpDone !== undefined) properties['追蹤已結案'] = { checkbox: data.followUpDone }
+  if (data.contactPerson !== undefined) properties['聯絡人'] = { rich_text: richText(data.contactPerson) }
 
   invalidateVisitsCache()
   const updated: any = await notionCallWithRetry('updateVisit', () =>
@@ -716,6 +750,7 @@ export async function updateVisit(id: string, data: {
 
 export async function deleteVisit(id: string): Promise<void> {
   invalidateVisitsCache()
+  if (visitsInDb()) { await dbw.dbDeleteVisit(id); return }
   await notionCallWithRetry('deleteVisit', () =>
     notion.pages.update({ page_id: id, archived: true })
   )
@@ -731,6 +766,7 @@ export async function deleteVisit(id: string): Promise<void> {
  * 拜訪訊號少算＝課後拜訪不觸發結案、待追蹤不自動結案，而且沒有任何錯誤訊息。
  */
 export async function* scanVisitPages(label: string, extraFilter?: any): AsyncGenerator<any> {
+  if (visitsInDb()) throw new Error(`${label}：客情已搬離 Notion，請改用 lib/db/visits-write 的 dbAllVisitRaw`)
   for (const part of visitDatePartitions()) {
     const filter = extraFilter ? { and: [part, extraFilter] } : part
     let cur: string | undefined
