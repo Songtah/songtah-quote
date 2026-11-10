@@ -1,0 +1,22 @@
+name: 客戶／客情增量同步到新資料庫（每 15 分鐘）
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: 觸發增量同步（最近 40 分鐘有改動的頁面，與上一輪重疊以防漏）
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            --max-time 300 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/sync-db?mode=incremental&since=40" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp.json
+          test "$code" = "200"

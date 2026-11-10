@@ -1,12 +1,12 @@
 /**
- * POST /api/cron/sync-db — 每晚 Notion → Supabase 全量同步（搬遷第二步：只鏡像，不切換）
+ * POST /api/cron/sync-db — Notion → Supabase 同步。預設全量（每晚）；?mode=incremental&since=30 只同步最近 N 分鐘有改動的頁面（每 15 分鐘）。
  * 由 GitHub Action 夜間 curl 呼叫（x-cron-secret: DAILY_REPORT_SECRET，timing-safe）。
  * 結果寫入 sync_runs，中央管理在 /settings/db-sync 檢視；不發任何推播。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { hasDb } from '@/lib/db/client'
-import { runFullSync } from '@/lib/db/sync-notion'
+import { syncFromNotion } from '@/lib/db/sync-notion'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (!hasDb()) return NextResponse.json({ error: 'DATABASE_URL 未設定' }, { status: 503 })
   try {
-    const result = await runFullSync()
+    const mode = req.nextUrl.searchParams.get('mode') === 'incremental' ? 'incremental' : 'full'
+    const sinceMinutes = Math.min(Math.max(Number(req.nextUrl.searchParams.get('since') ?? 30) || 30, 5), 1440)
+    const result = await syncFromNotion({ mode, sinceMinutes })
     return NextResponse.json({ ok: true, ...result })
   } catch (error: any) {
     console.error('sync-db error:', error)

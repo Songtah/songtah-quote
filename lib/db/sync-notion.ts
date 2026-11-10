@@ -57,8 +57,12 @@ async function scan(dbId: string, filter: any, onPage: (p: any) => void) {
   } while (cursor)
 }
 
+export type SyncMode = 'full' | 'incremental'
 export type SyncResult = {
   runId: number
+  mode: SyncMode
+  /** Notion 有連到客戶、但該客戶不在資料庫裡的客情數（0 才算健康） */
+  danglingLinks: number
   customers: { seen: number; upserted: number; removed: number }
   visits: { seen: number; upserted: number; removed: number; unlinked: number }
   warnings: string[]
@@ -69,71 +73,113 @@ export type SyncResult = {
 const upsertSet = (cols: string[]) => cols.filter((c) => c !== 'notion_page_id').map((c) => `"${c}" = excluded."${c}"`).join(', ')
 const chunk = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n))
 
-export async function runFullSync(): Promise<SyncResult> {
+export async function runFullSync(): Promise<SyncResult> { return syncFromNotion({ mode: 'full' }) }
+
+/**
+ * mode=full：分縣市全量掃描、移除 Notion 已消失的列（含 5% 防呆）。
+ * mode=incremental：只掃 last_edited_time 在 sinceMinutes 內的頁面，不刪任何列；
+ *   客情連到的客戶若尚未在資料庫，先從 Notion 單頁補抓再寫客情，確保連結不遺失。
+ * 兩種模式都不會把既有的 customer_id 覆寫成空（coalesce）。
+ */
+export async function syncFromNotion(opts: { mode: SyncMode; sinceMinutes?: number }): Promise<SyncResult> {
   if (!DB.customers || !DB.visits) throw new Error('Notion 客戶／客情資料庫 ID 未設定')
   const db = sql()
   const t0 = Date.now()
-  const [run] = await db`insert into sync_runs (source) values ('notion') returning id`
+  const mode = opts.mode
+  const since = mode === 'incremental' ? new Date(Date.now() - (opts.sinceMinutes ?? 30) * 60_000).toISOString() : null
+  const [run] = await db`insert into sync_runs (source, mode) values ('notion', ${mode}) returning id`
   const warnings: string[] = []
 
+  // ---- 讀 Notion ----
   const customers = new Map<string, ReturnType<typeof mapCustomer>>()
-  const meta: any = await notionCallWithRetry('db-sync:schema', () => notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) }))
-  const counties: string[] = (meta.properties?.['縣市']?.select?.options ?? []).map((o: any) => o.name)
-  for (const c of counties) await scan(DB.customers, { property: '縣市', select: { equals: c } }, (p) => customers.set(p.id, mapCustomer(p)))
-  await scan(DB.customers, { property: '縣市', select: { is_empty: true } }, (p) => customers.set(p.id, mapCustomer(p)))
-
   const visits = new Map<string, ReturnType<typeof mapVisit>>()
-  for (const f of [
-    { property: '日期', date: { before: '2026-06-01' } },
-    { property: '日期', date: { on_or_after: '2026-06-01' } },
-    { property: '日期', date: { is_empty: true } },
-  ]) await scan(DB.visits, f, (p) => visits.set(p.id, mapVisit(p)))
+  if (mode === 'full') {
+    const meta: any = await notionCallWithRetry('db-sync:schema', () => notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) }))
+    const counties: string[] = (meta.properties?.['縣市']?.select?.options ?? []).map((o: any) => o.name)
+    for (const c of counties) await scan(DB.customers, { property: '縣市', select: { equals: c } }, (p) => customers.set(p.id, mapCustomer(p)))
+    await scan(DB.customers, { property: '縣市', select: { is_empty: true } }, (p) => customers.set(p.id, mapCustomer(p)))
+    for (const f of [
+      { property: '日期', date: { before: '2026-06-01' } },
+      { property: '日期', date: { on_or_after: '2026-06-01' } },
+      { property: '日期', date: { is_empty: true } },
+    ]) await scan(DB.visits, f, (p) => visits.set(p.id, mapVisit(p)))
+  } else {
+    const edited = { timestamp: 'last_edited_time', last_edited_time: { on_or_after: since } }
+    await scan(DB.customers, edited, (p) => customers.set(p.id, mapCustomer(p)))
+    await scan(DB.visits, edited, (p) => visits.set(p.id, mapVisit(p)))
+  }
 
-  // upsert 客戶
+  // ---- 客情連到的客戶若不在這批也不在資料庫：從 Notion 單頁補抓（連結不可遺失）----
+  const needed = new Set<string>()
+  for (const v of Array.from(visits.values())) if (v.customer_notion_id && !customers.has(v.customer_notion_id)) needed.add(v.customer_notion_id)
+  let danglingLinks = 0
+  if (needed.size) {
+    const known = new Set<string>((await db`select notion_page_id from customers where notion_page_id in ${db(Array.from(needed))}`).map((r: any) => r.notion_page_id))
+    for (const id of Array.from(needed)) {
+      if (known.has(id)) continue
+      try {
+        const pg: any = await notionCallWithRetry('db-sync:fetch-customer', () => notion.pages.retrieve({ page_id: id }))
+        if (pg && !pg.archived && pg.parent?.database_id && normalizeDatabaseId(pg.parent.database_id) === normalizeDatabaseId(DB.customers!)) customers.set(pg.id, mapCustomer(pg))
+        else danglingLinks++
+      } catch { danglingLinks++ }
+    }
+  }
+  if (danglingLinks) warnings.push(`${danglingLinks} 筆客情連到的客戶在 Notion 已不存在或不在客戶主檔，連結保留原值未改`)
+
+  // ---- upsert 客戶 ----
   const crows = Array.from(customers.values())
-  const ccols = Object.keys(crows[0] ?? {}) as (keyof ReturnType<typeof mapCustomer>)[]
+  const ccols = Object.keys(crows[0] ?? {}) as string[]
   let cu = 0
   for (const part of chunk(crows, 200)) {
-    const r = await db`insert into customers ${(db as any)(part, ...ccols)} on conflict (notion_page_id) do update set ${db.unsafe(upsertSet(ccols as string[]))}`
+    const r = await db`insert into customers ${(db as any)(part, ...ccols)} on conflict (notion_page_id) do update set ${db.unsafe(upsertSet(ccols))}`
     cu += r.count
   }
-  const idMap = new Map<string, number>((await db`select id, notion_page_id from customers`).map((r: any) => [r.notion_page_id, r.id]))
-  const vrows = Array.from(visits.values()).map((v) => ({ ...v, customer_id: v.customer_notion_id ? idMap.get(v.customer_notion_id) ?? null : null }))
-  const unlinked = vrows.filter((v) => v.customer_id == null).length
-  const vcols = Object.keys(vrows[0] ?? {})
-  let vu = 0
-  for (const part of chunk(vrows, 200)) {
-    const r = await db`insert into visits ${(db as any)(part, ...vcols)} on conflict (notion_page_id) do update set ${db.unsafe(upsertSet(vcols))}`
-    vu += r.count
+
+  // ---- upsert 客情（customer_id 用資料庫現況解析；不把既有連結覆寫成空）----
+  let vu = 0, unlinked = 0
+  const vlist = Array.from(visits.values())
+  if (vlist.length) {
+    const refIds = Array.from(new Set(vlist.map((v) => v.customer_notion_id).filter(Boolean))) as string[]
+    const idMap = new Map<string, number>(refIds.length ? (await db`select id, notion_page_id from customers where notion_page_id in ${db(refIds)}`).map((r: any) => [r.notion_page_id, r.id]) : [])
+    const vrows = vlist.map((v) => ({ ...v, customer_id: v.customer_notion_id ? idMap.get(v.customer_notion_id) ?? null : null }))
+    unlinked = vrows.filter((v) => v.customer_id == null).length
+    const vcols = Object.keys(vrows[0])
+    const setClause = upsertSet(vcols.filter((c) => c !== 'customer_id')) + ', "customer_id" = coalesce(excluded."customer_id", visits."customer_id")'
+    for (const part of chunk(vrows, 200)) {
+      const r = await db`insert into visits ${(db as any)(part, ...vcols)} on conflict (notion_page_id) do update set ${db.unsafe(setClause)}`
+      vu += r.count
+    }
   }
 
-  // 移除 Notion 已不存在的列（防呆：>5% 不刪）
+  // ---- 全量才移除 Notion 已不存在的列（防呆：>5% 不刪）----
   const removed = { customers: 0, visits: 0 }
-  for (const [table, seen] of [['customers', customers], ['visits', visits]] as const) {
-    const have = await db`select notion_page_id from ${db(table)}`
-    const gone = have.map((r: any) => r.notion_page_id as string).filter((id) => !seen.has(id))
-    if (gone.length > have.length * 0.05) { warnings.push(`${table} 有 ${gone.length} 筆未在 Notion 出現（超過 5%），未刪除`); continue }
-    if (gone.length) removed[table] = (await db`delete from ${db(table)} where notion_page_id in ${db(gone)}`).count
+  if (mode === 'full') {
+    for (const [table, seen] of [['customers', customers], ['visits', visits]] as const) {
+      const have = await db`select notion_page_id from ${db(table)}`
+      const gone = have.map((r: any) => r.notion_page_id as string).filter((id) => !seen.has(id))
+      if (gone.length > have.length * 0.05) { warnings.push(`${table} 有 ${gone.length} 筆未在 Notion 出現（超過 5%），未刪除`); continue }
+      if (gone.length) removed[table] = (await db`delete from ${db(table)} where notion_page_id in ${db(gone)}`).count
+    }
   }
 
   const seconds = Math.round((Date.now() - t0) / 1000)
   await db`update sync_runs set finished_at = now(), customers_seen = ${customers.size}, customers_upserted = ${cu},
     visits_seen = ${visits.size}, visits_upserted = ${vu}, visits_unlinked = ${unlinked},
-    notes = ${JSON.stringify({ removed, warnings, seconds })} where id = ${run.id}`
-  return { runId: run.id, customers: { seen: customers.size, upserted: cu, removed: removed.customers }, visits: { seen: visits.size, upserted: vu, removed: removed.visits, unlinked }, warnings, seconds }
+    notes = ${JSON.stringify({ removed, warnings, seconds, since, danglingLinks })} where id = ${run.id}`
+  return { runId: run.id, mode, danglingLinks, customers: { seen: customers.size, upserted: cu, removed: removed.customers }, visits: { seen: visits.size, upserted: vu, removed: removed.visits, unlinked }, warnings, seconds }
 }
 
 export type SyncStatus = {
   dbCustomers: number; dbVisits: number; dbVisitsLinked: number
-  lastRun: null | { id: number; startedAt: string; finishedAt: string | null; customersSeen: number | null; visitsSeen: number | null; visitsUnlinked: number | null; notes: any }
-  recentRuns: { id: number; startedAt: string; finishedAt: string | null; customersSeen: number | null; visitsSeen: number | null; visitsUnlinked: number | null; ok: boolean }[]
+  lastRun: null | { id: number; mode: string; startedAt: string; finishedAt: string | null; customersSeen: number | null; visitsSeen: number | null; visitsUnlinked: number | null; notes: any }
+  recentRuns: { id: number; mode: string; startedAt: string; finishedAt: string | null; customersSeen: number | null; visitsSeen: number | null; visitsUnlinked: number | null; ok: boolean }[]
 }
 export async function getSyncStatus(): Promise<SyncStatus> {
   const db = sql()
   const [c] = await db`select count(*)::int n from customers`
   const [v] = await db`select count(*)::int n, count(customer_id)::int linked from visits`
-  const runs = await db`select id, started_at, finished_at, customers_seen, visits_seen, visits_unlinked, notes from sync_runs order by id desc limit 10`
-  const toRun = (r: any) => ({ id: r.id, startedAt: r.started_at?.toISOString?.() ?? String(r.started_at), finishedAt: r.finished_at ? (r.finished_at.toISOString?.() ?? String(r.finished_at)) : null, customersSeen: r.customers_seen, visitsSeen: r.visits_seen, visitsUnlinked: r.visits_unlinked, notes: r.notes ? safeJson(r.notes) : null })
+  const runs = await db`select id, mode, started_at, finished_at, customers_seen, visits_seen, visits_unlinked, notes from sync_runs order by id desc limit 10`
+  const toRun = (r: any) => ({ id: r.id, mode: r.mode ?? 'full', startedAt: r.started_at?.toISOString?.() ?? String(r.started_at), finishedAt: r.finished_at ? (r.finished_at.toISOString?.() ?? String(r.finished_at)) : null, customersSeen: r.customers_seen, visitsSeen: r.visits_seen, visitsUnlinked: r.visits_unlinked, notes: r.notes ? safeJson(r.notes) : null })
   return {
     dbCustomers: c.n, dbVisits: v.n, dbVisitsLinked: v.linked,
     lastRun: runs[0] ? toRun(runs[0]) : null,

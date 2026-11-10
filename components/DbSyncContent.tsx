@@ -27,20 +27,23 @@ export default function DbSyncContent() {
   const last = data.lastRun
   const notes = last?.notes && typeof last.notes === 'object' ? last.notes : null
   const warnings: string[] = notes?.warnings ?? []
-  const stale = last?.finishedAt ? Date.now() - new Date(last.finishedAt).getTime() > 36 * 3600 * 1000 : true
-  const mismatch = last?.finishedAt && (last.customersSeen !== data.dbCustomers || last.visitsSeen !== data.dbVisits)
+  const lastFull = data.recentRuns.find((r) => r.mode !== 'incremental' && r.finishedAt)
+  const stale = lastFull?.finishedAt ? Date.now() - new Date(lastFull.finishedAt).getTime() > 36 * 3600 * 1000 : true
+  const dangling = notes?.danglingLinks ?? 0
+  const mismatch = lastFull?.finishedAt && (lastFull.customersSeen !== data.dbCustomers || lastFull.visitsSeen !== data.dbVisits)
 
   return (
     <div className="space-y-6">
       <section className="grid gap-4 sm:grid-cols-3">
-        <Stat label="資料庫內客戶" value={data.dbCustomers.toLocaleString()} note={last?.customersSeen != null ? `Notion 上次讀到 ${last.customersSeen.toLocaleString()}` : ''} />
+        <Stat label="資料庫內客戶" value={data.dbCustomers.toLocaleString()} note={lastFull?.customersSeen != null ? `上次全量 Notion 讀到 ${lastFull.customersSeen.toLocaleString()}` : ''} />
         <Stat label="資料庫內客情" value={data.dbVisits.toLocaleString()} note={`已連到客戶 ${data.dbVisitsLinked.toLocaleString()}`} />
         <Stat label="上次同步" value={fmt(last?.finishedAt ?? null)} note={notes?.seconds != null ? `耗時 ${notes.seconds} 秒` : last && !last.finishedAt ? '未完成' : ''} />
       </section>
 
-      {(stale || mismatch || warnings.length > 0) && (
+      {(stale || mismatch || dangling > 0 || warnings.length > 0) && (
         <div className="card-soft border-l-4 border-amber-400 p-4 text-sm text-stone-700 space-y-1">
-          {stale && <p>超過 36 小時沒有完成的同步。</p>}
+          {stale && <p>超過 36 小時沒有完成的全量同步。</p>}
+          {dangling > 0 && <p>有 {dangling} 筆客情連到的客戶在 Notion 找不到，連結已保留原值，請檢查。</p>}
           {mismatch && <p>資料庫筆數與 Notion 上次讀到的不一致，請查看最近幾次紀錄。</p>}
           {warnings.map((w, i) => <p key={i}>{w}</p>)}
         </div>
@@ -50,11 +53,12 @@ export default function DbSyncContent() {
         <div className="px-5 py-3 text-sm font-medium text-stone-700">最近 10 次同步</div>
         <table className="w-full text-sm">
           <thead className="bg-stone-50 text-left text-xs text-stone-500">
-            <tr><th className="px-5 py-2 font-medium">開始</th><th className="px-5 py-2 font-medium">完成</th><th className="px-5 py-2 font-medium text-right">客戶</th><th className="px-5 py-2 font-medium text-right">客情</th><th className="px-5 py-2 font-medium text-right">未連客戶</th></tr>
+            <tr><th className="px-5 py-2 font-medium">模式</th><th className="px-5 py-2 font-medium">開始</th><th className="px-5 py-2 font-medium">完成</th><th className="px-5 py-2 font-medium text-right">客戶</th><th className="px-5 py-2 font-medium text-right">客情</th><th className="px-5 py-2 font-medium text-right">未連客戶</th></tr>
           </thead>
           <tbody>
             {data.recentRuns.map((r) => (
               <tr key={r.id} className="border-t border-stone-100 tabular-nums">
+                <td className="px-5 py-2 text-stone-500">{r.mode === 'incremental' ? '增量' : '全量'}</td>
                 <td className="px-5 py-2 text-stone-600">{fmt(r.startedAt)}</td>
                 <td className="px-5 py-2 text-stone-600">{r.finishedAt ? fmt(r.finishedAt) : <span className="text-amber-600">未完成</span>}</td>
                 <td className="px-5 py-2 text-right">{r.customersSeen?.toLocaleString() ?? '—'}</td>
@@ -62,7 +66,7 @@ export default function DbSyncContent() {
                 <td className="px-5 py-2 text-right">{r.visitsUnlinked?.toLocaleString() ?? '—'}</td>
               </tr>
             ))}
-            {data.recentRuns.length === 0 && <tr><td colSpan={5} className="px-5 py-6 text-center text-stone-400">還沒有同步紀錄</td></tr>}
+            {data.recentRuns.length === 0 && <tr><td colSpan={6} className="px-5 py-6 text-center text-stone-400">還沒有同步紀錄</td></tr>}
           </tbody>
         </table>
       </section>

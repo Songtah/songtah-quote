@@ -86,3 +86,6 @@ create table if not exists sync_runs (
 
 -- 2026-11-10：機構代碼可被多個單位共用（院區、科系），唯一規則改為「代碼＋名稱」
 create unique index if not exists customers_code_name_uidx on customers (institution_code, name) where institution_code is not null;
+
+-- 2026-11-10：同步模式（full／incremental）
+alter table sync_runs add column if not exists mode text not null default 'full';
