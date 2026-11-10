@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { processPendingRepairTickets } from '@/lib/visit-repair-tickets'
 import { getSystemCustomerById } from '@/lib/notion/customers'
-import { notion, notionCallWithRetry, getRelationIds } from '@/lib/notion/shared'
+import { dbVisitRaw } from '@/lib/db/visits-write'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     const out = await processPendingRepairTickets(async (visitId) => {
-      const page: any = await notionCallWithRetry('repair-tickets:visit', () => notion.pages.retrieve({ page_id: visitId }))
-      const cid = getRelationIds(page, '🏥 牙科單位資料')[0]
+      const row = await dbVisitRaw(visitId)   // 客情已在資料庫（2026-11-10）
+      const cid = row?.customerNotionId
       if (!cid) return null
       const c = await getSystemCustomerById(cid)
       return c ? { customerId: c.id, customerName: c.name } : null
