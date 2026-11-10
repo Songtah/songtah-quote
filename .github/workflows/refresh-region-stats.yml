@@ -125,15 +125,3 @@ jobs:
             -H "x-cron-secret: ${CRON_SECRET}")
           echo "HTTP $code"; cat /tmp/resp7.json
           test "$code" = "200"
-
-      - name: 客戶主檔與客情 → 新資料庫鏡像同步（搬遷第二步，只鏡像不切換）
-        if: always()
-        env:
-          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
-        run: |
-          code=$(curl -s -o /tmp/resp8.json -w "%{http_code}" \
-            --max-time 300 \
-            -X POST "https://songtah-quote.vercel.app/api/cron/sync-db" \
-            -H "x-cron-secret: ${CRON_SECRET}")
-          echo "HTTP $code"; cat /tmp/resp8.json
-          test "$code" = "200"

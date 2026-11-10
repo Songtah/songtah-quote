@@ -11,8 +11,9 @@ import {
 import { INACTIVE_SALESPERSONS } from '@/lib/line-salesperson-map'
 import { canonicalSalespersonName, salespersonNameVariants } from '@/lib/salesperson-name'
 import { isInactiveCustomer } from '@/lib/customer-status'
-import { readFromDb } from '@/lib/db/read-source'
+import { readFromDb, customersInDb } from '@/lib/db/read-source'
 import * as dbc from '@/lib/db/customers-read'
+import * as dbcw from '@/lib/db/customers-write'
 import { mirrorCustomerPage } from '@/lib/db/mirror'
 
 // ── 全庫掃描(分區版)──────────────────────────────────────────────────────
@@ -453,6 +454,16 @@ export async function assignSalesperson(
 
   let assigned = 0
   const skipped: { id: string; name: string; current: string }[] = []
+  if (customersInDb()) {
+    for (const id of customerIds) {
+      const row = await dbcw.dbCustomerRow(id)
+      if (!row) { skipped.push({ id, name: '', current: '(非客戶主檔)' }); continue }
+      if (row.owner) { skipped.push({ id, name: row.name, current: row.owner }); continue }
+      await dbcw.dbUpdateCustomer(id, { owner: salesperson }); assigned++
+    }
+    if (assigned > 0) await invalidateCustomerCaches()
+    return { assigned, skipped }
+  }
   for (const id of customerIds) {
     // 重讀當前狀態(防競態 + 防誤傳非空白 id)
     const page: any = await notionCallWithRetry('assignSalesperson:check', () =>
@@ -497,6 +508,16 @@ export async function reassignSalesperson(
 
   let reassigned = 0
   const skipped: { id: string; name: string; current: string }[] = []
+  if (customersInDb()) {
+    for (const id of customerIds) {
+      const row = await dbcw.dbCustomerRow(id)
+      if (!row) { skipped.push({ id, name: '', current: '(非客戶主檔)' }); continue }
+      if (row.owner !== from) { skipped.push({ id, name: row.name, current: row.owner || '(空白)' }); continue }
+      await dbcw.dbUpdateCustomer(id, { owner: to }); reassigned++
+    }
+    if (reassigned > 0) await invalidateCustomerCaches()
+    return { reassigned, skipped }
+  }
   for (const id of customerIds) {
     const page: any = await notionCallWithRetry('reassignSalesperson:check', () =>
       notion.pages.retrieve({ page_id: id })
@@ -738,6 +759,21 @@ export async function updateCustomerDevStage(
   id: string,
   data: { devStage?: string | null; devSource?: string; salesperson?: string }
 ): Promise<{ salespersonSkipped: boolean; currentSalesperson?: string }> {
+  if (customersInDb()) {
+    const row = await dbcw.dbCustomerRow(id)
+    if (!row) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+    if (data.devStage !== undefined && data.devStage !== null && !DEV_STAGES.includes(data.devStage as DevStage)) throw new Error(`無效的開發階段：${data.devStage}`)
+    const cols: Record<string, any> = {}
+    if (data.devStage !== undefined) cols.dev_stage = data.devStage || null
+    if (data.devSource) cols.dev_source = data.devSource
+    let salespersonSkipped = false
+    let currentSalesperson: string | undefined
+    if (data.salesperson) { currentSalesperson = row.owner; if (row.owner) salespersonSkipped = true; else cols.owner = data.salesperson }
+    if (Object.keys(cols).length) await dbcw.dbUpdateCustomer(id, cols)
+    setCachedValue('pipeline-customers-v1', null as any, 1)
+    if (cols.owner) await invalidateCustomerCaches()
+    return { salespersonSkipped, currentSalesperson }
+  }
   // 防止任意 page_id 寫入：限定目標頁面必須屬於客戶主檔 DB
   const page = await notionCallWithRetry('updateCustomerDevStage:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
@@ -798,6 +834,23 @@ export async function claimTerritoryCustomers(
   const eligible: { id: string; name: string; type: string; status: string; devStage: string; previousDevStage: string }[] = []
   const skipped: { id: string; name: string; reason: string }[] = []
   let claimed = 0
+
+  if (customersInDb()) {
+    for (const id of Array.from(new Set(customerIds))) {
+      const row = await dbcw.dbCustomerRow(id)
+      if (!row) { skipped.push({ id, name: '', reason: '非有效客戶主檔' }); continue }
+      if (row.city !== area.city || row.district !== area.district) { skipped.push({ id, name: row.name, reason: '不在此轄區' }); continue }
+      if (row.owner) { skipped.push({ id, name: row.name, reason: `已由 ${row.owner} 負責` }); continue }
+      if (isInactiveCustomer(row.status)) { skipped.push({ id, name: row.name, reason: `機構狀態為 ${row.status}` }); continue }
+      const finalDevStage = row.devStage || '線索'
+      eligible.push({ id, name: row.name, type: row.type, status: row.status, devStage: finalDevStage, previousDevStage: row.devStage })
+      if (dryRun) continue
+      await dbcw.dbUpdateCustomer(id, { owner: salesperson, ...(!row.devStage ? { dev_stage: '線索' } : {}), ...(!row.devSource ? { dev_source: '轄區開發' } : {}) })
+      claimed++
+    }
+    if (claimed > 0) { setCachedValue('pipeline-customers-v1', null as any, 1); await invalidateCustomerCaches() }
+    return { claimed, eligible, skipped }
+  }
 
   for (const id of Array.from(new Set(customerIds))) {
     const page: any = await notionCallWithRetry('claimTerritoryCustomers:check', () =>
@@ -868,6 +921,17 @@ export async function advanceCustomerDevStage(
   target: Exclude<DevStage, '線索' | '流失'>,
   access?: { actorName: string; canManageAll: boolean },
 ): Promise<boolean> {
+  if (customersInDb()) {
+    const row = await dbcw.dbCustomerRow(id)
+    if (!row) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+    if (access && !access.canManageAll && row.owner && row.owner !== access.actorName) throw new Error('不可更新其他業務負責的客戶')
+    const current = row.devStage as DevStage | ''
+    if (current === '流失' || current === '已成交') return false
+    if (current && DEV_STAGE_RANK[current as Exclude<DevStage, '流失'>] >= DEV_STAGE_RANK[target]) return false
+    await dbcw.dbUpdateCustomer(id, { dev_stage: target })
+    setCachedValue('pipeline-customers-v1', null as any, 1)
+    return true
+  }
   const page = await notionCallWithRetry('advanceCustomerDevStage:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
   ) as any
@@ -915,6 +979,12 @@ export async function createSystemCustomer(data: {
   technicianCount?:        number  // 牙體技術師數
   technicianTraineeCount?: number  // 牙體技術生數
 }): Promise<{ id: string }> {
+  if (customersInDb()) {
+    const id = await dbcw.dbCreateCustomer(data)
+    try { await setRedisValue('customers-with-codes-v5', null, 1) } catch {}
+    setCachedValue('all-system-customers-v2', null as any, 1)
+    return { id }
+  }
   if (!DB.customers) throw new Error('NOTION_CUSTOMERS_SYSTEM_DB 未設定')
   const page: any = await notionCallWithRetry('createSystemCustomer', () =>
     notion.pages.create({
@@ -948,6 +1018,12 @@ export async function createSystemCustomer(data: {
 
 // ── 醫事監控用：更新客戶「機構狀態」（開業/停業/已歇業/撤銷/狀況不明）──────────
 export async function updateCustomerStatus(id: string, status: string): Promise<void> {
+  if (customersInDb()) {
+    const n = await dbcw.dbUpdateCustomer(id, { institution_status: status || null })
+    if (!n) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+    deleteRedisValue('customers-with-codes-v5')
+    return
+  }
   // 防止任意 page_id 寫入：限定目標頁面必須屬於客戶主檔 DB
   const page = await notionCallWithRetry('updateCustomerStatus:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
@@ -975,6 +1051,12 @@ export async function updateCustomerStatus(id: string, status: string): Promise<
 export async function updateCustomerInstitutionCode(id: string, code: string): Promise<void> {
   const clean = (code ?? '').trim()
   if (!/^[A-Za-z0-9]{4,20}$/.test(clean)) throw new Error('機構代碼格式不正確')
+  if (customersInDb()) {
+    const n = await dbcw.dbUpdateCustomer(id, { institution_code: clean })
+    if (!n) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+    deleteRedisValue('customers-with-codes-v5')
+    return
+  }
   const page = await notionCallWithRetry('updateCustomerInstitutionCode:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
   ) as any
@@ -1009,6 +1091,27 @@ export type BasSyncPatch = {
 }
 
 export async function updateCustomerBasFields(id: string, patch: BasSyncPatch): Promise<string[]> {
+  if (customersInDb()) {
+    const cols: Record<string, any> = {}
+    const changed: string[] = []
+    if (patch.status) { cols.institution_status = patch.status; changed.push('機構狀態') }
+    if (patch.institutionCode) { cols.institution_code = patch.institutionCode; changed.push('機構代碼') }
+    if (patch.name) { cols.name = patch.name; changed.push('客戶名稱') }
+    if (patch.address) { cols.address = patch.address; changed.push('地址') }
+    if (patch.phone) { cols.phone = patch.phone; changed.push('電話') }
+    if (typeof patch.nhi === 'boolean') { cols.nhi_contracted = patch.nhi; changed.push('健保特約') }
+    if (typeof patch.dentistCount === 'number') { cols.dentist_count = patch.dentistCount; changed.push('牙醫師數') }
+    if (typeof patch.technicianCount === 'number') { cols.technician_count = patch.technicianCount; changed.push('牙體技術師數') }
+    if (typeof patch.technicianTraineeCount === 'number') { cols.trainee_count = patch.technicianTraineeCount; changed.push('牙體技術生數') }
+    if (patch.infoUrl) { cols.institution_url = patch.infoUrl; changed.push('機構資料連結') }
+    if (patch.personnelUrl) { cols.staff_url = patch.personnelUrl; changed.push('醫事人員連結') }
+    if (patch.deptUrl) { cols.departments_url = patch.deptUrl; changed.push('診療科別連結') }
+    if (!changed.length) return []
+    const n = await dbcw.dbUpdateCustomer(id, cols)
+    if (!n) throw new Error('customerId 不屬於客戶主檔，拒絕寫入')
+    deleteRedisValue('customers-with-codes-v5')
+    return changed
+  }
   const page = await notionCallWithRetry('updateCustomerBasFields:checkOwner', () =>
     notion.pages.retrieve({ page_id: id })
   ) as any

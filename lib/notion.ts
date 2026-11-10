@@ -1,3 +1,5 @@
+import { customersInDb } from '@/lib/db/read-source'
+import { dbSearchActiveCustomers } from '@/lib/db/customers-write'
 import { notion } from '@/lib/notion/shared'
 import type { Product, Customer, Quote, QuoteItem } from '@/types'
 import { getCatalogProduct } from '@/lib/products-catalog'
@@ -116,6 +118,10 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function searchCustomers(query: string): Promise<Customer[]> {
   if (!query || query.trim().length < 1) return []
+  if (customersInDb()) {
+    const rows = await dbSearchActiveCustomers(query.trim())
+    return rows.map((r) => ({ id: r.id, name: r.name, address: r.address, phone: r.phone, taxId: '', city: r.city, type: r.type } as Customer))
+  }
 
   const resp: any = await notion.databases.query({
     database_id: DB.customers,

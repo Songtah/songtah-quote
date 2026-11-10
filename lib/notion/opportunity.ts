@@ -11,6 +11,10 @@
 import { notion, DB, normalizeDatabaseId, notionCallWithRetry, getTitle, getText, getSelect, getProp } from './shared'
 import { detectOpportunities } from '@/lib/opportunity-signals'
 import { getOpportunityKeywordLibrary } from '@/lib/opportunity-keywords'
+import { customersInDb } from '@/lib/db/read-source'
+import { dbListOpportunityCustomers, dbListDistrictClinics, dbCustomerRow, dbUpdateCustomer, type CustomerRow } from '@/lib/db/customers-write'
+
+const rowToOpp = (r: CustomerRow, goldTags: Set<string>): OppCustomer => ({ id: r.id, name: r.name, city: r.city, district: r.district, salesperson: r.owner, phone: r.phone, address: r.address, tags: r.opportunityTags, goldTags: r.opportunityTags.filter((t) => goldTags.has(t)) })
 
 const CUST = () => normalizeDatabaseId(DB.customers!)
 
@@ -42,6 +46,12 @@ export async function listOpportunityCustomers(f: {
   if (!DB.customers) return []
   const library = await getOpportunityKeywordLibrary()
   const goldTags = new Set(library.signals.filter((signal) => signal.gold).map((signal) => signal.tag))
+  if (customersInDb()) {
+    let items = (await dbListOpportunityCustomers({ tag: f.tag, city: f.city, district: f.district, salesperson: f.salesperson })).map((r) => rowToOpp(r, goldTags))
+    if (f.goldOnly) items = items.filter((c) => c.goldTags.length > 0)
+    items.sort((a, b) => b.goldTags.length - a.goldTags.length || b.tags.length - a.tags.length || a.name.localeCompare(b.name, 'zh-TW'))
+    return items
+  }
   const clauses: any[] = [{ property: '商機標籤', multi_select: { is_not_empty: true } }]
   if (f.tag) clauses.push({ property: '商機標籤', multi_select: { contains: f.tag } })
   if (f.city) clauses.push({ property: '縣市', select: { equals: f.city } })
@@ -77,6 +87,11 @@ export async function listUnclaimedOpportunityLeads(): Promise<OppCustomer[]> {
   if (!DB.customers) return []
   const library = await getOpportunityKeywordLibrary()
   const goldTags = new Set(library.signals.filter((signal) => signal.gold).map((signal) => signal.tag))
+  if (customersInDb()) {
+    const items = (await dbListOpportunityCustomers({ unclaimedOnly: true })).map((r) => rowToOpp(r, goldTags))
+    items.sort((a, b) => b.goldTags.length - a.goldTags.length || a.name.localeCompare(b.name, 'zh-TW'))
+    return items
+  }
   const items: OppCustomer[] = []
   let cursor: string | undefined
   do {
@@ -176,10 +191,11 @@ export async function scanDistrict(city: string, district: string, opts: { dryRu
   const dictionary = library.signals
   const goldTagSet = new Set(dictionary.filter((signal) => signal.gold).map((signal) => signal.tag))
 
-  // 撈該區牙醫診所
+  // 撈該區牙醫診所（資料庫版把列包成 Notion 頁面形狀，讓下方讀取邏輯共用）
   const custs: any[] = []
+  if (customersInDb()) for (const r of await dbListDistrictClinics(city, district)) custs.push({ id: r.id, properties: { '客戶名稱': { type: 'title', title: [{ plain_text: r.name }] }, '地址': { type: 'rich_text', rich_text: [{ plain_text: r.address }] }, '商機標籤': { type: 'multi_select', multi_select: r.opportunityTags.map((n) => ({ name: n })) }, '附屬技工室': { type: 'checkbox', checkbox: r.hasLab } } })
   let cursor: string | undefined
-  do {
+  if (!customersInDb()) do {
     const res: any = await notionCallWithRetry('scanDistrict:list', () =>
       notion.databases.query({
         database_id: CUST(), page_size: 100,
@@ -222,7 +238,8 @@ export async function scanDistrict(city: string, district: string, opts: { dryRu
       const merged = Array.from(new Set([...existing, ...tags]))
       const props: any = { '商機標籤': { multi_select: merged.map((n) => ({ name: n })) } }
       if (goldTags.includes('院內技工室') && getProp(p, '附屬技工室')?.checkbox !== true) props['附屬技工室'] = { checkbox: true }
-      await notionCallWithRetry('scanDistrict:write', () => notion.pages.update({ page_id: p.id, properties: props }))
+      if (customersInDb()) await dbUpdateCustomer(p.id, { opportunity_tags: merged, ...(props['附屬技工室'] ? { has_lab: true } : {}) })
+      else await notionCallWithRetry('scanDistrict:write', () => notion.pages.update({ page_id: p.id, properties: props }))
       written++
     }
   }

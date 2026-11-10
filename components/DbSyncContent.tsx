@@ -30,7 +30,7 @@ export default function DbSyncContent() {
   const infos = allWarnings.filter((w) => w.startsWith('客情以資料庫'))
   const warnings = allWarnings.filter((w) => !w.startsWith('客情以資料庫'))
   const lastFull = data.recentRuns.find((r) => r.mode !== 'incremental' && r.finishedAt)
-  const stale = lastFull?.finishedAt ? Date.now() - new Date(lastFull.finishedAt).getTime() > 36 * 3600 * 1000 : true
+  const stale = false   // 同步已停用（2026-11-10）
   const dangling = notes?.danglingLinks ?? 0
   const mismatch = lastFull?.finishedAt && lastFull.customersSeen !== data.dbCustomers
 
@@ -42,7 +42,7 @@ export default function DbSyncContent() {
         <Stat label="上次同步" value={fmt(last?.finishedAt ?? null)} note={notes?.seconds != null ? `耗時 ${notes.seconds} 秒` : last && !last.finishedAt ? '未完成' : ''} />
       </section>
 
-      <div className="card-soft p-4 text-sm text-stone-600">客情紀錄自 2026-11-10 起以新資料庫為唯一來源，Notion 客情庫已封存、不再寫入；同步只處理客戶主檔。{infos.length ? '' : ''}</div>
+      <div className="card-soft p-4 text-sm text-stone-600">客戶主檔與客情紀錄自 2026-11-10 起以新資料庫為唯一來源，Notion 已封存、不再寫入；同步排程已停用。{infos.length ? '' : ''}</div>
       {(stale || mismatch || dangling > 0 || warnings.length > 0) && (
         <div className="card-soft border-l-4 border-amber-400 p-4 text-sm text-stone-700 space-y-1">
           {stale && <p>超過 36 小時沒有完成的全量同步。</p>}

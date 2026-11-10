@@ -9,7 +9,7 @@
  */
 import { DB, notion, normalizeDatabaseId, notionCallWithRetry } from '@/lib/notion/shared'
 import { sql } from '@/lib/db/client'
-import { visitsInDb } from '@/lib/db/read-source'
+import { visitsInDb, customersInDb } from '@/lib/db/read-source'
 
 const txt = (p: any) => ((p?.rich_text ?? p?.title ?? []) as any[]).map((t) => t.plain_text).join('').trim() || null
 const sel = (p: any) => p?.select?.name ?? p?.status?.name ?? null
@@ -90,6 +90,11 @@ export async function syncFromNotion(opts: { mode: SyncMode; sinceMinutes?: numb
   const since = mode === 'incremental' ? new Date(Date.now() - (opts.sinceMinutes ?? 30) * 60_000).toISOString() : null
   const [run] = await db`insert into sync_runs (source, mode) values ('notion', ${mode}) returning id`
   const warnings: string[] = []
+  if (customersInDb()) {
+    // 客戶主檔已以資料庫為唯一來源（2026-11-10）：不再從 Notion 同步，否則會把系統新增的客戶當成「Notion 已刪」移除
+    await db`update sync_runs set finished_at = now(), customers_seen = 0, customers_upserted = 0, visits_seen = 0, visits_upserted = 0, visits_unlinked = 0, notes = ${JSON.stringify({ skipped: '客戶與客情皆以資料庫為唯一來源，同步已停用', seconds: 0 })} where id = ${run.id}`
+    return { runId: run.id, mode, danglingLinks: 0, customers: { seen: 0, upserted: 0, removed: 0 }, visits: { seen: 0, upserted: 0, removed: 0, unlinked: 0 }, warnings: ['客戶與客情皆以資料庫為唯一來源，同步已停用'], seconds: 0 }
+  }
 
   // ---- 讀 Notion ----
   const customers = new Map<string, ReturnType<typeof mapCustomer>>()

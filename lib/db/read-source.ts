@@ -21,5 +21,14 @@ export function visitsInDb(): boolean {
   return hasDb()
 }
 
+/**
+ * 客戶主檔是否以資料庫為唯一來源（2026-11-10 起預設是；Notion 客戶庫封存、不再寫入也不再同步）。
+ * 退回：CUSTOMERS_SOURCE=notion（系統產生的客戶 origin='db' 需先回填 Notion）。
+ */
+export function customersInDb(): boolean {
+  if (process.env.CUSTOMERS_SOURCE === 'notion') return false
+  return hasDb()
+}
+
 /** Notion 頁面 id 去連字號（兩種寫法在系統內並存） */
 export const bareId = (id: string) => (id ?? '').replace(/-/g, '').toLowerCase()

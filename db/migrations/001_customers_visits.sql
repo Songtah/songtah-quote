@@ -92,3 +92,6 @@ alter table sync_runs add column if not exists mode text not null default 'full'
 
 -- 2026-11-10：客情搬離 Notion。新客情 origin='db'（id 由系統產生 uuid）；既有列 origin='notion'
 alter table visits add column if not exists origin text not null default 'notion';
+
+-- 2026-11-10：客戶主檔停止寫 Notion。新客戶 origin='db'（id 為系統 uuid）
+alter table customers add column if not exists origin text not null default 'notion';
