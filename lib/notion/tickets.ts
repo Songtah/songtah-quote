@@ -2,6 +2,8 @@
  * lib/notion/tickets.ts — 工單 / RMA（葉領域，從 system-notion.ts 抽出）
  * 客戶名稱解析走 ./relations（跨切面），不直接 import customers。
  */
+import { readFromDb } from '@/lib/db/read-source'
+import * as dbt from '@/lib/db/tickets'
 import type { CreateTicketPayload, Ticket, UpdateTicketPayload } from '@/types'
 import {
   notion, DB, normalizeDatabaseId, notionCallWithRetry, richText,
@@ -10,6 +12,7 @@ import {
 import { resolveCustomerNames } from './relations'
 
 export async function listCustomerTickets(customerId: string): Promise<Ticket[]> {
+  if (readFromDb()) return dbt.dbListCustomerTickets(customerId)
   if (!DB.tickets) return []
 
   const response: any = await notionCallWithRetry('listCustomerTickets', () =>
@@ -28,6 +31,7 @@ export async function listCustomerTickets(customerId: string): Promise<Ticket[]>
 
 /** 某設備的維修紀錄(依「設備資料」relation 反查)，供設備詳情頁顯示維修履歷。 */
 export async function listEquipmentTickets(equipmentId: string): Promise<Ticket[]> {
+  if (readFromDb()) return dbt.dbListEquipmentTickets(equipmentId)
   if (!DB.tickets) return []
 
   const response: any = await notionCallWithRetry('listEquipmentTickets', () =>
@@ -128,6 +132,10 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
   // 建立日期：有帶（客情自動開單＝客情日期）用帶入值，否則今天（台北時區，避免 00:00–08:00 記成前一天）
   const createdAt = validDateOnly(payload.createdDate)
     || new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
+  if (readFromDb()) {
+    const created = await dbt.dbCreateTicket(payload, createdAt)
+    return { id: created.id, equipmentId: payload.equipmentId, number: created.number, customerName: payload.customerName, title: payload.title, ticketType: payload.ticketType, status: payload.status, priority: payload.priority, scheduledDate: payload.scheduledDate ?? '', contactName: payload.contactName, description: payload.description, supportOwner: payload.supportOwner, salesOwner: payload.salesOwner, createdDate: createdAt }
+  }
   const response: any = await notionCallWithRetry('createTicket', () =>
     notion.pages.create({
       parent: { database_id: normalizeDatabaseId(DB.tickets) },
@@ -213,6 +221,7 @@ export async function createTicket(payload: CreateTicketPayload): Promise<Ticket
 }
 
 export async function updateTicket(id: string, data: UpdateTicketPayload): Promise<void> {
+  if (readFromDb()) { await dbt.dbUpdateTicket(id, data); return }
   const properties: Record<string, any> = {}
 
   if (data.status !== undefined) properties['狀態'] = { status: { name: data.status } }
@@ -250,6 +259,7 @@ export async function updateTicket(id: string, data: UpdateTicketPayload): Promi
 
 /** 全部未結案工單的最小欄位(id/優先級/建立日期)，供首頁待辦聚合算逾期數用。 */
 export async function listOpenTicketsForSla(): Promise<{ id: string; priority: string; createdDate: string }[]> {
+  if (readFromDb()) return dbt.dbOpenTicketsForSla()
   if (!DB.tickets) return []
   const items: { id: string; priority: string; createdDate: string }[] = []
   let cursor: string | undefined
@@ -281,6 +291,11 @@ export async function listSystemTickets(options?: {
 }): Promise<{ items: Ticket[]; hasMore: boolean; nextCursor: string | null }> {
   const limit = options?.limit ?? 10
   const cursor = options?.cursor
+  if (readFromDb()) {
+    const offset = cursor?.startsWith('o:') ? Number(cursor.slice(2)) || 0 : 0
+    const page = await dbt.dbListTickets({ limit, offset, salesOwner: options?.salesOwner })
+    return { items: page.items, hasMore: page.hasMore, nextCursor: page.hasMore ? `o:${offset + limit}` : null }
+  }
 
   if (!cursor) {
     const response: any = await notionCallWithRetry('listSystemTickets', () =>
@@ -324,6 +339,11 @@ export async function listSystemTickets(options?: {
 }
 
 export async function getSystemTicketById(id: string) {
+  if (readFromDb()) {
+    const t = await dbt.dbGetTicketById(id)
+    if (!t) throw new Error('找不到這張工單')
+    return t
+  }
   const page: any = await notionCallWithRetry('getSystemTicketById', () =>
     notion.pages.retrieve({ page_id: id })
   )

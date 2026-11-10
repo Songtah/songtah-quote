@@ -2,6 +2,8 @@
  * lib/notion/equipment.ts — 客戶設備（從 system-notion.ts 抽出）
  * 含設備搜尋、客戶設備清單、單筆設備、更新，以及只供設備使用的 Notion 圖片解析 helper。
  */
+import { readFromDb } from '@/lib/db/read-source'
+import * as dbe from '@/lib/db/equipment'
 import type { Equipment } from '@/types'
 import {
   notion, DB, transientCache, normalizeDatabaseId, notionCallWithRetry,
@@ -15,6 +17,7 @@ export async function searchEquipment(query: string): Promise<Equipment[]> {
   const cacheKey = `equipment:${keyword || '*'}`.toLowerCase()
   const cached = getCachedValue<Equipment[]>(cacheKey)
   if (cached) return cached
+  if (readFromDb()) { const items = await dbe.dbSearchEquipment(keyword); setCachedValue(cacheKey, items, 120_000); return items }
 
   const response: any = await notionCallWithRetry('searchEquipment', () =>
     notion.databases.query({
@@ -153,6 +156,17 @@ export async function listCustomerEquipment(customerId: string): Promise<Equipme
   const cached = getCachedValue<Equipment[]>(cacheKey)
   if (cached) return cached
 
+  if (readFromDb()) {
+    const rows = await dbe.dbListCustomerEquipment(customerId)
+    const detailsMap = await resolvePageDetails(rows.map((r) => r.productId))   // 產品縮圖仍在 Notion 產品頁
+    const items: Equipment[] = rows.map((r) => {
+      const details = detailsMap[r.productId] ?? { thumbnail: '', name: '' }
+      return { id: r.id, customerName: r.customerUnit, serialNumber: r.serialNumber, manufacturer: r.manufacturer, status: r.status, supportId: r.supportId, teamViewerId: r.teamViewerId, productName: details.name, originalCustomerId: customerId, originalProductId: r.productId, thumbnail: details.thumbnail }
+    })
+    setCachedValue(cacheKey, items, 180_000)
+    return items
+  }
+
   let results: any[] = []
   for (const field of EQUIPMENT_CUSTOMER_FIELDS) {
     try {
@@ -207,6 +221,13 @@ export async function listCustomerEquipment(customerId: string): Promise<Equipme
 }
 
 export async function getEquipmentById(id: string) {
+  if (readFromDb()) {
+    const r = await dbe.dbGetEquipmentById(id)
+    if (!r) return null
+    const detailsMap = await resolvePageDetails(r.productId ? [r.productId] : [])
+    const details = detailsMap[r.productId] ?? { thumbnail: '', name: '' }
+    return { id: r.id, customerName: r.customerUnit, serialNumber: r.serialNumber, manufacturer: r.manufacturer, status: r.status, supportId: r.supportId, teamViewerId: r.teamViewerId, dongleSerial: r.dongleSerial, note: r.note, warrantyEnd: r.warrantyEnd, activationDate: r.activationDate, productName: details.name, originalProductId: r.productId, thumbnail: details.thumbnail, customerId: r.customerId }
+  }
   try {
     const page: any = await notionCallWithRetry('getEquipmentById', () =>
       notion.pages.retrieve({ page_id: id })
@@ -270,7 +291,8 @@ export async function updateEquipment(id: string, data: {
   if (data.activationDate !== undefined)
     properties['啟用日期'] = { date: data.activationDate ? { start: data.activationDate } : null }
 
-  await notionCallWithRetry('updateEquipment', () =>
+  if (readFromDb()) await dbe.dbUpdateEquipment(id, data)
+  else await notionCallWithRetry('updateEquipment', () =>
     notion.pages.update({ page_id: id, properties })
   )
   // Invalidate all customer-equipment and page-details cache entries
@@ -287,6 +309,7 @@ export async function updateEquipment(id: string, data: {
  * 供拜訪建議快取層每晚重算;不要在請求路徑直接呼叫。
  */
 export async function scanEquipmentCustomerCounts(): Promise<Record<string, number>> {
+  if (readFromDb()) return dbe.dbEquipmentCustomerCounts()
   if (!DB.equipment) return {}
   const map: Record<string, number> = {}
   let cur: string | undefined
