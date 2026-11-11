@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { styledQrDataUrl } from '@/lib/qr-style'
+import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import Link from 'next/link'
 import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
 import { PromotionsContent } from '@/components/PromotionsContent'
@@ -293,7 +293,11 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
                 </button>
                 <a href={checkin.qr} download={`簽到QR-${event.name}.png`}
                   className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
-                  下載 QR 圖檔
+                  下載 QR（PNG）
+                </a>
+                <a href={styledQrSvgDataUrl(checkin.url)} download={`簽到QR-${event.name}.svg`}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
+                  下載 QR（SVG）
                 </a>
               </div>
             </div>

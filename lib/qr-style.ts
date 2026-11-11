@@ -30,6 +30,11 @@ export function styledQrSvg(text: string): string {
     + `<g fill="#000">${dots}${finder(0, 0)}${finder(0, n - 7)}${finder(n - 7, 0)}</g></svg>`
 }
 
+/** SVG 下載用（向量檔，給設計／印刷放大不失真） */
+export function styledQrSvgDataUrl(text: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(styledQrSvg(text))}`
+}
+
 /** 瀏覽器端：轉成 PNG data URL（預設 1000px，列印夠用）。 */
 export function styledQrDataUrl(text: string, size = 1000): Promise<string> {
   return new Promise((resolve, reject) => {

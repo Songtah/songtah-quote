@@ -6,7 +6,7 @@
  * 下方：各題彙總與回覆名單。活動問卷的名單可按「已領」發贈品（同一支手機只收一筆）。
  */
 import { useCallback, useEffect, useState } from 'react'
-import { styledQrDataUrl } from '@/lib/qr-style'
+import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import {
   FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
@@ -275,7 +275,8 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
               <p className="mt-1 break-all text-xs text-stone-600">{url}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) }} className={btn2}>{copied ? '已複製' : '複製連結'}</button>
-                {qr && <a href={qr} download={`${label}QR.png`} className={`${btn2} inline-flex items-center`}>下載 QR 圖檔</a>}
+                {qr && <a href={qr} download={`${label}QR.png`} className={`${btn2} inline-flex items-center`}>下載 QR（PNG）</a>}
+                {qr && url && <a href={styledQrSvgDataUrl(url)} download={`${label}QR.svg`} className={`${btn2} inline-flex items-center`}>下載 QR（SVG）</a>}
                 <a href={url} target="_blank" rel="noreferrer" className={`${btn2} inline-flex items-center`}>預覽</a>
               </div>
               {!form.open && <p className="mt-2 text-xs text-amber-700">目前未開放，訪客打開會看到「沒有開放填寫」。</p>}

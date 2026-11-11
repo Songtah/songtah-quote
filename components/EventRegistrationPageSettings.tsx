@@ -5,7 +5,7 @@
  * 開關、收費與報名費／報名方案、付款說明、名額、廣告圖；儲存後即時生效，並提供連結、QR code 與預覽。
  */
 import { useEffect, useState } from 'react'
-import { styledQrDataUrl } from '@/lib/qr-style'
+import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import type { EventItem } from '@/lib/notion/events'
 import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP, shortCodeOf, FORM_FIELDS, FIELD_MODES } from '@/lib/online-registration'
 
@@ -264,7 +264,13 @@ export function EventRegistrationPageSettings({
             {qr && (
               <a href={qr} download={`報名QR-${event.name}.png`}
                 className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
-                下載 QR
+                下載 QR（PNG）
+              </a>
+            )}
+            {qr && url && (
+              <a href={styledQrSvgDataUrl(url)} download={`報名QR-${event.name}.svg`}
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-900/10 transition-all hover:bg-stone-50 active:scale-95">
+                下載 QR（SVG）
               </a>
             )}
           </div>
