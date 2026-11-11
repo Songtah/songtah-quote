@@ -57,7 +57,8 @@ function parseSpecs(raw: string): SpecTable {
 
 interface CatalogItem {
   code: string
-  name: string
+  name: string          // ERP 品名
+  officialName?: string // 官方標準名（有值時優先顯示）
   brand: string
   productType: string   // 商品型態(9 種)
   category: string      // 功能分類(62 種)
@@ -1773,7 +1774,7 @@ function SkuRow({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm font-medium text-stone-800">{item.name}</p>
+              <p className="truncate text-sm font-medium text-stone-800" title={item.officialName ? `ERP 品名：${item.name}` : undefined}>{item.officialName || item.name}</p>
               {item.discontinued && (
                 <span className="shrink-0 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
                   {item.status || '未販售'}
@@ -2069,7 +2070,7 @@ function FamilyCard({
                           )}
                         </div>
                         <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0">{item.code}</span>
-                        <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.name}</span>
+                        <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.officialName || item.name}{item.officialName && <span className="ml-2 text-xs font-normal text-stone-400">ERP：{item.name}</span>}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 sm:justify-end">
                         {item.discontinued ? (
@@ -2481,6 +2482,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
       const matchesKeyword = !debouncedQ ||
         item.code.toLowerCase().includes(debouncedQ) ||
         item.name.toLowerCase().includes(debouncedQ) ||
+        (item.officialName || '').toLowerCase().includes(debouncedQ) ||
         (item.brand || '').toLowerCase().includes(debouncedQ) ||
         (item.seriesName || '').toLowerCase().includes(debouncedQ)
 

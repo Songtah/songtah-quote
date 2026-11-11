@@ -34,6 +34,8 @@ export const GET = withApiAuth('session', async (req: NextRequest) => {
     products.map((p) => ({
       id:           p.code,  // use code as ID for catalog items
       name:         p.name,
+      // 官方標準名（原廠現行名稱）；name 仍是 ERP 品名，單據與 ERP 對帳用
+      officialName: p.officialName ?? '',
       manufacturer: p.brand,
       productType:  p.productType,
       category:     p.category,

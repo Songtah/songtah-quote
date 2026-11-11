@@ -25,7 +25,7 @@ const btn1 = 'min-h-11 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibo
  */
 function ProductPicker({ eventId, value, onChange }: { eventId: string; value: FormProduct[]; onChange: (v: FormProduct[]) => void }) {
   const [q, setQ] = useState('')
-  const [results, setResults] = useState<{ skuCode: string; name: string; manufacturer: string; imageUrl?: string }[]>([])
+  const [results, setResults] = useState<{ skuCode: string; name: string; officialName?: string; manufacturer: string; imageUrl?: string }[]>([])
   const [searching, setSearching] = useState(false)
   const [uploading, setUploading] = useState('')
   const [error, setError] = useState('')
@@ -131,13 +131,13 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
           {results.map((r) => (
             <li key={r.skuCode}>
               <button type="button" disabled={chosen.has(r.skuCode)}
-                onClick={() => { onChange([...value, { code: r.skuCode, name: r.name, brand: r.manufacturer ?? '', imageUrl: r.imageUrl ?? '' }]); setQ('') }}
+                onClick={() => { onChange([...value, { code: r.skuCode, name: r.officialName || r.name, brand: r.manufacturer ?? '', imageUrl: r.imageUrl ?? '' }]); setQ('') }}
                 className="flex w-full items-center gap-3 px-4 py-2 text-left text-xs transition-colors hover:bg-brand-50/50 disabled:opacity-40">
                 {r.imageUrl
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={r.imageUrl} alt="" className="size-9 shrink-0 rounded-lg bg-white object-contain ring-1 ring-stone-900/[0.06]" />
                   : <span className="size-9 shrink-0 rounded-lg bg-stone-100" aria-hidden="true" />}
-                <span className="min-w-0 flex-1 text-stone-700">{r.name}<span className="ml-2 text-stone-400">{r.manufacturer}</span></span>
+                <span className="min-w-0 flex-1 text-stone-700">{r.officialName || r.name}<span className="ml-2 text-stone-400">{r.manufacturer}</span></span>
                 <span className="shrink-0 tabular-nums text-stone-400">{chosen.has(r.skuCode) ? '已加入' : r.imageUrl ? r.skuCode : `${r.skuCode}・無圖`}</span>
               </button>
             </li>

@@ -25922,7 +25922,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO A100"
  },
  {
   "code": "KM-A200",
@@ -25932,7 +25933,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO A200"
  },
  {
   "code": "KM-C-100-2F",
@@ -25942,7 +25944,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO 桌上型集塵器"
  },
  {
   "code": "KM-C-100-G",
@@ -25952,7 +25955,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO 桌上型集塵器"
  },
  {
   "code": "KM-C-100-H",
@@ -25962,7 +25966,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO 桌上型集塵器"
  },
  {
   "code": "KM-GA10L",
@@ -25992,7 +25997,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO H100"
  },
  {
   "code": "KM-H200",
@@ -26002,7 +26008,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO H200"
  },
  {
   "code": "KM-K3",
@@ -26012,7 +26019,8 @@
   "category": "磨石／研磨工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "grinding-tool"
+  "categoryId": "grinding-tool",
+  "officialName": "SORINO K3 + Grinding box"
  },
  {
   "code": "KM-K3-N",
@@ -26022,7 +26030,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO K3 Pro 移動式吸塵器(無刷)"
  },
  {
   "code": "KM-K4",
@@ -26032,7 +26041,8 @@
   "category": "磨石／研磨工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "grinding-tool"
+  "categoryId": "grinding-tool",
+  "officialName": "SORINO K4 + Grinding box"
  },
  {
   "code": "KM-K4-N",
@@ -26042,7 +26052,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "SORINO K4 Pro 移動式吸塵器(無刷)"
  },
  {
   "code": "KM-XCEL",
