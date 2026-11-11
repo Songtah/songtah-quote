@@ -9404,44 +9404,12 @@
       "95|12|未染色": "ZZ-999-027-95H12",
       "95|16|未染色": "ZZ-999-027-95H16",
       "95|18|未染色": "ZZ-999-027-95H18",
-      "95|22|未染色": "ZZ-999-027-95H22"
-    }
-  },
-  {
-    "id": "ZZ-PRETTAU-ANTERIOR",
-    "seriesCode": "ZZ-PRETTAU-ANTERIOR",
-    "seriesName": "Prettau Anterior 氧化鋯塊",
-    "brand": "Zirkonzahn",
-    "productType": "材料",
-    "category": "氧化鋯塊",
-    "skuPattern": "",
-    "namePattern": "Prettau Anterior {直徑}H{厚度}",
-    "specs": [
-      {
-        "key": "直徑",
-        "label": "直徑 (mm)",
-        "options": [
-          "98"
-        ]
-      },
-      {
-        "key": "厚度",
-        "label": "厚度 (mm)",
-        "options": [
-          "10",
-          "12",
-          "16",
-          "18",
-          "22"
-        ]
-      }
-    ],
-    "skuMap": {
-      "98|10": "ZZ-999-027-98H10",
-      "98|12": "ZZ-999-027-98H12",
-      "98|16": "ZZ-999-027-98H16",
-      "98|18": "ZZ-999-027-98H18",
-      "98|22": "ZZ-999-027-98H22"
+      "95|22|未染色": "ZZ-999-027-95H22",
+      "98|10|未染色": "ZZ-999-027-98H10",
+      "98|12|未染色": "ZZ-999-027-98H12",
+      "98|16|未染色": "ZZ-999-027-98H16",
+      "98|18|未染色": "ZZ-999-027-98H18",
+      "98|22|未染色": "ZZ-999-027-98H22"
     }
   },
   {
@@ -9851,12 +9819,12 @@
   {
     "id": "ZZ-PRETTAU-3",
     "seriesCode": "ZZ-PRETTAU-3",
-    "seriesName": "Prettau 3 氧化鋯塊",
+    "seriesName": "Prettau 3 Dispersive 氧化鋯塊",
     "brand": "Zirkonzahn",
     "productType": "材料",
     "category": "氧化鋯塊",
     "skuPattern": "",
-    "namePattern": "Prettau 3 {直徑}H{厚度} {顏色}",
+    "namePattern": "Prettau 3 Dispersive {直徑}H{厚度} {顏色}",
     "specs": [
       {
         "key": "直徑",
@@ -10100,6 +10068,81 @@
     "skuMap": {
       "H16 0M2（3 入）": "ZZ-ZROC01030M2",
       "H22 0M2（3 入）": "ZZ-ZROC51030M2"
+    }
+  },
+  {
+    "id": "ZZ-ICE-ZIRKON-TRANSLUCENT",
+    "seriesCode": "ZZ-ICE-ZIRKON-TRANSLUCENT",
+    "seriesName": "ICE Zirkon Translucent 氧化鋯塊",
+    "brand": "Zirkonzahn",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "",
+    "namePattern": "ICE Zirkon Translucent {直徑}H{厚度}",
+    "specs": [
+      {
+        "key": "直徑",
+        "label": "直徑 (mm)",
+        "options": [
+          "95",
+          "98"
+        ]
+      },
+      {
+        "key": "厚度",
+        "label": "厚度 (mm)",
+        "options": [
+          "10",
+          "12",
+          "14",
+          "16",
+          "18",
+          "20",
+          "22",
+          "25"
+        ]
+      }
+    ],
+    "skuMap": {
+      "95|10": "ZZ-999-020-95H10",
+      "95|12": "ZZ-999-020-95H12",
+      "95|14": "ZZ-999-020-95H14",
+      "95|16": "ZZ-999-020-95H16",
+      "95|18": "ZZ-999-020-95H18",
+      "95|22": "ZZ-999-020-95H22",
+      "95|25": "ZZ-999-020-95H25",
+      "98|12": "ZZ-999-025-98H12",
+      "98|14": "ZZ-999-025-98H14",
+      "98|18": "ZZ-999-025-98H18",
+      "98|20": "ZZ-999-025-98H20",
+      "98|22": "ZZ-999-025-98H22",
+      "98|25": "ZZ-999-025-98H25"
+    }
+  },
+  {
+    "id": "ZZ-ZIRCONIA-CREATIVE",
+    "seriesCode": "ZZ-ZIRCONIA-CREATIVE",
+    "seriesName": "Zirconia Creative 彩色氧化鋯塊",
+    "brand": "Zirkonzahn",
+    "productType": "材料",
+    "category": "氧化鋯塊",
+    "skuPattern": "",
+    "namePattern": "Zirconia Creative {規格}",
+    "specs": [
+      {
+        "key": "規格",
+        "label": "規格 / 型號",
+        "options": [
+          "Green 95H14",
+          "Dark blue 95H14",
+          "Black 95H18"
+        ]
+      }
+    ],
+    "skuMap": {
+      "Green 95H14": "ZZ-999-033-01",
+      "Dark blue 95H14": "ZZ-999-033-06",
+      "Black 95H18": "ZZ-999-033-08"
     }
   }
 ]
