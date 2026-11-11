@@ -149,7 +149,7 @@ export function PublicForm({ formId }: { formId: string }) {
               ))}
             </div>
           )}
-          {q.type === 'multi' && (
+          {(q.type === 'multi' || q.type === 'products') && (
             <div className="mt-2 flex flex-wrap gap-2">
               {q.options.map((o) => {
                 const cur = (answers[q.id] as string[]) ?? []

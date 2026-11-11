@@ -7,13 +7,16 @@
 export type FormKind = 'survey' | 'satisfaction'
 export const FORM_KIND_LABEL: Record<FormKind, string> = { survey: '活動問卷', satisfaction: '滿意度調查' }
 
-export const QUESTION_TYPES = ['text', 'textarea', 'single', 'multi', 'rating'] as const
+export const QUESTION_TYPES = ['text', 'textarea', 'single', 'multi', 'rating', 'products'] as const
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
-  text: '簡答', textarea: '長文字', single: '單選', multi: '複選', rating: '1–5 分',
+  text: '簡答', textarea: '長文字', single: '單選', multi: '複選', rating: '1–5 分', products: '關聯產品',
 }
 
-export type FormQuestion = { id: string; label: string; type: QuestionType; options: string[]; required: boolean }
+/** 關聯產品題的選項：從產品目錄挑出來的品項（code＝貨號）。訪客看到的是 name，可複選 */
+export type FormProduct = { code: string; name: string; brand: string }
+export type FormQuestion = { id: string; label: string; type: QuestionType; options: string[]; required: boolean; products?: FormProduct[] }
+export const MAX_PRODUCTS = 30
 /** 填答者身分：required＝姓名、手機、單位必填；optional＝可留可不留；none＝完全匿名 */
 export type FormIdentity = 'required' | 'optional' | 'none'
 
@@ -42,6 +45,20 @@ export function sanitizeFormInput(kind: FormKind, input: any): Omit<EventForm, '
     let id = clip(q?.id, 40).replace(/[^a-zA-Z0-9_-]/g, '')
     if (!id || seen.has(id)) id = `q${i + 1}_${Math.random().toString(36).slice(2, 8)}`
     seen.add(id)
+    if (type === 'products') {
+      // 關聯產品題：選項＝挑選的產品名稱（同名時加上貨號區分），products 保留貨號供之後串接產品資料
+      const codes = new Set<string>(), names = new Set<string>()
+      const products: FormProduct[] = []
+      for (const p of (Array.isArray(q?.products) ? q.products : []).slice(0, MAX_PRODUCTS)) {
+        const code = clip(p?.code, 60); let name = clip(p?.name, 100)
+        if (!code || !name || codes.has(code)) continue
+        if (names.has(name)) name = `${name}（${code}）`.slice(0, 100)
+        codes.add(code); names.add(name)
+        products.push({ code, name, brand: clip(p?.brand, 60) })
+      }
+      if (!products.length) throw new Error(`第 ${i + 1} 題「${label}」還沒有挑選產品`)
+      return { id, label, type, options: products.map((p) => p.name), required: q?.required === true, products }
+    }
     const options = type === 'single' || type === 'multi'
       ? Array.from(new Set((Array.isArray(q?.options) ? q.options : []).map((o: unknown) => clip(o, 100)).filter(Boolean))).slice(0, MAX_OPTIONS) as string[]
       : []
@@ -64,7 +81,7 @@ export function validateAnswers(form: Pick<EventForm, 'questions'>, raw: any): R
     if (q.type === 'text') val = clip(v, 200) || null
     else if (q.type === 'textarea') val = clip(v, 2000) || null
     else if (q.type === 'single') val = typeof v === 'string' && q.options.includes(v) ? v : null
-    else if (q.type === 'multi') { const arr = Array.isArray(v) ? v.filter((x) => typeof x === 'string' && q.options.includes(x)) : []; val = arr.length ? Array.from(new Set(arr)) : null }
+    else if (q.type === 'multi' || q.type === 'products') { const arr = Array.isArray(v) ? v.filter((x) => typeof x === 'string' && q.options.includes(x)) : []; val = arr.length ? Array.from(new Set(arr)) : null }
     else if (q.type === 'rating') { const n = Number(v); val = Number.isInteger(n) && n >= 1 && n <= 5 ? n : null }
     if (val == null) { if (q.required) throw new Error(`請回答「${q.label}」`); continue }
     out[q.id] = val
@@ -78,7 +95,7 @@ export function summarize(form: Pick<EventForm, 'questions'>, responses: Pick<Fo
   return form.questions.map((q) => {
     const vals = responses.map((r) => r.answers?.[q.id]).filter((v) => v != null && v !== '')
     const s: QuestionSummary = { id: q.id, label: q.label, type: q.type, answered: vals.length }
-    if (q.type === 'single' || q.type === 'multi') {
+    if (q.type === 'single' || q.type === 'multi' || q.type === 'products') {
       s.counts = Object.fromEntries(q.options.map((o) => [o, 0]))
       for (const v of vals) for (const o of (Array.isArray(v) ? v : [v])) if (typeof o === 'string' && o in s.counts) s.counts[o]++
     } else if (q.type === 'rating') {

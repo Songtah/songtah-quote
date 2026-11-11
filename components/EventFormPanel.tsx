@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import {
   FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
-  type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity,
+  MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
 } from '@/lib/event-forms-model'
 
 type Draft = { title: string; intro: string; gift: string; identity: FormIdentity; questions: FormQuestion[]; open: boolean }
@@ -18,6 +18,61 @@ const newQuestion = (): FormQuestion => ({ id: `q_${Math.random().toString(36).s
 const fmt = (iso: string) => iso ? new Date(iso).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
 const btn2 = 'min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 disabled:opacity-40'
 const btn1 = 'min-h-11 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40'
+
+/** 關聯產品題的產品挑選：搜尋產品目錄（/api/products/search），點選加入；已選的可移除 */
+function ProductPicker({ value, onChange }: { value: FormProduct[]; onChange: (v: FormProduct[]) => void }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<{ skuCode: string; name: string; manufacturer: string }[]>([])
+  const [searching, setSearching] = useState(false)
+  useEffect(() => {
+    const kw = q.trim()
+    if (!kw) { setResults([]); return }
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(kw)}&limit=12`)
+        const data = await res.json()
+        setResults(Array.isArray(data) ? data : [])
+      } catch { setResults([]) } finally { setSearching(false) }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q])
+  const chosen = new Set(value.map((p) => p.code))
+  return (
+    <div className="mt-3 space-y-2 pl-6">
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {value.map((p) => (
+            <span key={p.code} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs text-stone-700 ring-1 ring-stone-900/[0.06]">
+              {p.name}
+              <button type="button" aria-label={`移除 ${p.name}`} onClick={() => onChange(value.filter((x) => x.code !== p.code))} className="rounded-full px-1 text-stone-400 transition-all hover:text-red-600 active:scale-95">✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+      {value.length < MAX_PRODUCTS && (
+        <input className="input-soft w-full" value={q} placeholder="搜尋產品名稱或貨號，點選加入" aria-label="搜尋產品" onChange={(e) => setQ(e.target.value)} />
+      )}
+      {q.trim() && (
+        <ul className="max-h-56 divide-y divide-stone-900/[0.06] overflow-y-auto rounded-2xl bg-white ring-1 ring-stone-900/[0.06]">
+          {searching && <li className="px-4 py-2.5 text-xs text-stone-400">搜尋中…</li>}
+          {!searching && results.length === 0 && <li className="px-4 py-2.5 text-xs text-stone-400">找不到符合的產品</li>}
+          {results.map((r) => (
+            <li key={r.skuCode}>
+              <button type="button" disabled={chosen.has(r.skuCode)}
+                onClick={() => { onChange([...value, { code: r.skuCode, name: r.name, brand: r.manufacturer ?? '' }]); setQ('') }}
+                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-brand-50/50 disabled:opacity-40">
+                <span className="text-stone-700">{r.name}<span className="ml-2 text-stone-400">{r.manufacturer}</span></span>
+                <span className="shrink-0 tabular-nums text-stone-400">{chosen.has(r.skuCode) ? '已加入' : r.skuCode}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-xs text-stone-400">訪客會看到產品名稱並可複選；結果依產品統計。已選 {value.length}/{MAX_PRODUCTS}。</p>
+    </div>
+  )
+}
 
 export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; kind: FormKind; canEdit: boolean }) {
   const label = FORM_KIND_LABEL[kind]
@@ -174,13 +229,14 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <div className="flex flex-wrap items-start gap-2">
                   <span className="pt-2.5 text-sm tabular-nums text-stone-400">{i + 1}.</span>
                   <input className="input-soft min-w-0 flex-1" value={q.label} maxLength={200} placeholder="題目" aria-label={`第 ${i + 1} 題題目`} onChange={(e) => setQ(i, { label: e.target.value })} />
-                  <select className="select-soft w-28" value={q.type} aria-label="題型" onChange={(e) => {
+                  <select className="select-soft w-32" value={q.type} aria-label="題型" onChange={(e) => {
                     const type = e.target.value as FormQuestion['type']
-                    setQ(i, { type, options: type === 'single' || type === 'multi' ? (q.options.length >= 2 ? q.options : ['', '']) : [] })
+                    setQ(i, { type, options: type === 'single' || type === 'multi' ? (q.options.length >= 2 && q.type !== 'products' ? q.options : ['', '']) : [], products: type === 'products' ? (q.products ?? []) : undefined })
                   }}>
                     {QUESTION_TYPES.map((t) => <option key={t} value={t}>{QUESTION_TYPE_LABEL[t]}</option>)}
                   </select>
                 </div>
+                {q.type === 'products' && <ProductPicker value={q.products ?? []} onChange={(products) => setQ(i, { products, options: products.map((p) => p.name) })} />}
                 {(q.type === 'single' || q.type === 'multi') && (
                   <div className="mt-3 space-y-2 pl-6">
                     {q.options.map((o, j) => (
