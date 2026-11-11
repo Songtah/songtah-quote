@@ -51,12 +51,22 @@ function ProductPicker({ value, onChange }: { value: FormProduct[]; onChange: (v
         </div>
       )}
       {value.length < MAX_PRODUCTS && (
-        <input className="input-soft w-full" value={q} placeholder="搜尋產品名稱或貨號，點選加入" aria-label="搜尋產品" onChange={(e) => setQ(e.target.value)} />
+        <input className="input-soft w-full" value={q} placeholder="搜尋產品名稱或貨號，或直接輸入自訂名稱" aria-label="搜尋產品" onChange={(e) => setQ(e.target.value)} />
       )}
       {q.trim() && (
         <ul className="max-h-56 divide-y divide-stone-900/[0.06] overflow-y-auto rounded-2xl bg-white ring-1 ring-stone-900/[0.06]">
           {searching && <li className="px-4 py-2.5 text-xs text-stone-400">搜尋中…</li>}
-          {!searching && results.length === 0 && <li className="px-4 py-2.5 text-xs text-stone-400">找不到符合的產品</li>}
+          {!searching && results.length === 0 && <li className="px-4 py-2.5 text-xs text-stone-400">目錄裡找不到符合的產品</li>}
+          {/* 目錄是逐一貨號，問卷常用的是產品線或系列名稱：可直接用輸入的文字當選項 */}
+          {!searching && !value.some((p) => p.name === q.trim()) && (
+            <li>
+              <button type="button" onClick={() => { onChange([...value, { code: `custom:${q.trim()}`, name: q.trim().slice(0, 100), brand: '' }]); setQ('') }}
+                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-brand-50/50">
+                <span className="text-stone-700">用「{q.trim()}」當選項</span>
+                <span className="shrink-0 text-stone-400">自訂名稱</span>
+              </button>
+            </li>
+          )}
           {results.map((r) => (
             <li key={r.skuCode}>
               <button type="button" disabled={chosen.has(r.skuCode)}
@@ -69,7 +79,7 @@ function ProductPicker({ value, onChange }: { value: FormProduct[]; onChange: (v
           ))}
         </ul>
       )}
-      <p className="text-xs text-stone-400">訪客會看到產品名稱並可複選；結果依產品統計。已選 {value.length}/{MAX_PRODUCTS}。</p>
+      <p className="text-xs text-stone-400">訪客會看到這些名稱並可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。已選 {value.length}/{MAX_PRODUCTS}。</p>
     </div>
   )
 }
