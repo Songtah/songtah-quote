@@ -133,13 +133,17 @@ export async function getSystemUserByCredentials(
   username: string,
   password: string
 ): Promise<SystemUser | null> {
+  // 帳號代碼比對不分大小寫、忽略前後空白（2026-11-11）。
+  // 帳號資料搬到資料庫後，查詢變成逐字完全相符；Notion 原本的比對較寬鬆，
+  // 手機輸入法自動把首字改大寫或多帶一個空白就會登不進去（Ray 回報無法登入）。
+  // 帳號只有二十幾個，直接全部取回在程式比對；密碼仍逐字比對，不做任何寬鬆處理。
+  const wanted = (username ?? '').trim().toLowerCase()
+  if (!wanted) return null
   const response: any = await notionCallWithRetry('getSystemUserByCredentials', () =>
-    notion.databases.query({
-      database_id: normalizeDatabaseId(DB.users),
-      filter: { property: '帳號代碼', rich_text: { equals: username } },
-    })
+    notion.databases.query({ database_id: normalizeDatabaseId(DB.users), page_size: 100 })
   )
-  for (const page of response.results ?? []) {
+  const candidates = (response.results ?? []).filter((page: any) => getText(page, '帳號代碼').trim().toLowerCase() === wanted)
+  for (const page of candidates) {
     const storedPw = getText(page, '密碼')
     const matches = await verifyPassword(storedPw, password)
     if (matches) {
