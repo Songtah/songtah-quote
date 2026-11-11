@@ -5,7 +5,7 @@ import { JOB_TITLES, type FormQuestion, type FormIdentity, type FormKind } from 
 import { TW_CITIES, TW_DISTRICTS } from '@/lib/tw-districts'
 
 type Def = {
-  kind: FormKind; title: string; eventName: string; gift: string; open: boolean
+  kind: FormKind; title: string; eventName: string; gift: string; giftImage?: string; open: boolean
   intro?: string; identity?: FormIdentity; questions?: FormQuestion[]
 }
 type Receipt = { id: string; name: string; claimed: boolean; createdAt: string }
@@ -91,6 +91,10 @@ export function PublicForm({ formId }: { formId: string }) {
         {def.kind === 'survey' ? (
           <div className={`mt-5 rounded-3xl p-5 ${receipt.claimed ? 'bg-stone-100' : 'bg-brand-50'}`}>
             <p className="text-xs font-semibold text-stone-500">{receipt.claimed ? '贈品已領取' : '請向現場人員出示此畫面領取贈品'}</p>
+            {def.giftImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={def.giftImage} alt="" className="mx-auto mt-3 aspect-square w-40 rounded-2xl bg-white object-contain p-2 ring-1 ring-stone-900/[0.06]" />
+            )}
             {def.gift && <p className="mt-2 text-lg font-bold text-stone-800">{def.gift}</p>}
             <p className="mt-3 text-sm text-stone-600">{receipt.name}</p>
             <p className="mt-1 text-xs tabular-nums text-stone-400">填寫時間 {time}・編號 {receipt.id.slice(0, 6).toUpperCase()}</p>
@@ -126,7 +130,18 @@ export function PublicForm({ formId }: { formId: string }) {
         <p className="text-[11px] font-bold uppercase tracking-widest text-brand-500">{def.eventName}</p>
         <h1 className="mt-1 text-xl font-bold text-stone-800">{heading}</h1>
         {def.intro && <p className="mt-2 whitespace-pre-line text-sm leading-6 text-stone-500">{def.intro}</p>}
-        {def.kind === 'survey' && def.gift && <p className="mt-3 rounded-2xl bg-brand-50 px-4 py-2.5 text-sm text-stone-700">填完可領取：<span className="font-semibold">{def.gift}</span></p>}
+        {def.kind === 'survey' && (def.gift || def.giftImage) && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-brand-50 p-3">
+            {def.giftImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={def.giftImage} alt="" className="size-20 shrink-0 rounded-xl bg-white object-contain p-1 ring-1 ring-stone-900/[0.06]" />
+            )}
+            <p className="min-w-0 text-sm leading-6 text-stone-700">
+              <span className="block text-xs font-semibold text-brand-600">填完可領取</span>
+              <span className="font-semibold">{def.gift || '現場贈品'}</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {def.identity !== 'none' && (

@@ -10,7 +10,7 @@ const iso = (v: any) => (v == null ? '' : v instanceof Date ? v.toISOString() : 
 const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
 
 const toForm = (r: any): EventForm => ({
-  id: r.id, eventId: r.event_id, kind: r.kind, title: r.title, intro: r.intro, gift: r.gift,
+  id: r.id, eventId: r.event_id, kind: r.kind, title: r.title, intro: r.intro, gift: r.gift, giftImage: r.gift_image ?? '',
   identity: r.identity, questions: r.questions ?? [], open: !!r.open, updatedAt: iso(r.updated_at),
 })
 const toResponse = (r: any): FormResponse => ({
@@ -32,9 +32,9 @@ export async function getFormById(formId: string): Promise<EventForm | null> {
 export async function saveEventForm(eventId: string, data: Omit<EventForm, 'id' | 'eventId' | 'updatedAt'>): Promise<EventForm> {
   const db = sql()
   const r = await db`
-    insert into event_forms (event_id, kind, title, intro, gift, identity, questions, open)
-    values (${bare(eventId)}, ${data.kind}, ${data.title}, ${data.intro}, ${data.gift}, ${data.identity}, ${db.json(data.questions as any)}, ${data.open})
-    on conflict (event_id, kind) do update set title = excluded.title, intro = excluded.intro, gift = excluded.gift,
+    insert into event_forms (event_id, kind, title, intro, gift, gift_image, identity, questions, open)
+    values (${bare(eventId)}, ${data.kind}, ${data.title}, ${data.intro}, ${data.gift}, ${data.giftImage}, ${data.identity}, ${db.json(data.questions as any)}, ${data.open})
+    on conflict (event_id, kind) do update set title = excluded.title, intro = excluded.intro, gift = excluded.gift, gift_image = excluded.gift_image,
       identity = excluded.identity, questions = excluded.questions, open = excluded.open, updated_at = now()
     returning *`
   return toForm(r[0])

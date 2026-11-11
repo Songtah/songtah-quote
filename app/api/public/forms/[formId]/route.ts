@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   const form = await getFormById(params.formId)
   if (!form) return NextResponse.json({ error: '找不到這份表單' }, { status: 404 })
   const event = await getEventById(form.eventId).catch(() => null)
-  const base = { kind: form.kind, title: form.title, eventName: event?.name ?? '', gift: form.gift, open: form.open }
+  const base = { kind: form.kind, title: form.title, eventName: event?.name ?? '', gift: form.gift, giftImage: form.giftImage, open: form.open }
   const rid = req.nextUrl.searchParams.get('r')
   if (rid) {
     const r = await getResponse(form.id, rid)

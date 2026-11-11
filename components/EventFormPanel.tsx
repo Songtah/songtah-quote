@@ -12,8 +12,8 @@ import {
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
 } from '@/lib/event-forms-model'
 
-type Draft = { title: string; intro: string; gift: string; identity: FormIdentity; questions: FormQuestion[]; open: boolean }
-const emptyDraft = (kind: FormKind): Draft => ({ title: '', intro: '', gift: '', identity: kind === 'survey' ? 'required' : 'none', questions: [], open: false })
+type Draft = { title: string; intro: string; gift: string; giftImage: string; identity: FormIdentity; questions: FormQuestion[]; open: boolean }
+const emptyDraft = (kind: FormKind): Draft => ({ title: '', intro: '', gift: '', giftImage: '', identity: kind === 'survey' ? 'required' : 'none', questions: [], open: false })
 const newQuestion = (): FormQuestion => ({ id: `q_${Math.random().toString(36).slice(2, 9)}`, label: '', type: 'single', options: ['', ''], required: true })
 const fmt = (iso: string) => iso ? new Date(iso).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'
 const btn2 = 'min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 disabled:opacity-40'
@@ -165,13 +165,24 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
   const [url, setUrl] = useState('')
   const [copied, setCopied] = useState(false)
   const [claiming, setClaiming] = useState('')
+  const [giftUploading, setGiftUploading] = useState(false)
+  async function uploadGiftImage(file: File) {
+    setGiftUploading(true); setMsg(null)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch(`/api/events/${eventId}/forms/image`, { method: 'POST', body: fd })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? '上傳失敗')
+      setDraft((d) => ({ ...d, giftImage: json.url }))
+    } catch (e: any) { setMsg({ ok: false, text: e?.message ?? '上傳失敗' }) } finally { setGiftUploading(false) }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/events/${eventId}/forms?kind=${kind}`)
     const json = await res.json().catch(() => ({}))
     if (res.ok) {
       setForm(json.form ?? null); setResponses(json.responses ?? []); setSummary(json.summary ?? [])
-      if (json.form) setDraft({ title: json.form.title, intro: json.form.intro, gift: json.form.gift, identity: json.form.identity, questions: json.form.questions, open: json.form.open })
+      if (json.form) setDraft({ title: json.form.title, intro: json.form.intro, gift: json.form.gift, giftImage: json.form.giftImage ?? '', identity: json.form.identity, questions: json.form.questions, open: json.form.open })
     } else setMsg({ ok: false, text: json.error ?? '載入失敗' })
     setLoading(false)
   }, [eventId, kind])
@@ -281,9 +292,21 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
               <input className="input-soft mt-1 w-full" value={draft.title} maxLength={100} placeholder={label} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
             </label>
             {kind === 'survey' ? (
-              <label className="block text-sm font-medium text-stone-700">贈品
-                <input className="input-soft mt-1 w-full" value={draft.gift} maxLength={200} placeholder="例：崧達環保杯一個" onChange={(e) => setDraft({ ...draft, gift: e.target.value })} />
-              </label>
+              <div className="block text-sm font-medium text-stone-700">贈品
+                <input aria-label="贈品" className="input-soft mt-1 w-full" value={draft.gift} maxLength={200} placeholder="例：崧達環保杯一個" onChange={(e) => setDraft({ ...draft, gift: e.target.value })} />
+                <span className="mt-2 flex items-center gap-3 text-xs font-normal">
+                  {draft.giftImage
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={draft.giftImage} alt="" className="size-16 shrink-0 rounded-xl bg-white object-contain p-1 ring-1 ring-stone-900/[0.06]" />
+                    : <span className="grid size-16 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-400">無圖</span>}
+                  <label className="cursor-pointer font-medium text-brand-600 transition-colors hover:text-brand-700">
+                    {giftUploading ? '上傳中…' : draft.giftImage ? '換贈品照片' : '上傳贈品照片'}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={giftUploading}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadGiftImage(f); e.target.value = '' }} />
+                  </label>
+                  {draft.giftImage && <button type="button" onClick={() => setDraft({ ...draft, giftImage: '' })} className="text-stone-400 transition-colors hover:text-stone-600">拿掉照片</button>}
+                </span>
+              </div>
             ) : (
               <label className="block text-sm font-medium text-stone-700">填答者基本資料
                 <select className="select-soft mt-1 w-full" value={draft.identity} onChange={(e) => setDraft({ ...draft, identity: e.target.value as FormIdentity })}>
@@ -342,7 +365,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
           {responses.length > 0 && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-xs text-amber-700">已經有 {responses.length} 份回覆。刪除或更換題目後，舊回覆裡那一題的答案不會再顯示在彙總裡。</p>}
           <div className="flex flex-wrap gap-2">
             <button onClick={() => save()} disabled={saving} className={btn1}>{saving ? '儲存中…' : '儲存'}</button>
-            <button onClick={() => { setEditing(false); if (form) setDraft({ title: form.title, intro: form.intro, gift: form.gift, identity: form.identity, questions: form.questions, open: form.open }) }} className={btn2}>取消</button>
+            <button onClick={() => { setEditing(false); if (form) setDraft({ title: form.title, intro: form.intro, gift: form.gift, giftImage: form.giftImage ?? '', identity: form.identity, questions: form.questions, open: form.open }) }} className={btn2}>取消</button>
           </div>
         </div>
       )}

@@ -33,6 +33,8 @@ export type FormIdentity = 'required' | 'optional' | 'none'
 
 export type EventForm = {
   id: string; eventId: string; kind: FormKind; title: string; intro: string; gift: string
+  /** 贈品照片（只收本系統 Blob 網址；沒有就空字串） */
+  giftImage: string
   identity: FormIdentity; questions: FormQuestion[]; open: boolean; updatedAt: string
 }
 /** 基本資料的職稱選項（使用者 2026-11-11 指定牙技師／牙醫師；另留「其他」給助理、學生等，避免必填時填不下去） */
@@ -86,7 +88,7 @@ export function sanitizeFormInput(kind: FormKind, input: any): Omit<EventForm, '
   if (open && questions.length === 0) throw new Error('還沒有題目，不能開放填寫')
   // 活動問卷要換贈品，一定要留手機才能確認「一人一份」
   const identity: FormIdentity = kind === 'survey' ? 'required' : (['required', 'optional', 'none'].includes(input?.identity) ? input.identity : 'none')
-  return { kind, title: clip(input?.title, 100), intro: clip(input?.intro, 1000), gift: kind === 'survey' ? clip(input?.gift, 200) : '', identity, questions, open }
+  return { kind, title: clip(input?.title, 100), intro: clip(input?.intro, 1000), gift: kind === 'survey' ? clip(input?.gift, 200) : '', giftImage: kind === 'survey' ? blobImage(input?.giftImage) : '', identity, questions, open }
 }
 
 /** 驗證訪客送出的答案；回傳整理後的答案，或丟出訊息 */
