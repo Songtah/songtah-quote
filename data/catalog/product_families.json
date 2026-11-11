@@ -9609,12 +9609,12 @@
   {
     "id": "ZZ-PRETTAU-2",
     "seriesCode": "ZZ-PRETTAU-2",
-    "seriesName": "Prettau 2 氧化鋯塊",
+    "seriesName": "Prettau 2 Dispersive 氧化鋯塊",
     "brand": "Zirkonzahn",
     "productType": "材料",
     "category": "氧化鋯塊",
     "skuPattern": "",
-    "namePattern": "Prettau 2 {直徑}H{厚度} {顏色}",
+    "namePattern": "Prettau 2 Dispersive {直徑}H{厚度} {顏色}",
     "specs": [
       {
         "key": "直徑",
