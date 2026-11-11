@@ -51671,20 +51671,20 @@
   "name": "Prettau Aquarell Set 20ml （貨號待查證）",
   "brand": "Zirkonzahn",
   "productType": "材料",
-  "category": "氧化鋯塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "category": "內染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "internal-stain"
  },
  {
   "code": "ZZ-63-21",
   "name": "Prettau Aquarell Set 50ml(16瓶)",
   "brand": "Zirkonzahn",
   "productType": "材料",
-  "category": "氧化鋯塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "category": "內染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "internal-stain"
  },
  {
   "code": "ZZ-63-A1",
@@ -52389,10 +52389,10 @@
   "name": "Prettau Anterior Aquarell Set 50ml",
   "brand": "Zirkonzahn",
   "productType": "材料",
-  "category": "氧化鋯塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "category": "內染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "internal-stain"
  },
  {
   "code": "ZZ-999-010-2",
