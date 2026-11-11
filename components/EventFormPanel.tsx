@@ -19,11 +19,16 @@ const fmt = (iso: string) => iso ? new Date(iso).toLocaleString('zh-TW', { month
 const btn2 = 'min-h-11 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-600 transition-all hover:border-stone-300 hover:bg-stone-50 active:scale-95 disabled:opacity-40'
 const btn1 = 'min-h-11 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40'
 
-/** 關聯產品題的產品挑選：搜尋產品目錄（/api/products/search），點選加入；已選的可移除 */
-function ProductPicker({ value, onChange }: { value: FormProduct[]; onChange: (v: FormProduct[]) => void }) {
+/**
+ * 關聯產品題的產品挑選：搜尋產品目錄（/api/products/search）點選加入，或輸入自訂名稱。
+ * 每個產品可以有一張圖：目錄有圖的自動帶入，沒有的（或想換的）可自己上傳。訪客填寫時看到圖片卡片。
+ */
+function ProductPicker({ eventId, value, onChange }: { eventId: string; value: FormProduct[]; onChange: (v: FormProduct[]) => void }) {
   const [q, setQ] = useState('')
-  const [results, setResults] = useState<{ skuCode: string; name: string; manufacturer: string }[]>([])
+  const [results, setResults] = useState<{ skuCode: string; name: string; manufacturer: string; imageUrl?: string }[]>([])
   const [searching, setSearching] = useState(false)
+  const [uploading, setUploading] = useState('')
+  const [error, setError] = useState('')
   useEffect(() => {
     const kw = q.trim()
     if (!kw) { setResults([]); return }
@@ -38,48 +43,78 @@ function ProductPicker({ value, onChange }: { value: FormProduct[]; onChange: (v
     return () => clearTimeout(t)
   }, [q])
   const chosen = new Set(value.map((p) => p.code))
+  const setImage = (code: string, imageUrl: string) => onChange(value.map((p) => (p.code === code ? { ...p, imageUrl } : p)))
+  async function upload(code: string, file: File) {
+    setUploading(code); setError('')
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch(`/api/events/${eventId}/forms/image`, { method: 'POST', body: fd })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? '上傳失敗')
+      setImage(code, json.url)
+    } catch (e: any) { setError(e?.message ?? '上傳失敗') } finally { setUploading('') }
+  }
   return (
-    <div className="mt-3 space-y-2 pl-6">
+    <div className="mt-3 space-y-3 pl-6">
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <ul className="grid gap-2 sm:grid-cols-2">
           {value.map((p) => (
-            <span key={p.code} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs text-stone-700 ring-1 ring-stone-900/[0.06]">
-              {p.name}
-              <button type="button" aria-label={`移除 ${p.name}`} onClick={() => onChange(value.filter((x) => x.code !== p.code))} className="rounded-full px-1 text-stone-400 transition-all hover:text-red-600 active:scale-95">✕</button>
-            </span>
+            <li key={p.code} className="flex items-center gap-3 rounded-2xl bg-white p-2.5 ring-1 ring-stone-900/[0.06]">
+              {p.imageUrl
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={p.imageUrl} alt="" className="size-14 shrink-0 rounded-xl bg-white object-contain ring-1 ring-stone-900/[0.06]" />
+                : <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-[10px] text-stone-400">沒有圖</div>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-stone-700" title={p.name}>{p.name}</p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                  <label className="cursor-pointer text-brand-700 transition-colors hover:text-brand-600">
+                    {uploading === p.code ? '上傳中…' : p.imageUrl ? '換圖片' : '上傳圖片'}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!uploading}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(p.code, f); e.target.value = '' }} />
+                  </label>
+                  {p.imageUrl && <button type="button" onClick={() => setImage(p.code, '')} className="text-stone-400 transition-colors hover:text-stone-600">拿掉圖片</button>}
+                  <button type="button" onClick={() => onChange(value.filter((x) => x.code !== p.code))} className="text-stone-400 transition-colors hover:text-red-600">移除產品</button>
+                </div>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
+      {error && <p className="rounded-2xl bg-red-50 px-4 py-2 text-xs text-red-600">{error}</p>}
       {value.length < MAX_PRODUCTS && (
         <input className="input-soft w-full" value={q} placeholder="搜尋產品名稱或貨號，或直接輸入自訂名稱" aria-label="搜尋產品" onChange={(e) => setQ(e.target.value)} />
       )}
       {q.trim() && (
-        <ul className="max-h-56 divide-y divide-stone-900/[0.06] overflow-y-auto rounded-2xl bg-white ring-1 ring-stone-900/[0.06]">
+        <ul className="max-h-64 divide-y divide-stone-900/[0.06] overflow-y-auto rounded-2xl bg-white ring-1 ring-stone-900/[0.06]">
           {searching && <li className="px-4 py-2.5 text-xs text-stone-400">搜尋中…</li>}
           {!searching && results.length === 0 && <li className="px-4 py-2.5 text-xs text-stone-400">目錄裡找不到符合的產品</li>}
           {/* 目錄是逐一貨號，問卷常用的是產品線或系列名稱：可直接用輸入的文字當選項 */}
           {!searching && !value.some((p) => p.name === q.trim()) && (
             <li>
-              <button type="button" onClick={() => { onChange([...value, { code: `custom:${q.trim()}`, name: q.trim().slice(0, 100), brand: '' }]); setQ('') }}
+              <button type="button" onClick={() => { onChange([...value, { code: `custom:${q.trim()}`, name: q.trim().slice(0, 100), brand: '', imageUrl: '' }]); setQ('') }}
                 className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-brand-50/50">
                 <span className="text-stone-700">用「{q.trim()}」當選項</span>
-                <span className="shrink-0 text-stone-400">自訂名稱</span>
+                <span className="shrink-0 text-stone-400">自訂名稱，圖片另外上傳</span>
               </button>
             </li>
           )}
           {results.map((r) => (
             <li key={r.skuCode}>
               <button type="button" disabled={chosen.has(r.skuCode)}
-                onClick={() => { onChange([...value, { code: r.skuCode, name: r.name, brand: r.manufacturer ?? '' }]); setQ('') }}
-                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-brand-50/50 disabled:opacity-40">
-                <span className="text-stone-700">{r.name}<span className="ml-2 text-stone-400">{r.manufacturer}</span></span>
-                <span className="shrink-0 tabular-nums text-stone-400">{chosen.has(r.skuCode) ? '已加入' : r.skuCode}</span>
+                onClick={() => { onChange([...value, { code: r.skuCode, name: r.name, brand: r.manufacturer ?? '', imageUrl: r.imageUrl ?? '' }]); setQ('') }}
+                className="flex w-full items-center gap-3 px-4 py-2 text-left text-xs transition-colors hover:bg-brand-50/50 disabled:opacity-40">
+                {r.imageUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={r.imageUrl} alt="" className="size-9 shrink-0 rounded-lg bg-white object-contain ring-1 ring-stone-900/[0.06]" />
+                  : <span className="size-9 shrink-0 rounded-lg bg-stone-100" aria-hidden="true" />}
+                <span className="min-w-0 flex-1 text-stone-700">{r.name}<span className="ml-2 text-stone-400">{r.manufacturer}</span></span>
+                <span className="shrink-0 tabular-nums text-stone-400">{chosen.has(r.skuCode) ? '已加入' : r.imageUrl ? r.skuCode : `${r.skuCode}・無圖`}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      <p className="text-xs text-stone-400">訪客會看到這些名稱並可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。已選 {value.length}/{MAX_PRODUCTS}。</p>
+      <p className="text-xs text-stone-400">訪客會看到圖片與名稱，可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。圖片 JPG、PNG、WebP，4 MB 以內。已選 {value.length}/{MAX_PRODUCTS}。</p>
     </div>
   )
 }
@@ -246,7 +281,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                     {QUESTION_TYPES.map((t) => <option key={t} value={t}>{QUESTION_TYPE_LABEL[t]}</option>)}
                   </select>
                 </div>
-                {q.type === 'products' && <ProductPicker value={q.products ?? []} onChange={(products) => setQ(i, { products, options: products.map((p) => p.name) })} />}
+                {q.type === 'products' && <ProductPicker eventId={eventId} value={q.products ?? []} onChange={(products) => setQ(i, { products, options: products.map((p) => p.name) })} />}
                 {(q.type === 'single' || q.type === 'multi') && (
                   <div className="mt-3 space-y-2 pl-6">
                     {q.options.map((o, j) => (

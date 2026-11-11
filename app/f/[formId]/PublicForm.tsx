@@ -173,7 +173,26 @@ export function PublicForm({ formId }: { formId: string }) {
               ))}
             </div>
           )}
-          {(q.type === 'multi' || q.type === 'products') && (
+          {q.type === 'products' && (q.products ?? []).some((p) => p.imageUrl) && (
+            <div className="mt-2 grid grid-cols-2 gap-2.5">
+              {(q.products ?? []).map((p) => {
+                const cur = (answers[q.id] as string[]) ?? []
+                const on = cur.includes(p.name)
+                return (
+                  <button type="button" key={p.code} onClick={() => set(q.id, on ? cur.filter((x) => x !== p.name) : [...cur, p.name])} aria-pressed={on}
+                    className={`relative flex flex-col overflow-hidden rounded-2xl bg-white text-left transition-all active:scale-95 ${on ? 'ring-2 ring-brand-500 shadow-md shadow-brand-500/20' : 'ring-1 ring-stone-900/[0.08]'}`}>
+                    {p.imageUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full bg-white object-contain p-2" />
+                      : <div className="flex aspect-square w-full items-center justify-center bg-stone-100 px-3 text-center text-xs text-stone-400">{p.brand || '崧達'}</div>}
+                    <span className={`px-3 py-2.5 text-xs font-medium leading-5 ${on ? 'bg-brand-50 text-brand-700' : 'text-stone-700'}`}>{p.name}</span>
+                    {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {(q.type === 'multi' || (q.type === 'products' && !(q.products ?? []).some((p) => p.imageUrl))) && (
             <div className="mt-2 flex flex-wrap gap-2">
               {q.options.map((o) => {
                 const cur = (answers[q.id] as string[]) ?? []

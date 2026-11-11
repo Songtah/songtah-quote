@@ -14,7 +14,14 @@ export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
 }
 
 /** 關聯產品題的選項：從產品目錄挑出來的品項（code＝貨號）。訪客看到的是 name，可複選 */
-export type FormProduct = { code: string; name: string; brand: string }
+export type FormProduct = { code: string; name: string; brand: string; imageUrl?: string }
+/** 產品圖只收本系統 Vercel Blob 的網址（目錄圖與上傳圖都在那裡），避免問卷頁載入任意外部圖片 */
+function blobImage(v: unknown): string {
+  const u = clip(v, 500)
+  if (!u) return ''
+  try { const h = new URL(u); if (h.protocol === 'https:' && h.hostname.endsWith('.public.blob.vercel-storage.com')) return u } catch {}
+  return ''
+}
 export type FormQuestion = { id: string; label: string; type: QuestionType; options: string[]; required: boolean; products?: FormProduct[] }
 export const MAX_PRODUCTS = 30
 /** 填答者身分：required＝姓名、手機、單位必填；optional＝可留可不留；none＝完全匿名 */
@@ -59,7 +66,7 @@ export function sanitizeFormInput(kind: FormKind, input: any): Omit<EventForm, '
         if (!code || !name || codes.has(code)) continue
         if (names.has(name)) name = `${name}（${code}）`.slice(0, 100)
         codes.add(code); names.add(name)
-        products.push({ code, name, brand: clip(p?.brand, 60) })
+        products.push({ code, name, brand: clip(p?.brand, 60), imageUrl: blobImage(p?.imageUrl) })
       }
       if (!products.length) throw new Error(`第 ${i + 1} 題「${label}」還沒有挑選產品`)
       return { id, label, type, options: products.map((p) => p.name), required: q?.required === true, products }
