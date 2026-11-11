@@ -190,7 +190,7 @@ export async function upsertProductRichData(
  * overwrite=false 時，已有圖片的品項略過。dryRun 只回報會更新／略過的筆數。
  */
 export async function setProductImagesBatch(
-  entries: { skuCode: string; catalog: CatalogSnapshot }[],
+  entries: { skuCode: string; catalog: CatalogSnapshot; imageUrl?: string }[],   // 各筆可帶自己的圖（多張圖一次處理）；沒帶就用下面的 imageUrl
   imageUrl: string,
   options: { overwrite: boolean; dryRun: boolean },
 ): Promise<{ willUpdate: string[]; updated: string[]; skipped: { skuCode: string; reason: string }[]; failed: { skuCode: string; error: string }[] }> {
@@ -198,6 +198,9 @@ export async function setProductImagesBatch(
   const willUpdate: string[] = []
   const skipped: { skuCode: string; reason: string }[] = []
   const existingBySku = new Map<string, ProductRichData | null>()
+  const urlOf = (e: { imageUrl?: string }) => e.imageUrl || imageUrl
+  // 資料已是這張圖但縮圖索引可能沒跟上（上次索引更新失敗）：一併補進索引，重跑即可修復
+  const sameImage: string[] = []
 
   // 先讀現況（3 筆並行），決定要更新哪些
   for (let i = 0; i < entries.length; i += 3) {
@@ -206,7 +209,7 @@ export async function setProductImagesBatch(
     chunk.forEach((e, k) => {
       const existing = rows[k]
       existingBySku.set(e.skuCode, existing)
-      if (existing?.imageUrl === imageUrl) skipped.push({ skuCode: e.skuCode, reason: '已是這張圖' })
+      if (existing?.imageUrl === urlOf(e)) { skipped.push({ skuCode: e.skuCode, reason: '已是這張圖' }); sameImage.push(e.skuCode) }
       else if (existing?.imageUrl && !options.overwrite) skipped.push({ skuCode: e.skuCode, reason: '已有圖片（未勾選覆蓋）' })
       else willUpdate.push(e.skuCode)
     })
@@ -223,8 +226,9 @@ export async function setProductImagesBatch(
         await markProductImageIndexDirty(skuCode)
         const existing = existingBySku.get(skuCode)
         const catalog = bySku.get(skuCode)!.catalog
+        const url = urlOf(bySku.get(skuCode)!)
         if (existing) {
-          await notion.pages.update({ page_id: existing.notionId, properties: { '圖片URL': { url: imageUrl } } } as any)
+          await notion.pages.update({ page_id: existing.notionId, properties: { '圖片URL': { url } } } as any)
         } else {
           await notion.pages.create({
             parent: { database_id: DB_PRODUCTS },
@@ -234,7 +238,7 @@ export async function setProductImagesBatch(
               '生產商': { select: { name: catalog.brand || '其他' } },
               '系列':   { select: { name: catalog.category || '其他' } },
               '類型':   { select: { name: catalog.productType || '其他' } },
-              '圖片URL': { url: imageUrl },
+              '圖片URL': { url },
             },
           } as any)
         }
@@ -244,7 +248,7 @@ export async function setProductImagesBatch(
       }
     }))
   }
-  await updateProductImageIndexMany(updated.map((skuCode) => ({ skuCode, manufacturer: bySku.get(skuCode)!.catalog.brand, imageUrl })))
+  await updateProductImageIndexMany([...updated, ...sameImage].map((skuCode) => ({ skuCode, manufacturer: bySku.get(skuCode)!.catalog.brand, imageUrl: urlOf(bySku.get(skuCode)!) })))
   return { willUpdate, updated, skipped, failed }
 }
 
