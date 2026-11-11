@@ -14,7 +14,11 @@ export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
 }
 
 /** 關聯產品題的選項：從產品目錄挑出來的品項（code＝貨號）。訪客看到的是 name，可複選 */
-export type FormProduct = { code: string; name: string; brand: string; imageUrl?: string }
+/**
+ * name＝產品資料庫的名稱，作答與統計都以它（和 code）為準，不要拿來改成給訪客看的說法；
+ * label＝給訪客看的顯示名稱（選填）。改 label 不影響已收到的回覆與統計關聯。
+ */
+export type FormProduct = { code: string; name: string; brand: string; imageUrl?: string; label?: string }
 /** 產品圖只收本系統 Vercel Blob 的網址（目錄圖與上傳圖都在那裡），避免問卷頁載入任意外部圖片 */
 function blobImage(v: unknown): string {
   const u = clip(v, 500)
@@ -66,7 +70,8 @@ export function sanitizeFormInput(kind: FormKind, input: any): Omit<EventForm, '
         if (!code || !name || codes.has(code)) continue
         if (names.has(name)) name = `${name}（${code}）`.slice(0, 100)
         codes.add(code); names.add(name)
-        products.push({ code, name, brand: clip(p?.brand, 60), imageUrl: blobImage(p?.imageUrl) })
+        const label = clip(p?.label, 60)
+        products.push({ code, name, brand: clip(p?.brand, 60), imageUrl: blobImage(p?.imageUrl), ...(label && label !== name ? { label } : {}) })
       }
       if (!products.length) throw new Error(`第 ${i + 1} 題「${label}」還沒有挑選產品`)
       return { id, label, type, options: products.map((p) => p.name), required: q?.required === true, products }

@@ -199,7 +199,7 @@ export function PublicForm({ formId }: { formId: string }) {
                         ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full object-contain p-2" />
                         : <div className="mx-3 aspect-square rounded-xl bg-stone-100" aria-hidden="true" />)}
                       <span className={`block px-3 pb-3 pt-1 text-center text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>
-                        {splitProductName(p.name).map((line, i) => <span key={i} className="block">{line}</span>)}
+                        {splitProductName(p.label || p.name).map((line, i) => <span key={i} className="block">{line}</span>)}
                       </span>
                       {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
                     </button>

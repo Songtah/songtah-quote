@@ -88,7 +88,9 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
                 ? <img src={p.imageUrl} alt="" className="aspect-[4/3] w-full bg-white object-contain p-2" />
                 : <div className="mx-3 flex aspect-[4/3] items-center justify-center rounded-xl bg-stone-100 text-[11px] text-stone-400">沒有圖</div>}
               <div className="flex flex-1 flex-col gap-1.5 p-3 pt-2">
-                <p className="px-1 text-xs font-medium leading-5 text-stone-700" title={p.name}>{p.name}</p>
+                <input className="input-soft w-full !px-2.5 !py-1.5 text-xs" value={p.label ?? ''} maxLength={60} placeholder={p.name} aria-label={`${p.name} 給訪客看的名稱`}
+                  onChange={(e) => onChange(value.map((x) => (x.code === p.code ? { ...x, label: e.target.value } : x)))} />
+                <p className="px-1 text-[11px] leading-4 text-stone-400" title={p.name}>統計用：{p.name}</p>
                 <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 px-1 pt-1 text-[11px]">
                   <label className="cursor-pointer text-brand-700 transition-colors hover:text-brand-600">
                     {uploading === p.code ? '上傳中…' : p.imageUrl ? '換圖片' : '上傳圖片'}
@@ -144,7 +146,7 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
           ))}
         </ul>
       )}
-      <p className="text-xs text-stone-400">訪客會看到品牌、圖片與名稱的卡片，可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。圖片 JPG、PNG、WebP，4 MB 以內。已選 {value.length}/{MAX_PRODUCTS}。</p>
+      <p className="text-xs text-stone-400">訪客會看到品牌、圖片與名稱的卡片，可複選；名稱可以改成訪客好懂的說法（留空就用產品資料庫的名稱），統計仍以產品資料庫的名稱與貨號為準；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。圖片 JPG、PNG、WebP，4 MB 以內。已選 {value.length}/{MAX_PRODUCTS}。</p>
     </div>
   )
 }
