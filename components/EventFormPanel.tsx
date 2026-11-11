@@ -43,6 +43,25 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
     return () => clearTimeout(t)
   }, [q])
   const chosen = new Set(value.map((p) => p.code))
+  // 目錄後來才補上圖片的產品：一鍵把目錄的圖帶進來（自訂名稱的不在目錄裡，不處理）
+  const [filling, setFilling] = useState(false)
+  const [fillNote, setFillNote] = useState('')
+  const missingCatalogImages = value.filter((p) => !p.imageUrl && !p.code.startsWith('custom:'))
+  async function fillCatalogImages() {
+    setFilling(true); setFillNote('')
+    try {
+      const found: Record<string, string> = {}
+      for (const p of missingCatalogImages) {
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(p.code)}&limit=12`)
+        const data = await res.json().catch(() => [])
+        const hit = Array.isArray(data) ? data.find((r: any) => r.skuCode === p.code) : null
+        if (hit?.imageUrl) found[p.code] = hit.imageUrl
+      }
+      const n = Object.keys(found).length
+      if (n > 0) onChange(value.map((p) => (found[p.code] ? { ...p, imageUrl: found[p.code] } : p)))
+      setFillNote(n > 0 ? `已帶入 ${n} 張圖片，記得按儲存。${n < missingCatalogImages.length ? '其餘的目錄裡還沒有圖，可自己上傳。' : ''}` : '這些產品在目錄裡都還沒有圖，可自己上傳。')
+    } catch { setFillNote('帶入失敗，請再試一次。') } finally { setFilling(false) }
+  }
   const setImage = (code: string, imageUrl: string) => onChange(value.map((p) => (p.code === code ? { ...p, imageUrl } : p)))
   async function upload(code: string, file: File) {
     setUploading(code); setError('')
@@ -57,16 +76,19 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
   return (
     <div className="mt-3 space-y-3 pl-6">
       {value.length > 0 && (
-        <ul className="grid gap-2 sm:grid-cols-2">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {value.map((p) => (
-            <li key={p.code} className="flex items-center gap-3 rounded-2xl bg-white p-2.5 ring-1 ring-stone-900/[0.06]">
+            <li key={p.code} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-900/[0.06]">
               {p.imageUrl
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={p.imageUrl} alt="" className="size-14 shrink-0 rounded-xl bg-white object-contain ring-1 ring-stone-900/[0.06]" />
-                : <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-[10px] text-stone-400">沒有圖</div>}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-stone-700" title={p.name}>{p.name}</p>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                ? <img src={p.imageUrl} alt="" className="aspect-[4/3] w-full bg-white object-contain p-2" />
+                : <div className="flex aspect-[4/3] w-full items-center justify-center bg-stone-100 text-[11px] text-stone-400">沒有圖</div>}
+              <div className="flex flex-1 flex-col gap-1.5 border-t border-stone-900/[0.06] p-3">
+                <input className="w-full rounded-lg bg-transparent px-1 py-0.5 text-[11px] font-semibold tracking-wide text-brand-700 outline-none ring-brand-500/40 placeholder:font-normal placeholder:text-stone-400 focus:bg-brand-50/60 focus:ring-2"
+                  value={p.brand} maxLength={60} placeholder="填品牌名稱" aria-label={`${p.name} 的品牌`}
+                  onChange={(e) => onChange(value.map((x) => (x.code === p.code ? { ...x, brand: e.target.value } : x)))} />
+                <p className="px-1 text-xs font-medium leading-5 text-stone-700" title={p.name}>{p.name}</p>
+                <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 px-1 pt-1 text-[11px]">
                   <label className="cursor-pointer text-brand-700 transition-colors hover:text-brand-600">
                     {uploading === p.code ? '上傳中…' : p.imageUrl ? '換圖片' : '上傳圖片'}
                     <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!uploading}
@@ -80,6 +102,13 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
           ))}
         </ul>
       )}
+      {missingCatalogImages.length > 0 && (
+        <button type="button" onClick={fillCatalogImages} disabled={filling}
+          className="min-h-9 rounded-full bg-white px-4 text-xs font-semibold text-brand-700 ring-1 ring-brand-500/30 transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-40">
+          {filling ? '帶入中…' : `帶入產品目錄的圖片（${missingCatalogImages.length} 個還沒有圖）`}
+        </button>
+      )}
+      {fillNote && <p className="text-xs text-stone-500">{fillNote}</p>}
       {error && <p className="rounded-2xl bg-red-50 px-4 py-2 text-xs text-red-600">{error}</p>}
       {value.length < MAX_PRODUCTS && (
         <input className="input-soft w-full" value={q} placeholder="搜尋產品名稱或貨號，或直接輸入自訂名稱" aria-label="搜尋產品" onChange={(e) => setQ(e.target.value)} />
@@ -114,7 +143,7 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
           ))}
         </ul>
       )}
-      <p className="text-xs text-stone-400">訪客會看到圖片與名稱，可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。圖片 JPG、PNG、WebP，4 MB 以內。已選 {value.length}/{MAX_PRODUCTS}。</p>
+      <p className="text-xs text-stone-400">訪客會看到品牌、圖片與名稱的卡片，可複選；結果依產品統計。可從目錄挑，也可以自己打名稱（例如產品線或系列）。圖片 JPG、PNG、WebP，4 MB 以內。已選 {value.length}/{MAX_PRODUCTS}。</p>
     </div>
   )
 }

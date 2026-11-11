@@ -173,26 +173,33 @@ export function PublicForm({ formId }: { formId: string }) {
               ))}
             </div>
           )}
-          {q.type === 'products' && (q.products ?? []).some((p) => p.imageUrl) && (
-            <div className="mt-2 grid grid-cols-2 gap-2.5">
-              {(q.products ?? []).map((p) => {
-                const cur = (answers[q.id] as string[]) ?? []
-                const on = cur.includes(p.name)
-                return (
-                  <button type="button" key={p.code} onClick={() => set(q.id, on ? cur.filter((x) => x !== p.name) : [...cur, p.name])} aria-pressed={on}
-                    className={`relative flex flex-col overflow-hidden rounded-2xl bg-white text-left transition-all active:scale-95 ${on ? 'ring-2 ring-brand-500 shadow-md shadow-brand-500/20' : 'ring-1 ring-stone-900/[0.08]'}`}>
-                    {p.imageUrl
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full bg-white object-contain p-2" />
-                      : <div className="flex aspect-square w-full items-center justify-center bg-stone-100 px-3 text-center text-xs text-stone-400">{p.brand || '崧達'}</div>}
-                    <span className={`px-3 py-2.5 text-xs font-medium leading-5 ${on ? 'bg-brand-50 text-brand-700' : 'text-stone-700'}`}>{p.name}</span>
-                    {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          {(q.type === 'multi' || (q.type === 'products' && !(q.products ?? []).some((p) => p.imageUrl))) && (
+          {q.type === 'products' && (() => {
+            // 一律用卡片；整題都沒有圖時不留空白圖框，卡片只放品牌與名稱
+            const hasImage = (q.products ?? []).some((p) => p.imageUrl)
+            return (
+              <div className="mt-2 grid grid-cols-2 gap-2.5">
+                {(q.products ?? []).map((p) => {
+                  const cur = (answers[q.id] as string[]) ?? []
+                  const on = cur.includes(p.name)
+                  return (
+                    <button type="button" key={p.code} onClick={() => set(q.id, on ? cur.filter((x) => x !== p.name) : [...cur, p.name])} aria-pressed={on}
+                      className={`relative flex flex-col overflow-hidden rounded-2xl text-left transition-all active:scale-95 ${on ? 'bg-brand-50 ring-2 ring-brand-500 shadow-md shadow-brand-500/20' : 'bg-white shadow-sm ring-1 ring-stone-900/[0.08]'}`}>
+                      {hasImage && (p.imageUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full bg-white object-contain p-2" />
+                        : <div className="aspect-square w-full bg-stone-100" aria-hidden="true" />)}
+                      <span className={`flex flex-1 flex-col gap-1 px-3 ${hasImage ? 'py-2.5' : 'min-h-[5.5rem] justify-center py-3.5 pr-9'}`}>
+                        {p.brand && <span className="text-[11px] font-semibold tracking-wide text-brand-600">{p.brand}</span>}
+                        <span className={`text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>{p.name}</span>
+                      </span>
+                      {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })()}
+          {q.type === 'multi' && (
             <div className="mt-2 flex flex-wrap gap-2">
               {q.options.map((o) => {
                 const cur = (answers[q.id] as string[]) ?? []
