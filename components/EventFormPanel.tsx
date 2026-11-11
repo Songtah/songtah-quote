@@ -6,7 +6,7 @@
  * 下方：各題彙總與回覆名單。活動問卷的名單可按「已領」發贈品（同一支手機只收一筆）。
  */
 import { useCallback, useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { styledQrDataUrl } from '@/lib/qr-style'
 import {
   FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
@@ -181,7 +181,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
     if (!form) { setUrl(''); setQr(''); return }
     const link = `${window.location.origin}/f/${form.id}`
     setUrl(link)
-    QRCode.toDataURL(link, { width: 480, margin: 1 }).then(setQr).catch(() => {})
+    styledQrDataUrl(link).then(setQr).catch(() => {})
   }, [form])
 
   async function save(next: Draft = draft) {

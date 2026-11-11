@@ -5,7 +5,7 @@
  * 開關、收費與報名費／報名方案、付款說明、名額、廣告圖；儲存後即時生效，並提供連結、QR code 與預覽。
  */
 import { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { styledQrDataUrl } from '@/lib/qr-style'
 import type { EventItem } from '@/lib/notion/events'
 import { formatNT, MAX_PLANS, MAX_ATTENDEES_PER_SIGNUP, shortCodeOf, FORM_FIELDS, FIELD_MODES } from '@/lib/online-registration'
 
@@ -29,7 +29,7 @@ export function EventRegistrationPageSettings({
     // 對外一律給短網址（/r/前 6 碼），QR code 也較疏、較好掃；完整網址 /register/[id] 仍可用
     const link = `${window.location.origin}/r/${shortCodeOf(event.id)}`
     setUrl(link)
-    QRCode.toDataURL(link, { width: 480, margin: 1 }).then(setQr).catch(() => {})
+    styledQrDataUrl(link).then(setQr).catch(() => {})
   }, [event.id])
 
   const dirty = s.onlineRegistration !== event.onlineRegistration || s.paid !== event.paid || s.fee !== event.fee ||

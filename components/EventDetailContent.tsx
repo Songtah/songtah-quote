@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { styledQrDataUrl } from '@/lib/qr-style'
 import Link from 'next/link'
 import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
 import { PromotionsContent } from '@/components/PromotionsContent'
@@ -67,7 +67,7 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
       const res = await fetch(`/api/events/${id}?checkin=1`)
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? '無法產生簽到連結')
-      const qr = await QRCode.toDataURL(json.url, { width: 480, margin: 1 })
+      const qr = await styledQrDataUrl(json.url)
       setCheckin({ url: json.url, open: json.open, qr })
     } catch (e: any) {
       setCheckinError(e?.message ?? '無法產生簽到連結')
