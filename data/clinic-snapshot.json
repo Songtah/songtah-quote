@@ -1,19 +1,21 @@
 {
   "month": "2026-11",
-  "fetchedAt": "2026-11-09T03:55:00.148Z",
+  "fetchedAt": "2026-11-11T12:36:38.916Z",
   "source": "mohw-bas",
-  "totalClinics": 7148,
+  "totalClinics": 7150,
   "totalLabs": 1105,
   "totalHospitals": 188,
   "labsStale": false,
   "pendingRemaining": 1,
-  "prevTotalClinics": 7149,
+  "prevTotalClinics": 7148,
   "prevTotalLabs": 1105,
   "prevTotalHospitals": 188,
-  "totalCustomers": 8161,
+  "totalCustomers": 8206,
   "newCodes": [
-    "3705200089",
-    "豐和美牙醫診所__臺北市__萬華區"
+    "3702094534",
+    "3703260407",
+    "3703290647",
+    "3707360159"
   ],
   "codes": {
     "1101010012": {
@@ -9565,15 +9567,6 @@
       "termDate": "",
       "status": "開業"
     },
-    "3701157881": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "甄美美學牙醫診所",
-      "address": "臺北市士林區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
     "3701157890": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -16936,6 +16929,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3702094534": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "賢明牙醫診所",
+      "address": "高雄市前鎮區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3702094552": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -19087,6 +19089,15 @@
       "termDate": "",
       "status": "開業"
     },
+    "3703260407": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "白序牙醫診所",
+      "address": "臺中市北區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
     "3703270010": {
       "source": "mohw",
       "kind": "牙醫診所",
@@ -20378,6 +20389,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "心向牙醫診所",
+      "address": "臺中市北屯區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3703290647": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "欣賢牙醫診所",
       "address": "臺中市北屯區",
       "specialty": "",
       "termDate": "",
@@ -24320,6 +24340,15 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "亭美牙醫診所",
+      "address": "高雄市前鎮區",
+      "specialty": "",
+      "termDate": "",
+      "status": "開業"
+    },
+    "3707360159": {
+      "source": "mohw",
+      "kind": "牙醫診所",
+      "name": "高尚美牙醫診所",
       "address": "高雄市前鎮區",
       "specialty": "",
       "termDate": "",
@@ -43732,7 +43761,7 @@
     "3732010073": {
       "source": "mohw",
       "kind": "牙醫診所",
-      "name": "正大牙醫診所",
+      "name": "九大牙醫診所",
       "address": "桃園市桃園區",
       "specialty": "",
       "termDate": "",
@@ -45524,15 +45553,6 @@
       "source": "mohw",
       "kind": "牙醫診所",
       "name": "華仁牙醫診所",
-      "address": "桃園市中壢區",
-      "specialty": "",
-      "termDate": "",
-      "status": "開業"
-    },
-    "3732020275": {
-      "source": "mohw",
-      "kind": "牙醫診所",
-      "name": "坤泰牙醫診所",
       "address": "桃園市中壢區",
       "specialty": "",
       "termDate": "",
