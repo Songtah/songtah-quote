@@ -59,6 +59,7 @@ interface CatalogItem {
   code: string
   name: string          // ERP 品名
   officialName?: string // 官方標準名（有值時優先顯示）
+  erpPending?: boolean  // ERP 還沒有料號（code 為暫時代號）
   brand: string
   productType: string   // 商品型態(9 種)
   category: string      // 功能分類(62 種)
@@ -2069,7 +2070,7 @@ function FamilyCard({
                             <span className="text-lg text-stone-300" aria-hidden="true">◇</span>
                           )}
                         </div>
-                        <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0">{item.code}</span>
+                        <span className="block truncate font-mono text-[11px] text-stone-400 sm:w-32 sm:shrink-0" title={item.erpPending ? `暫時代號 ${item.code}` : undefined}>{item.erpPending ? '尚無 ERP 料號' : item.code}</span>
                         <span className="mt-1 block truncate text-sm font-medium text-stone-700 sm:mt-0">{item.officialName || item.name}{item.officialName && <span className="ml-2 text-xs font-normal text-stone-400">ERP：{item.name}</span>}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 sm:justify-end">

@@ -21,6 +21,7 @@ export interface CatalogProduct {
   code: string        // 貨品碼 / SKU code
   name: string        // 貨品名稱（ERP 品名，唯讀，不可改）
   officialName?: string // 官方標準名（原廠現行名稱）；有值時畫面優先顯示，ERP 品名退為次要
+  erpPending?: boolean  // ERP 還沒有料號：code 是 NOERP- 開頭的暫時代號，拿到料號後要換掉
   brand: string       // 品牌 / 生產商
   productType: string // 商品型態(9 種,見 data/product-taxonomy.json)
   category: string    // 功能分類(62 種)

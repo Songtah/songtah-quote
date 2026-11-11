@@ -67081,5 +67081,29 @@
   "mainCategoryId": "lab-production",
   "categoryId": "polishing-consumable",
   "needsReview": true
+ },
+ {
+  "code": "NOERP-ZEBRIS-JMA-OPTIC",
+  "name": "zebris JMA-Optic 電子面弓",
+  "officialName": "JMA-Optic 電子面弓",
+  "brand": "zebris",
+  "productType": "設備",
+  "category": "咬合器",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "articulator",
+  "erpPending": true
+ },
+ {
+  "code": "NOERP-STRAUMANN-SIRIOS-X3",
+  "name": "Straumann SIRIOS X3 口內掃描機",
+  "officialName": "SIRIOS X3 口內掃描機",
+  "brand": "Straumann",
+  "productType": "設備",
+  "category": "掃描儀",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "scanner",
+  "erpPending": true
  }
 ]
