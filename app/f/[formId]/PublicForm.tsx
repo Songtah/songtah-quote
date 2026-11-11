@@ -13,6 +13,14 @@ type Receipt = { id: string; name: string; claimed: boolean; createdAt: string }
 const KEY = (formId: string) => `songtah-form-response:${formId}`
 
 /** 訪客填寫問卷。送出後顯示完成畫面；活動問卷的完成畫面就是贈品兌換憑證，重新整理仍在。 */
+/** 產品名稱分行：英文型號一行、中文名稱另起一行（例：SORINO K3 Pro／移動式吸塵器）。只有一種文字就不拆。 */
+function splitProductName(name: string): string[] {
+  const i = name.search(/[\u4e00-\u9fff]/)
+  if (i <= 0) return [name]
+  const head = name.slice(0, i).trim()
+  return head ? [head, name.slice(i).trim()] : [name]
+}
+
 export function PublicForm({ formId }: { formId: string }) {
   const [def, setDef] = useState<Def | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
@@ -190,7 +198,9 @@ export function PublicForm({ formId }: { formId: string }) {
                         // eslint-disable-next-line @next/next/no-img-element
                         ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full object-contain p-2" />
                         : <div className="mx-3 aspect-square rounded-xl bg-stone-100" aria-hidden="true" />)}
-                      <span className={`block px-3 pb-3 pt-1 text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>{p.name}</span>
+                      <span className={`block px-3 pb-3 pt-1 text-center text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>
+                        {splitProductName(p.name).map((line, i) => <span key={i} className="block">{line}</span>)}
+                      </span>
                       {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
                     </button>
                   )
