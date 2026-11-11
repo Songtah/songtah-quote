@@ -184,14 +184,13 @@ export function PublicForm({ formId }: { formId: string }) {
                   return (
                     <button type="button" key={p.code} onClick={() => set(q.id, on ? cur.filter((x) => x !== p.name) : [...cur, p.name])} aria-pressed={on}
                       className={`relative flex flex-col overflow-hidden rounded-2xl text-left transition-all active:scale-95 ${on ? 'bg-brand-50 ring-2 ring-brand-500 shadow-md shadow-brand-500/20' : 'bg-white shadow-sm ring-1 ring-stone-900/[0.08]'}`}>
+                      {/* 品牌固定在卡片左上角；沒填品牌也保留這一列，名稱才會對齊 */}
+                      <span className="block min-h-[1.75rem] truncate px-3 pr-9 pt-2.5 text-[11px] font-semibold tracking-wide text-brand-600">{p.brand}</span>
                       {hasImage && (p.imageUrl
                         // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full bg-white object-contain p-2" />
-                        : <div className="aspect-square w-full bg-stone-100" aria-hidden="true" />)}
-                      <span className={`flex flex-1 flex-col gap-1 px-3 ${hasImage ? 'py-2.5' : 'min-h-[5.5rem] justify-center py-3.5 pr-9'}`}>
-                        {p.brand && <span className="text-[11px] font-semibold tracking-wide text-brand-600">{p.brand}</span>}
-                        <span className={`text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>{p.name}</span>
-                      </span>
+                        ? <img src={p.imageUrl} alt="" loading="lazy" className="aspect-square w-full object-contain p-2" />
+                        : <div className="mx-3 aspect-square rounded-xl bg-stone-100" aria-hidden="true" />)}
+                      <span className={`block px-3 pb-3 pt-1 text-sm font-medium leading-5 ${on ? 'text-brand-800' : 'text-stone-800'}`}>{p.name}</span>
                       {on && <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white" aria-hidden="true">✓</span>}
                     </button>
                   )

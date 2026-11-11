@@ -79,14 +79,15 @@ function ProductPicker({ eventId, value, onChange }: { eventId: string; value: F
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {value.map((p) => (
             <li key={p.code} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-900/[0.06]">
+              {/* 品牌固定在卡片左上角，和訪客看到的位置一致 */}
+              <input className="w-full bg-transparent px-3 pb-1 pt-2.5 text-[11px] font-semibold tracking-wide text-brand-700 outline-none placeholder:font-normal placeholder:text-stone-400 focus:bg-brand-50/60"
+                value={p.brand} maxLength={60} placeholder="填品牌名稱" aria-label={`${p.name} 的品牌`}
+                onChange={(e) => onChange(value.map((x) => (x.code === p.code ? { ...x, brand: e.target.value } : x)))} />
               {p.imageUrl
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={p.imageUrl} alt="" className="aspect-[4/3] w-full bg-white object-contain p-2" />
-                : <div className="flex aspect-[4/3] w-full items-center justify-center bg-stone-100 text-[11px] text-stone-400">沒有圖</div>}
-              <div className="flex flex-1 flex-col gap-1.5 border-t border-stone-900/[0.06] p-3">
-                <input className="w-full rounded-lg bg-transparent px-1 py-0.5 text-[11px] font-semibold tracking-wide text-brand-700 outline-none ring-brand-500/40 placeholder:font-normal placeholder:text-stone-400 focus:bg-brand-50/60 focus:ring-2"
-                  value={p.brand} maxLength={60} placeholder="填品牌名稱" aria-label={`${p.name} 的品牌`}
-                  onChange={(e) => onChange(value.map((x) => (x.code === p.code ? { ...x, brand: e.target.value } : x)))} />
+                : <div className="mx-3 flex aspect-[4/3] items-center justify-center rounded-xl bg-stone-100 text-[11px] text-stone-400">沒有圖</div>}
+              <div className="flex flex-1 flex-col gap-1.5 p-3 pt-2">
                 <p className="px-1 text-xs font-medium leading-5 text-stone-700" title={p.name}>{p.name}</p>
                 <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 px-1 pt-1 text-[11px]">
                   <label className="cursor-pointer text-brand-700 transition-colors hover:text-brand-600">
