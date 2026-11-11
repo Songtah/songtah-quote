@@ -7,6 +7,7 @@ import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/not
 import { PromotionsContent } from '@/components/PromotionsContent'
 import { EventFormPanel } from '@/components/EventFormPanel'
 import { EventBudgetPanel } from '@/components/EventBudgetPanel'
+import { EventReportPanel } from '@/components/EventReportPanel'
 import { EventRegistrationPageSettings } from '@/components/EventRegistrationPageSettings'
 import { RegistrationCustomerCell } from '@/components/RegistrationCustomerCell'
 
@@ -39,7 +40,7 @@ const TYPE_STYLE: Record<string, string> = {
   '其他': 'bg-stone-50 text-stone-600',
 }
 
-const TABS = ['總覽', '促銷', '報名表單', '活動問卷', '滿意度調查', '預算核銷'] as const
+const TABS = ['總覽', '促銷', '報名表單', '活動問卷', '滿意度調查', '預算核銷', '結案報告'] as const
 type Tab = (typeof TABS)[number]
 
 export function EventDetailContent({ id, canEdit = true, canEditPromotions = false }: { id: string; canEdit?: boolean; canEditPromotions?: boolean }) {
@@ -209,6 +210,7 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
       {tab === '活動問卷' && <EventFormPanel key="survey" eventId={id} kind="survey" canEdit={canEdit} />}
       {tab === '滿意度調查' && <EventFormPanel key="satisfaction" eventId={id} kind="satisfaction" canEdit={canEdit} />}
       {tab === '預算核銷' && <EventBudgetPanel eventId={id} />}
+      {tab === '結案報告' && <EventReportPanel eventId={id} />}
 
       {/* Stats */}
       {tab === '總覽' && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
