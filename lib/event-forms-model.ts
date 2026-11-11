@@ -24,8 +24,13 @@ export type EventForm = {
   id: string; eventId: string; kind: FormKind; title: string; intro: string; gift: string
   identity: FormIdentity; questions: FormQuestion[]; open: boolean; updatedAt: string
 }
+/** 基本資料的職稱選項（使用者 2026-11-11 指定牙技師／牙醫師；另留「其他」給助理、學生等，避免必填時填不下去） */
+export const JOB_TITLES = ['牙技師', '牙醫師', '其他'] as const
+
 export type FormResponse = {
   id: string; name: string; phone: string; institution: string
+  /** 技所／診所所在縣市、鄉鎮市區 */
+  city: string; district: string; jobTitle: string
   answers: Record<string, string | string[] | number>
   giftClaimedAt: string; giftClaimedBy: string; createdAt: string
 }

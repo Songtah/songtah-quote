@@ -222,7 +222,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <select className="select-soft mt-1 w-full" value={draft.identity} onChange={(e) => setDraft({ ...draft, identity: e.target.value as FormIdentity })}>
                   <option value="none">不收（匿名）</option>
                   <option value="optional">可填可不填</option>
-                  <option value="required">姓名、手機、單位必填</option>
+                  <option value="required">姓名、技所、地區、電話、職稱必填</option>
                 </select>
               </label>
             )}
@@ -230,7 +230,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
           <label className="block text-sm font-medium text-stone-700">開頭說明
             <textarea className="input-soft mt-1 w-full" rows={2} value={draft.intro} maxLength={1000} onChange={(e) => setDraft({ ...draft, intro: e.target.value })} />
           </label>
-          {kind === 'survey' && <p className="text-xs text-stone-400">活動問卷固定要填姓名、手機、單位名稱，才能確認一人領一份贈品。</p>}
+          {kind === 'survey' && <p className="text-xs text-stone-400">活動問卷固定先填基本資料：姓名、技所／診所名稱、所在地區、電話、職稱（牙技師／牙醫師／其他）。這五項不用自己出題；同一支電話只收一份，贈品一人一份。</p>}
 
           <div className="space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">題目（{draft.questions.length}/{MAX_QUESTIONS}）</p>
@@ -328,7 +328,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <thead className="bg-cream-50 text-xs text-stone-500">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">填寫時間</th>
-                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">單位</th><th className="px-4 py-3 text-left font-medium">手機</th></>}
+                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">技所／診所</th><th className="px-4 py-3 text-left font-medium">電話</th></>}
                     {form.questions.map((q) => <th key={q.id} className="max-w-[12rem] truncate px-4 py-3 text-left font-medium" title={q.label}>{q.label}</th>)}
                     {kind === 'survey' && <th className="px-4 py-3 text-left font-medium">贈品</th>}
                   </tr>
@@ -337,7 +337,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                   {responses.map((r) => (
                     <tr key={r.id} className="align-top transition-colors hover:bg-brand-50/50">
                       <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-stone-400">{fmt(r.createdAt)}<br />{r.id.slice(0, 6).toUpperCase()}</td>
-                      {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}</td><td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
+                      {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}{r.jobTitle && <p className="text-[11px] text-stone-400">{r.jobTitle}</p>}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}{(r.city || r.district) && <p className="text-[11px] text-stone-400">{r.city}{r.district}</p>}</td><td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
                       {form.questions.map((q) => {
                         const v = r.answers?.[q.id]
                         return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>

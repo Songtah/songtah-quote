@@ -14,7 +14,7 @@ const toForm = (r: any): EventForm => ({
   identity: r.identity, questions: r.questions ?? [], open: !!r.open, updatedAt: iso(r.updated_at),
 })
 const toResponse = (r: any): FormResponse => ({
-  id: r.id, name: r.name ?? '', phone: r.phone ?? '', institution: r.institution ?? '', answers: r.answers ?? {},
+  id: r.id, name: r.name ?? '', phone: r.phone ?? '', institution: r.institution ?? '', city: r.city ?? '', district: r.district ?? '', jobTitle: r.job_title ?? '', answers: r.answers ?? {},
   giftClaimedAt: iso(r.gift_claimed_at), giftClaimedBy: r.gift_claimed_by ?? '', createdAt: iso(r.created_at),
 })
 
@@ -52,7 +52,7 @@ export async function getResponse(formId: string, responseId: string): Promise<F
 }
 
 /** 新增一筆回覆。同一份問卷同一支手機（末 8 碼）已填過就回傳原本那筆，不重複建立。 */
-export async function addResponse(form: EventForm, data: { name: string; phone: string; institution: string; answers: Record<string, unknown> }): Promise<{ response: FormResponse; duplicate: boolean }> {
+export async function addResponse(form: EventForm, data: { name: string; phone: string; institution: string; city?: string; district?: string; jobTitle?: string; answers: Record<string, unknown> }): Promise<{ response: FormResponse; duplicate: boolean }> {
   const db = sql()
   const digits = data.phone.replace(/\D/g, '')
   const tail = digits.length >= 8 ? digits.slice(-8) : null
@@ -61,8 +61,8 @@ export async function addResponse(form: EventForm, data: { name: string; phone: 
     if (dup.length) return { response: toResponse(dup[0]), duplicate: true }
   }
   const r = await db`
-    insert into event_form_responses (form_id, event_id, name, phone, phone_tail, institution, answers)
-    values (${form.id}, ${form.eventId}, ${data.name || null}, ${data.phone || null}, ${tail}, ${data.institution || null}, ${db.json(data.answers as any)})
+    insert into event_form_responses (form_id, event_id, name, phone, phone_tail, institution, city, district, job_title, answers)
+    values (${form.id}, ${form.eventId}, ${data.name || null}, ${data.phone || null}, ${tail}, ${data.institution || null}, ${data.city || null}, ${data.district || null}, ${data.jobTitle || null}, ${db.json(data.answers as any)})
     on conflict (form_id, phone_tail) where phone_tail is not null do nothing
     returning *`
   if (!r.length && tail) {

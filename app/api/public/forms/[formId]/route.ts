@@ -16,7 +16,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { hitRateLimit } from '@/lib/notion/shared'
 import { getEventById } from '@/lib/notion/events'
 import { getFormById, getResponse, addResponse } from '@/lib/db/event-forms'
-import { validateAnswers } from '@/lib/event-forms-model'
+import { validateAnswers, JOB_TITLES } from '@/lib/event-forms-model'
+import { isValidDistrict } from '@/lib/tw-districts'
 
 export const dynamic = 'force-dynamic'
 type Ctx = { params: { formId: string } }
@@ -52,13 +53,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!form.open) return NextResponse.json({ error: '這份表單目前沒有開放填寫' }, { status: 403 })
 
   const name = clip(body?.name, 50), phone = clip(body?.phone, 30), institution = clip(body?.institution, 100)
-  if (form.identity === 'required' && (!name || institution.length < 2 || phone.replace(/\D/g, '').length < 8)) {
-    return NextResponse.json({ error: '請填寫姓名、手機與單位名稱' }, { status: 400 })
+  const city = clip(body?.city, 10), district = clip(body?.district, 10)
+  const jobTitle = (JOB_TITLES as readonly string[]).includes(body?.jobTitle) ? (body.jobTitle as string) : ''
+  const areaOk = !!city && isValidDistrict(city, district)
+  if (form.identity === 'required' && (!name || institution.length < 2 || phone.replace(/\D/g, '').length < 8 || !areaOk || !jobTitle)) {
+    return NextResponse.json({ error: '請填寫姓名、技所／診所名稱、所在地區、電話與職稱' }, { status: 400 })
   }
   try {
     const answers = validateAnswers(form, body?.answers)
     const anonymous = form.identity === 'none'
-    const { response, duplicate } = await addResponse(form, { name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution, answers })
+    const { response, duplicate } = await addResponse(form, {
+      name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution,
+      city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, answers,
+    })
     return NextResponse.json({ ok: true, duplicate, response: receipt(response) })
   } catch (e: any) {
     const msg = e?.message ?? ''

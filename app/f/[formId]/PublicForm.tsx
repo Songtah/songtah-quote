@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import type { FormQuestion, FormIdentity, FormKind } from '@/lib/event-forms-model'
+import { JOB_TITLES, type FormQuestion, type FormIdentity, type FormKind } from '@/lib/event-forms-model'
+import { TW_CITIES, TW_DISTRICTS } from '@/lib/tw-districts'
 
 type Def = {
   kind: FormKind; title: string; eventName: string; gift: string; open: boolean
@@ -19,7 +20,7 @@ export function PublicForm({ formId }: { formId: string }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [who, setWho] = useState({ name: '', phone: '', institution: '', website: '' })
+  const [who, setWho] = useState({ name: '', phone: '', institution: '', city: '', district: '', jobTitle: '', website: '' })
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({})
 
   const loadReceipt = useCallback(async (rid: string) => {
@@ -48,6 +49,7 @@ export function PublicForm({ formId }: { formId: string }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (def?.identity === 'required' && !who.jobTitle) { setError('請選擇職稱'); return }
     setBusy(true); setError('')
     try {
       const res = await fetch(`/api/public/forms/${formId}`, {
@@ -125,12 +127,34 @@ export function PublicForm({ formId }: { formId: string }) {
           <label className="block text-sm font-medium text-stone-700">姓名{idRequired && <span className="text-red-500"> *</span>}
             <input className="input-soft mt-1 w-full" value={who.name} maxLength={50} required={idRequired} autoComplete="name" onChange={(e) => setWho({ ...who, name: e.target.value })} />
           </label>
-          <label className="block text-sm font-medium text-stone-700">手機{idRequired && <span className="text-red-500"> *</span>}
+          <label className="block text-sm font-medium text-stone-700">技所／診所名稱{idRequired && <span className="text-red-500"> *</span>}
+            <input className="input-soft mt-1 w-full" value={who.institution} maxLength={100} required={idRequired} autoComplete="organization" onChange={(e) => setWho({ ...who, institution: e.target.value })} />
+          </label>
+          <div>
+            <p className="text-sm font-medium text-stone-700">技所／診所地區{idRequired && <span className="text-red-500"> *</span>}</p>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <select className="select-soft w-full" aria-label="縣市" value={who.city} required={idRequired} onChange={(e) => setWho({ ...who, city: e.target.value, district: '' })}>
+                <option value="">縣市</option>
+                {TW_CITIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+              <select className="select-soft w-full" aria-label="鄉鎮市區" value={who.district} required={idRequired} disabled={!who.city} onChange={(e) => setWho({ ...who, district: e.target.value })}>
+                <option value="">鄉鎮市區</option>
+                {(TW_DISTRICTS[who.city] ?? []).map((d) => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <label className="block text-sm font-medium text-stone-700">電話{idRequired && <span className="text-red-500"> *</span>}
             <input className="input-soft mt-1 w-full" value={who.phone} maxLength={30} required={idRequired} inputMode="tel" autoComplete="tel" onChange={(e) => setWho({ ...who, phone: e.target.value })} />
           </label>
-          <label className="block text-sm font-medium text-stone-700">單位名稱{idRequired && <span className="text-red-500"> *</span>}
-            <input className="input-soft mt-1 w-full" value={who.institution} maxLength={100} required={idRequired} placeholder="診所／技工所／學校" onChange={(e) => setWho({ ...who, institution: e.target.value })} />
-          </label>
+          <div>
+            <p className="text-sm font-medium text-stone-700">職稱{idRequired && <span className="text-red-500"> *</span>}</p>
+            <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="職稱">
+              {JOB_TITLES.map((j) => (
+                <button type="button" key={j} role="radio" aria-checked={who.jobTitle === j} onClick={() => setWho({ ...who, jobTitle: j })}
+                  className={`chip min-h-11 transition-all active:scale-95 ${who.jobTitle === j ? 'chip-active' : ''}`}>{j}</button>
+              ))}
+            </div>
+          </div>
           {/* honeypot：真人看不到 */}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" value={who.website} onChange={(e) => setWho({ ...who, website: e.target.value })} className="hidden" aria-hidden="true" />
         </fieldset>
