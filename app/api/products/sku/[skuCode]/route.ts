@@ -73,7 +73,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
   if (body.price !== undefined && body.price !== null && (
     typeof body.price !== 'number' || !Number.isFinite(body.price) || body.price <= 0
   )) {
-    return NextResponse.json({ error: '售價必須是大於 0 的數字，或留空以清除後台覆寫' }, { status: 400 })
+    return NextResponse.json({ error: '售價必須是大於 0 的數字，或留空以清除手動調價' }, { status: 400 })
   }
 
   try {

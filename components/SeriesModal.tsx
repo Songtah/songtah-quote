@@ -35,7 +35,7 @@ interface SeriesModalProps {
 
 // ── Series Info Section ───────────────────────────────────────
 
-function SeriesInfoSection({
+export function SeriesInfoSection({
   family,
   seriesData,
   seriesLoading,
@@ -269,7 +269,7 @@ function SeriesInfoSection({
 
 // ── Case C: Member list content ────────────────────────────────
 
-function MemberListContent({
+export function MemberListContent({
   members,
   selectedCode,
   onSelect,
