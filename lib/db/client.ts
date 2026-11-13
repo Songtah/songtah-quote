@@ -15,7 +15,10 @@ export function sql() {
     _sql = postgres(url, {
       prepare: false,          // transaction pooler 不支援 prepared statements
       max: 5,
-      idle_timeout: 20,
+      // Vercel 函式閒置時會被凍結：連線若在凍結期間被資料庫端斷掉，解凍後第一次查詢會卡住不回
+      // （2026-11-14 實測總經理儀表板隨機一段查詢卡滿 25 秒）。閒置 5 秒就關、每條最多用 5 分鐘。
+      idle_timeout: 5,
+      max_lifetime: 300,
       connect_timeout: 10,
       ssl: 'require',
     })
