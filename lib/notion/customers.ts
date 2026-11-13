@@ -191,12 +191,14 @@ export async function getAllSystemCustomers(): Promise<CustomerListItem[]> {
   const cacheKey = 'all-system-customers-v2' // v2=分區掃描修正 10k 截斷
   const cached = getCachedValue<CustomerListItem[]>(cacheKey)
   if (cached) return cached
-  if (readFromDb()) {
-    const items = await dbc.dbGetAllSystemCustomers()
-    setCachedValue(cacheKey, items, 300_000)
-    return items
-  }
+  // 同時多個請求（例：主管看「全體業務」拜訪建議會並行 9 份）只查一次，避免 9 份萬筆資料同時跨洋傳輸
   if (allSystemCustomersInFlight) return allSystemCustomersInFlight
+  if (readFromDb()) {
+    allSystemCustomersInFlight = dbc.dbGetAllSystemCustomers()
+      .then((items) => { setCachedValue(cacheKey, items, 300_000); return items })
+      .finally(() => { allSystemCustomersInFlight = null })
+    return allSystemCustomersInFlight
+  }
 
   const request = (async () => {
     const items: CustomerListItem[] = []
