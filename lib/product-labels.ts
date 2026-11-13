@@ -1,6 +1,6 @@
 /**
  * 產品頁對使用者顯示的狀態用語（單一來源）。
- * 資料欄位名稱不變：Notion 產品庫的 checkbox 仍叫「中央停用」、程式欄位仍是 disabled／priceSource。
+ * 資料欄位名稱不變：產品資料庫（Supabase 通用儲存）的 checkbox 仍叫「中央停用」、程式欄位仍是 disabled／priceSource。
  */
 export const PRODUCT_LABELS = {
   /** 中央管理手動隱藏、可恢復（原「中央停用」） */

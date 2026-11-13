@@ -1,7 +1,7 @@
 /**
  * POST /api/products/prices/batch —— 定價工作區／批次漲幅寫入（僅中央管理）
  * Body: { items: [{ code, price }], source: 'workspace' | 'batch', note? }
- * 一次最多 25 筆（前端分段送），逐筆寫 Notion「售價」→ 讀回驗證 → 刷新售價快取 → 記調價紀錄＋稽核。
+ * 一次最多 25 筆（前端分段送），逐筆寫產品資料庫「售價」（Supabase 通用儲存）→ 讀回驗證 → 刷新售價快取 → 記調價紀錄＋稽核。
  * 停售品不可定價；價格必須是正整數。既有報價／訂單的價格快照不受影響。
  */
 import { NextRequest, NextResponse } from 'next/server'
