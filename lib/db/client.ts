@@ -24,7 +24,7 @@ export function sql() {
       max_pipeline: 1,
       connect_timeout: 10,
       ssl: 'require',
-    })
+    } as postgres.Options<{}>)   // max_pipeline 是套件支援的設定，但型別定義沒列出
   }
   return _sql
 }
