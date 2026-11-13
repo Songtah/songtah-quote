@@ -304,21 +304,24 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
     } finally { setSaving('') }
   }
 
+  // 預覽 PDF：在頁面內開預覽視窗（不再用 window.open——fetch 之後開新分頁會被瀏覽器當成彈出視窗擋掉，
+  // 手機與 LINE 內建瀏覽器尤其如此，使用者看到的就是「按了沒反應」或空白分頁）
+  const [previewUrl, setPreviewUrl] = useState('')
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
   async function previewPdf() {
     setTouched(true); setError('')
     if (problems.length) { setError(problems[0]); return }
     setPreviewing(true)
-    // 先開視窗再填內容，避免被瀏覽器當成彈出式廣告擋掉
-    const win = window.open('', '_blank')
     try {
       const res = await fetch('/api/quotes/preview-pdf', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload(), quoteNumber: isEdit ? initial!.quoteNumber : '' }),
       })
-      if (!res.ok) { win?.close(); setError((await res.json().catch(() => ({}))).error || 'PDF 預覽失敗'); return }
-      const url = URL.createObjectURL(await res.blob())
-      if (win) win.location.href = url; else window.open(url, '_blank')
-    } catch (e: any) { win?.close(); setError(e?.message || 'PDF 預覽失敗') }
+      if (!res.ok) { setError((await res.json().catch(() => ({}))).error || 'PDF 預覽失敗'); return }
+      const blob = await res.blob()
+      if (!blob.size) { setError('PDF 預覽失敗：產生的檔案是空的，請再試一次'); return }
+      setPreviewUrl(URL.createObjectURL(new Blob([blob], { type: 'application/pdf' })))
+    } catch (e: any) { setError(e?.message || 'PDF 預覽失敗') }
     finally { setPreviewing(false) }
   }
 
@@ -690,6 +693,24 @@ export default function QuoteForm({ mode = 'create', initial = null, defaultSale
           </div>
         </div>
       </aside>
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/45 sm:items-center sm:p-4" role="presentation"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewUrl('') }}>
+          <div role="dialog" aria-modal="true" aria-label="報價單 PDF 預覽"
+            className="flex h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-[#fcfbf8] shadow-2xl ring-1 ring-stone-900/[0.06] sm:h-[92vh] sm:rounded-3xl">
+            <div className="glass-bar flex flex-wrap items-center gap-2 border-b border-stone-900/[0.06] px-4 py-3">
+              <p className="min-w-0 flex-1 truncate text-sm font-bold text-stone-800">PDF 預覽（尚未存檔）</p>
+              <a href={previewUrl} target="_blank" rel="noopener" className="button-secondary flex min-h-10 items-center px-4 text-sm">在新分頁開啟</a>
+              <a href={previewUrl} download={`報價單預覽_${customerName || '未命名'}.pdf`}
+                className="flex min-h-10 items-center rounded-full bg-brand-500 px-4 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">下載</a>
+              <button type="button" onClick={() => setPreviewUrl('')} aria-label="關閉預覽"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-stone-400 transition-all hover:bg-stone-100 hover:text-stone-700 active:scale-95">✕</button>
+            </div>
+            <iframe src={previewUrl} title="報價單 PDF 預覽" className="min-h-0 w-full flex-1 bg-stone-100" />
+            <p className="px-4 py-2 text-center text-[11px] text-stone-400 sm:hidden">手機若只顯示第一頁，請按「在新分頁開啟」或「下載」。</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
