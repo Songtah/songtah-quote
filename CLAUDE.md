@@ -40,17 +40,17 @@
 
 ## 資料架構鐵則
 
-0. **Notion 全庫掃描必用分區**:無過濾的 `databases.query` 分頁在 **10,000 筆處靜默截斷**(has_more 直接 false,2026-07-06 實測 10,655 筆只回 10,000,曾致監控誤判 280 筆重複匯入)。掃全客戶庫一律走 `lib/notion/customers.ts` 的 `scanAllCustomerPages`(按縣市分區+空白批);其他接近萬筆的 DB 全掃比照辦理。
+0. **資料實際位置（2026-11-10 起）**：所有功能資料都在 Supabase——客戶／客情／監控／設備／工單是專表；產品、系列、說明書與其餘各庫在通用儲存 `notion_pages`，由 `lib/db/notion-store.ts` 模擬 Notion 介面（程式仍呼叫 `notion.*`、欄位名沿用 Notion）。Notion 全部封存，不再是資料來源。只有退回 Notion 讀取（`DATA_READ_SOURCE=notion` 等）時才會遇到無過濾查詢在 10,000 筆處靜默截斷，那時掃全客戶庫走 `scanAllCustomerPages`（按縣市分區）。
 
 1. **價格快照**：訂單/報價一旦成立，品名與單價定格在單據內，禁止連動主檔。
-2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/目錄基準價/目錄規格摘要歸 `data/catalog/products_catalog.json`；中央人工售價覆寫與圖片/介紹/富內容技術規格表/文件歸 Notion。Notion 富內容不得反向覆蓋 ERP 與目錄主檔欄位。**目錄與 `data/catalog/product_families.json` 含內部基準價，禁止放回 `public/`**（2026-10-21 曾可未登入直接下載）；只由 `lib/products-catalog.ts`（`server-only`）讀取、經 withApiAuth API 提供。
+2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/目錄基準價/目錄規格摘要歸 `data/catalog/products_catalog.json`；中央人工售價覆寫與圖片/介紹/富內容技術規格表/文件歸產品通用儲存（見第 0 條）。這些富內容不得反向覆蓋 ERP 與目錄主檔欄位。**目錄與 `data/catalog/product_families.json` 含內部基準價，禁止放回 `public/`**（2026-10-21 曾可未登入直接下載）；只由 `lib/products-catalog.ts`（`server-only`）讀取、經 withApiAuth API 提供。
 3. **ERP 匯入新品後必跑** `python3 scripts/validate_categories.py`，分類錯誤先修再上線。
-4. **價格更新與優先序**：批次／基準價仍走「改 Excel 主檔 → `scripts/merge_catalog_prices.py` → 驗證 → git push 部署」，價格表比對規則見桌面《價格表比對規則.docx》。中央管理可在產品後台用 Notion `售價` 做單一 SKU 可逆覆寫；有效售價一律為「Notion 正值覆寫 > `products_catalog.json` 基準價 > 待定價」，清空覆寫即回到基準價。產品搜尋、目錄、系列成員、訂購價表、具 SKU 的報價產品來源與促銷伺服器驗價必須共用有效售價；無 SKU 的舊報價產品暫留既有 Notion `價格`，待完成貨號對應後再遷移。新價只影響之後選入的品項，既有訂單／報價價格快照禁止回刷。
+4. **價格更新與優先序**：批次／基準價仍走「改 Excel 主檔 → `scripts/merge_catalog_prices.py` → 驗證 → git push 部署」，價格表比對規則見桌面《價格表比對規則.docx》。中央管理可在產品後台用產品庫 `售價` 欄做單一 SKU 可逆覆寫；有效售價一律為「`售價` 正值覆寫 > `products_catalog.json` 基準價 > 待定價」，清空覆寫即回到基準價。產品搜尋、目錄、系列成員、訂購價表、具 SKU 的報價產品來源與促銷伺服器驗價必須共用有效售價；無 SKU 的舊報價產品暫留既有 `價格` 欄，待完成貨號對應後再遷移。新價只影響之後選入的品項，既有訂單／報價價格快照禁止回刷。
 5. **銷售狀態同步**：核對表（桌面《產品目錄核對表》）的「銷售狀態」以貨號（`code`）合併回 `products_catalog.json`——有售價→寫 `price`；已停售／未販售→`discontinued:true` 且 `status` 記細分。**選品器以 `discontinued` 隱藏**：`searchCatalog`（`/api/products/search`，訂貨/報價）過濾掉 discontinued；管理頁走 `getCatalog`／`catalog-raw` 仍全顯示並標狀態徽章。既成單據走價格快照不受影響。
 6. **產品編輯後台只限中央管理**：所有商品內容、售價覆寫、系列、圖片、文件與群組歸屬寫入 API 必須用 `withApiAuth('central-management', ...)`；一般產品權限只能瀏覽。ERP 貨號／品名及目錄基準價在後台維持唯讀；售價覆寫寫入前須讀取現值、寫入後 read-back 並刷新有效價格快取。
-7. **系列群組雙層來源**：部署內 `product_families.json` 保存規格矩陣；Notion 系列庫保存後台建立系列、名稱與介紹，產品庫「系列群組」保存人工 SKU 歸屬。人工歸屬覆蓋靜態歸屬，但寫入前必驗證系列存在、寫後必 read-back；管理資料讀取不完整時 fail-closed，不得讓後台在殘缺資料上繼續寫入。
+7. **系列群組雙層來源**：部署內 `product_families.json` 保存規格矩陣；系列庫（通用儲存）保存後台建立系列、名稱與介紹，產品庫「系列群組」保存人工 SKU 歸屬。人工歸屬覆蓋靜態歸屬，但寫入前必驗證系列存在、寫後必 read-back；管理資料讀取不完整時 fail-closed，不得讓後台在殘缺資料上繼續寫入。
 8. **產品 GET 禁止改 schema**：產品資料讀取只能查詢，不得在 GET/helper 中呼叫 `notion.databases.update`。缺欄位時明確報錯並先做 schema dry-run／取得核准，禁止靜默補欄位。
-9. **中央停用與正式停售分離**：產品庫 `中央停用` checkbox 是中央管理的可逆人工覆寫，不得改寫 `products_catalog.json` 的 `discontinued/status`。一般目錄、搜尋、篩選選項、系列規格／成員、訂購、促銷與報價選品都必須排除「中央停用」及正式停售 SKU；中央產品後台仍全顯示並標記，且可恢復。停用只影響新選品，既有單據與價格快照不得刪除或連動改寫。
+9. **暫停販售與正式停售分離**：產品庫 `中央停用` checkbox（畫面顯示「暫停販售」，字樣集中在 `lib/product-labels.ts`）是中央管理的可逆人工覆寫，不得改寫 `products_catalog.json` 的 `discontinued/status`。一般目錄、搜尋、篩選選項、系列規格／成員、訂購、促銷與報價選品都必須排除「中央停用」及正式停售 SKU；中央產品後台仍全顯示並標記，且可恢復。停用只影響新選品，既有單據與價格快照不得刪除或連動改寫。
 
 ## 促銷與訂貨鐵則
 
@@ -65,8 +65,8 @@
 ## 醫事監控鐵則（客戶資料監控）
 
 1. **對照來源＝衛福部 BAS**（`ma.mohw.gov.tw` 醫事查詢系統），非 NHI 健保開放資料。診所/醫院/衛生所＝`BAS_KIND=A`+`DEP_DEPT_ID=51`、牙技所＝`2`、鑲牙所＝`L`。快照只收「開業」者。詳見記憶 `project_clinic_monitor`。
-2. **狀態回寫會改 Notion 主檔（高風險操作）**：歇業候選/醫院待確認的「開業狀態」下拉 → `POST /api/admin/medical-monitor/status` → `updateCustomerStatus` **直接寫入 Notion 客戶庫「機構狀態」select**。這是改動正式主檔，UI 須讓使用者明確操作（逐筆、不自動觸發）；寫入後必 `deleteRedisValue('customers-with-codes-v2')` 使下次比對讀到新值。機構狀態 ∈ {停業,已歇業,撤銷} 者自動排除候選（結案）。**唯一自動寫入例外＝客情回報歇業**（`lib/visit-closures.ts`，每晚排程）：依據是業務親眼確認，僅限明確字眼（`lib/visit-closure-detect.ts`，排除否定／暫時／別家／推測）、之後無新拜訪、可在監控頁一鍵復原且復原後不再觸發；每筆寫稽核。
-3. **匯入也是寫 Notion 主檔**：待開發機構匯入 → `createSystemCustomer` 建立新客戶，並依機構代碼從 `data/bas-cache.json` 反查 basSeq、打 BAS 詳細頁（`fetchBasFull`）帶入 地址/電話/健保特約 + 機構資料/醫事人員連結/診療科別連結（URL 格式須與既有一致：BASBasicData／BASMedicalPersonnel／BASDepartments）。
+2. **狀態回寫會改客戶主檔（高風險操作）**：歇業候選/醫院待確認的「開業狀態」下拉 → `POST /api/admin/medical-monitor/status` → `updateCustomerStatus` **直接寫入客戶主檔「機構狀態」**（資料庫 customers 表）。這是改動正式主檔，UI 須讓使用者明確操作（逐筆、不自動觸發）；寫入後必 `deleteRedisValue('customers-with-codes-v2')` 使下次比對讀到新值。機構狀態 ∈ {停業,已歇業,撤銷} 者自動排除候選（結案）。**唯一自動寫入例外＝客情回報歇業**（`lib/visit-closures.ts`，每晚排程）：依據是業務親眼確認，僅限明確字眼（`lib/visit-closure-detect.ts`，排除否定／暫時／別家／推測）、之後無新拜訪、可在監控頁一鍵復原且復原後不再觸發；每筆寫稽核。
+3. **匯入也是寫客戶主檔**：待開發機構匯入 → `createSystemCustomer` 建立新客戶，並依機構代碼從 `data/bas-cache.json` 反查 basSeq、打 BAS 詳細頁（`fetchBasFull`）帶入 地址/電話/健保特約 + 機構資料/醫事人員連結/診療科別連結（URL 格式須與既有一致：BASBasicData／BASMedicalPersonnel／BASDepartments）。
 4. **比對結果與紀錄存伺服器端 Redis（刷新不可消失）**：最近結果＝`medical-monitor:last-result`（開頁回此、`?refresh=1` 才重算並覆寫）；每月趨勢紀錄＝`medical-monitor:history`（依快照月份去重、保留 36 筆）。**不可改回只存 localStorage**——跨裝置共用且要耐清快取。helper 在 `lib/system-notion.ts`（`get/setCachedMonitorResult`、`get/pushMonitorHistory`）。
 6. **判斷歇業／停業一律依 BAS_SEQ 直查詳細頁，禁止用名稱搜尋**（2026-10-07）：BAS 名稱搜尋**只回開業機構**，已歇業／停業者用名稱永遠查不到，只能得到「疑似」。詳細頁對歇業者仍保留，以 `data/bas-cache.json` 記下的 BAS_SEQ 直開即可讀真實狀態（`fetchStatusBySeq`）。每月快照步驟 3b 會補查已消失機構寫回快取（`statusCheckedAt`），比對端未補查者一律 `unverified`，**不可拿快取裡當初的「開業」當真**。手動立即補查：`node scripts/refresh-gone-status.mjs --write`。**單筆查詢（`/api/clinic-monitor/lookup`）與批次查證（`monitor-verify.ts`）都必須代碼優先**——批次查證曾只用名稱搜尋，歇業候選全落「查無」被一鍵同步跳過，一鍵處理形同無效。
 7. **人工排除是資料、不是快取**（2026-10-07）：監控頁「排除」存 Redis hash `medical-monitor:dismissed-v2`（`lib/notion/monitor-dismiss.ts`），不經 L1、不設 TTL、寫入失敗要回錯；讀不到排除清單時比對必須中止，**禁止回空陣列繼續算**（錯誤結果會被快取 30 天，已排除的全部重出）。排除鍵＝`類別族:客戶id:代碼`，代碼不在開業列表一族（closure/unregistered/samecity/hospital）共用 `missing`。新增任何「人工確認後不再提醒」的功能比照辦理。
