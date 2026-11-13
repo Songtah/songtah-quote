@@ -65,7 +65,7 @@
 ## 醫事監控鐵則（客戶資料監控）
 
 1. **對照來源＝衛福部 BAS**（`ma.mohw.gov.tw` 醫事查詢系統），非 NHI 健保開放資料。診所/醫院/衛生所＝`BAS_KIND=A`+`DEP_DEPT_ID=51`、牙技所＝`2`、鑲牙所＝`L`。快照只收「開業」者。詳見記憶 `project_clinic_monitor`。
-2. **狀態回寫會改客戶主檔（高風險操作）**：歇業候選/醫院待確認的「開業狀態」下拉 → `POST /api/admin/medical-monitor/status` → `updateCustomerStatus` **直接寫入客戶主檔「機構狀態」**（資料庫 customers 表）。這是改動正式主檔，UI 須讓使用者明確操作（逐筆、不自動觸發）；寫入後必 `deleteRedisValue('customers-with-codes-v2')` 使下次比對讀到新值。機構狀態 ∈ {停業,已歇業,撤銷} 者自動排除候選（結案）。**唯一自動寫入例外＝客情回報歇業**（`lib/visit-closures.ts`，每晚排程）：依據是業務親眼確認，僅限明確字眼（`lib/visit-closure-detect.ts`，排除否定／暫時／別家／推測）、之後無新拜訪、可在監控頁一鍵復原且復原後不再觸發；每筆寫稽核。
+2. **狀態回寫會改客戶主檔（高風險操作）**：歇業候選/醫院待確認的「開業狀態」下拉 → `POST /api/admin/medical-monitor/status` → `updateCustomerStatus` **直接寫入客戶主檔「機構狀態」**（資料庫 customers 表）。這是改動正式主檔，UI 須讓使用者明確操作（逐筆、不自動觸發）；寫入後必 `deleteRedisValue('customers-with-codes-v5')` 使下次比對讀到新值。機構狀態 ∈ {停業,已歇業,撤銷} 者自動排除候選（結案）。**唯一自動寫入例外＝客情回報歇業**（`lib/visit-closures.ts`，每晚排程）：依據是業務親眼確認，僅限明確字眼（`lib/visit-closure-detect.ts`，排除否定／暫時／別家／推測）、之後無新拜訪、可在監控頁一鍵復原且復原後不再觸發；每筆寫稽核。
 3. **匯入也是寫客戶主檔**：待開發機構匯入 → `createSystemCustomer` 建立新客戶，並依機構代碼從 `data/bas-cache.json` 反查 basSeq、打 BAS 詳細頁（`fetchBasFull`）帶入 地址/電話/健保特約 + 機構資料/醫事人員連結/診療科別連結（URL 格式須與既有一致：BASBasicData／BASMedicalPersonnel／BASDepartments）。
 4. **比對結果與紀錄存伺服器端 Redis（刷新不可消失）**：最近結果＝`medical-monitor:last-result`（開頁回此、`?refresh=1` 才重算並覆寫）；每月趨勢紀錄＝`medical-monitor:history`（依快照月份去重、保留 36 筆）。**不可改回只存 localStorage**——跨裝置共用且要耐清快取。helper 在 `lib/system-notion.ts`（`get/setCachedMonitorResult`、`get/pushMonitorHistory`）。
 6. **判斷歇業／停業一律依 BAS_SEQ 直查詳細頁，禁止用名稱搜尋**（2026-10-07）：BAS 名稱搜尋**只回開業機構**，已歇業／停業者用名稱永遠查不到，只能得到「疑似」。詳細頁對歇業者仍保留，以 `data/bas-cache.json` 記下的 BAS_SEQ 直開即可讀真實狀態（`fetchStatusBySeq`）。每月快照步驟 3b 會補查已消失機構寫回快取（`statusCheckedAt`），比對端未補查者一律 `unverified`，**不可拿快取裡當初的「開業」當真**。手動立即補查：`node scripts/refresh-gone-status.mjs --write`。**單筆查詢（`/api/clinic-monitor/lookup`）與批次查證（`monitor-verify.ts`）都必須代碼優先**——批次查證曾只用名稱搜尋，歇業候選全落「查無」被一鍵同步跳過，一鍵處理形同無效。
@@ -110,7 +110,7 @@
 ## 安全鐵則（2026 資安稽核後建立）
 
 1. **API route 一律用 `withApiAuth` 宣告授權規則，不能只檢查 `if (!session)`**：`session` 只證明「有登入」，不證明「有權限」。統一閘道在 `lib/api-auth.ts`——`export const POST = withApiAuth(rule, async (req, ctx, session) => {...})`，規則為 `'session'`（只需登入）／`'admin'`（role==='admin'）／`'central-management'`（role==='admin' 或 accountType==='中央管理'）／`{ roles: [...] }`（accountType 任一）／`{ module, action:'view'|'edit' }`（沿用 `lib/permissions` 的 canView/canEdit）。**新增任何 route 一律走 withApiAuth**。例外只有雙重驗證的 `daily-report`（cron secret）與 `line/webhook`（HMAC），這兩個維持手動驗證。高權限路由（accounts、admin/medical-monitor、clinic-monitor、line/import、dashboard/ceo）已全數採用;其餘 module-edit 寫入路由仍有正確的 inline `canEdit` 檢查（安全），可漸進改用 withApiAuth。
-2. **密碼一律雜湊，禁止明文比對／儲存**：`lib/system-notion.ts` 的 `hashPassword`/`verifyPassword`（bcrypt）是唯一允許的密碼存取路徑；新增任何帳號相關欄位寫入都要走這兩個 helper，不可直接 `properties['密碼'] = richText(plainPassword)`。
+2. **密碼一律雜湊，禁止明文比對／儲存**：`lib/notion/accounts.ts` 的 `hashPassword`/`verifyPassword`（bcrypt）是唯一允許的密碼存取路徑；新增任何帳號相關欄位寫入都要走這兩個 helper，不可直接 `properties['密碼'] = richText(plainPassword)`。
 3. **共用密鑰比對一律 timing-safe**：LINE webhook 簽章、`DAILY_REPORT_SECRET` 等共用密鑰比對禁止用 `===`，要用 `crypto.timingSafeEqual`；密鑰未設定時必須「失效關閉」（拒絕請求），不可「失效開放」。
 4. **訂單金額/數量伺服器端必須驗證**：兩道防線,任何新增訂貨/報價寫入路徑都要套用,不可只信任前端算好的金額——
    - `lib/orders-notion.ts` 的 `validateOrderItems`：基本防線（數量正整數、單價非負、贈品/樣品貨號須存在、贈品數量不可超過一般購買數量）。
@@ -130,7 +130,7 @@
 
 **鐵律：葉領域不互依；任何「跨多個領域的彙總邏輯」一律放組合層或上層 route，不准滲回葉領域。** 這條一旦守住，再長的彙總都不會把某個領域檔養成新的 god module。
 
-**現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**（2883 → ~72 行），所有實作在 `lib/notion/*`：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `dashboard`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
+**現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**，Notion 介面實作在 `lib/notion/*`、Supabase 讀寫在 `lib/db/*`；`lib/notion/*` 包含：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `dashboard`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
 
 ## 通知鐵則（2026-10-28 建立：站內通知中心＋網頁推播，不做 LINE 個人通知）
 
