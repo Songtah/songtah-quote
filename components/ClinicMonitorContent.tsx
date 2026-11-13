@@ -268,7 +268,7 @@ function MohwLookupButton({ name, code, kind, customerStatus, city, customerId, 
   )
 }
 
-// ── 開業狀態編輯（連動 Notion「機構狀態」）────────────────────────────────────────
+// ── 開業狀態編輯（連動客戶主檔「機構狀態」）────────────────────────────────────────
 const STATUS_OPTIONS = ['開業', '停業', '已歇業', '撤銷', '狀況不明']
 
 function StatusEditor({ customerId, current, onResolved }: {
@@ -734,7 +734,7 @@ function SuspectedClosuresTab({ items, unregistered = [], onResolved }: {
         <strong>曾登錄後消失</strong>者系統已依機構代碼直開衛福部詳細頁，標出真實狀態：
         <strong>歇業</strong>、<strong>停業</strong>（暫停，可能復業）、<strong>仍開業</strong>（不是歇業，多為科別或類別異動）；
         <strong>從未登錄</strong>＝多為未立案自編號碼，衛福部沒有紀錄可查。
-        確認後可直接編輯開業狀態（寫回 Notion；標停業／已歇業／撤銷後此筆即結案移除）。
+        確認後可直接編輯開業狀態（寫回客戶主檔；標停業／已歇業／撤銷後此筆即結案移除）。
       </div>
       <div className="flex flex-wrap gap-2">
         {([['all', `全部 ${merged.length}`], ['closed', `歇業 ${cnt('closed')}`], ['suspended', `停業 ${cnt('suspended')}`],
@@ -1907,7 +1907,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
       const res = await fetch('/api/admin/medical-monitor/save', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) { setSaveMsg(`❌ ${data.error ?? '儲存失敗'}`); return }
-      setSaveMsg(`✅ 已儲存 ${data.month} 紀錄至 Notion`)
+      setSaveMsg(`✅ 已儲存 ${data.month} 紀錄`)
     } catch (e: any) { setSaveMsg(`❌ ${e.message}`) }
     finally { setSaving(false) }
   }
@@ -2181,7 +2181,7 @@ export function ClinicMonitorContent({ isAdmin }: { isAdmin?: boolean }) {
             )}
           </div>
 
-          {/* 衛福部有、主檔未建檔（＝客戶主檔與 BAS 的差異，可勾選匯入 Notion；不是「未往來名單」）*/}
+          {/* 衛福部有、主檔未建檔（＝客戶主檔與 BAS 的差異，可勾選匯入客戶主檔；不是「未往來名單」）*/}
           {result?.hasSnapshot && showUnfiled && (
             <div className="space-y-3">
               <div className="text-xs text-stone-500 bg-cream-100 border border-cream-300 rounded-xl px-4 py-2.5 leading-relaxed">

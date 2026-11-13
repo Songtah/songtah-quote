@@ -35,10 +35,7 @@ jobs:
 
       - name: Run clinic monitor script
         env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_CLINIC_MONITOR_DB: ${{ secrets.NOTION_CLINIC_MONITOR_DB }}
           CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
-          NOTION_CUSTOMERS_SYSTEM_DB: ${{ secrets.NOTION_CUSTOMERS_SYSTEM_DB }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: node scripts/clinic-monitor.mjs
 

@@ -1,7 +1,8 @@
 /**
  * scripts/clinic-monitor.mjs
  *
- * 每月比對全國牙科機構開業/停業，更新快照 data/clinic-snapshot.json 並寫入 Notion。
+ * 每月比對全國牙科機構開業/停業，更新快照 data/clinic-snapshot.json，異動紀錄經正式站 /api/cron/monitor-ingest 寫入資料庫；
+ * 客戶主檔經 /api/cron/monitor-customers 讀取（兩者都用 x-cron-secret）。Notion 已封存，本腳本不再讀寫 Notion。
  *
  * ── 資料來源：衛福部醫事查詢系統（BAS, ma.mohw.gov.tw）─────────────────────────
  *   BAS_KIND=A + DEP_DEPT_ID=51（牙醫一般科）→ 牙科醫療機構（診所/醫院/衛生所）
@@ -20,7 +21,7 @@
  *     - 反覆按「更新醫事資料」即可逐步收斂到完整（cache pending=0）。
  *   → snapshot 永遠有效，GitHub Action 永遠綠燈。
  *
- * ── 異動類型（寫入 Notion）────────────────────────────────────────────────────
+ * ── 異動類型（寫入資料庫 monitor_records）────────────────────────────────────────────────────
  *   新增停業 / 恢復開業 / 新開業 / 停業 / 查無代碼 / 月份摘要
  */
 
@@ -29,10 +30,8 @@ import { parseStatus, refreshGoneStatuses } from '../lib/mohw-bas.mjs'
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-const NOTION_TOKEN       = process.env.NOTION_TOKEN
-const CLINIC_MONITOR_DB  = process.env.NOTION_CLINIC_MONITOR_DB
-const CUSTOMERS_DB       = process.env.NOTION_CUSTOMERS_SYSTEM_DB
-const TREND_DB           = process.env.NOTION_MEDICAL_TREND_DB || '386dcdaa-fb2a-818f-8c11-d24e88b111b3'
+// 客戶主檔 2026-11-10 起在資料庫（Notion 客戶庫已封存、不再更新），經正式站 API 取得
+const CUSTOMERS_URL      = process.env.MONITOR_CUSTOMERS_URL || 'https://songtah-quote.vercel.app/api/cron/monitor-customers'
 const SCHOOLS_PATH       = 'data/schools.json'
 const DRY_RUN            = process.env.DRY_RUN === 'true'
 const SNAPSHOT_PATH      = 'data/clinic-snapshot.json'
@@ -207,44 +206,34 @@ function classifyMedical(name) {
 // ── 崧達客戶 ───────────────────────────────────────────────────────────────────
 
 async function fetchSongtahCustomers() {
-  if (!CUSTOMERS_DB) { warn('未設定 NOTION_CUSTOMERS_SYSTEM_DB，跳過客戶比對'); return { byCode: new Map(), byName: new Map(), counts: {} } }
-  log('載入崧達客戶 …')
+  if (!CRON_SECRET) throw new Error('缺少 CRON_SECRET（DAILY_REPORT_SECRET），無法載入客戶主檔')
+  log('載入崧達客戶（資料庫）…')
+  const res = await fetch(CUSTOMERS_URL, { headers: { 'x-cron-secret': CRON_SECRET }, signal: AbortSignal.timeout(60_000) })
+  if (!res.ok) throw new Error(`monitor-customers → ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  const { customers = [] } = await res.json()
   const byCode = new Map()
   const byName = new Map()
   const counts = { custClinics: 0, custLabs: 0, custHospitals: 0, custSchools: 0 } // 各類型數量（含無代碼）
-  let cursor
-  do {
-    const body = { page_size: 100 }   // 不濾代碼，全部載入以統計各類型數量
-    if (cursor) body.start_cursor = cursor
-    const res = await notionPost(`/databases/${CUSTOMERS_DB}/query`, body)
-    for (const page of res.results) {
-      const name =
-        page.properties['名稱']?.title?.[0]?.plain_text      ??
-        page.properties['客戶名稱']?.title?.[0]?.plain_text  ??
-        page.properties['Name']?.title?.[0]?.plain_text      ?? ''
-      if (!name) continue
-      const type = page.properties['客戶類型']?.select?.name ?? ''
-      if (type === '牙醫診所' || type === '衛生所')        counts.custClinics++
-      else if (type === '牙體技術所' || type === '鑲牙所') counts.custLabs++
-      else if (type === '醫院')                            counts.custHospitals++
-      else if (type === '學術機構')                        counts.custSchools++
-      const code = getText(page, '機構代碼').trim()
-      if (!code) continue
-      const city = page.properties['縣市']?.select?.name ?? ''
-      const dist = page.properties['行政區']?.select?.name
-        ?? (page.properties['行政區']?.rich_text ?? []).map((t) => t.plain_text).join('')
-        ?? ''
-      const entry = { name, pageId: page.id, code, city, dist }
-      byCode.set(code, entry)
-      // 名稱索引改記「陣列」：全台同名機構很多（實測「致臻牙體技術所」有 4 筆客戶，
-      // 分屬桃園、臺中烏日 ×2、高雄鼓山），只留一筆會把異動掛到錯的客戶身上。
-      const nk = normalizeName(name)
-      if (!byName.has(nk)) byName.set(nk, [])
-      byName.get(nk).push(entry)
-    }
-    cursor = res.has_more ? res.next_cursor : null
-  } while (cursor)
-  log(`  有機構代碼的客戶：${byCode.size} 筆；類型計數 ${JSON.stringify(counts)}`)
+  for (const c of customers) {
+    const name = c.name ?? ''
+    if (!name) continue
+    const type = c.type ?? ''
+    if (type === '牙醫診所' || type === '衛生所')        counts.custClinics++
+    else if (type === '牙體技術所' || type === '鑲牙所') counts.custLabs++
+    else if (type === '醫院')                            counts.custHospitals++
+    else if (type === '學術機構')                        counts.custSchools++
+    const code = (c.code ?? '').trim()
+    if (!code) continue
+    const entry = { name, pageId: c.id, code, city: c.city ?? '', dist: c.dist ?? '' }
+    byCode.set(code, entry)
+    // 名稱索引記「陣列」：全台同名機構很多（實測「致臻牙體技術所」有 4 筆客戶，
+    // 分屬桃園、臺中烏日 ×2、高雄鼓山），只留一筆會把異動掛到錯的客戶身上。
+    const nk = normalizeName(name)
+    if (!byName.has(nk)) byName.set(nk, [])
+    byName.get(nk).push(entry)
+  }
+  log(`  客戶 ${customers.length} 筆；有機構代碼 ${byCode.size} 筆；類型計數 ${JSON.stringify(counts)}`)
+  if (customers.length < 1000) throw new Error(`客戶主檔只回 ${customers.length} 筆，疑似讀取不完整，停止比對`)
   return { byCode, byName, counts }
 }
 
@@ -353,10 +342,7 @@ function buildNotFoundList({ currentData, customers, prevCodes }) {
 
 const custUrl = id => `https://songtah-quote.vercel.app/customers/${id}`
 
-// ── Notion ────────────────────────────────────────────────────────────────────
-
-const DELAY_MS = 340
-const richText = t => [{ type: 'text', text: { content: String(t ?? '').slice(0, 2000) } }]
+// ── 寫入資料庫（經正式站） ─────────────────────────────────────────────────────
 
 // 2026-11-10 起：監控紀錄與數量趨勢不再寫 Notion，改經正式站 /api/cron/monitor-ingest 寫入資料庫（x-cron-secret）
 const INGEST_URL = process.env.MONITOR_INGEST_URL || 'https://songtah-quote.vercel.app/api/cron/monitor-ingest'
@@ -377,88 +363,11 @@ async function writeRecord(rec) {
   if (DRY_RUN) { log(`  [DRY] ${rec.type} | ${rec.name || rec.customer}`); return }
   pendingRecords.push({ type: rec.type, month: rec.month, code: rec.code, key: rec.key, name: rec.name, customer: rec.customer, address: rec.address, specialty: rec.specialty, kind: rec.kind, customerUrl: rec.customerUrl, termDate: rec.termDate })
 }
-async function writeRecordNotionLegacy(rec) {
-  if (DRY_RUN) { log(`  [DRY] ${rec.type} | ${rec.name || rec.customer}`); return }
-  const title = {
-    '新增停業': `🚨 ${rec.name}（${rec.customer}）`,
-    '恢復開業': `✅ ${rec.name}（${rec.customer}）`,
-    '新開業':   `🆕 ${rec.name}`,
-    '停業':     `⬜ ${rec.name}`,
-    '查無代碼': `🔍 ${rec.customer}（機構代碼查無）`,
-    '月份摘要': rec.name,
-  }[rec.type] ?? `${rec.type}｜${rec.name}`
-
-  const props = {
-    '標題':    { title:  richText(title) },
-    '異動類型':{ select: { name: rec.type } },
-  }
-  if (rec.month)       props['月份']     = { date: { start: rec.month + '-01' } }
-  if (rec.key || rec.code) props['機構代碼'] = { rich_text: richText(rec.key || rec.code || '') }
-  if (rec.name)        props['健保名稱'] = { rich_text: richText(rec.name) }
-  if (rec.customer)    props['客戶名稱'] = { rich_text: richText(rec.customer) }
-  if (rec.address)     props['地址']     = { rich_text: richText(rec.address) }
-  if (rec.specialty || rec.kind) props['診療科別'] = { rich_text: richText(rec.specialty || rec.kind) }
-  if (rec.customerUrl) props['客戶頁面'] = { url: rec.customerUrl }
-  if (rec.termDate && /^\d{8}$/.test(rec.termDate)) {
-    const d = rec.termDate
-    props['終止日期'] = { date: { start: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` } }
-  }
-  await notionPost('/pages', { parent: { database_id: CLINIC_MONITOR_DB }, properties: props })
-  await sleep(DELAY_MS)
-}
-
-async function notionPost(path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${NOTION_TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`Notion POST ${path} → ${res.status}: ${t.slice(0, 200)}`)
-  }
-  return res.json()
-}
-
-const getText = (page, f) => page.properties[f]?.rich_text?.map(t => t.plain_text).join('') ?? ''
-
-async function notionPatch(path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-    body: JSON.stringify(body), signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) throw new Error(`Notion PATCH ${path} → ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  return res.json()
-}
-
 /** 寫入「醫事數量趨勢」DB（一月一列，依月份 upsert）。只寫有提供的數值欄（diff 指標屬比對頁，月排程留空）*/
 async function upsertTrendRow(rec) {
   const trend = { month: rec.month, computedAt: new Date().toISOString(), totalClinics: rec.totalClinics, totalLabs: rec.totalLabs, totalHospitals: rec.totalHospitals, totalSchools: rec.totalSchools, custClinics: rec.custClinics, custLabs: rec.custLabs, custHospitals: rec.custHospitals, custSchools: rec.custSchools, customerWithCode: rec.customerWithCode, inBasOpen: rec.inBasOpen, toDevelop: rec.toDevelop, suspectedClosures: rec.suspectedClosures, hospitalUnverified: rec.hospitalUnverified, codeChanged: rec.codeChanged, inconsistentData: rec.inconsistentData }
   await postIngest({ trend })
 }
-async function upsertTrendRowNotionLegacy(rec) {
-  const props = {
-    '月份':     { title: [{ text: { content: rec.month } }] },
-    '紀錄時間': { date: { start: new Date().toISOString() } },
-  }
-  const map = {
-    '全台_牙醫診所': rec.totalClinics, '全台_牙體技術所': rec.totalLabs, '全台_醫院': rec.totalHospitals, '全台_學校': rec.totalSchools,
-    '客戶_牙醫診所': rec.custClinics, '客戶_牙體技術所': rec.custLabs, '客戶_醫院': rec.custHospitals, '客戶_學校': rec.custSchools,
-    '客戶有代碼': rec.customerWithCode, '在BAS開業': rec.inBasOpen, '待開發': rec.toDevelop,
-    '疑似歇業': rec.suspectedClosures, '醫院待確認': rec.hospitalUnverified, '更換代碼': rec.codeChanged, '資料不一致': rec.inconsistentData,
-  }
-  for (const [k, v] of Object.entries(map)) if (Number.isFinite(v)) props[k] = { number: v }
-  const q = await notionPost(`/databases/${TREND_DB}/query`, { page_size: 1, filter: { property: '月份', title: { equals: rec.month } } })
-  if (q.results?.[0]) await notionPatch(`/pages/${q.results[0].id}`, { properties: props })
-  else                await notionPost('/pages', { parent: { database_id: TREND_DB }, properties: props })
-}
-
 // ── 快取 ──────────────────────────────────────────────────────────────────────
 
 function loadCache() {
@@ -470,7 +379,7 @@ const cacheKeyOf = (basSeq, zoneSeq) => `${basSeq}__${zoneSeq}`
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  if (!NOTION_TOKEN)      throw new Error('缺少 NOTION_TOKEN')
+  if (!CRON_SECRET)       throw new Error('缺少 CRON_SECRET（DAILY_REPORT_SECRET）')
   if (!CRON_SECRET)       throw new Error('缺少 CRON_SECRET（DAILY_REPORT_SECRET）')
 
   const startedAt = Date.now()
@@ -486,7 +395,7 @@ async function main() {
     catch { warn('解析 snapshot 失敗，視為首次執行') }
   } else { log('無 snapshot，首次執行') }
   // 只有「上月也是 BAS 來源」才做月對月異動比對；換來源（如舊 NHI 快照）時 diff 無意義，
-  // 視為建立 BAS 基準（不寫一堆假停業/新開業到 Notion、不計增減）。
+  // 視為建立 BAS 基準（不寫一堆假停業/新開業到監控紀錄、不計增減）。
   const prevComparable = prevSnapshot?.source === 'mohw-bas' ? prevSnapshot : null
   if (prevSnapshot && !prevComparable) log('上月快照非 BAS 來源 → 本次建立 BAS 基準（不做異動比對）')
   const cache = loadCache()
@@ -638,9 +547,9 @@ async function main() {
   const closed   = changes.filter(c => c.type === '停業')
   log(`比對：新增停業 ${stopped.length}、恢復開業 ${restored.length}、新開業 ${newOpen.length}、停業 ${closed.length}、查無代碼 ${notFound.length}`)
 
-  // 6. 寫入 Notion（失敗不影響快照寫出）
+  // 6. 寫入資料庫（失敗不影響快照寫出）
   try {
-    log('寫入 Notion …')
+    log('寫入資料庫 …')
     await writeRecord({
       type: '月份摘要', month, name: `${month} 月份摘要`,
       address: [

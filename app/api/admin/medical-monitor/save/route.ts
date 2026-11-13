@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/medical-monitor/save
- * 手動「儲存比對紀錄」：把最近一次比對的每月數量寫入永久 Notion「醫事數量趨勢」DB。
- * （Redis 每月紀錄已於每次比對自動更新；此按鈕另存一份到 Notion 永久檔。）
+ * 手動「儲存比對紀錄」：把最近一次比對的每月數量寫入永久「醫事數量趨勢」（資料庫 medical_trend）。
+ * （Redis 每月紀錄已於每次比對自動更新；此按鈕另存一份到資料庫永久檔。）
  */
 import { NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'

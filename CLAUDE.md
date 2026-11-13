@@ -70,7 +70,7 @@
 4. **比對結果與紀錄存伺服器端 Redis（刷新不可消失）**：最近結果＝`medical-monitor:last-result`（開頁回此、`?refresh=1` 才重算並覆寫）；每月趨勢紀錄＝`medical-monitor:history`（依快照月份去重、保留 36 筆）。**不可改回只存 localStorage**——跨裝置共用且要耐清快取。helper 在 `lib/system-notion.ts`（`get/setCachedMonitorResult`、`get/pushMonitorHistory`）。
 6. **判斷歇業／停業一律依 BAS_SEQ 直查詳細頁，禁止用名稱搜尋**（2026-10-07）：BAS 名稱搜尋**只回開業機構**，已歇業／停業者用名稱永遠查不到，只能得到「疑似」。詳細頁對歇業者仍保留，以 `data/bas-cache.json` 記下的 BAS_SEQ 直開即可讀真實狀態（`fetchStatusBySeq`）。每月快照步驟 3b 會補查已消失機構寫回快取（`statusCheckedAt`），比對端未補查者一律 `unverified`，**不可拿快取裡當初的「開業」當真**。手動立即補查：`node scripts/refresh-gone-status.mjs --write`。**單筆查詢（`/api/clinic-monitor/lookup`）與批次查證（`monitor-verify.ts`）都必須代碼優先**——批次查證曾只用名稱搜尋，歇業候選全落「查無」被一鍵同步跳過，一鍵處理形同無效。
 7. **人工排除是資料、不是快取**（2026-10-07）：監控頁「排除」存 Redis hash `medical-monitor:dismissed-v2`（`lib/notion/monitor-dismiss.ts`），不經 L1、不設 TTL、寫入失敗要回錯；讀不到排除清單時比對必須中止，**禁止回空陣列繼續算**（錯誤結果會被快取 30 天，已排除的全部重出）。排除鍵＝`類別族:客戶id:代碼`，代碼不在開業列表一族（closure/unregistered/samecity/hospital）共用 `missing`。新增任何「人工確認後不再提醒」的功能比照辦理。
-5. **快照建置永不讓 Action 失敗**：`scripts/clinic-monitor.mjs` 對 BAS（有 WAF/限流）採持久快取＋時間預算＋帶走舊值＋永不 throw；換來源（prev.source≠'mohw-bas'）時跳過月對月 diff，避免假異動灌爆 Notion 監控紀錄。
+5. **快照建置永不讓 Action 失敗**：`scripts/clinic-monitor.mjs` 對 BAS（有 WAF/限流）採持久快取＋時間預算＋帶走舊值＋永不 throw；換來源（prev.source≠'mohw-bas'）時跳過月對月 diff，避免假異動灌爆監控紀錄。客戶主檔一律經 `/api/cron/monitor-customers` 從資料庫讀，不得再查已封存的 Notion。
 
 ## 客情拜訪鐵則
 
