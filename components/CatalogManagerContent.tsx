@@ -1986,20 +1986,27 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
 
   useEffect(() => { setVisibleTiles(TILE_PAGE) }, [debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter])
 
+  // 停售品（主檔已停售／未販售）一律隱藏；中央管理點「停售」篩選才列出
+  const showDiscontinued = statusFilter === 'discontinued'
+  const listedItems = useMemo(
+    () => (showDiscontinued ? allItems : allItems.filter((item) => !item.discontinued)),
+    [allItems, showDiscontinued],
+  )
+
   const filterOptions = useMemo(() => {
     const sortedUnique = (values: string[]) =>
       Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-Hant'))
     return {
-      brands: sortedUnique(allItems.map((item) => item.brand)),
-      mainCategories: sortedUnique(allItems.map((item) => item.mainCategory ?? '')),
+      brands: sortedUnique(listedItems.map((item) => item.brand)),
+      mainCategories: sortedUnique(listedItems.map((item) => item.mainCategory ?? '')),
       categories: sortedUnique(
-        allItems
+        listedItems
           .filter((item) => !mainCategoryFilter || item.mainCategory === mainCategoryFilter)
           .map((item) => item.category),
       ),
-      productTypes: sortedUnique(allItems.map((item) => item.productType)),
+      productTypes: sortedUnique(listedItems.map((item) => item.productType)),
     }
-  }, [allItems, mainCategoryFilter])
+  }, [listedItems, mainCategoryFilter])
 
   const activeFilterCount = [brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter].filter(Boolean).length
   const statusCounts = useMemo(() => {
@@ -2011,7 +2018,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   const isSearching = Boolean(debouncedQ) || hasFilters
   const searchResults = useMemo(() => {
     if (!isSearching) return []
-    return allItems.filter((item) => {
+    return listedItems.filter((item) => {
       const matchesKeyword = !debouncedQ ||
         item.code.toLowerCase().includes(debouncedQ) ||
         item.name.toLowerCase().includes(debouncedQ) ||
@@ -2025,7 +2032,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         (!productTypeFilter || item.productType === productTypeFilter) &&
         (!statusFilter || matchesStatus(item, statusFilter))
     })
-  }, [isSearching, allItems, debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter])
+  }, [isSearching, listedItems, debouncedQ, brandFilter, mainCategoryFilter, categoryFilter, productTypeFilter, statusFilter])
 
   const clearSearchAndFilters = () => {
     setSearch('')
@@ -2037,7 +2044,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
     setStatusFilter('')
   }
 
-  const itemByCode = useMemo(() => new Map(allItems.map((item) => [item.code, item])), [allItems])
+  const itemByCode = useMemo(() => new Map(listedItems.map((item) => [item.code, item])), [listedItems])
   const exactFamilyIndex = useMemo(() => buildExactFamilyIndex(families), [families])
   const familyById = useMemo(() => new Map(families.map((family) => [family.id, family])), [families])
 
@@ -2103,18 +2110,30 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
   // 結果頁的子分類膠囊：選了主分類 → 它的功能分類；只選品牌 → 該品牌有的主分類
   const subChips = useMemo(() => {
     if (mainCategoryFilter) {
-      const scope = allItems.filter((item) => item.mainCategory === mainCategoryFilter && (!brandFilter || item.brand === brandFilter))
+      const scope = listedItems.filter((item) => item.mainCategory === mainCategoryFilter && (!brandFilter || item.brand === brandFilter))
       const counts = new Map<string, number>()
       for (const item of scope) counts.set(item.category, (counts.get(item.category) ?? 0) + 1)
       return { kind: 'cat' as const, chips: Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })) }
     }
     if (brandFilter) {
       const counts = new Map<string, number>()
-      for (const item of allItems) if (item.brand === brandFilter && item.mainCategory) counts.set(item.mainCategory, (counts.get(item.mainCategory) ?? 0) + 1)
+      for (const item of listedItems) if (item.brand === brandFilter && item.mainCategory) counts.set(item.mainCategory, (counts.get(item.mainCategory) ?? 0) + 1)
       return { kind: 'main' as const, chips: Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })) }
     }
     return null
-  }, [allItems, mainCategoryFilter, brandFilter])
+  }, [listedItems, mainCategoryFilter, brandFilter])
+
+  const mainCounts = useMemo(() => {
+    const counts = new Map<string, { count: number; cats: Set<string> }>()
+    for (const item of listedItems) {
+      if (!item.mainCategory) continue
+      const entry = counts.get(item.mainCategory) ?? { count: 0, cats: new Set<string>() }
+      entry.count += 1
+      entry.cats.add(item.category)
+      counts.set(item.mainCategory, entry)
+    }
+    return counts
+  }, [listedItems])
 
   const scopeTitle = [brandFilter, categoryFilter || mainCategoryFilter].filter(Boolean).join(' · ') ||
     (statusFilter ? STATUS_FILTERS.find((f) => f.key === statusFilter)?.label : '') || (debouncedQ ? `「${search.trim()}」` : '篩選結果')
@@ -2200,7 +2219,7 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             <span className="mr-1 text-stone-400">
               {isSearching
                 ? <>符合 <b className="text-stone-700">{searchResults.length.toLocaleString()}</b> 個品項</>
-                : <>共 {allItems.length.toLocaleString()} 個品項 · {families.length} 個系列 · {brandCards.length} 個品牌</>}
+                : <>共 {listedItems.length.toLocaleString()} 個在售品項 · {familyGroups.reduce((n, g) => n + g.tiles.length, 0)} 個系列 · {brandCards.length} 個品牌</>}
             </span>
             {STATUS_FILTERS.filter((f) => (canManageProducts || !f.manageOnly) && statusCounts[f.key] > 0).map((f) => (
               <button key={f.key} type="button" onClick={() => setStatusFilter((v) => (v === f.key ? '' : f.key))}
@@ -2286,14 +2305,14 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
         <div>
           <div className="mb-3 flex items-baseline gap-2">
             <h3 className="text-sm font-bold text-stone-700">依分類找產品</h3>
-            <span className="text-[11px] text-stone-400">{taxonomy.mains.filter((m) => m.count > 0).length} 個主分類</span>
+            <span className="text-[11px] text-stone-400">{mainCounts.size} 個主分類</span>
           </div>
           <div className={TILE_GRID}>
-            {taxonomy.mains.filter((m) => m.count > 0).map((m) => (
+            {taxonomy.mains.filter((m) => (mainCounts.get(m.name)?.count ?? 0) > 0).map((m) => (
               <EntryTile
                 key={m.id}
                 title={m.name}
-                meta={`${m.count.toLocaleString()} 個品項 · ${m.funcs.filter((f) => f.count > 0).length} 個細分類`}
+                meta={`${(mainCounts.get(m.name)?.count ?? 0).toLocaleString()} 個品項 · ${mainCounts.get(m.name)?.cats.size ?? 0} 個細分類`}
                 thumbs={thumbsByMain.get(m.name)}
                 artwork={<MainCategoryArtwork categoryId={m.id} compact />}
                 onClick={() => { setMainCategoryFilter(m.name); setCategoryFilter('') }}

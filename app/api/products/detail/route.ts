@@ -39,7 +39,9 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
   const members = memberCodes
     .map((memberCode) => byCode.get(memberCode))
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
-    .filter((item) => central || (!item.discontinued && !disabled.has(item.code)))
+    // 停售品不列在系列裡；單品網址直接打開時，中央管理仍可看到（標示停售）
+    .filter((item) => !item.discontinued || (central && !family))
+    .filter((item) => central || !disabled.has(item.code))
   if (members.length === 0) return NextResponse.json({ error: '找不到這個產品' }, { status: 404 })
 
   const imageIndex = await listProductImageIndex(Array.from(new Set(members.map((item) => item.brand || '__empty__'))))
