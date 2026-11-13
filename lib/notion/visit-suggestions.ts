@@ -46,6 +46,8 @@ export async function getVisitSignals() {
   return getSignals()
 }
 
+/** 最近一次各步驟耗時（ms），供 ?timing=1 診斷 */
+export const suggestionTimings: Record<string, number> = {}
 let signalsInflight: Promise<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }> | null = null
 async function getSignals() {
   const cached = await getRedisValue<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }>(SIGNALS_CACHE_KEY)
@@ -229,9 +231,10 @@ export async function buildVisitSuggestions(params: {
   const mode = params.mode ?? 'today'
   const limit = params.limit ?? 20
 
+  const tm = <T>(k: string, p: Promise<T>) => { const t0 = Date.now(); return p.finally(() => { suggestionTimings[k] = Date.now() - t0 }) }
   const [{ builtAt, signals }, territories, footprints] = await Promise.all([
-    getSignals(), listTerritories().catch(() => []),
-    getEventFootprints().catch(() => ({} as Record<string, EventFootprint>)),   // 足跡失敗不影響其他訊號
+    tm('signals', getSignals()), tm('territories', listTerritories().catch(() => [])),
+    tm('footprints', getEventFootprints().catch(() => ({} as Record<string, EventFootprint>))),   // 足跡失敗不影響其他訊號
   ])
 
   // 我的有效轄區（today 模式的地理範圍）
@@ -249,7 +252,7 @@ export async function buildVisitSuggestions(params: {
     scope = `${params.city}${params.district}`
   } else {
     // today：名下客戶 ＋ 我轄區內尚無人負責者。不必選區。
-    const all = await getAllSystemCustomers()
+    const t1 = Date.now(); const all = await getAllSystemCustomers(); suggestionTimings.customers = Date.now() - t1
     pool = all.filter((c) => {
       if (c.salesperson === me) return true
       if (params.existingOnly) return false

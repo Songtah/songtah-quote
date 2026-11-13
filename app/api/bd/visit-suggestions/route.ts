@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { buildVisitSuggestions } from '@/lib/notion/visit-suggestions'
+import { buildVisitSuggestions, suggestionTimings } from '@/lib/notion/visit-suggestions'
 import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +30,12 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       return NextResponse.json({ error: '指定區域模式需要選擇縣市與行政區' }, { status: 400 })
     }
     const limit = Math.min(50, Math.max(1, Number(sp.get('limit')) || 20))
+    if (canViewAll && sp.get('timing') === '1') {   // 診斷：單一業務各步驟耗時，25 秒沒完成也回報已完成的部分
+      for (const k of Object.keys(suggestionTimings)) delete suggestionTimings[k]
+      const t0 = Date.now()
+      const done = await Promise.race([buildVisitSuggestions({ mode, city, district, salesperson, limit }).then(() => true), new Promise<false>((r) => setTimeout(() => r(false), 25_000))])
+      return NextResponse.json({ totalMs: Date.now() - t0, finished: done, parts: { ...suggestionTimings } })
+    }
     const users = await getSystemUsers()
     const salespeople = users
       .filter((a) => a.accountType === '業務' && a.status !== '停用')
