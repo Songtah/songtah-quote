@@ -19,6 +19,9 @@ export function sql() {
       // （2026-11-14 實測總經理儀表板隨機一段查詢卡滿 25 秒）。閒置 5 秒就關、每條最多用 5 分鐘。
       idle_timeout: 5,
       max_lifetime: 300,
+      // 不在同一條連線上連發多個查詢：搭配 Supabase transaction pooler 時偶爾會有查詢永遠不回
+      // （正式站並行 12 個查詢時隨機一個卡住，本機重現不到）。
+      max_pipeline: 1,
       connect_timeout: 10,
       ssl: 'require',
     })
