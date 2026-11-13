@@ -1156,7 +1156,12 @@ export async function getCustomerFilterOptions(): Promise<{
   let cities: string[] = []
   let salespersons: string[] = []
   let types: string[] = []
-  try {
+  if (readFromDb()) {
+    const o = await dbc.dbCustomerFilterOptions()
+    cities = o.cities
+    salespersons = o.salespersons.filter((s) => !INACTIVE_SALESPERSONS.has(s))
+    types = o.types
+  } else try {
     const db: any = await notionCallWithRetry('getCustomerFilterOptions:schema', () =>
       notion.databases.retrieve({ database_id: normalizeDatabaseId(DB.customers!) })
     )

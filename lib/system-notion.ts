@@ -2,10 +2,6 @@
 // ─── 跨切面 relation 解析 → ./notion/relations ─────────────────────────────────
 export { resolveCustomerInfo, resolveProductNames, resolveCustomerNames } from './notion/relations'
 
-// ─── 儀表板彙總（組合層）→ ./notion/dashboard ──────────────────────────────────
-export type { ModuleSummary, DashboardSummary } from './notion/dashboard'
-export { getProductsSummary, getDashboardSummary, getModuleRecords, getRoleSummary } from './notion/dashboard'
-
 // ─── 產品搜尋 → ./notion/products-search（葉領域）──────────────────────────────
 export type { ProductItem } from './notion/products-search'
 export { searchProducts, getProductCategories } from './notion/products-search'

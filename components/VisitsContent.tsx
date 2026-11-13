@@ -1505,7 +1505,7 @@ export default function VisitsContent({
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-brand-100/60 bg-brand-50/40">
                   <h3 className="font-bold text-stone-900">🔍 自動偵測競品</h3>
-                  <p className="text-xs text-stone-500 mt-0.5">掃描拜訪內文，比對 Notion 競品選項並自動填入</p>
+                  <p className="text-xs text-stone-500 mt-0.5">掃描拜訪內文，比對競品清單並自動填入</p>
                 </div>
 
                 <div className="px-5 py-4 space-y-4">
@@ -1513,8 +1513,8 @@ export default function VisitsContent({
                   {!detectRunning && !detectDone && (
                     <div className="text-sm text-stone-600 space-y-1.5">
                       <p>• 只處理<span className="font-medium">競品欄位為空</span>的紀錄，不覆蓋已填資料</p>
-                      <p>• 以 Notion 競品選項名稱直接比對內文關鍵字</p>
-                      <p>• 如需新增競品選項，請至 Notion 競品欄位新增後再執行</p>
+                      <p>• 以競品清單的名稱直接比對內文關鍵字</p>
+                      <p>• 如需新增競品，請聯絡系統管理員加入競品清單後再執行</p>
                     </div>
                   )}
 

@@ -132,7 +132,8 @@ async function resolvePageDetails(ids: string[]): Promise<Record<string, { thumb
             break
           }
         }
-        let thumbnail = getPageCoverUrl(page)
+        // 產品照片已改存「圖片URL」（Vercel Blob）；舊的封面／內文圖片只當備援
+        let thumbnail = page.properties?.['圖片URL']?.url || getPageCoverUrl(page)
         if (!thumbnail) {
           thumbnail = await findFirstImageUrl(blocks.results ?? [])
         }
@@ -158,7 +159,7 @@ export async function listCustomerEquipment(customerId: string): Promise<Equipme
 
   if (readFromDb()) {
     const rows = await dbe.dbListCustomerEquipment(customerId)
-    const detailsMap = await resolvePageDetails(rows.map((r) => r.productId))   // 產品縮圖仍在 Notion 產品頁
+    const detailsMap = await resolvePageDetails(rows.map((r) => r.productId))   // 產品縮圖取產品庫「圖片URL」
     const items: Equipment[] = rows.map((r) => {
       const details = detailsMap[r.productId] ?? { thumbnail: '', name: '' }
       return { id: r.id, customerName: r.customerUnit, serialNumber: r.serialNumber, manufacturer: r.manufacturer, status: r.status, supportId: r.supportId, teamViewerId: r.teamViewerId, productName: details.name, originalCustomerId: customerId, originalProductId: r.productId, thumbnail: details.thumbnail }

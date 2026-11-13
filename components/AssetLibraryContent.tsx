@@ -725,16 +725,8 @@ export function AssetLibraryContent({ setupNeeded }: { setupNeeded?: boolean }) 
   if (setupNeeded) {
     return (
       <div className="max-w-lg mx-auto mt-10 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-6">
-        <p className="font-semibold text-amber-800 mb-2">⚠️ 需要完成設定才能使用品牌素材庫</p>
-        <ol className="text-sm text-amber-700 space-y-2 list-decimal list-inside">
-          <li>在 Notion 新增一個 Full Page 資料庫，命名為「品牌素材庫」</li>
-          <li>將 Notion Integration 加入此資料庫的存取權限</li>
-          <li>複製資料庫 ID（URL 中 <code className="bg-amber-100 px-1 rounded">notion.so/xxx/<strong>[這一段]</strong>?v=...</code>）</li>
-          <li>在 Vercel 或 <code className="bg-amber-100 px-1 rounded">.env.local</code> 加入：<br />
-            <code className="bg-amber-100 px-1.5 py-0.5 rounded text-xs mt-1 block">NOTION_ASSETS_DB=貼上資料庫ID</code>
-          </li>
-          <li>重新部署即可啟用</li>
-        </ol>
+        <p className="font-semibold text-amber-800 mb-2">⚠️ 品牌素材庫目前無法讀取</p>
+        <p className="text-sm text-amber-700">請聯絡系統管理員確認素材庫設定。</p>
       </div>
     )
   }

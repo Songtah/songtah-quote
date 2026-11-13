@@ -13,7 +13,7 @@ export default async function NewTicketPage() {
   return (
     <AppShell
       title="新建工單"
-      description="依照技術支援回報表單整理成網站版工單建立流程，會直接寫入 Notion 工單資料庫。"
+      description="依照技術支援回報表單整理成網站版工單建立流程，會直接寫入工單資料庫。"
     >
       <TicketForm />
     </AppShell>

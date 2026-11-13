@@ -174,7 +174,6 @@ export default function AuditLogsContent() {
                   <th className="px-4 py-3 text-left">操作</th>
                   <th className="px-4 py-3 text-left">摘要</th>
                   <th className="px-4 py-3 text-left">操作者</th>
-                  <th className="px-4 py-3 text-right">詳情</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-100/30">
@@ -205,20 +204,6 @@ export default function AuditLogsContent() {
                         {log.actorRole ? (
                           <span className="ml-2 text-xs text-stone-400">（{log.actorRole}）</span>
                         ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {log.url ? (
-                          <a
-                            href={log.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors"
-                          >
-                            Notion ↗
-                          </a>
-                        ) : (
-                          <span className="text-xs text-stone-300">—</span>
-                        )}
                       </td>
                     </tr>
                   )

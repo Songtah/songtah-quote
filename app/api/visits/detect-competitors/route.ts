@@ -16,17 +16,10 @@
 import { dbVisitsWithoutCompetitors } from '@/lib/db/visits-write'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { Client } from '@notionhq/client'
 import { getVisitFormOptions } from '@/lib/system-notion'
 import { updateVisit } from '@/lib/notion/visits'
 import { detectCompetitors } from '@/lib/competitor-detector'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
-const VISITS_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'
-
-function normId(id: string) {
-  return id.replace(/-/g, '')
-}
 
 export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   try {
@@ -40,7 +33,7 @@ export const POST = withApiAuth('central-management', async (req: NextRequest) =
     const competitorOptions = formOptions.competitorOptions
 
     if (!competitorOptions.length) {
-      return NextResponse.json({ error: 'Notion 競品欄位尚無選項，請先在 Notion 建立競品選項' }, { status: 400 })
+      return NextResponse.json({ error: '競品清單是空的，請聯絡系統管理員加入競品' }, { status: 400 })
     }
 
     // ── 2. 抓取競品欄位為空的拜訪紀錄 ────────────────────────────

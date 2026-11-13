@@ -1190,7 +1190,7 @@ function PromotionDrawer({ initial, copyOf, onClose, onSaved, eventId }: DrawerP
           <div>
             <label className="block text-xs font-semibold text-stone-500 mb-1">DM 附件連結</label>
             <input type="url" value={dmUrl} onChange={(e) => setDmUrl(e.target.value)}
-              placeholder="https://…（Notion 附件、Google Drive 等）"
+              placeholder="https://…（Google Drive 等公開連結）"
               className="input-soft w-full" />
             <p className="text-[11px] text-stone-400 mt-1">貼入公開連結，業務可直接點開查閱</p>
           </div>

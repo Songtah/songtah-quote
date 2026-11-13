@@ -15,12 +15,13 @@
  */
 import { readFromDb } from '@/lib/db/read-source'
 import { dbUnlinkedVisits } from '@/lib/db/visits-read'
+import { dbVisitRaw } from '@/lib/db/visits-write'
 import { getRedisValue, setRedisValue, deleteRedisValue, notionCallWithRetry, notion, DB, normalizeDatabaseId, getTitle, getSelect, getDate, getText } from './shared'
-import { searchSystemCustomers } from './customers'
+import { searchSystemCustomers, getSystemCustomerById } from './customers'
 import { type MatchCandidate } from '@/lib/customer-name-match'
 import { loadMatchContext, matchVisitCustomer } from './match-context'
 import { loadAliases, rememberAlias } from './visit-alias'
-import { recordVisitBump } from './visits'
+import { recordVisitBump, updateVisit } from './visits'
 
 export type PendingMatchCandidate = MatchCandidate & { type?: string; salesperson?: string }
 
@@ -174,26 +175,15 @@ export function getLastAutoLinked(): number { return lastAutoLinked }
  * 叫法已先存進記憶）；系統自動補的保留業務原本的寫法，讓夜間記憶學得到。
  */
 async function linkVisits(visitIds: string[], customerId: string, opts: { overwriteName: boolean }): Promise<{ fullName: string; city: string }> {
-  const page: any = await notionCallWithRetry('linkVisits:customer', () =>
-    notion.pages.retrieve({ page_id: customerId })
-  )
-  const customersDb = normalizeDatabaseId(DB.customers!).replace(/-/g, '')
-  if ((page?.parent?.database_id ?? '').replace(/-/g, '') !== customersDb) {
-    throw new Error('指定的不是客戶主檔頁面')
-  }
-  const fullName = getTitle(page, '客戶名稱') || getText(page, '客戶名稱')
-  const city = getSelect(page, '縣市')
+  // 客戶主檔與客情都在資料庫（2026-11-10 起）；舊版直接讀寫 Notion 頁面，會寫進已封存的 Notion、資料庫仍是未關聯
+  const customer = await getSystemCustomerById(customerId)
+  if (!customer) throw new Error('指定的不是客戶主檔')
+  const fullName = customer.name
+  const city = customer.city
   for (const id of visitIds) {
-    const updated: any = await notionCallWithRetry('linkVisits:visit', () =>
-      notion.pages.update({
-        page_id: id,
-        properties: {
-          '🏥 牙科單位資料': { relation: [{ id: customerId }] },
-          ...(opts.overwriteName && fullName ? { '單位名稱': { title: [{ text: { content: fullName } }] } } : {}),
-        } as any,
-      })
-    )
-    await recordVisitBump(customerId, getDate(updated, '日期'))
+    await updateVisit(id, { customerId, ...(opts.overwriteName && fullName ? { customerName: fullName } : {}) })
+    const row = await dbVisitRaw(id)
+    await recordVisitBump(customerId, row?.date ?? '')
   }
   return { fullName, city }
 }

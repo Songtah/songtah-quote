@@ -410,7 +410,7 @@ function ImageUploadZone({
             disabled={disabled}
           />
           <p className="text-xs text-stone-400 mt-1.5">
-            可貼入 Google Drive 公開連結、Notion 附件連結或任何公開圖片 URL。
+            可貼入 Google Drive 公開連結或任何公開圖片網址。
           </p>
         </>
       )}

@@ -60,7 +60,8 @@ const sameBrand = (a: string, b: string) => {
   return n(a) === n(b)
 }
 
-const visitUrl = (id: string) => `https://www.notion.so/${id.replace(/-/g, '')}`
+// 客情沒有單筆頁面，連到客戶頁（該頁列出所有客情）；Notion 已封存，不再連 notion.so
+const customerUrl = (id: string) => `https://songtah-quote.vercel.app/customers/${id}`
 const today = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)
 const daysAgo = (d: string) => (Date.parse(today()) - Date.parse(d)) / 86400_000
 /** 客情日期（YYYY-MM-DD）；缺漏或格式不符時用今天 */
@@ -102,7 +103,7 @@ export async function createRepairTicketFromVisit(input: VisitRepairInput, optio
 
   const { repair } = input
   const brand = detectBrand(`${repair.equipment} ${repair.evidence}`)
-  const source = `由客情自動建立：${input.visitDate} ${input.salesperson} 回報「${repair.evidence}」｜客情 ${visitUrl(input.visitId)}`
+  const source = `由客情自動建立：${input.visitDate} ${input.salesperson} 回報「${repair.evidence}」｜客戶 ${customerUrl(input.customerId)}`
 
   // 工單建立日期＝客情日期（不是匯入／回補當天），90 天去重也以客情日期與工單建立日期的距離計算，
   // 否則回補的舊客情會併進一年後才開的工單（實例：#213），新客情也會併進回補出來的舊案。

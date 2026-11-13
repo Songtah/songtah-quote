@@ -155,7 +155,7 @@ function DeleteModal({
           客戶：<span className="font-semibold text-stone-700">{quote.customerName}</span>
         </p>
         <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-5">
-          報價單與所有品項會一併移除（30 天內可由 Notion 垃圾桶救回）。
+          報價單與所有品項會一併移除（資料庫仍保留封存紀錄，誤刪可請系統管理員還原）。
         </p>
         <div className="flex gap-2">
           <button onClick={onCancel} disabled={loading}

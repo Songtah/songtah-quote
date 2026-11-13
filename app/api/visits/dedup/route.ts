@@ -16,13 +16,10 @@ import { dbVisitsForDedup } from '@/lib/db/visits-write'
 import { deleteVisit } from '@/lib/notion/visits'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { Client } from '@notionhq/client'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
-const VISITS_DB = (process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16').replace(/-/g, '')
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 

@@ -19,18 +19,11 @@
 import { dbVisitsUnlinked } from '@/lib/db/visits-write'
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
-import { Client } from '@notionhq/client'
 import { loadMatchContext, matchVisitCustomer } from '@/lib/notion/match-context'
 import { loadAliases } from '@/lib/notion/visit-alias'
 import { recordVisitBump, updateVisit } from '@/lib/notion/visits'
 import { searchSystemCustomers } from '@/lib/system-notion'
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
-const VISITS_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'
-
-function normId(id: string) {
-  return id.replace(/-/g, '')
-}
 
 export const POST = withApiAuth('central-management', async (req: NextRequest) => {
   try {

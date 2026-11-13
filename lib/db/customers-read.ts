@@ -6,6 +6,7 @@ import { sql } from './client'
 import { bareId } from './read-source'
 import { canonicalSalespersonName, salespersonNameVariants } from '@/lib/salesperson-name'
 import { isInactiveCustomer } from '@/lib/customer-status'
+import { TW_CITIES } from '@/lib/tw-districts'
 import type {
   SystemCustomerDetail, CustomerSearchResult, CustomerListItem, AreaCustomer,
   CustomerWithCode, RegionStatRow, RegionStatsResult, PipelineCustomer,
@@ -124,6 +125,17 @@ export async function dbListCustomersByAreas(areas: { city: string; district: st
     select notion_page_id, name, county, district, customer_type, institution_status, address, phone, owner, dev_stage, institution_code
     from customers where name <> '' and (county, district) in ${db(uniq.map((a) => [a.city, a.district]))}`
   return rows.map(areaCustomer).sort((a, b) => zh(a.name, b.name))
+}
+
+/** 篩選選項：縣市／負責業務／客戶類型取資料裡實際出現過的值（Notion 選項清單已封存） */
+export async function dbCustomerFilterOptions(): Promise<{ cities: string[]; salespersons: string[]; types: string[] }> {
+  const rows = await sql()`select
+    array(select distinct county from customers where coalesce(county,'') <> '') as cities,
+    array(select distinct owner from customers where coalesce(owner,'') <> '') as owners,
+    array(select distinct customer_type from customers where coalesce(customer_type,'') <> '') as types`
+  const r: any = rows[0] ?? {}
+  const order = (c: string) => { const i = TW_CITIES.indexOf(c.replace(/臺/g, '台')); return i < 0 ? 999 : i }
+  return { cities: (r.cities ?? []).sort((a: string, b: string) => order(a) - order(b) || zh(a, b)), salespersons: (r.owners ?? []).sort(zh), types: (r.types ?? []).sort(zh) }
 }
 
 export async function dbGetCustomersWithCodes(): Promise<CustomerWithCode[]> {
