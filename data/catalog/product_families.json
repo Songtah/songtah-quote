@@ -7537,8 +7537,6 @@
         "key": "規格",
         "label": "規格 / 型號",
         "options": [
-          "強化爐加熱棒組Heater",
-          "強化爐感溫棒Thermocouple",
           "快速燒付盤 蓋子 Quick Firing Cover",
           "快速燒付盤 Quick Firing Tray S",
           "快速燒付盤架 Quick Firing Tray Stand",
@@ -7547,8 +7545,6 @@
       }
     ],
     "skuMap": {
-      "強化爐加熱棒組Heater": "DK-ZRCM-020901",
-      "強化爐感溫棒Thermocouple": "DK-ZRCM-021001",
       "快速燒付盤 蓋子 Quick Firing Cover": "DK-ZRCM-021212",
       "快速燒付盤 Quick Firing Tray S": "DK-ZRCM-021213",
       "快速燒付盤架 Quick Firing Tray Stand": "DK-ZRCM-021214",
@@ -8174,10 +8170,10 @@
   {
     "id": "DK-ZRCM-EQUIPMENT-ACCESSORY",
     "seriesCode": "DK-ZRCM-EQUIPMENT-ACCESSORY",
-    "seriesName": "ZRCM 設備配件",
+    "seriesName": "ZRCM 強化爐維修零件",
     "brand": "DENKEN",
-    "productType": "配件",
-    "category": "設備配件",
+    "productType": "維修料件",
+    "category": "DENKEN 維修零件",
     "skuPattern": "",
     "namePattern": "{規格}",
     "specs": [
@@ -8186,13 +8182,17 @@
         "label": "規格 / 型號",
         "options": [
           "強化爐溫度開關",
-          "強化爐Under Cooling Fan"
+          "強化爐Under Cooling Fan",
+          "強化爐加熱棒組Heater",
+          "強化爐感溫棒Thermocouple"
         ]
       }
     ],
     "skuMap": {
       "強化爐溫度開關": "DK-ZRCM-020902",
-      "強化爐Under Cooling Fan": "DK-ZRCM-021102"
+      "強化爐Under Cooling Fan": "DK-ZRCM-021102",
+      "強化爐加熱棒組Heater": "DK-ZRCM-020901",
+      "強化爐感溫棒Thermocouple": "DK-ZRCM-021001"
     }
   },
   {

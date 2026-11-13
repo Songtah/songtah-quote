@@ -1392,21 +1392,21 @@
   "code": "BS-08",
   "name": "氧化鋯氣泡球",
   "brand": "貝施美",
-  "productType": "配件",
-  "category": "爐具配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "furnace-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "BS-09",
   "name": "測溫環",
   "brand": "貝施美",
-  "productType": "配件",
-  "category": "爐具配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "furnace-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "BS-10",
@@ -9864,11 +9864,11 @@
   "code": "DK-02-1",
   "name": "除臭機-除臭片",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "耗材",
+  "category": "過濾耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "filter-consumable",
   "needsReview": true
  },
  {
@@ -9905,41 +9905,41 @@
   "code": "DK-04-01",
   "name": "Carbon Crucible 碳坩堝",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-04-01-1",
   "name": "Carbon Washer 坩堝墊片",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-04-02",
   "name": "Ceramic Crucible 陶瓷坩堝",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-04-03",
   "name": "Cascom 爐心",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "爐具配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "furnace-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-04-F1",
@@ -10075,21 +10075,21 @@
   "code": "DK-08-01",
   "name": "Super Cascom 專用碳坩堝",
   "brand": "DENKEN",
-  "productType": "設備",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-08-02",
   "name": "Super Cascom 專用陶瓷坩堝",
   "brand": "DENKEN",
-  "productType": "設備",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-09",
@@ -10115,21 +10115,21 @@
   "code": "DK-11-1",
   "name": "Neo Super Cascom 碳坩堝",
   "brand": "DENKEN",
-  "productType": "設備",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-11-2",
   "name": "Neo Super Cascom 陶瓷坩堝",
   "brand": "DENKEN",
-  "productType": "設備",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-11-3",
@@ -10255,11 +10255,11 @@
   "code": "DK-16-19",
   "name": "View Glass 視窗玻璃",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-16-PF82",
@@ -10315,11 +10315,11 @@
   "code": "DK-18",
   "name": "助熔劑",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable",
   "needsReview": true
  },
  {
@@ -10398,41 +10398,41 @@
   "code": "DK-24-1",
   "name": "Cascom SE 碳坩堝 S Size",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-24-2",
   "name": "Cascom SE 碳坩堝 L",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-24-3",
   "name": "Cascom SE 陶瓷坩堝",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-24-4",
   "name": "Cascom SE 陶瓷坩堝口",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "DK-24-5",
@@ -10612,41 +10612,41 @@
   "code": "DK-ZRCM-020901",
   "name": "強化爐加熱棒組Heater",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "爐具配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "furnace-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-ZRCM-020902",
   "name": "強化爐溫度開關",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-ZRCM-021001",
   "name": "強化爐感溫棒Thermocouple",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "爐具配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "furnace-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-ZRCM-021102",
   "name": "強化爐Under Cooling Fan",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "維修料件",
+  "category": "DENKEN 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-denken"
  },
  {
   "code": "DK-ZRCM-021212",
@@ -25753,22 +25753,22 @@
   "code": "KM-013",
   "name": "Device operation PCB (C type)",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
   "code": "KM-014",
   "name": "TouchPCB (C type)",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
@@ -25785,11 +25785,11 @@
   "code": "KM-016",
   "name": "Touchpanel",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
@@ -25846,33 +25846,33 @@
   "code": "KM-020",
   "name": "Spigot",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
   "code": "KM-021",
   "name": "集塵箱絞鍊",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
   "code": "KM-022",
   "name": "集塵塑膠網",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
@@ -25900,22 +25900,22 @@
   "code": "KM-026",
   "name": "Mesh covwe",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
   "code": "KM-027-1",
   "name": "K3集塵箱玻璃",
   "brand": "KO-MAX",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "維修料件",
+  "category": "KO-MAX 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-ko-max",
   "needsReview": true
  },
  {
@@ -26696,21 +26696,21 @@
   "code": "MT-080240-12",
   "name": "080240-12 噴砂機 噴頭 1MM",
   "brand": "MESTRA",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "MT-080240-13",
   "name": "080240-13 噴砂機 噴頭 1.25MM",
   "brand": "MESTRA",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "MT-080259B",
@@ -26727,21 +26727,21 @@
   "code": "MT-080262-40",
   "name": "噴砂機噴筆(紅)",
   "brand": "MESTRA",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "MT-080262-41",
   "name": "噴砂機噴筆(藍)",
   "brand": "MESTRA",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "MT-080400",
@@ -28556,11 +28556,11 @@
   "code": "UW-08",
   "name": "HE31-201 碳刷座",
   "brand": "URAWA",
-  "productType": "配件",
-  "category": "馬達配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "motor-accessory"
+  "productType": "維修料件",
+  "category": "URAWA 維修零件",
+  "mainCategory": "維修零件",
+  "mainCategoryId": "spare-parts",
+  "categoryId": "spare-part-urawa"
  },
  {
   "code": "UW-11",
@@ -31761,22 +31761,22 @@
   "code": "YMH-22-1",
   "name": "New Cera Sheet 小坩堝纖維片(12pc)",
   "brand": "YAMAHACHI",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable",
   "needsReview": true
  },
  {
   "code": "YMH-22-2",
   "name": "New Cera Sheet 大坩堝纖維片(10pc)",
   "brand": "YAMAHACHI",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "productType": "耗材",
+  "category": "設備耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "equipment-consumable",
   "needsReview": true
  },
  {
@@ -65965,21 +65965,21 @@
   "code": "SY-04160",
   "name": "K-CRUCIBLE 離心坩堝",
   "brand": "Song Young",
-  "productType": "配件",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "SY-04163",
   "name": "K-CRUCIBLE 離心坩堝#4",
   "brand": "Song Young",
-  "productType": "配件",
-  "category": "壓鑄／鑄造設備",
+  "productType": "耗材",
+  "category": "設備耗材",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "casting-pressing-equipment"
+  "categoryId": "equipment-consumable"
  },
  {
   "code": "SY-04170",
@@ -66092,11 +66092,11 @@
   "code": "SY-04210",
   "name": "超音波潔牙機",
   "brand": "Song Young",
-  "productType": "配件",
-  "category": "設備配件",
+  "productType": "設備",
+  "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
+  "categoryId": "cleaning-dust-control",
   "needsReview": true
  },
  {

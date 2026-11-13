@@ -447,6 +447,24 @@
    "name": "Song Young 維修零件",
    "mainId": "spare-parts",
    "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-denken",
+   "name": "DENKEN 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-urawa",
+   "name": "URAWA 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "equipment-consumable",
+   "name": "設備耗材",
+   "mainId": "lab-production",
+   "mainName": "技工製程與耗材"
   }
  ],
  "productForms": [
