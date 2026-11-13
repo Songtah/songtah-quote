@@ -106,7 +106,7 @@ async function queryPaged(
   database_id: string,
   filter?: any,
   sorts?: any[],
-  maxPages = 999          // 預設不限，特殊場景傳入限制
+  maxPages = 50           // 上限 5,000 筆，防止分頁游標異常時無限迴圈
 ): Promise<any[]> {
   const results: any[] = []
   let cursor: string | undefined
@@ -120,7 +120,9 @@ async function queryPaged(
       ...(cursor ? { start_cursor: cursor } : {}),
     } as any)
     results.push(...(resp.results ?? []))
-    cursor = resp.has_more ? resp.next_cursor : undefined
+    const next = resp.has_more ? resp.next_cursor : undefined
+    if (next && next === cursor) break   // 游標沒前進＝異常，停止
+    cursor = next
     pages++
   } while (cursor && pages < maxPages)
   return results
@@ -269,7 +271,7 @@ export interface QuoteStat {
 
 async function fetchQuoteStats(from: string, to: string): Promise<QuoteStat[]> {
   const pages = await queryPaged(QUOTES_DB, {
-    property: '建立時間',
+    timestamp: 'created_time',
     created_time: { on_or_after: `${from}T00:00:00Z` },
   })
   // client-side filter to 上限日期（Notion created_time 不支援 on_or_before 在 and 中）
