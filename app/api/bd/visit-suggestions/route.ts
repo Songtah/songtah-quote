@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { buildVisitSuggestions, suggestionTimings } from '@/lib/notion/visit-suggestions'
 import { canAcceptNewBusiness, getSystemUsers } from '@/lib/notion/accounts'
+import { cachedSWR } from '@/lib/notion/shared'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -45,6 +46,8 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
     // 中央管理／admin 的 session 沒有對應的「業務人員」值，用它當範圍會永遠是空的。
     // 主管沒指定業務時 → 彙總全體業務的名單，各筆標明是誰的。
     if (canViewAll && !sp.get('salesperson')) {
+      // 全體業務：9 份並行計算，冷啟動要 20 秒以上；結果跨實例快取（5 分鐘內直接回，過期先回舊值、背景更新）
+      const all = await cachedSWR(`visit-suggestions:all:v1:${mode}:${city}:${district}`, async () => {
       const each = await Promise.all(
         salespeople.map((name) => buildVisitSuggestions({ mode, city, district, salesperson: name, limit: 500 })
           .catch(() => null))
@@ -53,8 +56,11 @@ export const GET = withApiAuth({ module: 'bd', action: 'view' }, async (req: Nex
       merged.sort((a, b) => b.score - a.score)
       const byKind = { overdue: 0, hot: 0, stale: 0, newOpening: 0, event: 0 } as Record<string, number>
       for (const it of merged) byKind[it.kind]++
+      return { merged: merged.slice(0, 50), total: merged.length, byKind }   // 只存前 50 筆（畫面最多取 50），控制快取大小
+      }, { freshMs: 5 * 60_000, maxAgeMs: 6 * 60 * 60_000 })
+      const { merged, total, byKind } = all
       return NextResponse.json({
-        mode, items: merged.slice(0, limit), total: merged.length, byKind,
+        mode, items: merged.slice(0, limit), total, byKind,
         scope: `全體業務（${salespeople.length} 位）`,
         builtAt: '', salespeople, viewingAll: true,
       })
