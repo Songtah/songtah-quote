@@ -11,6 +11,7 @@ const MAIN_VISUALS: Record<string, { kind: VisualKind; caption: string }> = {
   'clinical-tools': { kind: 'tool', caption: '器械・工具・配件' },
   'software-digital-service': { kind: 'software', caption: '軟體・數位服務' },
   'technical-service': { kind: 'service', caption: '安裝・維修・教育' },
+  'spare-parts': { kind: 'equipment', caption: '機台換修零件' },
   'other-review': { kind: 'review', caption: '等待確認與整理' },
 }
 
@@ -99,7 +100,7 @@ export function seriesVisualKind(category: string, mainCategory = ''): VisualKin
   if (/染|比色|釉|瓷粉|色/.test(text)) return 'shade'
   if (/3D|列印/.test(text)) return 'print'
   if (/掃描|氧化鋯|PMMA|玻璃陶瓷|蠟塊|CAD/.test(text)) return 'digital'
-  if (/設備|爐|機|吸塵|工作桌/.test(text)) return 'equipment'
+  if (/設備|爐|機|吸塵|工作桌|零件/.test(text)) return 'equipment'
   if (/車針|工具|器材|配件|植體|刷具/.test(text)) return 'tool'
   if (/軟體|授權/.test(text)) return 'software'
   if (/服務|維修|安裝/.test(text)) return 'service'

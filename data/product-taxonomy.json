@@ -43,6 +43,10 @@
    "name": "技術服務"
   },
   {
+   "id": "spare-parts",
+   "name": "維修零件"
+  },
+  {
    "id": "other-review",
    "name": "待人工確認"
   }
@@ -337,12 +341,6 @@
    "mainName": "3D 列印"
   },
   {
-   "id": "printer-spare-part",
-   "name": "列印機維修料件",
-   "mainId": "additive-manufacturing",
-   "mainName": "3D 列印"
-  },
-  {
    "id": "printing-consumable",
    "name": "3D 列印製程耗材",
    "mainId": "additive-manufacturing",
@@ -419,6 +417,36 @@
    "name": "氧化鋯塊",
    "mainId": "digital-manufacturing",
    "mainName": "CAD/CAM 數位製造"
+  },
+  {
+   "id": "spare-part-asiga",
+   "name": "ASIGA 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-ko-max",
+   "name": "KO-MAX 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-medifive",
+   "name": "MEDIFIVE 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-mestra",
+   "name": "MESTRA 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
+  },
+  {
+   "id": "spare-part-song-young",
+   "name": "Song Young 維修零件",
+   "mainId": "spare-parts",
+   "mainName": "維修零件"
   }
  ],
  "productForms": [

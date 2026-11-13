@@ -10223,7 +10223,7 @@
     "seriesName": "ASIGA MAX 維修料件",
     "brand": "ASIGA",
     "productType": "維修料件",
-    "category": "列印機維修料件",
+    "category": "ASIGA 維修零件",
     "skuPattern": "",
     "namePattern": "{規格}",
     "specs": [
@@ -10247,7 +10247,7 @@
     "seriesName": "ASIGA Ultra 維修料件",
     "brand": "ASIGA",
     "productType": "維修料件",
-    "category": "列印機維修料件",
+    "category": "ASIGA 維修零件",
     "skuPattern": "",
     "namePattern": "{規格}",
     "specs": [
@@ -10277,7 +10277,7 @@
     "seriesName": "ASIGA 其他維修料件",
     "brand": "ASIGA",
     "productType": "維修料件",
-    "category": "列印機維修料件",
+    "category": "ASIGA 維修零件",
     "skuPattern": "",
     "namePattern": "{規格}",
     "specs": [
