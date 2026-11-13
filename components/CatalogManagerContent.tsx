@@ -7,6 +7,7 @@ import { MainCategoryArtwork } from '@/components/product-series/SeriesArtwork'
 import { EntryTile, ProductTile, TILE_GRID, type ProductTileData, type TileBadge } from '@/components/catalog/ProductTile'
 import { PRODUCT_LABELS } from '@/lib/product-labels'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { buildExactFamilyIndex, explicitFamilySkuCodes } from '@/lib/product-family-members'
 import { useBodyScrollLock, useDialogFocus } from '@/lib/use-dialog-focus'
 
@@ -2193,6 +2194,12 @@ export function CatalogManagerContent({ taxonomy, canManageProducts }: Props) {
             <button type="button" onClick={openSeriesAdmin} title="中央管理：維護系列與品項歸屬"
               className="button-secondary min-h-10 px-4">管理系列</button>
           )}
+          <Link href={canManageProducts ? '/products/pricing' : '/products/pricing?tab=announcements'}
+            className={canManageProducts
+              ? 'flex min-h-10 items-center rounded-full bg-brand-500 px-4 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95'
+              : 'button-secondary flex min-h-10 items-center px-4'}>
+            {canManageProducts ? '定價' : '價格公告'}
+          </Link>
         </div>
 
         <div id="catalog-filters" className={`${filtersOpen ? 'grid' : 'hidden'} grid-cols-2 gap-2 sm:grid lg:grid-cols-4`}>

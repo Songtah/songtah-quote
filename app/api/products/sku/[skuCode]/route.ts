@@ -11,6 +11,7 @@ import {
 } from '@/lib/products-notion'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 import { getManagedFamilies, getManagedFamilyById } from '@/lib/products-managed-families'
+import { recordPriceChanges } from '@/lib/product-pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +89,7 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
       }
     }
     const before = await getProductRichData(skuCode).catch(() => null)
+    const priceBefore = before?.price ?? catalog.price ?? null
     const notionId = await upsertProductRichData(
       skuCode,
       {
@@ -139,6 +141,14 @@ export const PUT = withApiAuth<Ctx>('central-management', async (req, { params }
         priceCacheStatus = 'invalidated'
         console.warn('[PUT /api/products/sku] price cache refresh failed; cache invalidated:', error)
       }
+    }
+    if (body.price !== undefined) {
+      const priceAfter = after.price ?? catalog.price ?? null
+      await recordPriceChanges([{
+        code: skuCode, name: catalog.officialName || catalog.name, brand: catalog.brand,
+        before: priceBefore, after: priceAfter, at: Date.now(),
+        actor: getAuditActor(session).name || '中央管理', source: 'edit',
+      }]).catch((error) => console.error('[PUT /api/products/sku] record price change failed:', error))
     }
     await logAuditEvent({
       module: 'products',

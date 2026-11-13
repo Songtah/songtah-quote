@@ -1,0 +1,22 @@
+name: 價格異動公告 — 每月 1 日彙整上個月的調價
+
+on:
+  # 台灣時間每月 1 日 08:30（UTC 00:30）
+  schedule:
+    - cron: '30 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 觸發正式站公告端點
+        env:
+          CRON_SECRET: ${{ secrets.DAILY_REPORT_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" --max-time 120 \
+            -X POST "https://songtah-quote.vercel.app/api/cron/price-announcement" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+          echo "HTTP $code"; cat /tmp/resp.json
+          test "$code" = "200"

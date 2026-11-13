@@ -84,3 +84,13 @@ export function visitClosureApplied(c: { customerId: string; customerName: strin
     href: '/admin/clinic-monitor',
   }))
 }
+
+// ── 價格異動公告（每月 1 日）：所有內部帳號 ─────────────────────
+const EVERYONE = ['t:業務', 't:行政', 't:中央管理', 't:總經理', 't:技術支援', 't:財務', 'r:admin']
+export function priceAnnouncementPublished(a: { period: string; total: number; summary: string }) {
+  bg(notify(EVERYONE, {
+    title: `${a.period.replace('-', ' 年 ')} 月價格異動公告`,
+    body: `共 ${a.total} 個品項：${a.summary}`,
+    href: `/products/pricing?tab=announcements&period=${a.period}`,
+  }))
+}
