@@ -6246,13 +6246,15 @@
         "label": "規格 / 型號",
         "options": [
           "Re-Fine Bright 速性粉A3 (250g)",
-          "Re-Fine Bright 速性粉A2 (250g)"
+          "Re-Fine Bright 速性粉A2 (250g)",
+          "Re-Fine Bright 速性粉LF Pink (250g)"
         ]
       }
     ],
     "skuMap": {
       "Re-Fine Bright 速性粉A3 (250g)": "YMH-05-4",
-      "Re-Fine Bright 速性粉A2 (250g)": "YMH-05-6"
+      "Re-Fine Bright 速性粉A2 (250g)": "YMH-05-6",
+      "Re-Fine Bright 速性粉LF Pink (250g)": "YMH-05-5"
     }
   },
   {
@@ -6743,7 +6745,20 @@
           "Prettau Aquarell D2 50ml",
           "Prettau Aquarell D3 50ml",
           "Prettau Aquarell D3 20ml (未販售)",
-          "Prettau Aquarell D4 50ml"
+          "Prettau Aquarell D4 50ml",
+          "Prettau Aquarell Incisal Blue 20ml",
+          "Prettau Aquarell Incisal Violet 20ml",
+          "Prettau Aquarell Incisal Grey 20ml",
+          "Prettau Aquarell Orange 1 20ml",
+          "Prettau Aquarell Tissue A 20ml",
+          "Prettau Aquarell Tissue B 20ml",
+          "Prettau Aquarell Tissue C 20ml",
+          "Prettau Aquarell Brown 2 20ml",
+          "Prettau Aquarell Cervical A 20ml",
+          "Prettau Aquarell Cervical B 20ml",
+          "Prettau Aquarell Cervical C 20ml",
+          "Prettau Aquarell Cervical D 20ml",
+          "Prettau Aquarell LuNe 20ml"
         ]
       }
     ],
@@ -6766,7 +6781,20 @@
       "Prettau Aquarell D2 50ml": "ZZ-63-D2",
       "Prettau Aquarell D3 50ml": "ZZ-63-D3",
       "Prettau Aquarell D3 20ml (未販售)": "ZZ-63-D3-20",
-      "Prettau Aquarell D4 50ml": "ZZ-63-D4"
+      "Prettau Aquarell D4 50ml": "ZZ-63-D4",
+      "Prettau Aquarell Incisal Blue 20ml": "ZZ-62-1",
+      "Prettau Aquarell Incisal Violet 20ml": "ZZ-62-2",
+      "Prettau Aquarell Incisal Grey 20ml": "ZZ-62-3",
+      "Prettau Aquarell Orange 1 20ml": "ZZ-62-4",
+      "Prettau Aquarell Tissue A 20ml": "ZZ-62-5",
+      "Prettau Aquarell Tissue B 20ml": "ZZ-62-6",
+      "Prettau Aquarell Tissue C 20ml": "ZZ-62-7",
+      "Prettau Aquarell Brown 2 20ml": "ZZ-62-8",
+      "Prettau Aquarell Cervical A 20ml": "ZZ-62-A",
+      "Prettau Aquarell Cervical B 20ml": "ZZ-62-B",
+      "Prettau Aquarell Cervical C 20ml": "ZZ-62-C",
+      "Prettau Aquarell Cervical D 20ml": "ZZ-62-D",
+      "Prettau Aquarell LuNe 20ml": "ZZ-62-LU"
     }
   },
   {

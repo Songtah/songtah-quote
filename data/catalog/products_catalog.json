@@ -741,7 +741,8 @@
   "category": "列印機維修料件",
   "mainCategory": "3D 列印",
   "mainCategoryId": "additive-manufacturing",
-  "categoryId": "printer-spare-part"
+  "categoryId": "printer-spare-part",
+  "officialName": "Position Encoder Projector USB Cable"
  },
  {
   "code": "AG-03000",
@@ -1291,10 +1292,10 @@
   "name": "COBRA Shade Scan 比色機",
   "brand": "其他",
   "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "category": "光學設備",
+  "mainCategory": "技工設備與基礎設施",
+  "mainCategoryId": "lab-equipment",
+  "categoryId": "optical-equipment"
  },
  {
   "code": "BS-05",
@@ -9625,11 +9626,11 @@
   "code": "CA-YD-TH0206",
   "name": "全瓷HP套裝(6支裝)",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
@@ -9646,22 +9647,22 @@
   "code": "CA-YD-TH0302",
   "name": "全瓷HP套裝",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
   "code": "CA-YD-TH0502",
   "name": "聚合瓷拋光套裝(5支裝)",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
@@ -9679,22 +9680,22 @@
   "code": "CA-YD-TH0902",
   "name": "全瓷HP套裝(9支裝)",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
   "code": "CA-YD-TH7011",
   "name": "瓷嵌體/貼面套裝(7支裝)",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
@@ -9711,22 +9712,22 @@
   "code": "CA-YD-TR0302",
   "name": "全瓷RA套裝",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
   "code": "CA-YD-TR0305",
   "name": "樹脂RA套裝",
   "brand": "CAM / 上海穩昊",
-  "productType": "待確認",
-  "category": "套裝組",
-  "mainCategory": "待人工確認",
-  "mainCategoryId": "other-review",
-  "categoryId": "kit-bundle",
+  "productType": "耗材",
+  "category": "拋光／研磨耗材",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "polishing-consumable",
   "needsReview": true
  },
  {
@@ -10467,12 +10468,13 @@
   "code": "DK-26",
   "name": "Coollant Fluid 冷卻液",
   "brand": "DENKEN",
-  "productType": "配件",
-  "category": "設備配件",
-  "mainCategory": "技工設備與基礎設施",
-  "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory",
-  "needsReview": true
+  "productType": "耗材",
+  "category": "專用液／藥劑",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "process-liquid",
+  "needsReview": true,
+  "officialName": "Coolant Fluid 冷卻液"
  },
  {
   "code": "DK-27",
@@ -10782,12 +10784,12 @@
   "code": "DSD-03",
   "name": "Propaque Brush 普羅筆",
   "brand": "Davis Schottlander",
-  "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
+  "productType": "耐用工具／器械",
+  "category": "瓷筆／刷具",
+  "mainCategory": "比色、染色與表面處理",
   "price": 250,
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "mainCategoryId": "color-characterization",
+  "categoryId": "ceramic-brush"
  },
  {
   "code": "DSD-04",
@@ -16122,7 +16124,8 @@
   "category": "專用液／藥劑",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "process-liquid"
+  "categoryId": "process-liquid",
+  "officialName": "ZR Stain Liquid 15ml"
  },
  {
   "code": "DSD-ZR-03-A2",
@@ -16179,10 +16182,10 @@
   "name": "ZR Stain Kit",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-07",
@@ -16590,7 +16593,8 @@
   "category": "瓷粉／陶瓷材料",
   "mainCategory": "固定式修復材料",
   "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "categoryId": "ceramic-material",
+  "officialName": "ZR Fluorescent Neutral (15g)"
  },
  {
   "code": "DSD-ZR-G1",
@@ -16887,80 +16891,80 @@
   "name": "ZR STAIN #1(White)2.5g",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-2",
   "name": "ZR STAIN Yellow #2 (2.5g)",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-4",
   "name": "ZR STAIN #4(Orange Brown)2.5g",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-7",
   "name": "ZR STAIN #7(Blue)2.5g",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-A",
   "name": "ZR STAIN #A(2.5g)",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-B",
   "name": "ZR STAIN #B(2.5g)",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-C",
   "name": "ZR STAIN #C (2.5g)",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-STAIN-D",
   "name": "ZR STAIN D(2.5g)",
   "brand": "Davis Schottlander",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "外染液",
+  "mainCategory": "比色、染色與表面處理",
+  "mainCategoryId": "color-characterization",
+  "categoryId": "external-stain"
  },
  {
   "code": "DSD-ZR-TC01",
@@ -24969,21 +24973,21 @@
   "code": "GEN-10-14T",
   "name": "鈦盤98 14T",
   "brand": "GenCore",
-  "productType": "配件",
-  "category": "車機配件",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "milling-accessory"
+  "productType": "材料",
+  "category": "金屬材料",
+  "mainCategory": "固定式修復材料",
+  "mainCategoryId": "fixed-restorative",
+  "categoryId": "metal-material"
  },
  {
   "code": "GEN-10-20T",
   "name": "鈦盤98 120T",
   "brand": "GenCore",
-  "productType": "配件",
-  "category": "車機配件",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "milling-accessory"
+  "productType": "材料",
+  "category": "金屬材料",
+  "mainCategory": "固定式修復材料",
+  "mainCategoryId": "fixed-restorative",
+  "categoryId": "metal-material"
  },
  {
   "code": "GEN-T01-2.0B",
@@ -26424,7 +26428,8 @@
   "category": "設備配件",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "equipment-accessory"
+  "categoryId": "equipment-accessory",
+  "officialName": "Instrument Bench Stand筆架"
  },
  {
   "code": "MPF-700-0000",
@@ -26509,7 +26514,8 @@
   "category": "煮模／壓模工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "flasking-pressing-tool"
+  "categoryId": "flasking-pressing-tool",
+  "officialName": "Mestra 油壓機"
  },
  {
   "code": "MT-030370",
@@ -26519,7 +26525,8 @@
   "category": "煮模／壓模工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "flasking-pressing-tool"
+  "categoryId": "flasking-pressing-tool",
+  "officialName": "Mestra 手動式壓模機 (3個)"
  },
  {
   "code": "MT-030410",
@@ -26539,7 +26546,8 @@
   "category": "煮模／壓模工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "flasking-pressing-tool"
+  "categoryId": "flasking-pressing-tool",
+  "officialName": "Mestra 壓力鍋"
  },
  {
   "code": "MT-030420-04",
@@ -26639,7 +26647,8 @@
   "category": "馬達／手機",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "motor-handpiece"
+  "categoryId": "motor-handpiece",
+  "officialName": "Mestra 慢速打亮馬達軸心(右邊)"
  },
  {
   "code": "MT-080162-06",
@@ -26659,7 +26668,8 @@
   "category": "馬達／手機",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "motor-handpiece"
+  "categoryId": "motor-handpiece",
+  "officialName": "Mestra 慢速打亮馬達"
  },
  {
   "code": "MT-080164-06",
@@ -26679,7 +26689,8 @@
   "category": "馬達／手機",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "motor-handpiece"
+  "categoryId": "motor-handpiece",
+  "officialName": "Mestra 慢速打亮馬達軸心(左邊)"
  },
  {
   "code": "MT-080240-12",
@@ -26709,7 +26720,8 @@
   "category": "其他設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "other-equipment"
+  "categoryId": "other-equipment",
+  "officialName": "Mestra 兩用筆式噴砂機"
  },
  {
   "code": "MT-080262-40",
@@ -26759,7 +26771,8 @@
   "category": "馬達／手機",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "motor-handpiece"
+  "categoryId": "motor-handpiece",
+  "officialName": "Mestra 慢速馬達(防塵罩)"
  },
  {
   "code": "MT-080515",
@@ -26789,7 +26802,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "Mestra 強力吸塵器"
  },
  {
   "code": "MT-080591B",
@@ -26810,7 +26824,8 @@
   "category": "清潔／吸塵設備",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "cleaning-dust-control"
+  "categoryId": "cleaning-dust-control",
+  "officialName": "Mestra 防塵箱"
  },
  {
   "code": "OS-01",
@@ -26830,7 +26845,8 @@
   "category": "磨石／研磨工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "grinding-tool"
+  "categoryId": "grinding-tool",
+  "officialName": "Porcelain 研磨輪(粗)"
  },
  {
   "code": "PC-02",
@@ -26840,7 +26856,8 @@
   "category": "磨石／研磨工具",
   "mainCategory": "技工製程與耗材",
   "mainCategoryId": "lab-production",
-  "categoryId": "grinding-tool"
+  "categoryId": "grinding-tool",
+  "officialName": "Porcelain 研磨輪(細)"
  },
  {
   "code": "PD-01",
@@ -28427,7 +28444,8 @@
   "category": "瓷爐",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "ceramic-furnace"
+  "categoryId": "ceramic-furnace",
+  "officialName": "eON 250 NEO Pressing ceramic Furnace 壓鑄瓷爐"
  },
  {
   "code": "UG-EON0006",
@@ -28437,7 +28455,8 @@
   "category": "瓷爐",
   "mainCategory": "技工設備與基礎設施",
   "mainCategoryId": "lab-equipment",
-  "categoryId": "ceramic-furnace"
+  "categoryId": "ceramic-furnace",
+  "officialName": "eON 200 NEO Ceramic Furnace 電腦瓷爐/220V"
  },
  {
   "code": "UG-PPE0001",
@@ -31446,60 +31465,60 @@
   "name": "Paraffin Wax (硬) /1Kg",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-10-2",
   "name": "Paraffin Wax (中) /Kg",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-10-3",
   "name": "Paraffin Wax (軟) /Kg",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-11-1",
   "name": "Cast Wax 腊冠 (Green/Hard)/50g",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-11-2",
   "name": "Cast Wax 腊冠 (Green/Medium)/50g",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-11-3",
   "name": "Cast Wax 腊冠 (Red/Hard)/50g",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-12",
@@ -31556,30 +31575,30 @@
   "name": "Rolling Wax 5mm (270g)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-14-2",
   "name": "Rolling Wax 6mm (270g)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-14-3",
   "name": "Rolling Wax 7mm (270g)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-15",
@@ -31629,11 +31648,11 @@
   "name": "Carving Wax Grey (50g/盒)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
   "price": 400,
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-17-4",
@@ -31672,20 +31691,21 @@
   "name": "Neo White (5Kg/箱)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "包埋材／石膏",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "investment-gypsum"
  },
  {
   "code": "YMH-20",
   "name": "Neo White Liquide (500ml)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "包埋材／石膏",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "investment-gypsum",
+  "officialName": "Neo White Liquid (500ml)"
  },
  {
   "code": "YMH-21-1",
@@ -31764,30 +31784,30 @@
   "name": "Pattern Bright 重合樹脂粉 (粉100g/液100ml)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-24-1",
   "name": "RE-Fine EX 速性修補粉 LF-Pink/100g",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "樹脂材料",
+  "mainCategory": "活動義齒與人工牙",
+  "mainCategoryId": "removable-prosthetics",
+  "categoryId": "resin-material"
  },
  {
   "code": "YMH-24-2",
   "name": "RE-Fine EX 速性修補粉 (Ivory)/100g",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "樹脂材料",
+  "mainCategory": "活動義齒與人工牙",
+  "mainCategoryId": "removable-prosthetics",
+  "categoryId": "resin-material"
  },
  {
   "code": "YMH-25",
@@ -31845,10 +31865,10 @@
   "name": "Dipping Wax 腊(200g)",
   "brand": "YAMAHACHI",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "蠟／壓鑄材料",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "wax-pressing-material"
  },
  {
   "code": "YMH-30-1",
@@ -32550,7 +32570,8 @@
   "category": "瓷粉／陶瓷材料",
   "mainCategory": "固定式修復材料",
   "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "categoryId": "ceramic-material",
+  "officialName": "Provifine Powder A3 (50g)"
  },
  {
   "code": "YMH-41-2",
@@ -32560,7 +32581,8 @@
   "category": "瓷粉／陶瓷材料",
   "mainCategory": "固定式修復材料",
   "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "categoryId": "ceramic-material",
+  "officialName": "Provifine Powder LF-Pink (50g)"
  },
  {
   "code": "YMH-42-1",
@@ -32630,7 +32652,8 @@
   "category": "瓷粉／陶瓷材料",
   "mainCategory": "固定式修復材料",
   "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "categoryId": "ceramic-material",
+  "officialName": "Primer for Acrylic"
  },
  {
   "code": "YMH-56",
@@ -51059,7 +51082,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid A1 (50ml)"
  },
  {
   "code": "ZZ-46-A2",
@@ -51070,7 +51094,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid A2 (50ml)"
  },
  {
   "code": "ZZ-46-A3",
@@ -51081,7 +51106,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid A3 (50ml)"
  },
  {
   "code": "ZZ-46-A3.5",
@@ -51092,7 +51118,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid A3.5 (50ml)"
  },
  {
   "code": "ZZ-46-A4",
@@ -51103,7 +51130,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid A4 (50ml)"
  },
  {
   "code": "ZZ-46-B1",
@@ -51114,7 +51142,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid B1 (50ml)"
  },
  {
   "code": "ZZ-46-B2",
@@ -51125,7 +51154,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid B2 (50ml)"
  },
  {
   "code": "ZZ-46-B3",
@@ -51136,7 +51166,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid B3 (50ml)"
  },
  {
   "code": "ZZ-46-B4",
@@ -51147,7 +51178,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid B4 (50ml)"
  },
  {
   "code": "ZZ-46-C1",
@@ -51158,7 +51190,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid C1 (50ml)"
  },
  {
   "code": "ZZ-46-C2",
@@ -51169,7 +51202,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid C2 (50ml)"
  },
  {
   "code": "ZZ-46-C3",
@@ -51180,7 +51214,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid C3 (50ml)"
  },
  {
   "code": "ZZ-46-C4",
@@ -51191,7 +51226,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid C4(50ml)"
  },
  {
   "code": "ZZ-46-D2",
@@ -51202,7 +51238,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid D2 (50ml)"
  },
  {
   "code": "ZZ-46-D3",
@@ -51213,7 +51250,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid D3 (50ml)"
  },
  {
   "code": "ZZ-46-D4",
@@ -51224,7 +51262,8 @@
   "price": 1200,
   "mainCategory": "比色、染色與表面處理",
   "mainCategoryId": "color-characterization",
-  "categoryId": "internal-stain"
+  "categoryId": "internal-stain",
+  "officialName": "Prettau Colour Liquid D4 (50ml)"
  },
  {
   "code": "ZZ-47",
@@ -52503,166 +52542,166 @@
   "code": "ZZ-999-011-0.3C",
   "name": "CAD/CAM Bur 0.3C PMMA (FR436)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-0.5S",
   "name": "CAD/CAM Bur 0.5S PMMA (FR056)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-0.6A",
   "name": "CAD/CAM Bur 0.6A PMMA (FR226)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-1.5A",
   "name": "CAD/CAM Bur 1.5A PMMA (FR236)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-1L",
   "name": "CAD/CAM Bur 1L PMMA (FR046)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-2L",
   "name": "CAD/CAM Bur 2L PMMA (FR036)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 1800,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-0.3C",
   "name": "CAD/CAM Bur 0.3C PMMA (6mm)(FR6006)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-0.5S",
   "name": "CAD/CAM Bur 0.5S PMMA (6mm)(FR6005)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-0.6A",
   "name": "CAD/CAM Bur 0.6A PMMA (6mm)(FR6004)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-1.5A",
   "name": "CAD/CAM Bur 1.5A PMMA (6mm)(FR6002)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-1L",
   "name": "CAD/CAM Bur 1L PMMA (6mm)(FR6003)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-2.5R",
   "name": "CAD/CAM Bur 2.5R PMMA (6mm)(FR6030)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 3100,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-6-2L",
   "name": "CAD/CAM Bur 2L PMMA (6mm)(FR6001)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-FR034",
   "name": "Milling Bur 2L PMMA Premium(3mm)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-011-FR044",
   "name": "Milling Bur 1L PMMA Premium(3mm)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
+  "productType": "耗材",
+  "category": "車針／鑽針",
   "price": 2000,
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-999-012-0.5S",
@@ -53531,7 +53570,8 @@
   "price": 4000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "categoryId": "pmma-blank",
+  "officialName": "Temp Premium Flexible Transpa 95H20 XXXXX"
  },
  {
   "code": "ZZ-999-022-TMAQ0120",
@@ -54106,7 +54146,8 @@
   "price": 4000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H10-A2"
  },
  {
   "code": "ZZ-999-036-95H16-A1",
@@ -54117,7 +54158,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H16-A1"
  },
  {
   "code": "ZZ-999-036-95H16-A2",
@@ -54128,7 +54170,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H16-A2"
  },
  {
   "code": "ZZ-999-036-95H16-A3",
@@ -54139,7 +54182,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H16-A3"
  },
  {
   "code": "ZZ-999-036-95H16-A3.5",
@@ -54150,7 +54194,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H16-A3.5"
  },
  {
   "code": "ZZ-999-036-95H18-A1",
@@ -54161,7 +54206,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-A1"
  },
  {
   "code": "ZZ-999-036-95H18-A2",
@@ -54172,7 +54218,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-A2"
  },
  {
   "code": "ZZ-999-036-95H18-A3",
@@ -54183,7 +54230,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-A3"
  },
  {
   "code": "ZZ-999-036-95H18-A3.5",
@@ -54194,7 +54242,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-A3.5"
  },
  {
   "code": "ZZ-999-036-95H18-A4",
@@ -54205,7 +54254,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-A4"
  },
  {
   "code": "ZZ-999-036-95H18-B1",
@@ -54216,7 +54266,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-B1"
  },
  {
   "code": "ZZ-999-036-95H18-B3",
@@ -54227,7 +54278,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-B3"
  },
  {
   "code": "ZZ-999-036-95H18-B4",
@@ -54238,7 +54290,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-B4"
  },
  {
   "code": "ZZ-999-036-95H18-C2",
@@ -54249,7 +54302,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-C2"
  },
  {
   "code": "ZZ-999-036-95H18-C3",
@@ -54260,7 +54314,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H18-C3"
  },
  {
   "code": "ZZ-999-036-95H20-A2",
@@ -54270,7 +54325,8 @@
   "category": "氧化鋯塊",
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H20-A2"
  },
  {
   "code": "ZZ-999-036-95H22-A2",
@@ -54280,7 +54336,8 @@
   "category": "氧化鋯塊",
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H22-A2"
  },
  {
   "code": "ZZ-999-036-95H22-A3",
@@ -54290,7 +54347,8 @@
   "category": "氧化鋯塊",
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H22-A3"
  },
  {
   "code": "ZZ-999-036-95H25-A2",
@@ -54300,7 +54358,8 @@
   "category": "氧化鋯塊",
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H25-A2"
  },
  {
   "code": "ZZ-999-036-A1",
@@ -54311,7 +54370,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-A1"
  },
  {
   "code": "ZZ-999-036-A2",
@@ -54322,7 +54382,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-A2"
  },
  {
   "code": "ZZ-999-036-A3",
@@ -54333,7 +54394,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-A3"
  },
  {
   "code": "ZZ-999-036-A3.5",
@@ -54344,7 +54406,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-A3.5"
  },
  {
   "code": "ZZ-999-036-A4",
@@ -54355,7 +54418,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-A4"
  },
  {
   "code": "ZZ-999-036-B1",
@@ -54366,7 +54430,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-B1"
  },
  {
   "code": "ZZ-999-036-B2",
@@ -54377,7 +54442,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-B2"
  },
  {
   "code": "ZZ-999-036-B3",
@@ -54388,7 +54454,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-B3"
  },
  {
   "code": "ZZ-999-036-B4",
@@ -54399,7 +54466,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-B4"
  },
  {
   "code": "ZZ-999-036-C1",
@@ -54410,7 +54478,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-C1"
  },
  {
   "code": "ZZ-999-036-C2",
@@ -54421,7 +54490,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-C2"
  },
  {
   "code": "ZZ-999-036-C3",
@@ -54432,7 +54502,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-C3"
  },
  {
   "code": "ZZ-999-036-C4",
@@ -54443,7 +54514,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-C4"
  },
  {
   "code": "ZZ-999-036-D2",
@@ -54454,7 +54526,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-D2"
  },
  {
   "code": "ZZ-999-036-D3",
@@ -54465,7 +54538,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-D3"
  },
  {
   "code": "ZZ-999-036-D4",
@@ -54476,7 +54550,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 95H14-D4"
  },
  {
   "code": "ZZ-999-037-98H14-A1",
@@ -54487,7 +54562,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-A1"
  },
  {
   "code": "ZZ-999-037-98H14-A2",
@@ -54498,7 +54574,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-A2"
  },
  {
   "code": "ZZ-999-037-98H14-A3",
@@ -54509,7 +54586,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-A3"
  },
  {
   "code": "ZZ-999-037-98H14-A3.5",
@@ -54520,7 +54598,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-A3.5"
  },
  {
   "code": "ZZ-999-037-98H14-A4",
@@ -54531,7 +54610,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-A4"
  },
  {
   "code": "ZZ-999-037-98H14-B1",
@@ -54542,7 +54622,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-B1"
  },
  {
   "code": "ZZ-999-037-98H14-B2",
@@ -54553,7 +54634,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-B2"
  },
  {
   "code": "ZZ-999-037-98H14-B3",
@@ -54564,7 +54646,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-B3"
  },
  {
   "code": "ZZ-999-037-98H14-C1",
@@ -54575,7 +54658,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-C1"
  },
  {
   "code": "ZZ-999-037-98H14-C2",
@@ -54586,7 +54670,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-C2"
  },
  {
   "code": "ZZ-999-037-98H14-C3",
@@ -54597,7 +54682,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-C3"
  },
  {
   "code": "ZZ-999-037-98H14-D2",
@@ -54608,7 +54694,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-D2"
  },
  {
   "code": "ZZ-999-037-98H14-D3",
@@ -54619,7 +54706,8 @@
   "price": 5000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H14-D3"
  },
  {
   "code": "ZZ-999-037-98H16-A1",
@@ -54630,7 +54718,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-A1"
  },
  {
   "code": "ZZ-999-037-98H16-A2",
@@ -54641,7 +54730,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-A2"
  },
  {
   "code": "ZZ-999-037-98H16-A3",
@@ -54652,7 +54742,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-A3"
  },
  {
   "code": "ZZ-999-037-98H16-A3.5",
@@ -54663,7 +54754,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-A3.5"
  },
  {
   "code": "ZZ-999-037-98H16-B1",
@@ -54674,7 +54766,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-B1"
  },
  {
   "code": "ZZ-999-037-98H16-B2",
@@ -54685,7 +54778,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-B2"
  },
  {
   "code": "ZZ-999-037-98H16-B3",
@@ -54696,7 +54790,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-B3"
  },
  {
   "code": "ZZ-999-037-98H16-B4",
@@ -54707,7 +54802,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-B4"
  },
  {
   "code": "ZZ-999-037-98H16-C1",
@@ -54718,7 +54814,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-C1"
  },
  {
   "code": "ZZ-999-037-98H16-C2",
@@ -54729,7 +54826,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-C2"
  },
  {
   "code": "ZZ-999-037-98H16-C3",
@@ -54740,7 +54838,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-C3"
  },
  {
   "code": "ZZ-999-037-98H16-D2",
@@ -54751,7 +54850,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-D2"
  },
  {
   "code": "ZZ-999-037-98H16-D3",
@@ -54762,7 +54862,8 @@
   "price": 5500,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H16-D3"
  },
  {
   "code": "ZZ-999-037-98H18-A1",
@@ -54773,7 +54874,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-A1"
  },
  {
   "code": "ZZ-999-037-98H18-A2",
@@ -54784,7 +54886,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-A2"
  },
  {
   "code": "ZZ-999-037-98H18-A3",
@@ -54795,7 +54898,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-A3"
  },
  {
   "code": "ZZ-999-037-98H18-A3.5",
@@ -54806,7 +54910,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-A3.5"
  },
  {
   "code": "ZZ-999-037-98H18-A4",
@@ -54817,7 +54922,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-A4"
  },
  {
   "code": "ZZ-999-037-98H18-B1",
@@ -54828,7 +54934,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-B1"
  },
  {
   "code": "ZZ-999-037-98H18-B2",
@@ -54839,7 +54946,8 @@
   "price": 6000,
   "mainCategory": "CAD/CAM 數位製造",
   "mainCategoryId": "digital-manufacturing",
-  "categoryId": "zirconia-blank"
+  "categoryId": "zirconia-blank",
+  "officialName": "Anatomic Coloured 98H18-B2"
  },
  {
   "code": "ZZ-999-038-95H16",
@@ -56760,7 +56868,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Astra-Set Parallel cemented titanium base HEX 3.5-4.0"
  },
  {
   "code": "ZZ-BSAB0183L30",
@@ -56770,7 +56879,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Astra-Set Parallel cemented titanium base HEX 4.0/5.0"
  },
  {
   "code": "ZZ-BSAB0192",
@@ -56780,7 +56890,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Astra-Set Parallel cemented titanium base HEX 3.5-4.0"
  },
  {
   "code": "ZZ-BSAB0193",
@@ -56790,7 +56901,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Astra-Set Parallel cemented titanium base HEX 4.5/5.0"
  },
  {
   "code": "ZZ-BSAB0281",
@@ -56800,7 +56912,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Branemark Set Parallel 3.5"
  },
  {
   "code": "ZZ-BSAB0282",
@@ -56810,7 +56923,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Branemark Set Parallel 4.1"
  },
  {
   "code": "ZZ-BSAB0283",
@@ -56820,7 +56934,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Branemark Set Parallel 5.1"
  },
  {
   "code": "ZZ-BSAB0291L10",
@@ -56870,7 +56985,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Branemark-Set Parallel 4.1"
  },
  {
   "code": "ZZ-BSAB0292L10",
@@ -56960,7 +57076,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Straumann-Set Parallel NC3.3"
  },
  {
   "code": "ZZ-BSAB0592",
@@ -56970,7 +57087,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Straumann-Set Parallel RC4.1"
  },
  {
   "code": "ZZ-BSAB0681",
@@ -56980,7 +57098,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Straumann-Set Parallel NN3.5"
  },
  {
   "code": "ZZ-BSAB0682",
@@ -56990,7 +57109,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Straumann-Set Parallel RN4.8"
  },
  {
   "code": "ZZ-BSAB0683",
@@ -57000,7 +57120,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Straumann-Set Parallel WN6.5"
  },
  {
   "code": "ZZ-BSAB0881",
@@ -57120,7 +57241,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Zimmer-Set Parallel cemented titanium base HEX 3.5"
  },
  {
   "code": "ZZ-BSAB1181K85",
@@ -57130,7 +57252,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Zimmer-Set Parallel cemented titanium base HEX 3.5"
  },
  {
   "code": "ZZ-BSAB1182",
@@ -57140,7 +57263,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Zimmer-Set Parallel cemented titanium base HEX 4.5"
  },
  {
   "code": "ZZ-BSAB1182K85",
@@ -57150,7 +57274,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Zimmer-Set Parallel cemented titanium base HEX 4.5"
  },
  {
   "code": "ZZ-BSAB1191L10",
@@ -57170,7 +57295,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Alaha-Set Parallel cemented titanium base 3.75"
  },
  {
   "code": "ZZ-BSAB2085",
@@ -57540,7 +57666,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Set Parallel 3.5"
  },
  {
   "code": "ZZ-BSAD0382",
@@ -57550,7 +57677,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Set Parallel 4.3"
  },
  {
   "code": "ZZ-BSAD0383",
@@ -57560,7 +57688,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Set Parallel 5.0"
  },
  {
   "code": "ZZ-BSAD0384",
@@ -57570,7 +57699,8 @@
   "category": "植體配件",
   "mainCategory": "臨床／技工器械與輔助工具",
   "mainCategoryId": "clinical-tools",
-  "categoryId": "implant-component"
+  "categoryId": "implant-component",
+  "officialName": "Nobel-Set Parallel 6.0"
  },
  {
   "code": "ZZ-BSAD0431",
@@ -59169,71 +59299,71 @@
   "code": "ZZ-FR6003",
   "name": "CAD/CAM Milling Bur 1L PMMA (6mm)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6007",
   "name": "Milling Bur 1L PMMA Premium(6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6008",
   "name": "Milling Bur 2L PMMA Premium(6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6009",
   "name": "CAD/CAM Milling Bur 6T PMMA (6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6010",
   "name": "CAD/CAM Milling Bur 1.5AXL PMMA (6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6030",
   "name": "CAD/CAM Milling Bur 2.5R PMMA (6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR6031",
   "name": "CAD/CAM Milling Bur 3R PMMA (6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-FR7001",
@@ -59349,11 +59479,11 @@
   "code": "ZZ-FR8016",
   "name": "CAD/CAM Thread Milling Bur 1.8 G PMMA (6MM)",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "PMMA 塊",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "pmma-blank"
+  "productType": "耗材",
+  "category": "車針／鑽針",
+  "mainCategory": "技工製程與耗材",
+  "mainCategoryId": "lab-production",
+  "categoryId": "bur-drill"
  },
  {
   "code": "ZZ-HOAC8041",
@@ -59414,7 +59544,8 @@
   "price": 600,
   "mainCategory": "固定式修復材料",
   "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "categoryId": "ceramic-material",
+  "officialName": "Build up Liquid 瓷粉專用液 (50ml)"
  },
  {
   "code": "ZZ-KEAC0101",
@@ -59874,11 +60005,11 @@
   "code": "ZZ-SIAK0001",
   "name": "Adapter Ratchet Wrench",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "productType": "耐用工具／器械",
+  "category": "牙科器材",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "dental-instrument"
  },
  {
   "code": "ZZ-SIAK0303",
@@ -59894,11 +60025,11 @@
   "code": "ZZ-SIAK1001",
   "name": "Torque Ratchet Wrench",
   "brand": "Zirkonzahn",
-  "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "productType": "耐用工具／器械",
+  "category": "牙科器材",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "dental-instrument"
  },
  {
   "code": "ZZ-SIAK1101",
@@ -60154,11 +60285,11 @@
   "code": "ZZ-SIAK6001",
   "name": "Tool holder Universal Screwdriver Set(通用二階器械組)",
   "brand": "Zirkonzahn",
-  "productType": "配件",
-  "category": "車機配件",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "milling-accessory"
+  "productType": "耐用工具／器械",
+  "category": "牙科器材",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "dental-instrument"
  },
  {
   "code": "ZZ-SIAL0001",
@@ -60659,10 +60790,10 @@
   "name": "SCREW BLANK A2-B2 95H16",
   "brand": "Zirkonzahn",
   "productType": "材料",
-  "category": "瓷粉／陶瓷材料",
-  "mainCategory": "固定式修復材料",
-  "mainCategoryId": "fixed-restorative",
-  "categoryId": "ceramic-material"
+  "category": "PMMA 塊",
+  "mainCategory": "CAD/CAM 數位製造",
+  "mainCategoryId": "digital-manufacturing",
+  "categoryId": "pmma-blank"
  },
  {
   "code": "ZZ-TMAY12529",
@@ -60739,191 +60870,191 @@
   "code": "ZZ-ZBAD0132",
   "name": "Set Scanmarker 3.5/4.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0133",
   "name": "Set Scanmarker 4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0231",
   "name": "Nobel-Branemark Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0232",
   "name": "Nobel-Branemark Scanmarker 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0233",
   "name": "Nobel-Branemark Scanmarker 5.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0331",
   "name": "Noble-Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0332",
   "name": "Noble-Scanmarker 4.3",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0333",
   "name": "Noble-Scanmarker 5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0334",
   "name": "Noble-Scanmarker 6.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0431",
   "name": "Nobel Biocare Set Scanmarker NP-RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0432",
   "name": "Nobel Biocare Set Scanmarker WP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0531",
   "name": "ST-BL-SM RC3.3(Scanmarker and screw)",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0532",
   "name": "ST-BL-SM RC4.1(Scanmarker and screw)",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0533",
   "name": "Set Scanmarker SC",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0631",
   "name": "Straumann-Scanmarker NN3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0632",
   "name": "Straumann-Scanmarker RN4.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0633",
   "name": "Straumann-Scanmarker WN6.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0642",
   "name": "Straumann-Scanmarker RN4.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0643",
   "name": "Straumann-Scanmarker WN6.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0831",
@@ -60959,291 +61090,291 @@
   "code": "ZZ-ZBAD0931",
   "name": "Biomet 3i-Scanmarker 3.4",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0932",
   "name": "Biomet 3i-Scanmarker 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD0933",
   "name": "Set Scanmarker 5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1032",
   "name": "Xive & Scanmarker 3.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1033",
   "name": "Xive & Frialit-Scanmarker 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1034",
   "name": "Set Scanmarker 5.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1131",
   "name": "Zimmer-Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1132",
   "name": "Zimmer-Scanmarker 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1231",
   "name": "SIC-Scanmarker 3.3",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1232",
   "name": "SIC-Scanmarker 4.2",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD1831",
   "name": "Alpha-Scanmarker 3.75",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD2035",
   "name": "Camlog-Scanmarker 6.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD2431",
   "name": "Noble-Set Scanmarker NP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD2432",
   "name": "Noble-Set Scanmarker RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD2433",
   "name": "Noble-Set Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD3031",
   "name": "F-DA-Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD3731",
   "name": "Set Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD3732",
   "name": "Set Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4231",
   "name": "OS-GS-SM Scanmarker and Screw 4.0/4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4232",
   "name": "Set Scanmarker Ø 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4332",
   "name": "OS-US-SM Scanmarker and Screw 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4831",
   "name": "D-I-SM Scanmarker and Screw 3.4",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4833",
   "name": "D-I-SM-Scanmarker and Screw 4.3",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD4931",
   "name": "Set Scanmarker 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD6831",
   "name": "Set Scanmarker 3.5 - 8.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD7632",
   "name": "Set Scanmarker 3.6",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD7633",
   "name": "Set Scanmarker 4.2",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD7731",
   "name": "Multi Unit Abutment Scanmarker                        Scanmarker",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD8032",
   "name": "Set Scanmarker 4.6",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBAD8231",
@@ -61259,61 +61390,61 @@
   "code": "ZZ-ZBAD8731",
   "name": "Set Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0131",
   "name": "Set White Scanmarker  3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0132",
   "name": "Set White Scanmarker 3.5/4.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0133",
   "name": "Set White Scanmarker 4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0233",
   "name": "SET ZZ White Scanmarker 5.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0432",
   "name": "SET ZZ White Scanmarker and screw",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0632",
@@ -61349,31 +61480,31 @@
   "code": "ZZ-ZBCD0931",
   "name": "Set White Scanmarker Ø 3.4",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0932",
   "name": "Set White Scanmarker Ø 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD0933",
   "name": "Set White Scanmarker Ø 5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD1031",
@@ -61389,11 +61520,11 @@
   "code": "ZZ-ZBCD1032",
   "name": "Set White Scanmarker Ø 3.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD1033",
@@ -61429,101 +61560,101 @@
   "code": "ZZ-ZBCD1132",
   "name": "Set White Scanmarker 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD1831",
   "name": "Set White Scanmarker 3.75",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD1832",
   "name": "Set White Scanmarker TC",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD2432",
   "name": "Set White Scanmarker RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD2433",
   "name": "Set White Scanmarker CC 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD3731",
   "name": "Set White Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD3731L",
   "name": "Set White Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD3732",
   "name": "Set White Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD4231",
   "name": "Set White Scanmarker 4.0/4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD4232",
   "name": "Set White Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD5036",
@@ -61539,21 +61670,21 @@
   "code": "ZZ-ZBCD7636",
   "name": "Set White Scanmarker",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD8031",
   "name": "Straumann 3.5 scanbody",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD8131",
@@ -61599,211 +61730,211 @@
   "code": "ZZ-ZBCD9231",
   "name": "Set White Scanmarker Zirkonzahn MUA Non Hex",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBCD9931",
   "name": "Set White Scanmarker Ø 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0233",
   "name": "ScanAnalog 5.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0431",
   "name": "ScanAnalog NP/RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0432",
   "name": "ScanAnalog WP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0532",
   "name": "ScanAnalog ψRCψ4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0632",
   "name": "ScanAnalog 4.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0633",
   "name": "ScanAnalog 6.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0831",
   "name": "ScanAnalog 3.4",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0832",
   "name": "ScanAnalog 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE0833",
   "name": "ScanAnalog 5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE1032",
   "name": "XIVER ScanAnalog",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE1131",
   "name": "ScanAnalog Φ3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE1132",
   "name": "ScanAnalog Φ4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE2431",
   "name": "ScanAnalog NP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE2432",
   "name": "ScanAnalog RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE2433",
   "name": "ScanAnalog CC 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE4231",
   "name": "ScanAnalog Φ4.0/4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE4232",
   "name": "ScanAnalog Φ3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE4931",
   "name": "ScanAnalog Φ4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE7636",
   "name": "ASTRA ScanAnalog",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE8231",
@@ -61819,381 +61950,381 @@
   "code": "ZZ-ZBDE9131",
   "name": "ScanAnalog Multi Abutment",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBDE9231L12",
   "name": "Set White Metal Scanmarker L12 Zirkonzahn MUA Non Hex",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0131L12",
   "name": "Set White Metal Scanmarker L12 Ø 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0132L10",
   "name": "Set White Metal Scanmarker L10 Ø 3.5/4.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0132L12",
   "name": "Set White Metal Scanmarker L12 Ø 3.5/4.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0133L10",
   "name": "Set White Metal Scanmarker L10 Ø 4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0133L12",
   "name": "Set White Metal Scanmarker L12 Ø 4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0431L10",
   "name": "Set White Metal Scanmarker L10 NP-RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0431L12",
   "name": "Set White Metal Scanmarker L12 NP-RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0431L15",
   "name": "Set White Metal Scanmarker L15 NP-RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0432L12",
   "name": "Set White Metal Scanmarker L12 WP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0632L12",
   "name": "Set White Metal Scanmarker L12 RN4.8",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0831L12",
   "name": "Set White Metal Scanmarker L12 3.4",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0832L12",
   "name": "Set White Metal Scanmarker L12 4.1",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED0833L12",
   "name": "Set White Metal Scanmarker L12 5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED1131L10",
   "name": "Set White Metal Scanmarker L10 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED1131L12",
   "name": "Set White Metal Scanmarker L12 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED1132L10",
   "name": "Set White Metal Scanmarker L10  4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED1132L12",
   "name": "Set White Metal Scanmarker L12 4.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED14131L2",
   "name": "Set White Metal Scanmarker L12 RB/WB",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2431L10",
   "name": "Set White Metal Scanmarker L10 NP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2431L12",
   "name": "Set White Metal Scanmarker L12 NP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2431L15",
   "name": "Set White Metal Scanmarker L15 NP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2432L10",
   "name": "Set White Metal Scanmarker L10 RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2432L12",
   "name": "Set White Metal Scanmarker L12 RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2432L15",
   "name": "Set White Metal Scanmarker L15 RP",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2433L12",
   "name": "Set White Metal Scanmarker L12 CC 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED2433L15",
   "name": "Set White Metal Scanmarker L15 CC 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED3731L",
   "name": "Set White Metal Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED3731L12",
   "name": "Set White Metal Scanmarker 3.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED3732L",
   "name": "Set White Metal Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED3732L12",
   "name": "Set White Metal Scanmarker 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED4232L12",
   "name": "Set White Metal Scanmarker L12 Ø 3.5",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED4731L12",
   "name": "Set White Metal Scanmarker L12  3.3",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED4733L12",
   "name": "Set White Metal Scanmarker L12  4.3",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED8032L12",
   "name": "Set White Metal Scanmarker L12 Ø 4.6",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBED9231L12",
   "name": "Set White Metal Scanmarker L12 Zirkonzahn MUA Non Hex\r\nNon Hex",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBEDO133L12",
   "name": "Set White Metal Scanmarker L12-Ø 4.5/5.0",
   "brand": "Zirkonzahn",
-  "productType": "設備",
-  "category": "掃描儀",
-  "mainCategory": "CAD/CAM 數位製造",
-  "mainCategoryId": "digital-manufacturing",
-  "categoryId": "scanner"
+  "productType": "配件",
+  "category": "植體配件",
+  "mainCategory": "臨床／技工器械與輔助工具",
+  "mainCategoryId": "clinical-tools",
+  "categoryId": "implant-component"
  },
  {
   "code": "ZZ-ZBZA0101",
@@ -66794,11 +66925,11 @@
   "name": "比色燈",
   "brand": "Song Young",
   "productType": "設備",
-  "category": "泛用設備",
-  "mainCategory": "待人工確認",
+  "category": "光學設備",
+  "mainCategory": "技工設備與基礎設施",
   "price": 1800,
-  "mainCategoryId": "other-review",
-  "categoryId": "generic-equipment",
+  "mainCategoryId": "lab-equipment",
+  "categoryId": "optical-equipment",
   "needsReview": true
  },
  {
