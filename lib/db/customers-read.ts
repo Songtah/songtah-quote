@@ -123,7 +123,7 @@ export async function dbListCustomersByAreas(areas: { city: string; district: st
   const db = sql()
   const rows = await db`
     select notion_page_id, name, county, district, customer_type, institution_status, address, phone, owner, dev_stage, institution_code
-    from customers where name <> '' and (county, district) in ${db(uniq.map((a) => [a.city, a.district]))}`
+    from customers where name <> '' and (county, district) in (select * from unnest(${uniq.map((a) => a.city)}::text[], ${uniq.map((a) => a.district)}::text[]))`
   return rows.map(areaCustomer).sort((a, b) => zh(a.name, b.name))
 }
 

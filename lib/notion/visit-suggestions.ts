@@ -46,9 +46,11 @@ export async function getVisitSignals() {
   return getSignals()
 }
 
+let signalsInflight: Promise<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }> | null = null
 async function getSignals() {
   const cached = await getRedisValue<{ builtAt: string; signals: Record<string, CustomerVisitSignal> }>(SIGNALS_CACHE_KEY)
-  const base = cached ?? await refreshSuggestionMaps()   // 冷啟動當場算，之後由每晚 cron 保鮮
+  // 冷啟動當場算（同一實例同時多個請求只算一次；主管「全體業務」會同時跑 9 位），之後由每晚 cron 保鮮
+  const base = cached ?? await (signalsInflight ??= refreshSuggestionMaps().finally(() => { signalsInflight = null }))
   // 併入白天剛建檔／剛關聯的拜訪（recordVisitBump），不必等每晚重建；不改快取本體
   const bumps = await getVisitBumps()
   if (!Object.keys(bumps).length) return base

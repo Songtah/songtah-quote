@@ -31,11 +31,14 @@ function toCache<T>(key: string, v: T, ttlMs: number) {
 }
 
 // ── 安全包裝：單一查詢失敗不拖垮整體 ─────────────────────────────
-async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+/** 最近一次各段查詢耗時（ms），供 /api/dashboard/ceo?timing=1 診斷正式站慢在哪 */
+export const lastCeoTimings: Record<string, number> = {}
+async function safe<T>(fn: () => Promise<T>, fallback: T, label = ''): Promise<T> {
+  const t0 = Date.now()
   try { return await fn() } catch (e) {
     console.warn('[ceo-stats] query failed:', e instanceof Error ? e.message : e)
     return fallback
-  }
+  } finally { if (label) lastCeoTimings[label] = Date.now() - t0 }
 }
 
 // ── 台北時間日期 helpers ────────────────────────────────────────
@@ -363,15 +366,15 @@ export async function getCEOStats(): Promise<CEOStats> {
   //    → ④ 用 Promise.all 同時發出 6 個查詢，壁鐘時間 ≈ 單月最慢者
 
   const [allOrders, allQuotes, thisMonthVisits, openFollowUps, recentHighRiskAudit, openTickets, ...visitCounts] = await Promise.all([
-    safe(() => fetchOrderStats(months[0].from, curMonth.to), []),
-    safe(() => fetchQuoteStats(months[0].from, curMonth.to), []),
-    safe(() => fetchVisitsFull(curMonth.from, curMonth.to), []),
-    safe(() => fetchOpenFollowUps(), []),
-    safe(() => listRecentHighRiskAuditLogs(5), []),
-    safe(() => listOpenTicketsForSla(), []),
+    safe(() => fetchOrderStats(months[0].from, curMonth.to), [], 'orders'),
+    safe(() => fetchQuoteStats(months[0].from, curMonth.to), [], 'quotes'),
+    safe(() => fetchVisitsFull(curMonth.from, curMonth.to), [], 'visits'),
+    safe(() => fetchOpenFollowUps(), [], 'followUps'),
+    safe(() => listRecentHighRiskAuditLogs(5), [], 'audit'),
+    safe(() => listOpenTicketsForSla(), [], 'tickets'),
     // 6 個月的 visit count 平行查詢
     ...months.map((m) =>
-      safe(() => fetchVisitCount(m.from, m.to), 0)
+      safe(() => fetchVisitCount(m.from, m.to), 0, `visitCount:${m.month}`)
     ),
   ])
 
