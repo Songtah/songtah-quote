@@ -29,11 +29,21 @@ interface DetailItem {
   status?: string
   disabled?: boolean
   imageUrl?: string
+  official?: { url: string; kind: 'product' | 'brand' } | null
 }
 
 interface SeriesData {
   id: string; seriesCode: string; seriesName: string; brand: string
   description: string; imageUrl: string; technicalSpecs: string; applicableScope: string; notes: string
+}
+
+/** 此貨號在系列規格矩陣裡的選項，例：顏色 A1、容量 1000g */
+function variantSpecs(family: ProductFamily | null, code: string): { label: string; value: string }[] {
+  if (!family?.skuMap) return []
+  const entry = Object.entries(family.skuMap).find(([, skuCode]) => skuCode === code)
+  if (!entry) return []
+  const values = entry[0].split('|')
+  return family.specs.map((spec, index) => ({ label: spec.label, value: values[index] ?? '' })).filter((row) => row.value)
 }
 
 const money = (value: number) => `NT$${value.toLocaleString('zh-TW')}`
@@ -160,6 +170,18 @@ export function ProductDetailContent({ seriesId, code, initialSku, canManageProd
   const brand = family?.brand || representative.brand
   const sellableCount = items.filter((item) => !item.discontinued && !item.disabled).length
   const unpricedCount = items.filter((item) => !item.discontinued && !item.disabled && item.price == null).length
+  const official = (selected ?? items[0]).official ?? null
+  const specRows = selected ? [
+    ...variantSpecs(family, selected.code),
+    ...(selected.spec ? [{ label: '規格', value: selected.spec }] : []),
+    { label: '品牌', value: selected.brand },
+    { label: '分類', value: [selected.mainCategory, selected.category].filter(Boolean).join(' › ') },
+    { label: '商品型態', value: selected.productType },
+    { label: '貨號', value: selected.erpPending ? '尚無 ERP 料號' : selected.code },
+    { label: 'ERP 品名', value: selected.name },
+    ...(selected.officialName ? [{ label: '官方名稱', value: selected.officialName }] : []),
+    ...(family ? [{ label: '所屬系列', value: family.seriesName }] : []),
+  ].filter((row) => row.value) : []
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 pb-10">
@@ -225,11 +247,21 @@ export function ProductDetailContent({ seriesId, code, initialSku, canManageProd
               </div>
             )}
 
-            {canManageProducts && selected && (
-              <button type="button" onClick={() => openEdit(selected.code)}
-                className="mt-auto self-start rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">
-                編輯{family ? '此規格' : '產品'}的照片、售價與文件
-              </button>
+            {(official || (canManageProducts && selected)) && (
+              <div className="mt-auto flex flex-wrap gap-2 pt-5">
+                {official && (
+                  <a href={official.url} target="_blank" rel="noopener noreferrer"
+                    className="flex min-h-11 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-5 text-sm font-semibold text-stone-700 transition-all hover:border-brand-300 hover:text-brand-700 active:scale-95">
+                    {official.kind === 'product' ? '原廠產品頁' : `${brand} 原廠官網`}<span aria-hidden="true">↗</span>
+                  </a>
+                )}
+                {canManageProducts && selected && (
+                  <button type="button" onClick={() => openEdit(selected.code)}
+                    className="min-h-11 rounded-full bg-brand-500 px-5 text-sm font-semibold text-white shadow-md shadow-brand-500/25 transition-all hover:bg-brand-600 active:scale-95">
+                    編輯{family ? '此規格' : '產品'}的照片、售價與文件
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -270,7 +302,22 @@ export function ProductDetailContent({ seriesId, code, initialSku, canManageProd
         </section>
       )}
 
-      {/* 選定貨號的照片、規格、文件 */}
+      {/* 規格資料：每個貨號都有（系列規格選項＋主檔欄位）；原廠技術參數表在下方 */}
+      {selected && specRows.length > 0 && (
+        <section className="card-soft p-4 sm:p-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400">規格資料</p>
+          <dl className="mt-3 grid gap-x-6 sm:grid-cols-2">
+            {specRows.map((row) => (
+              <div key={row.label} className="flex gap-3 border-b border-stone-900/[0.05] py-2.5 text-sm">
+                <dt className="w-20 shrink-0 text-stone-400">{row.label}</dt>
+                <dd className="min-w-0 break-words font-medium text-stone-700">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      {/* 選定貨號的照片、技術參數表、文件 */}
       {selected && <SeriesSkuDetails item={selected} />}
 
       {/* 全系列價格表 */}

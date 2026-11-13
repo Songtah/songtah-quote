@@ -12,6 +12,7 @@ import { getEffectiveCatalog, getAvailableManagedFamilies } from '@/lib/products
 import { getManagedFamilies } from '@/lib/products-managed-families'
 import { explicitFamilySkuCodes } from '@/lib/product-family-members'
 import { listDisabledSkuCodes, listProductImageIndex } from '@/lib/products-notion'
+import { officialLinkFor } from '@/lib/product-official-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,7 @@ export const GET = withApiAuth('session', async (req: NextRequest, _ctx, session
     ...item,
     disabled: disabled.has(item.code),
     imageUrl: imageIndex[item.code] ?? '',
+    official: officialLinkFor(item.code, item.brand),
   }))
 
   return NextResponse.json({ family: family ?? null, items }, { headers: { 'Cache-Control': 'private, no-store' } })
