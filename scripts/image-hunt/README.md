@@ -13,7 +13,7 @@
 | 2. 爬官網 | `node scripts/image-hunt/crawl.mjs <brand>` | `brand-index/<brand>.json`(整站產品頁:標題+圖) |
 | 3. 比對下載 | `node scripts/image-hunt/match.mjs <brand>` | `candidates/<targetId>/cand-N.jpg + meta.json` |
 | 4. 人工覆核 | `node scripts/image-hunt/review-server.mjs` → http://localhost:4600 | `decisions.json`(使用者點選) |
-| 5. 寫入 | `node scripts/image-hunt/apply.mjs`(dry-run)→ `--write` | Blob webp + image-index.json(SKU)/ Notion 系列庫主圖URL(系列) |
+| 5. 寫入 | `npx tsx --env-file=.env.local scripts/image-hunt/apply.mjs`(dry-run)→ `--write` | Blob webp + image-index.json(SKU)/ 系列庫主圖URL(資料庫,系列) |
 
 ## 原則
 

@@ -5,13 +5,14 @@
  * DB id 對照表、Notion property 讀取 helper、限流重試。各領域檔（customers/visits/...）
  * 一律從這裡 import，system-notion.ts 則 re-export 之以維持既有 import 路徑相容。
  */
-import { Client } from '@notionhq/client'
+import type { Client } from '@notionhq/client'
 import { createNotionProxy } from '@/lib/db/notion-store'
 import { Redis } from '@upstash/redis'
 import { waitUntil } from '@vercel/functions'
 
-// 2026-11-10：已搬進 Supabase 的資料庫／頁面由 lib/db/notion-store 代理，其餘照舊打 Notion
-export const notion: Client = createNotionProxy(new Client({ auth: process.env.NOTION_TOKEN }))
+// 2026-11-10 起 Notion 全部封存：所有讀寫都由 lib/db/notion-store 在 Supabase 處理（介面沿用 Notion 形狀），
+// 不在資料庫的庫／頁面一律報錯，不會再連到 Notion。
+export const notion: Client = createNotionProxy()
 
 // ── In-memory cache (L1) ─────────────────────────────────────────────────────
 // Fast but resets on every Vercel cold start.

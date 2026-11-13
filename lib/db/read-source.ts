@@ -1,34 +1,15 @@
 /**
- * lib/db/read-source.ts — 客戶主檔／客情紀錄的讀取來源開關
+ * lib/db/read-source.ts — 客戶主檔／客情紀錄的資料來源
  *
- * 2026-11-10 起預設從 Supabase 讀（搬遷第三步）。
- * 退回方式：環境變數 DATA_READ_SOURCE=notion 並重新部署，所有讀取立刻回到 Notion，資料不受影響。
- * 寫入仍先進 Notion（其他 6 個 Notion 庫關聯著客戶），寫完立即鏡像到資料庫（lib/db/mirror.ts）。
+ * 2026-11-10 起資料只在 Supabase，Notion 已全部封存。舊的退回開關（DATA_READ_SOURCE／VISITS_SOURCE／
+ * CUSTOMERS_SOURCE=notion）已移除：退回只會讀到封存前的舊資料，而且讀寫 Notion 的路徑已一律報錯。
+ * 只有本機沒設 DATABASE_URL 時這些函式才會回 false（此時相關功能無法使用）。
  */
 import { hasDb } from './client'
 
-export function readFromDb(): boolean {
-  if (process.env.DATA_READ_SOURCE === 'notion') return false
-  return hasDb()
-}
-
-/**
- * 客情紀錄是否以資料庫為唯一來源（2026-11-10 起預設是；Notion 客情庫已封存、不再寫入）。
- * 退回：VISITS_SOURCE=notion 並重新部署；但系統產生的客情（origin='db'）要先用 scripts/db-visits-backfill-notion.mjs 回填 Notion。
- */
-export function visitsInDb(): boolean {
-  if (process.env.VISITS_SOURCE === 'notion') return false
-  return hasDb()
-}
-
-/**
- * 客戶主檔是否以資料庫為唯一來源（2026-11-10 起預設是；Notion 客戶庫封存、不再寫入也不再同步）。
- * 退回：CUSTOMERS_SOURCE=notion（系統產生的客戶 origin='db' 需先回填 Notion）。
- */
-export function customersInDb(): boolean {
-  if (process.env.CUSTOMERS_SOURCE === 'notion') return false
-  return hasDb()
-}
+export function readFromDb(): boolean { return hasDb() }
+export function visitsInDb(): boolean { return hasDb() }
+export function customersInDb(): boolean { return hasDb() }
 
 /** Notion 頁面 id 去連字號（兩種寫法在系統內並存） */
 export const bareId = (id: string) => (id ?? '').replace(/-/g, '').toLowerCase()

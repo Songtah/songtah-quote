@@ -49,24 +49,6 @@ async function scanAllCustomerPages(onPage: (page: any) => void): Promise<void> 
   }
 }
 
-export async function listAllSystemCustomers(): Promise<{ id: string; name: string; city: string; type: string }[]> {
-  if (!DB.customers) return []
-  const cacheKey = 'all-system-customers'
-  const cached = getCachedValue<{ id: string; name: string; city: string; type: string }[]>(cacheKey)
-  if (cached) return cached
-
-  const { rows } = await querySummary(DB.customers, 200)
-  const items = rows.map((page: any) => ({
-    id: page.id,
-    name: getTitle(page, '客戶名稱'),
-    city: getSelect(page, '縣市'),
-    type: getSelect(page, '客戶類型'),
-  })).filter((c: any) => c.name)
-
-  setCachedValue(cacheKey, items, 300_000) // cache 5 min
-  return items
-}
-
 export type SystemCustomerDetail = {
   id: string
   name: string

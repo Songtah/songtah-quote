@@ -2,9 +2,7 @@ import { notion } from '@/lib/notion/shared'
 import type { NextRequest } from 'next/server'
 
 
-const AUDIT_DB_TITLE = '系統操作紀錄'
 const AUDIT_DB_ID = '348dcdaafb2a81508712f7e6eebb6363'
-const AUDIT_FALLBACK_SOURCE_DB = process.env.NOTION_VISITS_DB ?? '285dcdaafb2a80aea173db268665ae16'
 const REDACTED = '[REDACTED]'
 
 let auditDbIdCache: string | null = null
@@ -187,59 +185,7 @@ function toParagraphBlocks(label: string, content: string) {
   }))
 }
 
-async function resolveAuditParentPageId() {
-  const database: any = await notionCallWithRetry('audit.resolveSourceDb', () =>
-    notion.databases.retrieve({
-      database_id: normalizeDatabaseId(AUDIT_FALLBACK_SOURCE_DB),
-    })
-  )
-
-  let parent = database.parent
-
-  while (parent) {
-    if (parent.type === 'page_id') return parent.page_id as string
-
-    if (parent.type !== 'block_id') break
-
-    const block: any = await notionCallWithRetry('audit.resolveParentBlock', () =>
-      notion.blocks.retrieve({
-        block_id: parent.block_id,
-      })
-    )
-
-    parent = block.parent
-  }
-
-  return null
-}
-
-async function findExistingAuditDb(parentPageId?: string) {
-  const response: any = await notionCallWithRetry('audit.searchDb', () =>
-    notion.search({
-      query: AUDIT_DB_TITLE,
-      filter: { property: 'object', value: 'database' },
-      page_size: 20,
-    })
-  )
-
-  const results = response.results ?? []
-  return results.find((result: any) => {
-    const title =
-      result.title?.map((item: any) => item.plain_text).join('') ??
-      result.properties?.['事件標題']?.title?.map((item: any) => item.plain_text).join('') ??
-      ''
-
-    if (title !== AUDIT_DB_TITLE) return false
-    if (!parentPageId) return true
-    return result.parent?.type === 'page_id' && result.parent.page_id === parentPageId
-  })
-}
-
 async function ensureAuditDb() {
-  // 1. Explicit env var (fastest path)
-  if (process.env.NOTION_AUDIT_LOGS_DB) {
-    return normalizeDatabaseId(process.env.NOTION_AUDIT_LOGS_DB)
-  }
   // 2026-11-10：稽核紀錄已搬到資料庫（notion_pages），固定用原資料庫 id，不再搜尋／建立 Notion 庫
   // （Notion 端已改名封存，用標題搜尋會找不到而另建新庫）
   return AUDIT_DB_ID

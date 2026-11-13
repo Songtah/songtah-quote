@@ -4,7 +4,7 @@
 //   1. 讀 decisions.json(只處理已選圖、未 skip、未套用的)
 //   2. sharp 轉 webp(最長邊 1200)+ 內容雜湊檔名 + dHash 感知去重(同圖共用同一 Blob URL)
 //   3. group 目標 → image-index.json 為每個 memberCode 寫同一 URL(只補空白,不覆蓋既有圖)
-//      series 目標 → Notion 系列庫 主圖URL(僅在原本為空時寫入)
+//      series 目標 → 系列庫（資料庫）主圖URL(僅在原本為空時寫入)
 //   4. 已套用記到 applied.json,可重跑不重複
 //
 // 2026-07-21 決策改複選(picks 陣列,可選主圖+hover 替換圖)後的權宜作法:
@@ -18,12 +18,13 @@ import path from 'path'
 import crypto from 'crypto'
 import sharp from 'sharp'
 import { put, list } from '@vercel/blob'
-import { Client } from '@notionhq/client'
+import { createNotionProxy } from '../../lib/db/notion-store.ts'
 
 const WORKSPACE = '/Users/ted/Desktop/Songtah/產品圖片工作區'
 const WRITE = process.argv.includes('--write')
-const notion = new Client({ auth: process.env.NOTION_TOKEN })
-const SERIES_DB = process.env.NOTION_SERIES_DB
+// Notion 已封存：系列庫在 Supabase 通用儲存，經 notion-store（需 DATABASE_URL）。執行：npx tsx --env-file=.env.local scripts/image-hunt/apply.mjs
+const notion = createNotionProxy()
+const SERIES_DB = process.env.NOTION_SERIES_DB || '6578a74e010640e49fbb20dc5127d525'
 
 const decisions = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'decisions.json'), 'utf8'))
 const appliedPath = path.join(WORKSPACE, 'applied.json')

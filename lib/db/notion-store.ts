@@ -188,7 +188,7 @@ function toPage(r: any): any {
   return {
     object: 'page', id: dashed(r.page_id), created_time: iso(r.created_time), last_edited_time: iso(r.last_edited_time), archived: !!r.archived,
     parent: { type: 'database_id', database_id: dashed(r.db_id) }, properties: r.properties, cover: r.cover ?? null, icon: r.icon ?? null,
-    url: `https://www.notion.so/${r.page_id}`,
+    url: "",   // Notion 已封存，不再產生 notion.so 連結
   }
 }
 async function loadSchema(dbId: string): Promise<{ title: string; schema: Record<string, any> }> {
@@ -411,28 +411,38 @@ export const store = {
   },
 }
 
-/** 把真正的 Notion client 包成代理：已搬入的庫／頁面走 store，其餘照舊打 Notion。 */
-export function createNotionProxy(real: any): any {
-  // NOTION_STORE_DISABLED=1：全部回到 Notion（比對／緊急退回用；已搬入後 Notion 端不再更新，只能短期使用）
-  const route = async (kind: 'db' | 'page', id: string) => process.env.NOTION_STORE_DISABLED === '1' ? false : (kind === 'db' ? isStoredDb(id) : isStoredPage(id))
+/**
+ * 系統唯一的「notion」物件：介面沿用 Notion client 的形狀（databases／pages／blocks），資料全在 Supabase。
+ * 2026-11-10 起 Notion 全部封存：不在資料庫裡的庫／頁面一律報錯，不再退回真正的 Notion
+ * （退回只會讀到舊資料、寫進沒人看的封存庫）。
+ */
+function notionGone(what: string, id?: string): never {
+  const msg = `Notion 已停用（2026-11 封存），這筆資料不在系統資料庫：${what}${id ? ` ${id}` : ''}`
+  console.error('[notion-gone]', msg)
+  throw new Error(msg)
+}
+
+export function createNotionProxy(): any {
   return {
-    ...real,
     databases: {
-      ...real.databases,
-      query: async (a: any) => (await route('db', a.database_id)) ? store.databases.query(a) : real.databases.query(a),
-      retrieve: async (a: any) => (await route('db', a.database_id)) ? store.databases.retrieve(a) : real.databases.retrieve(a),
-      update: async (a: any) => (await route('db', a.database_id)) ? store.databases.update(a) : real.databases.update(a),
-      create: (a: any) => real.databases.create(a),
+      query: async (a: any) => (await isStoredDb(a.database_id)) ? store.databases.query(a) : notionGone('databases.query', a.database_id),
+      retrieve: async (a: any) => (await isStoredDb(a.database_id)) ? store.databases.retrieve(a) : notionGone('databases.retrieve', a.database_id),
+      update: async (a: any) => (await isStoredDb(a.database_id)) ? store.databases.update(a) : notionGone('databases.update', a.database_id),
+      create: async () => notionGone('databases.create'),
     },
     pages: {
-      ...real.pages,
-      create: async (a: any) => (a.parent?.database_id && (await route('db', a.parent.database_id))) ? store.pages.create(a) : real.pages.create(a),
-      retrieve: async (a: any) => (await route('page', a.page_id)) ? store.pages.retrieve(a) : real.pages.retrieve(a),
-      update: async (a: any) => (await route('page', a.page_id)) ? store.pages.update(a) : real.pages.update(a),
+      create: async (a: any) => (a.parent?.database_id && (await isStoredDb(a.parent.database_id))) ? store.pages.create(a) : notionGone('pages.create', a.parent?.database_id ?? a.parent?.page_id),
+      retrieve: async (a: any) => (await isStoredPage(a.page_id)) ? store.pages.retrieve(a) : notionGone('pages.retrieve', a.page_id),
+      update: async (a: any) => (await isStoredPage(a.page_id)) ? store.pages.update(a) : notionGone('pages.update', a.page_id),
     },
     blocks: {
-      ...real.blocks,
-      children: { ...real.blocks.children, list: async (a: any) => (await route('page', a.block_id)) ? store.blocks.children.list(a) : real.blocks.children.list(a) },
+      children: {
+        list: async (a: any) => (await isStoredPage(a.block_id)) ? store.blocks.children.list(a) : notionGone('blocks.children.list', a.block_id),
+        append: async (a: any) => notionGone('blocks.children.append', a.block_id),
+      },
+      delete: async (a: any) => notionGone('blocks.delete', a.block_id),
     },
+    search: async () => notionGone('search'),
+    users: { list: async () => notionGone('users.list') },
   }
 }

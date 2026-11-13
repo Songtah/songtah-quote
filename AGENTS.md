@@ -30,7 +30,7 @@
 
 - Next.js 14（App Router）＋ TypeScript ＋ Tailwind；資料在 **Supabase**（客戶、客情等是專表，其餘在通用儲存 `notion_pages`，經 `lib/db/notion-store.ts` 模擬 Notion 介面，所以程式仍寫 `notion.*`；Notion 已全部封存，見 CLAUDE.md 資料架構第 0 條）；快取與狀態用 **Upstash Redis**；部署 **Vercel**；排程用 GitHub Actions（`.github/workflows/*.yml` 呼叫 `/api/cron/*`）＋ Vercel cron。
 - `lib/notion/shared.ts`：基礎層（client、雙層快取 L1 記憶體＋L2 Redis、限流重試、`cachedSWR`、`runExclusiveScan`、`hitRateLimit`）。**不可 import 任何領域檔。**
-- `lib/notion/<domain>.ts`：葉領域，彼此不互相 import；跨領域彙總只放組合層（`lib/notion/dashboard.ts` 等）或 route。
+- `lib/notion/<domain>.ts`：葉領域，彼此不互相 import；跨領域彙總只放組合層（如 `lib/notion/pending-match.ts`）或 route。
 - `lib/system-notion.ts` 只是 barrel re-export，**不要往裡面加實作**。
 - AI 判讀（客情反應、維修偵測）用 Anthropic API：`lib/visit-reaction-ai.ts`。
 - 通知：機制在 `lib/notifications.ts`，「什麼事通知誰」只寫在 `lib/notification-events.ts`。
@@ -44,23 +44,23 @@
 5. 正式站驗證時：不要送出會產生真實資料的表單（報名、訂單、簽核），用預覽、dry-run 或唯讀 API 驗證；需要真實流程測試時請使用者操作。
 6. 改了規則就同步更新 `CLAUDE.md` 對應段落。
 
-### Notion 結構變更
-- 一律寫成腳本 `scripts/add-*.mjs`：預設 dry-run 列出會新增的欄位，`--write` 才執行；**只新增、不刪改既有欄位**。範例：`scripts/add-registration-fields.mjs`、`scripts/add-quote-order-link-fields.mjs`。
+### 資料欄位變更（Notion 已斷線）
+- 通用儲存的新欄位在第一次寫入時自動建立（`lib/db/notion-store.ts` 推斷型別）；新增欄位屬資料結構變更，**動工前先問使用者**，只新增、不刪改既有欄位。
 - GET／讀取路徑**禁止**呼叫 `notion.databases.update`。
-- 寫入正式主檔前先 dry-run 印出受影響筆數與樣本。
+- 一次性資料腳本用 `postgres` 連 `DATABASE_URL`（值在本機 `.env.local`），或 `npx tsx --env-file=.env.local` 引用 `lib/db/*`；**不得連 Notion**。寫入正式資料前先 dry-run 印出受影響筆數與樣本。
 
 ## 5. 環境與帳號
 
 - 正式站在 Vercel 的**公司帳號**下的專案 `songtah-quote`；使用者個人帳號有一個同名專案，**那不是正式站**，查設定別看錯。
 - 主要環境變數（值只在 Vercel 與本機 `.env.local`，`.env*` 已 gitignore）：
-  `NOTION_TOKEN`、各 `NOTION_*_DB`、`KV_REST_API_URL`／`KV_REST_API_TOKEN`（Redis）、`NEXTAUTH_SECRET`、`ANTHROPIC_API_KEY`、
+  `DATABASE_URL`（Supabase）、各 `NOTION_*_DB`（只是資料庫內各庫的 id，名稱沿用舊稱）、`KV_REST_API_URL`／`KV_REST_API_TOKEN`（Redis）、`NEXTAUTH_SECRET`、`ANTHROPIC_API_KEY`、
   `LINE_*`、`DAILY_REPORT_SECRET`、`BLOB_READ_WRITE_TOKEN`、`VAPID_PUBLIC_KEY`／`VAPID_PRIVATE_KEY`／`VAPID_SUBJECT`（網頁推播）。
 - 本機的 `DAILY_REPORT_SECRET` 與正式站不同，本機無法直接呼叫 `/api/cron/*`。
 - Redis 是免費方案（每月約 50 萬指令），大量新增 Redis 用量前先估算並告知使用者。
 
 ## 6. 資料與效能陷阱（都踩過）
 
-- **只有退回 Notion 讀取時才有 10,000 筆截斷**（`DATA_READ_SOURCE`／`VISITS_SOURCE=notion`）：那時客戶全掃用 `scanAllCustomerPages`（依縣市分區）、客情用 `scanVisitPages`（依日期分區）。已用日期範圍過濾的查詢不要再分區（會變慢）。統計出「剛好整數」要當截斷警訊。
+- 統計出「剛好整數」（例如剛好 10,000、剛好等於 limit）要當查詢被截斷的警訊。
 - **Notion 限流 429**：大型重算用 `runExclusiveScan`（Redis 鎖）排隊。
 - **L1 快取是單一 Vercel 實例的記憶體**，換實例就各算各的：跨實例的計數／限流一定要用 Redis 原子操作（`hitRateLimit`），不要用「讀 `getRedisValue` 再 `setRedisValue`」。
 - 首頁等重頁面用 `cachedSWR`（先回快取、背景重算）；資料寫入時呼叫對應的 `mark*Dirty()`，結果不完整時 `shouldCache` 回 false 不要存。

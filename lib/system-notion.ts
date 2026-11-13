@@ -25,7 +25,7 @@ export {
 // ─── 客戶主檔 → 已抽至 ./notion/customers（葉領域）──────────────────────────────
 export type { SystemCustomerDetail, CustomerSearchResult, CustomerListItem, CustomerWithCode } from './notion/customers'
 export {
-  listAllSystemCustomers, getSystemCustomerById, searchSystemCustomers,
+  getSystemCustomerById, searchSystemCustomers,
   getAllSystemCustomers, listSystemCustomersPaginated, getCustomersWithCodes,
   createSystemCustomer, updateCustomerStatus, getCustomerFilterOptions,
 } from './notion/customers'

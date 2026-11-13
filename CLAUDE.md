@@ -40,7 +40,7 @@
 
 ## 資料架構鐵則
 
-0. **資料實際位置（2026-11-10 起）**：所有功能資料都在 Supabase——客戶／客情／監控／設備／工單是專表；產品、系列、說明書與其餘各庫在通用儲存 `notion_pages`，由 `lib/db/notion-store.ts` 模擬 Notion 介面（程式仍呼叫 `notion.*`、欄位名沿用 Notion）。Notion 全部封存，不再是資料來源。只有退回 Notion 讀取（`DATA_READ_SOURCE=notion` 等）時才會遇到無過濾查詢在 10,000 筆處靜默截斷，那時掃全客戶庫走 `scanAllCustomerPages`（按縣市分區）。
+0. **資料實際位置（2026-11-10 起）**：所有功能資料都在 Supabase——客戶／客情／監控／設備／工單是專表；產品、系列、說明書與其餘各庫在通用儲存 `notion_pages`，由 `lib/db/notion-store.ts` 模擬 Notion 介面（程式仍呼叫 `notion.*`、欄位名沿用 Notion）。Notion 全部封存且**已斷線**：`notion-store` 對不在資料庫的庫／頁面一律丟「Notion 已停用」錯誤，沒有退回開關，`@notionhq/client` 只剩型別。禁止新增任何直連 Notion 的程式、腳本或排程。
 
 1. **價格快照**：訂單/報價一旦成立，品名與單價定格在單據內，禁止連動主檔。
 2. **欄位擁有權**：貨號/品名歸 ERP（唯讀）；分類/目錄基準價/目錄規格摘要歸 `data/catalog/products_catalog.json`；中央人工售價覆寫與圖片/介紹/富內容技術規格表/文件歸產品通用儲存（見第 0 條）。這些富內容不得反向覆蓋 ERP 與目錄主檔欄位。**目錄與 `data/catalog/product_families.json` 含內部基準價，禁止放回 `public/`**（2026-10-21 曾可未登入直接下載）；只由 `lib/products-catalog.ts`（`server-only`）讀取、經 withApiAuth API 提供。
@@ -118,7 +118,7 @@
 5. **報價單狀態機**：`lib/quote-status.ts` 的 `QUOTE_TRANSITIONS` 是唯一允許的狀態轉換來源（簽核 `/api/quotes/[id]/approve` 與修改後送審 `PUT /api/quotes/[id]` 共用），新增動作要先在這張表加規則，不可繞過直接呼叫 `updateQuoteStatus`。只有草稿／待行政審核／已退回可修改內容；已核准後價格定格。報價金額一律由 `lib/quote-model.ts` 計算（前後端共用），伺服器寫入時重算。報價單 PDF（`lib/pdf.tsx`）、訂購單 PDF 與客戶分享頁配色一律依系統設計語言（棕金 brand／cream／stone，色票集中在 `lib/pdf-brand.tsx`；2026-10-11 由綠色品牌識別改回），Logo 用新版品牌標誌；字型用 `public/fonts/NotoSansTC-Regular/Bold.woff`（由 `@fontsource/noto-sans-tc` 分片合併的完整字集，含全形標點與粗體），簽章區以 `PushToBottom` 固定在最後一頁底部。
 5-2. **報價單轉訂貨單**（2026-10-28）：只有「已核准」且未轉過的報價單能轉（`/orders/new?fromQuote=`，`POST /api/orders` 的 `sourceQuoteId` 伺服器重驗），產生**訂貨單草稿**；有貨號（報價明細「貨號」，或品名唯一對到目錄）者以目錄品項帶入、單價沿用報價核准價，手打規格／設備與停售品轉自訂品項原文保留；整單折讓與未稅營業稅寫入備註「請行政確認」，不自動攤價。報價單「轉出訂單」與訂單「來源報價」互記（`id|編號`）。報價品項可自由編輯不受影響；選產品時規格欄自動帶入技術規格逐行（`lib/product-spec-lines.ts`：Notion 技術規格表優先，其次系列規格矩陣）。
 5-1. **訂貨單狀態機**：`lib/order-status.ts` 的 `ORDER_TRANSITIONS` 是唯一允許的狀態轉換來源（`PATCH /api/orders/[id]` 依此驗證、清單與表單只顯示該角色可做的動作）；業務只能改草稿內容、只能刪草稿，行政（admin／行政／中央管理）可確認、到貨、改非草稿單（改品項須 `confirmNonDraftEdit`＋稽核）。建立／狀態轉換／刪除都要留稽核紀錄。訂購單 PDF（`lib/order-pdf.tsx`）與報價單共用 `lib/pdf-brand.tsx`；「再訂一次」單價一律改用當下有效售價，不沿用舊單價格。
-6. **對外代理／外部圖片一律驗證網域**：`app/api/notion-image/route.ts` 的 `isUrlSafeToProxy` 是唯一允許代理的網址檢查，新增任何「伺服器端 fetch 使用者可控 URL」的功能都要套用同等的 host allowlist + 私網位址檢查，避免 SSRF。
+6. **對外代理／外部圖片一律驗證網域**：`lib/url-safety.ts` 的 `isUrlSafeToProxy` 是唯一允許代理的網址檢查，新增任何「伺服器端 fetch 使用者可控 URL」的功能都要套用同等的 host allowlist + 私網位址檢查，避免 SSRF。
 
 ## Notion 資料層架構原則（拆 god module 的長期防線）
 
@@ -126,11 +126,11 @@
 
 1. **基礎層 `lib/notion/shared.ts`**：Notion client、雙層快取、DB id 對照、property helper、限流重試。**leaf，不可 import 任何領域檔**。
 2. **葉領域 `lib/notion/<domain>.ts`**（customers／equipment／visits／tickets／events／course-costs／medical-monitor／accounts…）：各自擁有自己的 Notion DB 與查詢，**包含「依某客戶查」這類查詢**（例：`listCustomerEquipment` 歸 equipment、`listCustomerEvents` 歸 events——「某客戶的 X」歸 X，不歸客戶）。**葉領域彼此不互相 import**。
-3. **組合層 `lib/notion/dashboard.ts`（及客戶 360 等彙總）**：跨領域彙總/組合**只能放這裡**，它 import 多個葉領域，自己不直接碰 DB 細節。
+3. **組合層（如 `lib/notion/pending-match.ts`、客戶 360 等彙總）**：跨領域彙總/組合**只能放這裡**，它 import 多個葉領域，自己不直接碰 DB 細節。
 
 **鐵律：葉領域不互依；任何「跨多個領域的彙總邏輯」一律放組合層或上層 route，不准滲回葉領域。** 這條一旦守住，再長的彙總都不會把某個領域檔養成新的 god module。
 
-**現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**，Notion 介面實作在 `lib/notion/*`、Supabase 讀寫在 `lib/db/*`；`lib/notion/*` 包含：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `dashboard`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
+**現況（拆分已完成）**：`system-notion.ts` 已收斂為**純 barrel re-export**，Notion 介面實作在 `lib/notion/*`、Supabase 讀寫在 `lib/db/*`；`lib/notion/*` 包含：`shared`（基礎）、`relations`（跨切面 relation 解析）、葉領域 `customers/equipment/visits/tickets/events/course-costs/medical-monitor/products-search/accounts`、組合層 `pending-match`、權限模型 `permissions-model`。**既有 `import { ... } from '@/lib/system-notion'` 全部維持相容**；新程式可直接 import 對應的 `lib/notion/<domain>` 檔。**新增領域請建新檔，不要往 `system-notion.ts` 加實作。**
 
 ## 通知鐵則（2026-10-28 建立：站內通知中心＋網頁推播，不做 LINE 個人通知）
 
