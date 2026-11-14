@@ -63,7 +63,7 @@ export function PublicForm({ formId }: { formId: string }) {
     e.preventDefault()
     if (def?.identity === 'required' && !who.jobTitle) { setError('請選擇職稱'); return }
     const givesPersonal = def?.identity !== 'none' && !!(who.name || who.phone || who.institution || who.email)
-    if (givesPersonal && (!consent || !marketing)) { setError('請閱讀個人資料蒐集告知事項並勾選兩項同意'); return }
+    if (givesPersonal && !consent) { setError('請閱讀個人資料蒐集告知事項並勾選同意'); return }
     setBusy(true); setError('')
     try {
       const res = await fetch(`/api/public/forms/${formId}`, {
@@ -274,9 +274,9 @@ export function PublicForm({ formId }: { formId: string }) {
             <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-brand-500" checked={consent} required={idRequired} onChange={(e) => setConsent(e.target.checked)} />
             <span>{PRIVACY_CONSENT_LABEL}{idRequired && <span className="text-red-500"> *</span>}</span>
           </label>
-          <label className="mt-2 flex items-start gap-2.5 text-sm text-stone-700">
-            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-brand-500" checked={marketing} required={idRequired} onChange={(e) => setMarketing(e.target.checked)} />
-            <span>{PRIVACY_MARKETING_LABEL}{idRequired && <span className="text-red-500"> *</span>}</span>
+          <label className="mt-2 flex items-start gap-2.5 text-sm text-stone-600">
+            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-brand-500" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
+            <span>{PRIVACY_MARKETING_LABEL}<span className="ml-1 text-xs text-stone-400">（選填）</span></span>
           </label>
         </div>
       )}

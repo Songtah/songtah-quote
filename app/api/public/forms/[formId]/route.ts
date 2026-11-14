@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const anonymous = form.identity === 'none'
     // 個資告知：只要留了任何個人資料就必須勾選同意（個資法第 8 條告知、第 19 條同意）
     const givesPersonal = !anonymous && !!(name || phone || institution || email)
-    if (givesPersonal && (body?.consent !== true || body?.marketing !== true)) return NextResponse.json({ error: '請閱讀個人資料蒐集告知事項並勾選兩項同意' }, { status: 400 })
+    if (givesPersonal && body?.consent !== true) return NextResponse.json({ error: '請閱讀個人資料蒐集告知事項並勾選同意' }, { status: 400 })
     const { response, duplicate } = await addResponse(form, {
       name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution,
       city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, email: anonymous ? '' : email, consentVersion: givesPersonal ? PRIVACY_NOTICE_VERSION : '', marketingOptIn: givesPersonal && body?.marketing === true, answers,
