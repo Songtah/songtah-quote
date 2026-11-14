@@ -38,7 +38,7 @@ export type EventForm = {
   identity: FormIdentity; questions: FormQuestion[]; open: boolean; updatedAt: string
 }
 /** 基本資料的職稱選項（使用者 2026-11-11 指定牙技師／牙醫師；另留「其他」給助理、學生等，避免必填時填不下去） */
-export const JOB_TITLES = ['牙技師', '牙醫師', '其他'] as const
+export const JOB_TITLES = ['牙技師', '牙醫師', '學生', '其他'] as const
 
 export type FormResponse = {
   id: string; name: string; phone: string; institution: string
