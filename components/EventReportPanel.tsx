@@ -163,7 +163,7 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
           onClick={p.firstContactCustomers ? () => setShowFirst((v) => !v) : undefined} active={showFirst} />
         {sec.satisfaction
           ? <Kpi label="滿意度" value={sat?.average != null ? `${sat.average} / 5` : '—'} note={sat ? (sat.average != null ? `${sat.responses} 份回覆，${sat.ratingQuestions} 題評分題的平均` : `${sat.responses} 份回覆，沒有評分題`) : '還沒建立滿意度調查'} onClick={go('forms')} action="看詳細" />
-          : sec.survey
+          : sec.survey && sec.registration   // 沒有報名時第一張卡已是問卷填寫，不重複
             ? <Kpi label="活動問卷" value={survey ? `${survey.responses} 份` : '—'} note={survey ? `贈品發出 ${survey.giftClaimed} 份` : '還沒建立活動問卷'} onClick={go('forms')} action="看詳細" />
             : <Kpi label="既有往來客戶" value={`${p.existingCustomers} 家`} note="活動前已有客情紀錄，或標記為公司既有客戶" onClick={go('participation')} action="看參與成果" />}
         <Kpi label="活動業績" value={s.amount != null ? nt(s.amount) : `${s.orders} 張`}
