@@ -82,6 +82,21 @@ export async function setResponseCustomer(formId: string, responseId: string, cu
   return r.length ? toResponse(r[0]) : null
 }
 
+/** 某客戶填過的所有問卷（依配對到的客戶），附表單類型、標題與題目，供客戶頁「參加活動」顯示 */
+export async function listCustomerResponses(customerId: string): Promise<{ eventId: string; form: EventForm; response: FormResponse }[]> {
+  const rows = await sql()`
+    select r.*, f.id as f_id, f.event_id as f_event_id, f.kind as f_kind, f.title as f_title, f.intro as f_intro, f.gift as f_gift, f.gift_image as f_gift_image,
+           f.identity as f_identity, f.questions as f_questions, f.open as f_open, f.updated_at as f_updated_at
+    from event_form_responses r join event_forms f on f.id = r.form_id
+    where replace(lower(coalesce(r.customer_id, '')), '-', '') = ${bare(customerId)}
+    order by r.created_at desc`
+  return rows.map((r: any) => ({
+    eventId: r.f_event_id,
+    form: toForm({ id: r.f_id, event_id: r.f_event_id, kind: r.f_kind, title: r.f_title, intro: r.f_intro, gift: r.f_gift, gift_image: r.f_gift_image, identity: r.f_identity, questions: r.f_questions, open: r.f_open, updated_at: r.f_updated_at }),
+    response: toResponse(r),
+  }))
+}
+
 /** 標記／取消贈品已領。回傳更新後的回覆；找不到回 null。 */
 export async function setGiftClaimed(formId: string, responseId: string, claimed: boolean, by: string): Promise<FormResponse | null> {
   if (!isUuid(responseId)) return null

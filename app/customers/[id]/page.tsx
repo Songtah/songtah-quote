@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AppShell } from '@/components/AppShell'
 import { VisitModal } from '@/components/VisitsContent'
 import type { Equipment, Ticket } from '@/types'
-import type { SystemCustomerDetail, Visit, EventRegistration } from '@/lib/system-notion'
+import type { SystemCustomerDetail, Visit } from '@/lib/system-notion'
+import type { CustomerEventItem } from '@/app/api/customers/[id]/events/route'
 
 type QuoteSummary = { id: string; quoteNumber: string; status: string; total: number; createdAt: string }
 type OrderSummary = { id: string; orderNumber: string; status: string; totalAmount: number; createdTime: string }
@@ -74,7 +75,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
   const [ticketsExpanded, setTicketsExpanded] = useState(false)
   const [visitsExpanded, setVisitsExpanded] = useState(false)
   const [eqExpanded, setEqExpanded] = useState(false)
-  const [customerEvents, setCustomerEvents] = useState<EventRegistration[]>([])
+  const [customerEvents, setCustomerEvents] = useState<CustomerEventItem[]>([])
+  const [openSurvey, setOpenSurvey] = useState<string>('')
   const [eventsExpanded, setEventsExpanded] = useState(false)
 
   const [selectedEq, setSelectedEq] = useState<EquipmentDetail | null>(null)
@@ -493,7 +495,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                 {data.visits.length > 5 && (
                   <button
                     onClick={() => setVisitsExpanded((v) => !v)}
-                    className="w-full pt-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                    className="w-full pt-1 text-xs text-stone-400 hover:text-stone-600 transition-colors"
                   >
                     {visitsExpanded ? '▲ 收合' : `▼ 顯示其餘 ${data.visits.length - 5} 筆`}
                   </button>
@@ -565,33 +567,63 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           <div className="card-soft p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide">參加活動</h2>
-              <span className="text-xs text-stone-400">{customerEvents.length} 筆</span>
+              <span className="text-xs text-stone-400">{customerEvents.length} 場</span>
             </div>
             {customerEvents.length === 0 ? (
-              <p className="text-sm text-stone-400">尚無活動報名紀錄</p>
+              <p className="text-sm text-stone-400">尚無活動報名或問卷紀錄</p>
             ) : (
               <div className="space-y-2">
-                {(eventsExpanded ? customerEvents : customerEvents.slice(0, 3)).map(ev => (
-                  <Link
-                    key={ev.id}
-                    href={`/events/${ev.eventId}`}
-                    className="flex items-center justify-between rounded-2xl border border-stone-900/[0.06] p-3 hover:bg-brand-50/40 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-800 truncate">{(ev as any).eventName || ev.institution}</p>
-                      <p className="text-xs text-stone-400">
-                        {(ev as any).eventDate || (ev.registeredAt ? new Date(ev.registeredAt).toLocaleDateString('zh-TW') : '')}
-                        {ev.source ? `・${ev.source}` : ''}{ev.contact ? `・${ev.contact}` : ''}
-                      </p>
+                {(eventsExpanded ? customerEvents : customerEvents.slice(0, 3)).map(ev => {
+                  const reg = ev.registration
+                  const date = ev.eventDate || (reg?.registeredAt ? new Date(reg.registeredAt).toLocaleDateString('zh-TW') : '')
+                  return (
+                    <div key={ev.key} className="rounded-2xl border border-stone-900/[0.06] p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          {ev.eventId ? (
+                            <Link href={`/events/${ev.eventId}`} className="block truncate text-sm font-medium text-stone-800 hover:text-brand-700 hover:underline">{ev.eventName || reg?.institution || '活動'}</Link>
+                          ) : <p className="truncate text-sm font-medium text-stone-800">{ev.eventName || reg?.institution || '活動'}</p>}
+                          <p className="text-xs text-stone-400">
+                            {date}{reg?.source ? `・${reg.source}` : ''}{reg?.contact ? `・${reg.contact}` : ''}
+                          </p>
+                        </div>
+                        {reg ? (
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            reg.status === '已確認' ? 'bg-brand-50 text-brand-700' :
+                            reg.status === '已到場' ? 'bg-emerald-50 text-emerald-700' :
+                            reg.status === '取消'   ? 'bg-red-100 text-red-600' :
+                            'bg-stone-100 text-stone-600'
+                          }`}>{reg.status || '已報名'}</span>
+                        ) : <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">未報名</span>}
+                      </div>
+                      {ev.surveys.map(sv => (
+                        <div key={sv.id} className="mt-2 rounded-xl bg-cream-50 px-3 py-2">
+                          <button onClick={() => setOpenSurvey(o => (o === sv.id ? '' : sv.id))}
+                            className="flex w-full items-center justify-between gap-2 text-left transition-all active:scale-[0.99]">
+                            <span className="min-w-0 text-xs text-stone-600">
+                              <span className="font-semibold text-brand-700">填了{sv.kindLabel}</span>
+                              {sv.title ? `「${sv.title}」` : ''}
+                              {sv.name ? `・${sv.name}${sv.jobTitle ? ` ${sv.jobTitle}` : ''}` : ''}
+                              ・{new Date(sv.createdAt).toLocaleDateString('zh-TW')}
+                              {sv.kind === 'survey' && (sv.giftClaimed ? '・贈品已領' : '・贈品未領')}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-stone-400">{openSurvey === sv.id ? '收合' : `看回答（${sv.answers.length}）`}</span>
+                          </button>
+                          {openSurvey === sv.id && (
+                            <dl className="mt-2 space-y-1.5 border-t border-stone-900/[0.06] pt-2">
+                              {sv.answers.length === 0 ? <p className="text-xs text-stone-400">沒有作答內容</p> : sv.answers.map((x, k) => (
+                                <div key={k}>
+                                  <dt className="text-[11px] text-stone-400">{x.q}</dt>
+                                  <dd className="text-sm text-stone-700">{x.a}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      ev.status === '已確認' ? 'bg-brand-50 text-green-700' :
-                      ev.status === '已到場' ? 'bg-emerald-50 text-emerald-700' :
-                      ev.status === '取消'   ? 'bg-red-100 text-red-600' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>{ev.status}</span>
-                  </Link>
-                ))}
+                  )
+                })}
                 {customerEvents.length > 3 && (
                   <button
                     onClick={() => setEventsExpanded(v => !v)}
