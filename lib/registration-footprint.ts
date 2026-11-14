@@ -226,6 +226,20 @@ export type CustomerResolution = {
  * 讓同一家的第二筆紀錄直接配到剛建的那筆（不重複建檔）。
  * dryRun 不寫任何東西，供匯入預覽與排程 dry-run 使用。
  */
+/**
+ * 只配對既有客戶、不建檔（問卷回覆用）：規則與報名名單相同——名稱字根＋縣市／行政區＋機構類別，
+ * 客戶庫查無時再看衛福部名單的機構代碼是否已在客戶庫。不唯一就不配，回傳說明。
+ */
+export async function matchExistingCustomer(input: ResolveInput, cache?: { customers?: CustomerListItem[]; codes?: Map<string, CustomerWithCode> }): Promise<{ customerId: string | null; note: string }> {
+  const customers = cache?.customers ?? await getAllSystemCustomers()
+  const m = await matchCustomer(input, customers)
+  if (m.customerId || !m.notFound) return { customerId: m.customerId, note: m.note }
+  const codes = cache?.codes ?? new Map((await getCustomersWithCodes()).filter((c) => c.institutionCode).map((c) => [c.institutionCode, c]))
+  const bas = resolveViaBas(input, codes)
+  if (bas.kind === 'existing') return { customerId: bas.customerId, note: bas.note }
+  return { customerId: null, note: bas.kind === 'create' ? '客戶庫查無此機構（衛福部名單有，未自動建檔）' : (bas.note || m.note) }
+}
+
 export function createCustomerResolver(opts: { dryRun: boolean; maxCreates?: number; auditLabel?: string }) {
   let customers: CustomerListItem[] | null = null
   let codes: Map<string, CustomerWithCode> | null = null

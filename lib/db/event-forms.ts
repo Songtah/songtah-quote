@@ -16,6 +16,7 @@ const toForm = (r: any): EventForm => ({
 const toResponse = (r: any): FormResponse => ({
   id: r.id, name: r.name ?? '', phone: r.phone ?? '', institution: r.institution ?? '', city: r.city ?? '', district: r.district ?? '', jobTitle: r.job_title ?? '', answers: r.answers ?? {},
   giftClaimedAt: iso(r.gift_claimed_at), giftClaimedBy: r.gift_claimed_by ?? '', createdAt: iso(r.created_at),
+  customerId: r.customer_id ?? '', matchNote: r.match_note ?? '',
 })
 
 export async function getEventForm(eventId: string, kind: FormKind): Promise<EventForm | null> {
@@ -70,6 +71,15 @@ export async function addResponse(form: EventForm, data: { name: string; phone: 
     return { response: toResponse(dup[0]), duplicate: true }
   }
   return { response: toResponse(r[0]), duplicate: false }
+}
+
+/** 寫入客戶配對。onlyIfAuto＝true 時（自動配對）不覆蓋人工調整過的那筆。 */
+export async function setResponseCustomer(formId: string, responseId: string, customerId: string | null, note: string, onlyIfAuto = false): Promise<FormResponse | null> {
+  if (!isUuid(responseId)) return null
+  const r = onlyIfAuto
+    ? await sql()`update event_form_responses set customer_id = ${customerId}, match_note = ${note} where id = ${responseId} and form_id = ${formId} and coalesce(match_note, '') not like '人工%' returning *`
+    : await sql()`update event_form_responses set customer_id = ${customerId}, match_note = ${note} where id = ${responseId} and form_id = ${formId} returning *`
+  return r.length ? toResponse(r[0]) : null
 }
 
 /** 標記／取消贈品已領。回傳更新後的回覆；找不到回 null。 */

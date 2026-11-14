@@ -6,7 +6,9 @@
  * 下方：各題彙總與回覆名單。活動問卷的名單可按「已領」發贈品（同一支手機只收一筆）。
  */
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
+import { RegistrationCustomerCell, type CustomerMatch } from '@/components/RegistrationCustomerCell'
 import {
   FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
@@ -220,11 +222,22 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error ?? '更新失敗')
-      setResponses((prev) => prev.map((x) => (x.id === r.id ? json.response : x)))
+      setResponses((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...json.response, customerName: x.customerName, customerArea: x.customerArea } : x)))
     } catch (e: any) {
       setMsg({ ok: false, text: e?.message ?? '更新失敗' })
     } finally { setClaiming('') }
   }
+
+  // 人工改配／取消配對客戶（寫到問卷回覆；人工結果自動配對不再覆蓋）
+  async function saveMatch(r: FormResponse, customerId: string | null): Promise<CustomerMatch> {
+    const res = await fetch(`/api/events/${eventId}/forms`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, responseId: r.id, customerId }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(json.error ?? '更新失敗')
+    return { customerId: json.customerId ?? '', customerName: json.customerName ?? '', customerArea: json.customerArea ?? '', matchNote: json.matchNote ?? '' }
+  }
+  const setMatch = (id: string, v: CustomerMatch) => setResponses((prev) => prev.map((x) => (x.id === id ? { ...x, ...v } : x)))
 
   const setQ = (i: number, patch: Partial<FormQuestion>) => setDraft((d) => ({ ...d, questions: d.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)) }))
   const move = (i: number, dir: -1 | 1) => setDraft((d) => {
@@ -419,7 +432,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <thead className="bg-cream-50 text-xs text-stone-500">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">填寫時間</th>
-                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">技所／診所</th><th className="px-4 py-3 text-left font-medium">電話</th></>}
+                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">技所／診所</th><th className="px-4 py-3 text-left font-medium">客戶配對</th><th className="px-4 py-3 text-left font-medium">電話</th></>}
                     {form.questions.map((q) => <th key={q.id} className="max-w-[12rem] truncate px-4 py-3 text-left font-medium" title={q.label}>{q.label}</th>)}
                     {kind === 'survey' && <th className="px-4 py-3 text-left font-medium">贈品</th>}
                   </tr>
@@ -428,7 +441,17 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                   {responses.map((r) => (
                     <tr key={r.id} className="align-top transition-colors hover:bg-brand-50/50">
                       <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-stone-400">{fmt(r.createdAt)}<br />{r.id.slice(0, 6).toUpperCase()}</td>
-                      {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}{r.jobTitle && <p className="text-[11px] text-stone-400">{r.jobTitle}</p>}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}{(r.city || r.district) && <p className="text-[11px] text-stone-400">{r.city}{r.district}</p>}</td><td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
+                      {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}{r.jobTitle && <p className="text-[11px] text-stone-400">{r.jobTitle}</p>}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}{(r.city || r.district) && <p className="text-[11px] text-stone-400">{r.city}{r.district}</p>}</td>
+                        <td className="px-4 py-3">
+                          {canEdit ? (
+                            <RegistrationCustomerCell registrationId={r.id} institution={r.institution || '（未填單位）'} sourceLabel="問卷填寫"
+                              value={{ customerId: r.customerId, customerName: r.customerName ?? '', customerArea: r.customerArea ?? '', matchNote: r.matchNote }}
+                              onChange={(v) => setMatch(r.id, v)} saveMatch={(cid) => saveMatch(r, cid)} />
+                          ) : r.customerId ? (
+                            <Link href={`/customers/${r.customerId}`} className="font-medium text-brand-700 hover:underline">{r.customerName || '查看客戶'}</Link>
+                          ) : <span className="text-xs text-stone-400">未配對</span>}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
                       {form.questions.map((q) => {
                         const v = r.answers?.[q.id]
                         return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>

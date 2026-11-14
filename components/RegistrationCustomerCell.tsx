@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * 報名名單「客戶配對」欄：顯示配對到的客戶名稱（連到客戶主檔），並可即時改配或取消配對。
+ * 報名名單／問卷回覆名單的「客戶配對」欄：顯示配對到的客戶名稱（連到客戶主檔），並可即時改配或取消配對。
+ * 問卷回覆傳入 saveMatch（寫到問卷回覆），報名名單沿用預設（寫到報名紀錄）。
  * 人工調整後配對說明以「人工」開頭，自動配對排程不會再改動。
  */
 import { useEffect, useRef, useState } from 'react'
@@ -12,12 +13,14 @@ type Hit = { id: string; name: string; city: string; district: string; type: str
 export type CustomerMatch = { customerId: string; customerName: string; customerArea: string; matchNote: string }
 
 export function RegistrationCustomerCell({
-  registrationId, institution, value, onChange,
+  registrationId, institution, value, onChange, saveMatch, sourceLabel = '報名填寫',
 }: {
   registrationId: string
   institution: string
   value: CustomerMatch
   onChange: (v: CustomerMatch) => void
+  saveMatch?: (customerId: string | null) => Promise<CustomerMatch>
+  sourceLabel?: string
 }) {
   const [editing, setEditing] = useState(false)
   const [q, setQ] = useState('')
@@ -65,6 +68,7 @@ export function RegistrationCustomerCell({
   async function save(customerId: string | null) {
     setSaving(true); setError('')
     try {
+      if (saveMatch) { onChange(await saveMatch(customerId)); setEditing(false); return }
       const res = await fetch(`/api/events/${registrationId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ _type: 'registration-customer', customerId }),
@@ -106,7 +110,7 @@ export function RegistrationCustomerCell({
       {editing && (
         // 表格在 overflow-x-auto 容器內，浮動視窗會被裁掉，改為在儲存格內展開
         <div className="mt-2 w-72 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-stone-900/10">
-          <p className="text-[11px] text-stone-500">報名填寫：{institution}</p>
+          <p className="text-[11px] text-stone-500">{sourceLabel}：{institution}</p>
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜尋客戶名稱"
             className="input-soft mt-2 w-full text-sm" />
           <div className="mt-2 max-h-64 overflow-y-auto">

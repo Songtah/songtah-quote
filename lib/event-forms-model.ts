@@ -46,6 +46,10 @@ export type FormResponse = {
   city: string; district: string; jobTitle: string
   answers: Record<string, string | string[] | number>
   giftClaimedAt: string; giftClaimedBy: string; createdAt: string
+  /** 配對到的客戶主檔（空字串＝未配對）；matchNote 以「人工」開頭者自動配對不再改動 */
+  customerId: string; matchNote: string
+  /** 後台顯示用（API 回傳時補上） */
+  customerName?: string; customerArea?: string
 }
 
 export const MAX_QUESTIONS = 30
