@@ -432,7 +432,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <thead className="bg-cream-50 text-xs text-stone-500">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">填寫時間</th>
-                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">技所／診所</th><th className="px-4 py-3 text-left font-medium">客戶配對</th><th className="px-4 py-3 text-left font-medium">電話</th></>}
+                    {showIdentity && <><th className="px-4 py-3 text-left font-medium">姓名</th><th className="px-4 py-3 text-left font-medium">技所／診所</th><th className="px-4 py-3 text-left font-medium">客戶配對</th><th className="px-4 py-3 text-left font-medium">電話／信箱</th></>}
                     {form.questions.map((q) => <th key={q.id} className="max-w-[12rem] truncate px-4 py-3 text-left font-medium" title={q.label}>{q.label}</th>)}
                     {kind === 'survey' && <th className="px-4 py-3 text-left font-medium">贈品</th>}
                   </tr>
@@ -451,7 +451,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                             <Link href={`/customers/${r.customerId}`} className="font-medium text-brand-700 hover:underline">{r.customerName || '查看客戶'}</Link>
                           ) : <span className="text-xs text-stone-400">未配對</span>}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}</td></>}
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}{r.email && <p className="text-[11px] text-stone-400">{r.email}</p>}</td></>}
                       {form.questions.map((q) => {
                         const v = r.answers?.[q.id]
                         return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>

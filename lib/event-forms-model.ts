@@ -44,6 +44,8 @@ export type FormResponse = {
   id: string; name: string; phone: string; institution: string
   /** 技所／診所所在縣市、鄉鎮市區 */
   city: string; district: string; jobTitle: string
+  /** 電子信箱（選填） */
+  email: string
   answers: Record<string, string | string[] | number>
   giftClaimedAt: string; giftClaimedBy: string; createdAt: string
   /** 配對到的客戶主檔（空字串＝未配對）；matchNote 以「人工」開頭者自動配對不再改動 */

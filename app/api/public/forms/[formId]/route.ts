@@ -54,6 +54,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const name = clip(body?.name, 50), phone = clip(body?.phone, 30), institution = clip(body?.institution, 100)
   const city = clip(body?.city, 10), district = clip(body?.district, 10)
+  const email = clip(body?.email, 120)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: '信箱格式不正確' }, { status: 400 })
   const jobTitle = (JOB_TITLES as readonly string[]).includes(body?.jobTitle) ? (body.jobTitle as string) : ''
   const areaOk = !!city && isValidDistrict(city, district)
   if (form.identity === 'required' && (!name || institution.length < 2 || phone.replace(/\D/g, '').length < 8 || !areaOk || !jobTitle)) {
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const anonymous = form.identity === 'none'
     const { response, duplicate } = await addResponse(form, {
       name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution,
-      city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, answers,
+      city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, email: anonymous ? '' : email, answers,
     })
     return NextResponse.json({ ok: true, duplicate, response: receipt(response) })
   } catch (e: any) {
