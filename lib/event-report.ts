@@ -15,6 +15,11 @@
  *  會後追蹤（追蹤期＝活動結束日起 60 天）
  *    已拜訪／未拜訪   配對到的客戶在追蹤期內有沒有客情紀錄
  *    會後報價／訂單   配對到的客戶在活動結束日之後建立的報價單／訂貨單張數；金額只有中央管理看得到
+ *  業績（2026-11-14 新增；金額只有中央管理看得到，其他人只看張數）
+ *    促銷訂單         訂貨單綁定「掛在這場活動底下的促銷」者（訂貨頁選促銷活動即自動歸入），不含草稿、已取消
+ *    參加客戶訂單     配對到的客戶在活動開始日（含）以後建立、沒有綁本活動促銷的訂貨單，不含草稿、已取消
+ *    活動業績         促銷訂單＋參加客戶訂單（同一張單只算一次）；投報倍數＝活動業績 ÷ 已核准支出
+ *    品項排行         促銷訂單的一般品項（不含贈品／樣品）依金額（數量×單價）排序
  */
 import { sql } from '@/lib/db/client'
 import { getEventById, listEventRegistrations } from '@/lib/notion/events'
@@ -68,6 +73,21 @@ export type EventReport = {
     /** 只有中央管理拿得到；其他人為 null */
     quoteAmount: number | null; orderAmount: number | null
   }
+  sales: EventSales
+}
+
+export type SalesOrder = { id: string; number: string; date: string; customerId: string; customerName: string; salesperson: string; status: string; promotion: string; amount: number | null; kind: '促銷' | '參加客戶' }
+export type EventSales = {
+  promotions: { id: string; name: string; startDate: string; endDate: string; items: number; confirmedItems: number }[]
+  promoOrders: number; attendeeOrders: number; orders: number; customers: number
+  /** 金額只有中央管理拿得到；其他人為 null */
+  promoAmount: number | null; attendeeAmount: number | null; amount: number | null
+  /** 活動業績 ÷ 已核准支出（中央管理才有） */
+  roi: number | null
+  drafts: number
+  bySalesperson: { name: string; orders: number; amount: number | null }[]
+  topProducts: { name: string; brand: string; qty: number; amount: number | null }[]
+  list: SalesOrder[]
 }
 
 const tally = (values: string[], limit = 8) => {
@@ -150,7 +170,10 @@ export async function buildEventReport(eventId: string, opts: { showAmounts: boo
     quotes = q[0].n; quoteAmount = q[0].amt; orders = o[0].n; orderAmount = o[0].amt
   }
 
+  const sales = await buildSales(db, event.id, start, matched, budget.spent, opts.showAmounts)
+
   return {
+    sales,
     event: { id: event.id, name: event.name, date: event.date, endDate: event.endDate, location: event.location, type: event.type, status: event.status },
     generatedAt: new Date().toISOString(),
     participation: {
@@ -181,5 +204,85 @@ export async function buildEventReport(eventId: string, opts: { showAmounts: boo
       visited: visitedIds.size, notVisited: notVisitedList.length, notVisitedList: notVisitedList.slice(0, 200),
       quotes, orders, quoteAmount: opts.showAmounts ? quoteAmount : null, orderAmount: opts.showAmounts ? orderAmount : null,
     },
+  }
+}
+
+const EXCLUDED = ['草稿', '已取消']
+
+async function buildSales(db: ReturnType<typeof sql>, eventId: string, start: string, matched: string[], spent: number, showAmounts: boolean): Promise<EventSales> {
+  const ev = bare(eventId)
+  const promoRows = await db`select replace(page_id, '-', '') id, properties p from notion_pages
+    where db_id = (select db_id from notion_databases where title = '促銷活動' limit 1) and not archived
+      and replace(coalesce(properties->'所屬活動'->'relation'->0->>'id', ''), '-', '') = ${ev}`
+  const promoIds = promoRows.map((r: any) => r.id as string)
+  const itemRows = promoIds.length
+    ? await db`select coalesce(properties->'活動ID'->'rich_text'->0->>'plain_text', '') pid, coalesce(properties->'品項狀態'->'select'->>'name', '') st from notion_pages
+        where db_id = (select db_id from notion_databases where title = '促銷品項明細' limit 1) and not archived
+          and replace(coalesce(properties->'活動ID'->'rich_text'->0->>'plain_text', ''), '-', '') = any(${promoIds})`
+    : []
+  const txt = (p: any, k: string) => (p?.[k]?.title ?? p?.[k]?.rich_text ?? []).map((x: any) => x.plain_text ?? '').join('')
+  const promotions = promoRows.map((r: any) => ({
+    id: r.id, name: txt(r.p, '活動名稱'), startDate: r.p?.['開始日期']?.date?.start ?? '', endDate: r.p?.['結束日期']?.date?.start ?? '',
+    items: itemRows.filter((i: any) => bare(i.pid) === r.id).length,
+    confirmedItems: itemRows.filter((i: any) => bare(i.pid) === r.id && i.st === '已確認').length,
+  }))
+
+  // 促銷訂單＋參加客戶訂單（同一張單只算一次）
+  const orderRows = (promoIds.length || (matched.length && start))
+    ? await db`select replace(page_id, '-', '') id, created_time, properties p from notion_pages
+        where db_id = (select db_id from notion_databases where title = '訂貨單' limit 1) and not archived
+          and (replace(coalesce(properties->'促銷活動ID'->'rich_text'->0->>'plain_text', ''), '-', '') = any(${promoIds})
+            or (replace(coalesce(properties->'客戶ID'->'rich_text'->0->>'plain_text', ''), '-', '') = any(${matched}) and created_time >= ${start || '9999-12-31'}::date))`
+    : []
+  const all = orderRows.map((r: any) => {
+    const promo = bare(txt(r.p, '促銷活動ID'))
+    return {
+      id: r.id as string, number: txt(r.p, '訂單編號'), date: r.p?.['日期']?.date?.start ?? String(r.created_time).slice(0, 10),
+      customerId: bare(txt(r.p, '客戶ID')), customerName: txt(r.p, '客戶名稱'), salesperson: txt(r.p, '業務') || '未填',
+      status: r.p?.['狀態']?.select?.name ?? '', promotion: promoIds.includes(promo) ? txt(r.p, '促銷活動名稱') : '',
+      amountRaw: Number(r.p?.['總金額']?.number ?? 0), kind: (promoIds.includes(promo) ? '促銷' : '參加客戶') as '促銷' | '參加客戶',
+    }
+  })
+  const counted = all.filter((o) => !EXCLUDED.includes(o.status))
+  const drafts = all.filter((o) => o.status === '草稿').length
+  const sum = (xs: typeof counted) => xs.reduce((s, o) => s + o.amountRaw, 0)
+  const promoOrders = counted.filter((o) => o.kind === '促銷')
+  const attendeeOrders = counted.filter((o) => o.kind === '參加客戶')
+  const amount = sum(counted)
+
+  const sp = new Map<string, { orders: number; amount: number }>()
+  for (const o of counted) { const c = sp.get(o.salesperson) ?? { orders: 0, amount: 0 }; c.orders++; c.amount += o.amountRaw; sp.set(o.salesperson, c) }
+
+  // 品項排行：只看促銷訂單
+  const promoOrderIds = promoOrders.map((o) => o.id)
+  const lineRows = promoOrderIds.length
+    ? await db`select properties p from notion_pages
+        where db_id = (select db_id from notion_databases where title = '訂購明細' limit 1) and not archived
+          and replace(coalesce(properties->'訂購單'->'relation'->0->>'id', ''), '-', '') = any(${promoOrderIds})`
+    : []
+  const prod = new Map<string, { name: string; brand: string; qty: number; amount: number }>()
+  for (const r of lineRows as any[]) {
+    const type = r.p?.['品項類型']?.select?.name ?? ''
+    if (type === '贈品' || type === '樣品') continue
+    const name = txt(r.p, '品名'), code = txt(r.p, '貨品碼')
+    const qty = Number(r.p?.['數量']?.number ?? 1), price = Number(r.p?.['單價']?.number ?? 0)
+    const key = code || name
+    const c = prod.get(key) ?? { name, brand: txt(r.p, '品牌'), qty: 0, amount: 0 }
+    c.qty += qty; c.amount += qty * price; prod.set(key, c)
+  }
+
+  return {
+    promotions,
+    promoOrders: promoOrders.length, attendeeOrders: attendeeOrders.length, orders: counted.length,
+    customers: new Set(counted.map((o) => o.customerId || o.customerName)).size,
+    promoAmount: showAmounts ? sum(promoOrders) : null, attendeeAmount: showAmounts ? sum(attendeeOrders) : null, amount: showAmounts ? amount : null,
+    roi: showAmounts && spent > 0 ? Math.round((amount / spent) * 10) / 10 : null,
+    drafts,
+    bySalesperson: Array.from(sp.entries()).map(([name, v]) => ({ name, orders: v.orders, amount: showAmounts ? v.amount : null }))
+      .sort((a, b) => b.orders - a.orders || (b.amount ?? 0) - (a.amount ?? 0)),
+    topProducts: Array.from(prod.values()).sort((a, b) => b.amount - a.amount || b.qty - a.qty).slice(0, 10)
+      .map((x) => ({ ...x, amount: showAmounts ? x.amount : null })),
+    list: counted.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200)
+      .map(({ amountRaw, ...o }) => ({ ...o, amount: showAmounts ? amountRaw : null })),
   }
 }
