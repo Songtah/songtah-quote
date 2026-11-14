@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import Link from 'next/link'
+import { eventSections, eventSectionsByType } from '@/lib/event-type-rules'
 import type { EventItem, EventRegistration as BaseRegistration } from '@/lib/notion/events'
 import { PromotionsContent } from '@/components/PromotionsContent'
 import { EventFormPanel } from '@/components/EventFormPanel'
@@ -42,13 +43,10 @@ const TYPE_STYLE: Record<string, string> = {
 
 const TABS = ['總覽', '促銷', '報名表單', '活動問卷', '滿意度調查', '預算核銷', '結案報告'] as const
 type Tab = (typeof TABS)[number]
-/**
- * 依活動類型顯示分頁（2026-11-14 使用者定調）：展覽不用報名、不做滿意度調查，只留活動問卷；課程（培訓）等其他類型照舊。
- * 已經有資料的分頁一律照常顯示（展覽的簽到也寫在報名名單裡），不會因為類型把既有資料藏起來。
- */
-function visibleTabs(type: string, hasRegs: boolean, hasSatisfaction: boolean): readonly Tab[] {
-  if (type !== '展覽') return TABS
-  return TABS.filter((t) => (t !== '報名表單' || hasRegs) && (t !== '滿意度調查' || hasSatisfaction))
+/** 依活動類型顯示分頁（規則在 lib/event-type-rules）；已有資料的分頁照常顯示 */
+function visibleTabs(type: string, has: { registration: boolean; survey: boolean; satisfaction: boolean }): readonly Tab[] {
+  const sec = eventSections(type, has)
+  return TABS.filter((t) => (t !== '報名表單' || sec.registration) && (t !== '活動問卷' || sec.survey) && (t !== '滿意度調查' || sec.satisfaction))
 }
 
 export function EventDetailContent({ id, canEdit = true, canEditPromotions = false }: { id: string; canEdit?: boolean; canEditPromotions?: boolean }) {
@@ -64,14 +62,18 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
   const [matching, setMatching]     = useState(false)
   const [matchResult, setMatchResult] = useState('')
   const [actionError, setActionError] = useState('')
-  const [hasSatisfaction, setHasSatisfaction] = useState(false)
-  const tabs = visibleTabs(event?.type ?? '', regs.length > 0, hasSatisfaction)
-  // 展覽：先看有沒有既有的滿意度調查（有就照常顯示那個分頁）
+  const [hasForm, setHasForm] = useState({ survey: false, satisfaction: false })
+  const tabs = visibleTabs(event?.type ?? '', { registration: regs.length > 0, ...hasForm })
+  // 類型預設不用的問卷：先看有沒有既有的（有就照常顯示那個分頁）
   useEffect(() => {
-    if (event?.type !== '展覽') return
-    fetch(`/api/events/${id}/forms?kind=satisfaction`).then((r) => r.json())
-      .then((j) => setHasSatisfaction(!!j?.form || (j?.responses?.length ?? 0) > 0)).catch(() => {})
-  }, [event?.type, id])
+    if (!event) return
+    const base = eventSectionsByType(event.type ?? '')
+    for (const kind of ['survey', 'satisfaction'] as const) {
+      if (base[kind]) continue
+      fetch(`/api/events/${id}/forms?kind=${kind}`).then((r) => r.json())
+        .then((j) => { if (j?.form || (j?.responses?.length ?? 0) > 0) setHasForm((h) => ({ ...h, [kind]: true })) }).catch(() => {})
+    }
+  }, [event, id])
   // 目前分頁因類型被隱藏時回到總覽
   useEffect(() => { if (!tabs.includes(tab)) setTab('總覽') }, [tabs, tab])
 

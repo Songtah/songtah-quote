@@ -22,6 +22,7 @@ import { getEventForm, listResponses } from '@/lib/db/event-forms'
 import { summarize, type QuestionSummary } from '@/lib/event-forms-model'
 import { listBudget } from '@/lib/db/event-budget'
 import { summarizeBudget, type BudgetSummary } from '@/lib/event-budget-model'
+import { eventSections, type EventSections } from '@/lib/event-type-rules'
 
 const bare = (id: string) => (id ?? '').replace(/-/g, '').toLowerCase()
 export const FOLLOW_UP_DAYS = 60
@@ -38,6 +39,10 @@ export type EventReport = {
     matchedCustomers: number; existingCustomers: number; firstContactCustomers: number; unmatched: number
     /** 只出現在問卷回覆（沒有報名）的客戶數 */
     fromFormsOnly: number
+    /** 首次接觸客戶名單（點數字展開）；source＝從報名或問卷來 */
+    firstContactList: { id: string; name: string; area: string; type: string; owner: string; source: string }[]
+    /** 填寫問卷的人數（有留個人資料者）；沒有報名的活動用它當參與人數 */
+    formRespondents: number
     bySource: { label: string; count: number }[]
     byUnitType: { label: string; count: number }[]
     byCity: { label: string; count: number }[]
@@ -49,8 +54,10 @@ export type EventReport = {
   cost: {
     budget: BudgetSummary
     feeCollected: number; feeOutstanding: number
-    perHead: number | null; perHeadBasis: '到場人數' | '報名人數' | null
+    perHead: number | null; perHeadBasis: '到場人數' | '報名人數' | '問卷填寫人數' | null
   }
+  /** 這種活動類型要顯示的區塊（lib/event-type-rules；有資料的照常顯示） */
+  sections: EventSections
   followUp: {
     days: number; windowEnd: string; windowOpen: boolean; started: boolean
     /** true＝活動結束日早於系統有客情紀錄的起點，已拜訪／未拜訪不可信 */
@@ -115,7 +122,8 @@ export async function buildEventReport(eventId: string, opts: { showAmounts: boo
   const budget = summarizeBudget(budgetData.items, budgetData.expenses)
   const feeCollected = regs.filter((r) => r.paymentStatus === '已付款').reduce((s, r) => s + (r.amount || 0), 0)
   const feeOutstanding = regs.filter((r) => r.paymentStatus === '未付款').reduce((s, r) => s + (r.amount || 0), 0)
-  const basisCount = attended > 0 ? attended : people
+  // 沒有報名（展覽）時以問卷填寫人數為準
+  const basisCount = attended > 0 ? attended : people > 0 ? people : formRes.length
   const perHead = budget.spent > 0 && basisCount > 0 ? Math.round(budget.spent / basisCount) : null
 
   // ── 會後追蹤 ──
@@ -150,16 +158,23 @@ export async function buildEventReport(eventId: string, opts: { showAmounts: boo
       attended, attendanceMarked: attendedRegs.length > 0, attendanceRate: attendedRegs.length > 0 && people > 0 ? Math.round((attended / people) * 100) : null,
       matchedCustomers: matched.length, existingCustomers: existing.length, firstContactCustomers: matched.length - existing.length,
       fromFormsOnly: matched.filter((id) => !regCustIds.has(id)).length,
+      formRespondents: formRes.length,
+      firstContactList: matched.filter((id) => !existing.includes(id)).map((id) => {
+        const c = cust.get(id)
+        return { id: c.id as string, name: c.name as string, area: `${c.county ?? ''}${c.district ?? ''}`, type: (c.customer_type as string) || '', owner: (c.owner as string) || '未分派', source: regCustIds.has(id) ? '報名' : '問卷' }
+      }).sort((a, b) => a.owner.localeCompare(b.owner, 'zh-TW') || a.name.localeCompare(b.name, 'zh-TW')),
       unmatched: regs.filter((r) => !r.customerId || !cust.has(bare(r.customerId))).length + formRes.filter((r) => !r.customerId || !cust.has(bare(r.customerId))).length,
       bySource: tally(regs.map((r) => r.source)),
-      byUnitType: tally(regs.map((r) => r.unitType || cust.get(bare(r.customerId))?.customer_type || '')),
-      byCity: tally(regs.map((r) => cityName(r.city || cust.get(bare(r.customerId))?.county || ''))),
+      // 沒有報名（展覽）時改用問卷填寫者統計
+      byUnitType: regs.length ? tally(regs.map((r) => r.unitType || cust.get(bare(r.customerId))?.customer_type || '')) : tally(formRes.map((r) => cust.get(bare(r.customerId))?.customer_type || '')),
+      byCity: regs.length ? tally(regs.map((r) => cityName(r.city || cust.get(bare(r.customerId))?.county || ''))) : tally(formRes.map((r) => cityName(r.city || cust.get(bare(r.customerId))?.county || ''))),
     },
     forms: {
       survey: surveyForm ? { open: surveyForm.open, responses: surveyRes.length, giftClaimed: surveyRes.filter((r) => r.giftClaimedAt).length, gift: surveyForm.gift, summary: summarize(surveyForm, surveyRes).map((q) => ({ ...q, texts: undefined })) } : null,
       satisfaction: satForm ? { open: satForm.open, responses: satRes.length, average: satAverage, ratingQuestions: ratingQs.length, summary: satSummary.map((q) => ({ ...q, texts: q.texts?.slice(0, 8) })) } : null,
     },
-    cost: { budget, feeCollected, feeOutstanding, perHead, perHeadBasis: perHead == null ? null : attended > 0 ? '到場人數' : '報名人數' },
+    cost: { budget, feeCollected, feeOutstanding, perHead, perHeadBasis: perHead == null ? null : attended > 0 ? '到場人數' : people > 0 ? '報名人數' : '問卷填寫人數' },
+    sections: eventSections(event.type ?? '', { registration: regsAll.length > 0, survey: !!surveyForm, satisfaction: !!satForm }),
     followUp: {
       days: FOLLOW_UP_DAYS, windowEnd, windowOpen: !!windowEnd && today <= windowEnd, started,
       visitDataGap: !!end && end < VISIT_DATA_FROM,
