@@ -169,8 +169,8 @@ export function PublicForm({ formId }: { formId: string }) {
           <label className="block text-sm font-medium text-stone-700">電話{idRequired && <span className="text-red-500"> *</span>}
             <input className="input-soft mt-1 w-full" value={who.phone} maxLength={30} required={idRequired} inputMode="tel" autoComplete="tel" onChange={(e) => setWho({ ...who, phone: e.target.value })} />
           </label>
-          <label className="block text-sm font-medium text-stone-700">信箱<span className="ml-1 text-xs font-normal text-stone-400">（選填）</span>
-            <input className="input-soft mt-1 w-full" type="email" value={who.email} maxLength={120} inputMode="email" autoComplete="email" onChange={(e) => setWho({ ...who, email: e.target.value })} />
+          <label className="block text-sm font-medium text-stone-700">信箱{idRequired && <span className="text-red-500"> *</span>}
+            <input className="input-soft mt-1 w-full" type="email" value={who.email} maxLength={120} required={idRequired} inputMode="email" autoComplete="email" onChange={(e) => setWho({ ...who, email: e.target.value })} />
           </label>
           <div>
             <p className="text-sm font-medium text-stone-700">職稱{idRequired && <span className="text-red-500"> *</span>}</p>

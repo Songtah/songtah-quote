@@ -58,8 +58,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: '信箱格式不正確' }, { status: 400 })
   const jobTitle = (JOB_TITLES as readonly string[]).includes(body?.jobTitle) ? (body.jobTitle as string) : ''
   const areaOk = !!city && isValidDistrict(city, district)
-  if (form.identity === 'required' && (!name || institution.length < 2 || phone.replace(/\D/g, '').length < 8 || !areaOk || !jobTitle)) {
-    return NextResponse.json({ error: '請填寫姓名、技所／診所名稱、所在地區、電話與職稱' }, { status: 400 })
+  if (form.identity === 'required' && (!name || institution.length < 2 || phone.replace(/\D/g, '').length < 8 || !areaOk || !jobTitle || !email)) {
+    return NextResponse.json({ error: '請填寫姓名、技所／診所名稱、所在地區、電話、信箱與職稱' }, { status: 400 })
   }
   try {
     const answers = validateAnswers(form, body?.answers)
