@@ -80,6 +80,16 @@ export function registrationCreated(e: { id: string; name: string }, r: { instit
   }))
 }
 
+// ── LINE 日報 ────────────────────────────────────────────
+/** 日報重試到上限仍沒建檔成功：以前只寫在伺服器紀錄裡沒人知道，客情就這樣漏掉。通知主管與回報的業務 */
+export function lineReportFailed(r: { salesperson: string; date: string; error: string }) {
+  bg(notify([...MANAGERS, ...person(r.salesperson)], {
+    title: 'LINE 日報沒有成功入庫',
+    body: `${r.salesperson} ${r.date} 的日報重試多次仍失敗（${r.error.slice(0, 80) || '原因不明'}）。請到「LINE 日報匯入」補匯，或請業務重傳`,
+    href: '/admin/line-import',
+  }))
+}
+
 // ── 客情監控（客情自動判讀後的系統動作）：回報的業務＋主管 ─────────────
 export function repairTicketCreated(t: { id: string; number: string; customerName: string; summary: string; salesperson: string }) {
   bg(notify([...MANAGERS, ...person(t.salesperson)], {

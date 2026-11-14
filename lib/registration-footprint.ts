@@ -31,6 +31,7 @@ import {
   getAllSystemCustomers, getSystemCustomerById, getCustomersWithCodes, assignSalesperson,
   type CustomerListItem, type CustomerWithCode,
 } from '@/lib/notion/customers'
+import { listUnmatchedResponses, setResponseCustomer } from '@/lib/db/event-forms'
 import { loadClaimContext, type ClaimContext } from '@/lib/notion/visit-claim'
 import { loadOpenBasInstitutions, createCustomerFromBas, type BasInstitution } from '@/lib/bas-customer-import'
 import { logAuditEvent } from '@/lib/audit'
@@ -372,6 +373,31 @@ export async function processRegistrations(params: {
     invalidateEventFootprints()
   }
   return result
+}
+
+// ── 3b. 問卷回覆配對（排程）─────────────────────────────────────
+
+/**
+ * 問卷／滿意度回覆自動配對既有客戶。原本只在後台打開回覆名單時才配，沒人開就一直不配，
+ * 客戶頁的「參加活動」與結案報告也就看不到。現在跟報名一起由每小時排程處理。
+ * 只配既有客戶、不建檔；結果（含配不到的原因）存起來，不會每輪重算。人工配對的不動。
+ */
+export async function processFormResponses(): Promise<{ scanned: number; matched: number; unmatched: number }> {
+  const todo = await listUnmatchedResponses(200)
+  const out = { scanned: todo.length, matched: 0, unmatched: 0 }
+  if (!todo.length) return out
+  const cache = {
+    customers: await getAllSystemCustomers(),
+    codes: new Map((await getCustomersWithCodes()).filter((c) => c.institutionCode).map((c) => [c.institutionCode, c])),
+  }
+  for (const { formId, response: r } of todo) {
+    try {
+      const m = await matchExistingCustomer({ institution: r.institution, city: r.city, district: r.district, phone: r.phone }, cache)
+      await setResponseCustomer(formId, r.id, m.customerId, m.note || (m.customerId ? '自動配對' : '無法確定客戶'), true)
+      if (m.customerId) out.matched++; else out.unmatched++
+    } catch (e) { console.warn('[forms] 排程配對失敗：', r.id, (e as Error).message) }
+  }
+  return out
 }
 
 // ── 4. 足跡訊號 ─────────────────────────────────────────────────

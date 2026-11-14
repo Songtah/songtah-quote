@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { retryPendingReports } from '@/lib/line-report-ingest'
+import { lineReportFailed } from '@/lib/notification-events'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest) {
   if (!verify(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     const { checked, retried } = await retryPendingReports()
+    // 重試到上限仍失敗的：站內通知主管與該業務（不再靜默）
+    for (const r of retried) {
+      if (r.status === 'failed') lineReportFailed({ salesperson: r.salesperson, date: r.fallbackDate ?? '', error: r.lastError ?? '' })
+    }
     return NextResponse.json({
       ok: true, checked,
       retried: retried.map((r) => ({ salesperson: r.salesperson, status: r.status, attempts: r.attempts, result: r.lastResult, error: r.lastError })),

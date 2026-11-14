@@ -82,6 +82,15 @@ export async function setResponseCustomer(formId: string, responseId: string, cu
   return r.length ? toResponse(r[0]) : null
 }
 
+/** 還沒配對過（沒有客戶、沒有配對說明）且有填單位的回覆，跨所有問卷；供排程自動配對 */
+export async function listUnmatchedResponses(limit = 200): Promise<{ formId: string; response: FormResponse }[]> {
+  const r = await sql()`
+    select * from event_form_responses
+    where customer_id is null and coalesce(match_note, '') = '' and coalesce(institution, '') <> ''
+    order by created_at desc limit ${limit}`
+  return r.map((x: any) => ({ formId: x.form_id as string, response: toResponse(x) }))
+}
+
 /** 某客戶填過的所有問卷（依配對到的客戶），附表單類型、標題與題目，供客戶頁「參加活動」顯示 */
 export async function listCustomerResponses(customerId: string): Promise<{ eventId: string; form: EventForm; response: FormResponse }[]> {
   const rows = await sql()`

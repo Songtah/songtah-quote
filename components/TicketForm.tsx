@@ -10,7 +10,11 @@ import {
   TICKET_TYPES,
 } from '@/lib/ticket-validation'
 
-type SystemCustomer = { id: string; name: string; city: string; type: string }
+type SystemCustomer = { id: string; name: string; city: string; type: string; salesperson?: string }
+
+/** 客戶的負責業務在工單業務名單內就直接帶入，否則維持原值 */
+const ownerOf = (salesperson: string | undefined, fallback: string) =>
+  (SALES_OWNERS as readonly string[]).includes(salesperson ?? '') ? salesperson! : fallback
 
 const EMPTY_FORM: CreateTicketPayload = {
   customerName: '',
@@ -28,11 +32,13 @@ const EMPTY_FORM: CreateTicketPayload = {
   note: '',
 }
 
-export default function TicketForm() {
+export default function TicketForm({ initialCustomer }: { initialCustomer?: { id: string; name: string; salesperson?: string } }) {
   const router = useRouter()
   const debounceRef = useRef<NodeJS.Timeout>()
 
-  const [form, setForm] = useState<CreateTicketPayload>(EMPTY_FORM)
+  const [form, setForm] = useState<CreateTicketPayload>(() => initialCustomer
+    ? { ...EMPTY_FORM, customerName: initialCustomer.name, customerId: initialCustomer.id, salesOwner: ownerOf(initialCustomer.salesperson, EMPTY_FORM.salesOwner) }
+    : EMPTY_FORM)
   const [equipmentQuery, setEquipmentQuery] = useState('')
   const [equipmentResults, setEquipmentResults] = useState<Equipment[]>([])
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
@@ -43,7 +49,7 @@ export default function TicketForm() {
   const [equipmentError, setEquipmentError] = useState('')
 
   const customerDebounceRef = useRef<NodeJS.Timeout>()
-  const [customerQuery, setCustomerQuery] = useState('')
+  const [customerQuery, setCustomerQuery] = useState(initialCustomer?.name ?? '')
   const [customerResults, setCustomerResults] = useState<SystemCustomer[]>([])
   const [showCustomerList, setShowCustomerList] = useState(false)
   const [customerLoading, setCustomerLoading] = useState(false)
@@ -131,7 +137,7 @@ export default function TicketForm() {
   function selectCustomer(item: SystemCustomer) {
     setCustomerQuery(item.name)
     setShowCustomerList(false)
-    setForm((prev) => ({ ...prev, customerName: item.name, customerId: item.id }))
+    setForm((prev) => ({ ...prev, customerName: item.name, customerId: item.id, salesOwner: ownerOf(item.salesperson, prev.salesOwner) }))
   }
 
   function clearEquipment() {

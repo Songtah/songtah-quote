@@ -22,6 +22,8 @@ interface Props {
   /** create：新增（initial 有值＝複製既有報價單）；edit：修改 initial */
   mode?: 'create' | 'edit'
   initial?: Quote | null
+  /** 新增時預先帶入的客戶（從客戶頁「建立報價單」進來） */
+  prefillCustomer?: { id: string; name: string; phone?: string; address?: string; taxId?: string }
   defaultSalesperson?: string
   onCreated?: (result: { shareUrl: string; id: string; quoteNumber: string }) => void
   onClose?: () => void
@@ -95,19 +97,19 @@ function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange
 }
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────
-export default function QuoteForm({ mode = 'create', initial = null, defaultSalesperson = '', onCreated, onClose }: Props) {
+export default function QuoteForm({ mode = 'create', initial = null, defaultSalesperson = '', prefillCustomer, onCreated, onClose }: Props) {
   const router = useRouter()
   const isEdit = mode === 'edit' && !!initial
   const today = todayTW()
 
   // 客戶
-  const [customerId, setCustomerId] = useState(initial?.customerId ?? '')
-  const [customerName, setCustomerName] = useState(initial?.customerName ?? '')
-  const [companyTitle, setCompanyTitle] = useState(initial?.companyTitle ?? '')
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? prefillCustomer?.id ?? '')
+  const [customerName, setCustomerName] = useState(initial?.customerName ?? prefillCustomer?.name ?? '')
+  const [companyTitle, setCompanyTitle] = useState(initial?.companyTitle ?? prefillCustomer?.name ?? '')
   const [contactPerson, setContactPerson] = useState(initial?.contactPerson ?? '')
-  const [customerPhone, setCustomerPhone] = useState(initial?.customerPhone ?? '')
-  const [customerTaxId, setCustomerTaxId] = useState(initial?.customerTaxId ?? '')
-  const [customerAddress, setCustomerAddress] = useState(initial?.customerAddress ?? '')
+  const [customerPhone, setCustomerPhone] = useState(initial?.customerPhone ?? prefillCustomer?.phone ?? '')
+  const [customerTaxId, setCustomerTaxId] = useState(initial?.customerTaxId ?? prefillCustomer?.taxId ?? '')
+  const [customerAddress, setCustomerAddress] = useState(initial?.customerAddress ?? prefillCustomer?.address ?? '')
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
   const [showCustomerList, setShowCustomerList] = useState(false)
   const customerTimer = useRef<ReturnType<typeof setTimeout>>()

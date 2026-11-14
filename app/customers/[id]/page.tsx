@@ -172,7 +172,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
     : []
 
   const lastVisit = data?.visits?.[0]
-  const openTickets = data?.tickets.filter((t) => t.status && !['已結案', '關閉', 'Closed'].includes(t.status)) ?? []
+  const openTickets = data?.tickets.filter((t) => t.status && !['✅ 結案', '已結案', '關閉', 'Closed'].includes(t.status)) ?? []
 
   return (
     <AppShell title="客戶管理" description="客戶主檔、設備清單與相關工單紀錄。">
@@ -275,16 +275,22 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                 新增客情
               </button>
               <Link
-                href="/tickets/new"
+                href={`/tickets/new?customerId=${params.id}`}
                 className="button-secondary gap-1.5"
               >
                 建立工單
               </Link>
               <Link
-                href="/quote/new"
+                href={`/quote/new?customerId=${params.id}`}
                 className="button-secondary gap-1.5"
               >
                 建立報價單
+              </Link>
+              <Link
+                href={`/orders/new?customerId=${params.id}`}
+                className="button-secondary gap-1.5"
+              >
+                建立訂貨單
               </Link>
             </div>
           </div>

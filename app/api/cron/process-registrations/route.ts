@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import { processRegistrations } from '@/lib/registration-footprint'
+import { processRegistrations, processFormResponses } from '@/lib/registration-footprint'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
   try {
     const dryRun = req.nextUrl.searchParams.get('dryRun') === '1'
     const retryUnmatched = req.nextUrl.searchParams.get('retry') === '1'
-    return NextResponse.json({ ok: true, dryRun, retryUnmatched, ...(await processRegistrations({ dryRun, retryUnmatched })) })
+    const result = await processRegistrations({ dryRun, retryUnmatched })
+    // 問卷回覆也一起配對客戶（失敗不影響報名處理的結果）
+    const forms = dryRun ? null : await processFormResponses().catch((e) => { console.error('process-form-responses error:', e); return null })
+    return NextResponse.json({ ok: true, dryRun, retryUnmatched, ...result, forms })
   } catch (error: any) {
     console.error('process-registrations error:', error)
     return NextResponse.json({ error: error?.message ?? '處理失敗' }, { status: 500 })

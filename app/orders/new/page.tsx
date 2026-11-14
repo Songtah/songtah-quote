@@ -12,12 +12,13 @@ import { redirect } from 'next/navigation'
 import { computeQuoteTotals } from '@/lib/quote-model'
 import type { OrderItem } from '@/lib/orders-notion'
 
+import { getSystemCustomerById } from '@/lib/notion/customers'
 export const dynamic = 'force-dynamic'
 
 export default async function NewOrderPage({
   searchParams,
 }: {
-  searchParams: { fromQuote?: string; from?: string }
+  searchParams: { fromQuote?: string; from?: string; customerId?: string }
 }) {
   await requireSession()
   const session = await getServerSession(authOptions)
@@ -32,6 +33,12 @@ export default async function NewOrderPage({
   // 從已核准報價單「轉訂單」（2026-10-28 改版）：品項直接帶入，單價沿用報價核准價（議價已由報價審核把關）。
   // 有貨號（或品名完全對到目錄）的品項以目錄品項帶入；手打的規格／設備內容與已停售品轉成自訂品項，原文保留。
   // 整單折讓與稅別訂貨單沒有對應欄位，寫進備註請行政確認。一張報價單只轉一次（送出時伺服器再驗）。
+  // 從客戶頁「建立訂貨單」進來：客戶資料直接帶入
+  if (searchParams.customerId && !searchParams.fromQuote && !searchParams.from) {
+    const c = await getSystemCustomerById(searchParams.customerId).catch(() => null)
+    if (c) prefill = { customerId: c.id, customerName: c.name, companyTitle: c.name, customerAddress: c.address, customerPhone: c.phone, customerTaxId: c.taxId }
+  }
+
   if (searchParams.fromQuote) {
     const quote = await getQuote(searchParams.fromQuote).catch(() => null)
     if (quote?.convertedOrder) redirect(`/orders/${quote.convertedOrder.id}`)
