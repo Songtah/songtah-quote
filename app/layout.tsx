@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { FloatingFontSizeToggle } from '@/components/FontSizeToggle'
@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   },
   // 加到 iPhone 主畫面時以 App 樣式開啟（網頁推播在 iPhone 上需要這樣開）
   appleWebApp: { capable: true, title: '崧達系統', statusBarStyle: 'default' },
+}
+
+// 手機：固定以裝置寬度顯示。maximumScale 1 讓 iPhone 點輸入框時不會自動放大（放大後在主畫面 App 裡常卡在放大、畫面偏一邊）；
+// iOS 仍可雙指縮放。viewportFit cover＋各處 safe-area 讓瀏海／底部橫條不擋內容。
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

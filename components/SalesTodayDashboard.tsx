@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { NumberTicker } from '@/components/ui/number-ticker'
 import { AppSidebar, AppMobileNav, AppBottomNav } from '@/components/AppNav'
+import { useTrackInAppNav } from '@/components/MobileBackButton'
 import { SalesPerformanceCard } from '@/components/SalesPerformanceCard'
 import { SalesPerformancePeriods } from '@/components/SalesPerformancePeriods'
 import { CrossSupportMyPanel } from '@/components/CrossSupportMyPanel'
@@ -65,6 +66,7 @@ export function SalesTodayDashboard({
   showTeamPerformance?: boolean
 }) {
   const router = useRouter()
+  useTrackInAppNav()
   const [query, setQuery] = useState('')
   const [showAllWork, setShowAllWork] = useState(false)
   const logged = useRef(false)

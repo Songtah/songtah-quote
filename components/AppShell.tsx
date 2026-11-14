@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import type { ModuleKey, UserPermissions } from '@/lib/system-notion'
 import { AppSidebar, AppMobileNav, AppBottomNav, type SessionUserLike } from '@/components/AppNav'
+import { MobileBackButton, useTrackInAppNav } from '@/components/MobileBackButton'
 import {
   BadgeDollarSign,
   BriefcaseBusiness,
@@ -87,6 +88,7 @@ export function AppShell({
   const permissions = ((session?.user as any)?.permissions as UserPermissions | undefined) ?? sessionUser?.permissions
   const userName = session?.user?.name?.trim() || '我的帳號'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  useTrackInAppNav()
 
   // ── Page-view audit (fire-and-forget) ──────────────────────
   const lastLoggedPath = useRef('')
@@ -112,6 +114,7 @@ export function AppShell({
         {/* 換頁只淡入、不位移：原本 fadeUp 往上滑 12px，手機上與載入骨架接不起來（2026-10-28） */}
         <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
           <div className="mb-6 sm:mb-8">
+            <MobileBackButton />
             <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-brand-500">{getPageTitle(pathname)}</p>
             <h1 className="text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl">{title}</h1>
             {description && <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-500 sm:text-base">{description}</p>}

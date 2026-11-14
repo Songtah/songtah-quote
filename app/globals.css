@@ -35,6 +35,14 @@ input[type="date"] {
 @layer base {
   html {
     color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* 整頁永遠不會被推出橫向捲動（任何元件過寬都在最外層裁掉）；用 clip 不用 hidden，sticky 頂欄才不會失效 */
+  html, body {
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   body {
@@ -211,6 +219,15 @@ input[type="date"] {
   .price-pill {
     @apply inline-flex items-center gap-0.5 rounded-full bg-brand-50 px-2.5 py-0.5
            text-xs font-semibold tabular-nums text-emerald-700 ring-1 ring-emerald-600/10;
+  }
+
+  /* 手機上輸入框字級至少 16px：小於 16px 時 iPhone 一點輸入框就自動放大畫面 */
+  @media (max-width: 1023px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: max(16px, 1em) !important;
+    }
   }
 
   /* 柔和輸入框 */
