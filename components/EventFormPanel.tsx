@@ -7,11 +7,13 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { TW_CITIES, TW_DISTRICTS } from '@/lib/tw-districts'
 import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import { RegistrationCustomerCell, type CustomerMatch } from '@/components/RegistrationCustomerCell'
 import { buildRenoticeEmail } from '@/lib/privacy-notice'
 import {
-  FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
+  FORM_KIND_LABEL, JOB_TITLES, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
 } from '@/lib/event-forms-model'
 
@@ -159,6 +161,9 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
   const [form, setForm] = useState<EventForm | null>(null)
   const [responses, setResponses] = useState<FormResponse[]>([])
   const [eventName, setEventName] = useState('')
+  const { data: session } = useSession()
+  const isCentral = (session?.user as any)?.role === 'admin' || (session?.user as any)?.accountType === '中央管理'
+  const [editingResp, setEditingResp] = useState<FormResponse | null>(null)
   const [copiedNotice, setCopiedNotice] = useState('')
   const [summary, setSummary] = useState<QuestionSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -472,7 +477,8 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                 <tbody className="divide-y divide-stone-900/[0.06]">
                   {responses.map((r) => (
                     <tr key={r.id} className="align-top transition-colors hover:bg-brand-50/50">
-                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-stone-400">{fmt(r.createdAt)}<br />{r.id.slice(0, 6).toUpperCase()}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-stone-400">{fmt(r.createdAt)}<br />{r.id.slice(0, 6).toUpperCase()}
+                        {isCentral && <button onClick={() => setEditingResp(r)} className="mt-1 block rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">修改</button>}</td>
                       {showIdentity && <><td className="px-4 py-3 text-stone-800">{r.name || '—'}{r.jobTitle && <p className="text-[11px] text-stone-400">{r.jobTitle}</p>}</td><td className="px-4 py-3 text-stone-600">{r.institution || '—'}{(r.city || r.district) && <p className="text-[11px] text-stone-400">{r.city}{r.district}</p>}</td>
                         <td className="px-4 py-3">
                           {canEdit ? (
@@ -525,6 +531,106 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
           )}
         </div>
       )}
+      {editingResp && form && (
+        <ResponseEditor response={editingResp} form={form} eventId={eventId} kind={kind} onClose={() => setEditingResp(null)}
+          onSaved={(r) => { setResponses((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...r, customerName: r.customerId === x.customerId ? x.customerName : '', customerArea: r.customerId === x.customerId ? x.customerArea : '' } : x))); setEditingResp(null) }} />
+      )}
+    </div>
+  )
+}
+
+/** 中央管理修改一筆問卷回覆（基本資料＋作答）。單位或地區改了會重新自動配對客戶（人工配對的不動）。 */
+function ResponseEditor({ response, form, eventId, kind, onClose, onSaved }: {
+  response: FormResponse; form: EventForm; eventId: string; kind: FormKind; onClose: () => void; onSaved: (r: FormResponse) => void
+}) {
+  const [v, setV] = useState({ name: response.name, phone: response.phone, institution: response.institution, city: response.city, district: response.district, jobTitle: response.jobTitle, email: response.email })
+  const [answers, setAnswers] = useState<Record<string, any>>({ ...response.answers })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const setA = (id: string, val: any) => setAnswers((a) => ({ ...a, [id]: val }))
+  async function save() {
+    setBusy(true); setError('')
+    try {
+      const res = await fetch(`/api/events/${eventId}/forms`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, responseId: response.id, edit: { ...v, answers } }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? '儲存失敗')
+      onSaved(json.response)
+    } catch (e: any) { setError(e?.message ?? '儲存失敗') } finally { setBusy(false) }
+  }
+  const field = 'input-soft mt-1 w-full'
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/30 p-0 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="card-soft max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-b-none p-5 sm:rounded-b-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-stone-900">修改回覆 <span className="text-xs font-normal text-stone-400">{response.id.slice(0, 6).toUpperCase()}</span></h3>
+          <button onClick={onClose} className="rounded-full px-3 py-1 text-sm text-stone-500 transition-all hover:bg-stone-100 active:scale-95">關閉</button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <label className="text-stone-600">姓名<input className={field} value={v.name} maxLength={50} onChange={(e) => setV({ ...v, name: e.target.value })} /></label>
+          <label className="text-stone-600">職稱
+            <select className="select-soft mt-1 w-full" value={v.jobTitle} onChange={(e) => setV({ ...v, jobTitle: e.target.value })}>
+              <option value="">未填</option>{JOB_TITLES.map((j) => <option key={j}>{j}</option>)}
+            </select>
+          </label>
+          <label className="col-span-2 text-stone-600">技所／診所<input className={field} value={v.institution} maxLength={100} onChange={(e) => setV({ ...v, institution: e.target.value })} /></label>
+          <label className="text-stone-600">縣市
+            <select className="select-soft mt-1 w-full" value={v.city} onChange={(e) => setV({ ...v, city: e.target.value, district: '' })}>
+              <option value="">未填</option>{TW_CITIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="text-stone-600">鄉鎮市區
+            <select className="select-soft mt-1 w-full" value={v.district} disabled={!v.city} onChange={(e) => setV({ ...v, district: e.target.value })}>
+              <option value="">未填</option>{(TW_DISTRICTS[v.city] ?? []).map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </label>
+          <label className="text-stone-600">電話<input className={field} value={v.phone} maxLength={30} inputMode="tel" onChange={(e) => setV({ ...v, phone: e.target.value })} /></label>
+          <label className="text-stone-600">信箱<input className={field} type="email" value={v.email} maxLength={120} onChange={(e) => setV({ ...v, email: e.target.value })} /></label>
+        </div>
+        {form.questions.length > 0 && (
+          <div className="mt-5 space-y-4 border-t border-stone-900/[0.06] pt-4">
+            {form.questions.map((q, i) => {
+              const val = answers[q.id]
+              return (
+                <div key={q.id} className="text-sm">
+                  <p className="font-medium text-stone-700">{i + 1}. {q.label}</p>
+                  {(q.type === 'text' || q.type === 'textarea') && (
+                    <textarea className={field} rows={q.type === 'text' ? 1 : 3} value={(val as string) ?? ''} onChange={(e) => setA(q.id, e.target.value)} />
+                  )}
+                  {q.type === 'single' && (
+                    <select className="select-soft mt-1 w-full" value={(val as string) ?? ''} onChange={(e) => setA(q.id, e.target.value || undefined)}>
+                      <option value="">未作答</option>{q.options.map((o) => <option key={o}>{o}</option>)}
+                    </select>
+                  )}
+                  {(q.type === 'multi' || q.type === 'products') && (
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {q.options.map((o) => {
+                        const arr: string[] = Array.isArray(val) ? val : []
+                        const on = arr.includes(o)
+                        return <button type="button" key={o} onClick={() => setA(q.id, on ? arr.filter((x) => x !== o) : [...arr, o])}
+                          className={`chip min-h-9 text-xs transition-all active:scale-95 ${on ? 'chip-active' : ''}`}>{o}</button>
+                      })}
+                    </div>
+                  )}
+                  {q.type === 'rating' && (
+                    <div className="mt-1 flex gap-2">
+                      {[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} onClick={() => setA(q.id, val === n ? undefined : n)}
+                        className={`chip size-9 justify-center tabular-nums transition-all active:scale-95 ${val === n ? 'chip-active' : ''}`}>{n}</button>)}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <p className="mt-4 text-xs text-stone-400">修改會留下操作紀錄。改了單位或地區，客戶配對會重新自動配一次（人工配對過的不會變）。</p>
+        {error && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-stone-500 transition-all hover:bg-stone-100 active:scale-95">取消</button>
+          <button onClick={save} disabled={busy} className="rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-40">{busy ? '儲存中…' : '儲存'}</button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -4,17 +4,19 @@
  *   PUT  { kind, title, intro, gift, identity, questions, open }  儲存設定
  *   PATCH { kind, responseId, claimed }  標記／取消「贈品已領」
  *   PATCH { kind, responseId, customerId }  人工改配／取消配對客戶（customerId=null）
+ *   PATCH { kind, responseId, edit: {...} }  修改回覆的基本資料與作答（僅中央管理，寫稽核）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getEventById } from '@/lib/notion/events'
-import { getEventForm, saveEventForm, listResponses, setGiftClaimed, setResponseCustomer, setNoticeSent } from '@/lib/db/event-forms'
+import { getEventForm, saveEventForm, listResponses, setGiftClaimed, setResponseCustomer, setNoticeSent, updateResponse } from '@/lib/db/event-forms'
 import { signConsentToken } from '@/lib/consent-token'
 import { matchExistingCustomer } from '@/lib/registration-footprint'
 import { getSystemCustomerById, getAllSystemCustomers, getCustomersWithCodes } from '@/lib/notion/customers'
 import { resolveCustomerInfo } from '@/lib/notion/relations'
 import type { FormResponse } from '@/lib/event-forms-model'
-import { sanitizeFormInput, summarize, FORM_KIND_LABEL, type FormKind } from '@/lib/event-forms-model'
+import { sanitizeFormInput, summarize, validateAnswers, JOB_TITLES, FORM_KIND_LABEL, type FormKind } from '@/lib/event-forms-model'
+import { isValidDistrict } from '@/lib/tw-districts'
 import { getAuditActor, getAuditRequestContext, logAuditEvent } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
@@ -85,6 +87,32 @@ export const PATCH = withApiAuth({ module: 'events', action: 'edit' }, async (re
   const form = await getEventForm(params.id, kind)
   if (!form) return NextResponse.json({ error: '找不到表單' }, { status: 404 })
   const by = (session.user as any)?.name ?? '未知'
+  if (body.edit && typeof body.edit === 'object') {
+    const u = session.user as any
+    if (u?.role !== 'admin' && u?.accountType !== '中央管理') return NextResponse.json({ error: '只有中央管理可以修改問卷回覆' }, { status: 403 })
+    const e = body.edit
+    const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '')
+    const email = clip(e.email, 120)
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: '信箱格式不正確' }, { status: 400 })
+    const city = clip(e.city, 10), district = clip(e.district, 10)
+    if ((city || district) && !isValidDistrict(city, district)) return NextResponse.json({ error: '縣市與鄉鎮市區不相符' }, { status: 400 })
+    const jobTitle = (JOB_TITLES as readonly string[]).includes(e.jobTitle) ? e.jobTitle : ''
+    let answers: Record<string, unknown>
+    try { answers = validateAnswers({ questions: form.questions.map((q) => ({ ...q, required: false })) }, e.answers) }   // 後台修正不強制必答
+    catch (err: any) { return NextResponse.json({ error: err?.message ?? '作答格式錯誤' }, { status: 400 }) }
+    try {
+      const r = await updateResponse(form.id, body.responseId, { name: clip(e.name, 50), phone: clip(e.phone, 30), institution: clip(e.institution, 100), city, district, jobTitle, email, answers })
+      if (!r) return NextResponse.json({ error: '找不到這筆回覆' }, { status: 404 })
+      logAuditEvent({
+        module: 'events', action: 'update', entityType: 'event-form-response', entityId: r.id,
+        summary: `修改${FORM_KIND_LABEL[kind]}回覆：${r.name || r.institution || r.id}`,
+        actor: getAuditActor(session), request: getAuditRequestContext(req),
+      }).catch(() => {})
+      return NextResponse.json({ response: r })
+    } catch (err: any) {
+      return NextResponse.json({ error: err?.message ?? '儲存失敗' }, { status: 400 })
+    }
+  }
   if ('noticeSent' in body) {
     const r = await setNoticeSent(form.id, body.responseId, body.noticeSent === true)
     if (!r) return NextResponse.json({ error: '找不到這筆回覆' }, { status: 404 })

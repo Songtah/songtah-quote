@@ -97,6 +97,39 @@ export async function listCustomerResponses(customerId: string): Promise<{ event
   }))
 }
 
+/**
+ * 中央管理修改問卷回覆的基本資料與作答。手機改了要同步末 8 碼（同一份問卷同一支手機只收一筆）；
+ * 單位或地區改了且客戶配對不是人工調整的，清掉配對讓下次開名單重新自動配對。
+ */
+export async function updateResponse(formId: string, responseId: string, data: {
+  name: string; phone: string; institution: string; city: string; district: string; jobTitle: string; email: string; answers: Record<string, unknown>
+}): Promise<FormResponse | null> {
+  if (!isUuid(responseId)) return null
+  const db = sql()
+  const cur = await db`select * from event_form_responses where id = ${responseId} and form_id = ${formId}`
+  if (!cur.length) return null
+  const digits = data.phone.replace(/\D/g, '')
+  const tail = digits.length >= 8 ? digits.slice(-8) : null
+  if (tail) {
+    const dup = await db`select id from event_form_responses where form_id = ${formId} and phone_tail = ${tail} and id <> ${responseId}`
+    if (dup.length) throw new Error('這支手機在同一份問卷已經有另一筆回覆')
+  }
+  const old = cur[0]
+  const rematch = (old.institution ?? '') !== data.institution || (old.city ?? '') !== data.city || (old.district ?? '') !== data.district
+  const manual = String(old.match_note ?? '').startsWith('人工')
+  const r = await db`update event_form_responses set
+      name = ${data.name || null}, phone = ${data.phone || null}, phone_tail = ${tail}, institution = ${data.institution || null},
+      city = ${data.city || null}, district = ${data.district || null}, job_title = ${data.jobTitle || null}, email = ${data.email || null},
+      answers = ${db.json(data.answers as any)}
+    where id = ${responseId} and form_id = ${formId} returning *`
+  if (!r.length) return null
+  if (rematch && !manual) {   // 不用巢狀片段：lib/db/client 的排隊包裝只認得完整查詢
+    const r2 = await db`update event_form_responses set customer_id = null, match_note = null where id = ${responseId} returning *`
+    return toResponse(r2[0])
+  }
+  return toResponse(r[0])
+}
+
 /** 補告知：標記／取消「已寄出補告知信」 */
 export async function setNoticeSent(formId: string, responseId: string, sent: boolean): Promise<FormResponse | null> {
   if (!isUuid(responseId)) return null
