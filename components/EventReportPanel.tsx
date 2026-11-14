@@ -117,7 +117,7 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
       {/* 四個重點數字 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="報名人數" value={p.people.toLocaleString()} note={`${p.registrations} 筆報名${p.attendanceMarked ? `，到場 ${p.attended} 人（出席率 ${p.attendanceRate}%）` : '，尚未標記到場'}`} />
-        <Kpi label="首次接觸客戶" value={`${p.firstContactCustomers} 家`} note={`配對到 ${p.matchedCustomers} 家客戶，其中 ${p.existingCustomers} 家是既有往來`} tone="text-brand-700" />
+        <Kpi label="首次接觸客戶" value={`${p.firstContactCustomers} 家`} note={`報名與問卷共配對到 ${p.matchedCustomers} 家客戶${p.fromFormsOnly ? `（${p.fromFormsOnly} 家只填了問卷）` : ''}，其中 ${p.existingCustomers} 家是既有往來`} tone="text-brand-700" />
         <Kpi label="滿意度" value={sat?.average != null ? `${sat.average} / 5` : '—'} note={sat ? (sat.average != null ? `${sat.responses} 份回覆，${sat.ratingQuestions} 題評分題的平均` : `${sat.responses} 份回覆，沒有評分題`) : '還沒建立滿意度調查'} />
         <Kpi label={over ? '超支' : '已核准支出'} value={c.budget.spent || c.budget.budget ? nt(over ? c.budget.spent - c.budget.budget : c.budget.spent) : '—'}
           note={c.budget.budget ? `預算 ${nt(c.budget.budget)}${c.perHead != null ? `，每位 ${nt(c.perHead)}` : ''}` : '還沒編預算'} tone={over ? 'text-red-600' : 'text-stone-800'} />
@@ -129,8 +129,8 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
         <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-4">
           <Stat label="報名" value={`${p.registrations} 筆／${p.people} 人`} note={p.cancelled ? `另有 ${p.cancelled} 筆取消，不計入` : '不含已取消'} />
           <Stat label="到場" value={p.attendanceMarked ? `${p.attended} 人` : '—'} note={p.attendanceMarked ? `出席率 ${p.attendanceRate}%（到場人數 ÷ 報名人數）` : '報名名單裡還沒有人被標成「已到場」'} />
-          <Stat label="既有往來／首次接觸" value={`${p.existingCustomers}／${p.firstContactCustomers} 家`} note="既有往來＝活動前已有客情紀錄，或標記為公司既有客戶" />
-          <Stat label="未配對" value={`${p.unmatched} 筆`} note="報名資料還沒對到客戶主檔，不會進業務的拜訪建議" />
+          <Stat label="既有往來／首次接觸" value={`${p.existingCustomers}／${p.firstContactCustomers} 家`} note="客戶來自報名名單與問卷回覆的客戶配對（同一家只算一次）；既有往來＝活動前已有客情紀錄，或標記為公司既有客戶" />
+          <Stat label="未配對" value={`${p.unmatched} 筆`} note="報名或問卷回覆還沒對到客戶主檔，不會進業務的拜訪建議；可在報名名單、問卷回覆名單的「客戶配對」補配" />
         </div>
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <Bars title="單位類型" rows={p.byUnitType} />
