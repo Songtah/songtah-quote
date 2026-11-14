@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { JOB_TITLES, type FormQuestion, type FormIdentity, type FormKind } from '@/lib/event-forms-model'
 import { TW_CITIES, TW_DISTRICTS } from '@/lib/tw-districts'
+import { PRIVACY_NOTICE_TITLE, PRIVACY_NOTICE_ITEMS, PRIVACY_CONSENT_LABEL, PRIVACY_MARKETING_LABEL } from '@/lib/privacy-notice'
 
 type Def = {
   kind: FormKind; title: string; eventName: string; gift: string; giftImage?: string; open: boolean
@@ -28,6 +29,9 @@ export function PublicForm({ formId }: { formId: string }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [consent, setConsent] = useState(false)
+  const [marketing, setMarketing] = useState(false)
+  const [noticeOpen, setNoticeOpen] = useState(false)
   const [who, setWho] = useState({ name: '', phone: '', institution: '', city: '', district: '', jobTitle: '', email: '', website: '' })
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>({})
 
@@ -58,11 +62,13 @@ export function PublicForm({ formId }: { formId: string }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (def?.identity === 'required' && !who.jobTitle) { setError('請選擇職稱'); return }
+    const givesPersonal = def?.identity !== 'none' && !!(who.name || who.phone || who.institution || who.email)
+    if (givesPersonal && !consent) { setError('請閱讀個人資料蒐集告知事項並勾選同意'); return }
     setBusy(true); setError('')
     try {
       const res = await fetch(`/api/public/forms/${formId}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...who, answers }),
+        body: JSON.stringify({ ...who, answers, consent, marketing }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error ?? '送出失敗，請再試一次')
@@ -249,6 +255,31 @@ export function PublicForm({ formId }: { formId: string }) {
           )}
         </div>
       ))}
+
+      {def.identity !== 'none' && (
+        <div className="rounded-2xl bg-cream-50 p-4 ring-1 ring-brand-100/60">
+          <button type="button" onClick={() => setNoticeOpen((v) => !v)} aria-expanded={noticeOpen}
+            className="flex w-full items-center justify-between gap-2 text-left text-sm font-semibold text-stone-800 transition-all active:scale-[0.99]">
+            {PRIVACY_NOTICE_TITLE}
+            <span className="shrink-0 text-xs font-medium text-brand-700">{noticeOpen ? '收合' : '展開閱讀'}</span>
+          </button>
+          {noticeOpen && (
+            <dl className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1 text-xs leading-5 text-stone-600">
+              {PRIVACY_NOTICE_ITEMS.map((it) => (
+                <div key={it.title}><dt className="font-semibold text-stone-700">{it.title}</dt><dd>{it.body}</dd></div>
+              ))}
+            </dl>
+          )}
+          <label className="mt-3 flex items-start gap-2.5 text-sm text-stone-700">
+            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-brand-500" checked={consent} required={idRequired} onChange={(e) => setConsent(e.target.checked)} />
+            <span>{PRIVACY_CONSENT_LABEL}{idRequired && <span className="text-red-500"> *</span>}</span>
+          </label>
+          <label className="mt-2 flex items-start gap-2.5 text-sm text-stone-600">
+            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-brand-500" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
+            <span>{PRIVACY_MARKETING_LABEL}<span className="ml-1 text-xs text-stone-400">（選填）</span></span>
+          </label>
+        </div>
+      )}
 
       {error && <p className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
       <button type="submit" disabled={busy}

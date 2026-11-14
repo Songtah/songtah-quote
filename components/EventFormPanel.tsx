@@ -451,7 +451,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                             <Link href={`/customers/${r.customerId}`} className="font-medium text-brand-700 hover:underline">{r.customerName || '查看客戶'}</Link>
                           ) : <span className="text-xs text-stone-400">未配對</span>}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}{r.email && <p className="text-[11px] text-stone-400">{r.email}</p>}</td></>}
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}{r.email && <p className="text-[11px] text-stone-400">{r.email}</p>}{r.consentAt && <p className="text-[11px] text-stone-400">已同意個資告知{r.marketingOptIn ? '・願收資訊' : ''}</p>}</td></>}
                       {form.questions.map((q) => {
                         const v = r.answers?.[q.id]
                         return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>

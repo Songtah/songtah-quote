@@ -44,8 +44,10 @@ export type FormResponse = {
   id: string; name: string; phone: string; institution: string
   /** 技所／診所所在縣市、鄉鎮市區 */
   city: string; district: string; jobTitle: string
-  /** 電子信箱（選填） */
+  /** 電子信箱 */
   email: string
+  /** 個資告知同意：同意時間、告知版本、是否同意收行銷資訊 */
+  consentAt: string; consentVersion: string; marketingOptIn: boolean
   answers: Record<string, string | string[] | number>
   giftClaimedAt: string; giftClaimedBy: string; createdAt: string
   /** 配對到的客戶主檔（空字串＝未配對）；matchNote 以「人工」開頭者自動配對不再改動 */

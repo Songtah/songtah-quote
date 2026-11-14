@@ -18,6 +18,7 @@ import { getEventById } from '@/lib/notion/events'
 import { getFormById, getResponse, addResponse } from '@/lib/db/event-forms'
 import { validateAnswers, JOB_TITLES } from '@/lib/event-forms-model'
 import { isValidDistrict } from '@/lib/tw-districts'
+import { PRIVACY_NOTICE_VERSION } from '@/lib/privacy-notice'
 
 export const dynamic = 'force-dynamic'
 type Ctx = { params: { formId: string } }
@@ -64,9 +65,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   try {
     const answers = validateAnswers(form, body?.answers)
     const anonymous = form.identity === 'none'
+    // 個資告知：只要留了任何個人資料就必須勾選同意（個資法第 8 條告知、第 19 條同意）
+    const givesPersonal = !anonymous && !!(name || phone || institution || email)
+    if (givesPersonal && body?.consent !== true) return NextResponse.json({ error: '請閱讀個人資料蒐集告知事項並勾選同意' }, { status: 400 })
     const { response, duplicate } = await addResponse(form, {
       name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution,
-      city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, email: anonymous ? '' : email, answers,
+      city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, email: anonymous ? '' : email, consentVersion: givesPersonal ? PRIVACY_NOTICE_VERSION : '', marketingOptIn: givesPersonal && body?.marketing === true, answers,
     })
     return NextResponse.json({ ok: true, duplicate, response: receipt(response) })
   } catch (e: any) {
