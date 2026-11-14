@@ -16,7 +16,7 @@ const eyebrow = 'text-[11px] font-bold uppercase tracking-widest text-stone-400'
 function Kpi({ label, value, note, tone = 'text-stone-800', onClick, active }: { label: string; value: string; note?: string; tone?: string; onClick?: () => void; active?: boolean }) {
   const inner = (
     <>
-      <p className="text-xs text-stone-500">{label}{onClick && <span className="ml-1 text-brand-600">{active ? '▲ 收合名單' : '▼ 看名單'}</span>}</p>
+      <p className="text-xs text-stone-500">{label}{onClick && <span className="ml-1 text-brand-600">點開名單</span>}</p>
       <p className={`mt-1 text-3xl font-semibold tabular-nums ${tone}`}>{value}</p>
       {note && <p className="mt-1.5 text-xs leading-5 text-stone-400">{note}</p>}
     </>
@@ -84,6 +84,12 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
   const [error, setError] = useState('')
   const [showAll, setShowAll] = useState(false)
   const [showFirst, setShowFirst] = useState(false)
+  useEffect(() => {   // Esc 關閉名單視窗
+    if (!showFirst) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowFirst(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showFirst])
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/report`).then(async (res) => {
@@ -134,13 +140,14 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
       </div>
 
       {showFirst && p.firstContactList.length > 0 && (
-        <section className="card-soft p-6">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/30 sm:items-center sm:p-4 print:hidden" onClick={() => setShowFirst(false)} role="dialog" aria-modal="true" aria-label="首次接觸客戶名單">
+        <div className="card-soft flex max-h-[85vh] w-full max-w-2xl flex-col rounded-b-none p-5 sm:rounded-b-3xl sm:p-6" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold text-stone-900">首次接觸客戶 <span className="text-sm font-normal text-stone-400">{p.firstContactList.length} 家</span></h3>
-            <button onClick={() => setShowFirst(false)} className="rounded-full px-3 py-1 text-sm text-stone-500 transition-all hover:bg-stone-100 active:scale-95 print:hidden">收合</button>
+            <button onClick={() => setShowFirst(false)} className="rounded-full bg-stone-100 px-4 py-1.5 text-sm font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">關閉</button>
           </div>
-          <p className="mt-1 text-xs text-stone-400">活動前沒有客情紀錄、也不是公司既有客戶；依負責業務排序。</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <p className="mt-1 text-xs text-stone-400">活動前沒有客情紀錄、也不是公司既有客戶；依負責業務排序。點客戶進客戶頁。</p>
+          <div className="mt-4 grid gap-2 overflow-y-auto sm:grid-cols-2">
             {p.firstContactList.map((c) => (
               <Link key={c.id} href={`/customers/${c.id}`} className="flex items-start justify-between gap-3 rounded-2xl border border-stone-900/[0.06] p-3 transition-colors hover:bg-brand-50/40">
                 <div className="min-w-0">
@@ -154,7 +161,8 @@ export function EventReportPanel({ eventId }: { eventId: string }) {
               </Link>
             ))}
           </div>
-        </section>
+        </div>
+        </div>
       )}
 
       {/* 參與成果 */}
