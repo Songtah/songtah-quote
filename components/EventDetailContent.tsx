@@ -42,6 +42,14 @@ const TYPE_STYLE: Record<string, string> = {
 
 const TABS = ['總覽', '促銷', '報名表單', '活動問卷', '滿意度調查', '預算核銷', '結案報告'] as const
 type Tab = (typeof TABS)[number]
+/**
+ * 依活動類型顯示分頁（2026-11-14 使用者定調）：展覽不用報名、不做滿意度調查，只留活動問卷；課程（培訓）等其他類型照舊。
+ * 已經有資料的分頁一律照常顯示（展覽的簽到也寫在報名名單裡），不會因為類型把既有資料藏起來。
+ */
+function visibleTabs(type: string, hasRegs: boolean, hasSatisfaction: boolean): readonly Tab[] {
+  if (type !== '展覽') return TABS
+  return TABS.filter((t) => (t !== '報名表單' || hasRegs) && (t !== '滿意度調查' || hasSatisfaction))
+}
 
 export function EventDetailContent({ id, canEdit = true, canEditPromotions = false }: { id: string; canEdit?: boolean; canEditPromotions?: boolean }) {
   const [tab, setTab] = useState<Tab>('總覽')
@@ -56,6 +64,16 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
   const [matching, setMatching]     = useState(false)
   const [matchResult, setMatchResult] = useState('')
   const [actionError, setActionError] = useState('')
+  const [hasSatisfaction, setHasSatisfaction] = useState(false)
+  const tabs = visibleTabs(event?.type ?? '', regs.length > 0, hasSatisfaction)
+  // 展覽：先看有沒有既有的滿意度調查（有就照常顯示那個分頁）
+  useEffect(() => {
+    if (event?.type !== '展覽') return
+    fetch(`/api/events/${id}/forms?kind=satisfaction`).then((r) => r.json())
+      .then((j) => setHasSatisfaction(!!j?.form || (j?.responses?.length ?? 0) > 0)).catch(() => {})
+  }, [event?.type, id])
+  // 目前分頁因類型被隱藏時回到總覽
+  useEffect(() => { if (!tabs.includes(tab)) setTab('總覽') }, [tabs, tab])
 
   const loadRegs = useCallback(() =>
     fetch(`/api/events/${id}?registrations=1`).then(r => r.json())
@@ -197,7 +215,7 @@ export function EventDetailContent({ id, canEdit = true, canEditPromotions = fal
 
       {/* 第二階分頁 */}
       <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-stone-100/80 p-1 sm:inline-flex sm:w-auto sm:rounded-full" role="tablist" aria-label="活動功能">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={`min-h-11 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all active:scale-95 ${tab === t ? 'bg-white text-stone-800 shadow-sm ring-1 ring-stone-900/[0.04]' : 'text-stone-500 hover:bg-white/60 hover:text-stone-700'}`}>
             {t}
