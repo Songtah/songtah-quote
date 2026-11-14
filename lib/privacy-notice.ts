@@ -5,7 +5,7 @@
  */
 import { COMPANY } from '@/lib/quote-model'
 
-export const PRIVACY_NOTICE_VERSION = '2026-11-14'
+export const PRIVACY_NOTICE_VERSION = '2026-11-14b'   // b＝行銷同意改為必勾
 
 export const PRIVACY_NOTICE_TITLE = '個人資料蒐集告知暨同意書'
 
@@ -23,5 +23,5 @@ export const PRIVACY_NOTICE_ITEMS: { title: string; body: string }[] = [
 ]
 
 export const PRIVACY_CONSENT_LABEL = '我已閱讀並了解上述個人資料蒐集告知事項，同意本公司在上述目的範圍內蒐集、處理及利用我的個人資料。'
-/** 行銷另行同意（個資法第 20 條：您可隨時要求停止行銷，本公司不另收費用） */
+/** 行銷同意（2026-11-14 使用者決定改為必勾；個資法第 20 條：當事人仍可隨時要求停止，必須照辦） */
 export const PRIVACY_MARKETING_LABEL = '我願意收到崧達的產品與活動資訊（可隨時通知我們停止寄送）。'
