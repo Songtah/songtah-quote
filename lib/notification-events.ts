@@ -19,6 +19,18 @@ const QUOTE_GM = ['t:總經理', 'r:admin']             // 待總經理審核由
 const person = (name?: string) => (name?.trim() ? [`n:${name.trim()}`] : [])
 const bg = (p: Promise<unknown>) => { try { waitUntil(p) } catch { void p } }
 
+// ── 活動問卷／滿意度調查 ─────────────────────────────────
+/** 有人填了問卷：通知中央管理與系統管理員（2026-11-14 使用者指示）。純通知，不需處理 */
+const FORM_WATCHERS = ['t:中央管理', 'r:admin']
+export function formResponseReceived(f: { eventId: string; eventName: string; kindLabel: string; name: string; institution: string; jobTitle: string }) {
+  const who = [f.name, f.jobTitle].filter(Boolean).join(' ') || '匿名填寫者'
+  bg(notify(FORM_WATCHERS, {
+    title: `${f.kindLabel}有新回覆`,
+    body: `${who}${f.institution ? `（${f.institution}）` : ''}填了${f.eventName ? `「${f.eventName}」的` : ''}${f.kindLabel}`,
+    href: `/events/${f.eventId}`,
+  }))
+}
+
 // ── 報價單 ───────────────────────────────────────────────
 export function quoteStatusChanged(q: { id: string; quoteNumber: string; customerName: string; salesperson: string }, to: string) {
   const who = [q.customerName, q.salesperson].filter(Boolean).join('・')

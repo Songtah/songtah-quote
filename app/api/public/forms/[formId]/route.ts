@@ -19,6 +19,8 @@ import { getFormById, getResponse, addResponse } from '@/lib/db/event-forms'
 import { validateAnswers, JOB_TITLES } from '@/lib/event-forms-model'
 import { isValidDistrict } from '@/lib/tw-districts'
 import { PRIVACY_NOTICE_VERSION } from '@/lib/privacy-notice'
+import { FORM_KIND_LABEL } from '@/lib/event-forms-model'
+import { formResponseReceived } from '@/lib/notification-events'
 
 export const dynamic = 'force-dynamic'
 type Ctx = { params: { formId: string } }
@@ -72,6 +74,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       name: anonymous ? '' : name, phone: anonymous ? '' : phone, institution: anonymous ? '' : institution,
       city: anonymous || !areaOk ? '' : city, district: anonymous || !areaOk ? '' : district, jobTitle: anonymous ? '' : jobTitle, email: anonymous ? '' : email, consentVersion: givesPersonal ? PRIVACY_NOTICE_VERSION : '', marketingOptIn: givesPersonal && body?.marketing === true, answers,
     })
+    if (!duplicate) {
+      const ev = await getEventById(form.eventId).catch(() => null)
+      formResponseReceived({ eventId: form.eventId, eventName: ev?.name ?? '', kindLabel: FORM_KIND_LABEL[form.kind], name: response.name, institution: response.institution, jobTitle: response.jobTitle })
+    }
     return NextResponse.json({ ok: true, duplicate, response: receipt(response) })
   } catch (e: any) {
     const msg = e?.message ?? ''
