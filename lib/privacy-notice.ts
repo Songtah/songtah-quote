@@ -25,3 +25,23 @@ export const PRIVACY_NOTICE_ITEMS: { title: string; body: string }[] = [
 export const PRIVACY_CONSENT_LABEL = '我已閱讀並了解上述個人資料蒐集告知事項，同意本公司在上述目的範圍內蒐集、處理及利用我的個人資料。'
 /** 行銷另行同意（個資法第 20 條：您可隨時要求停止行銷，本公司不另收費用） */
 export const PRIVACY_MARKETING_LABEL = '我願意收到崧達的產品與活動資訊（可隨時通知我們停止寄送）。'
+
+/** 補告知信（告知頁上線前填問卷的人）：由行政以公司信箱寄出，系統只產生內容與個人連結，不代寄 */
+export function buildRenoticeEmail(p: { name: string; eventName: string; link: string }): { subject: string; body: string } {
+  const who = p.name ? `${p.name} 您好：` : '您好：'
+  const ev = p.eventName ? `「${p.eventName}」` : '本公司活動'
+  return {
+    subject: `【崧達】個人資料蒐集告知（${p.eventName || '活動問卷'}）`,
+    body: [
+      who,
+      '',
+      `感謝您參加${ev}並填寫活動問卷。當時的問卷尚未附上個人資料蒐集告知，特此補充說明。`,
+      '請點以下連結閱讀告知事項，並勾選是否同意本公司在告知的目的範圍內利用您的資料：',
+      p.link,
+      '',
+      `若您不同意，或想查詢、更正、刪除您的資料，請直接回覆這封信，或來電 ${COMPANY.tel}，我們會依您的要求處理。`,
+      '',
+      `${COMPANY.name} 敬上`,
+    ].join('\n'),
+  }
+}

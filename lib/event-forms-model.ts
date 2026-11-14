@@ -48,12 +48,16 @@ export type FormResponse = {
   email: string
   /** 個資告知同意：同意時間、告知版本、是否同意收行銷資訊 */
   consentAt: string; consentVersion: string; marketingOptIn: boolean
+  /** 同意來源：form＝填寫時勾選、renotice＝補告知連結勾選；noticeSentAt＝補告知信寄出時間 */
+  consentSource: string; noticeSentAt: string
   answers: Record<string, string | string[] | number>
   giftClaimedAt: string; giftClaimedBy: string; createdAt: string
   /** 配對到的客戶主檔（空字串＝未配對）；matchNote 以「人工」開頭者自動配對不再改動 */
   customerId: string; matchNote: string
   /** 後台顯示用（API 回傳時補上） */
   customerName?: string; customerArea?: string
+  /** 尚未同意者的個人補告知連結（後台 API 補上） */
+  consentLink?: string
 }
 
 export const MAX_QUESTIONS = 30

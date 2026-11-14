@@ -8,7 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withApiAuth } from '@/lib/api-auth'
 import { getEventById } from '@/lib/notion/events'
-import { getEventForm, saveEventForm, listResponses, setGiftClaimed, setResponseCustomer } from '@/lib/db/event-forms'
+import { getEventForm, saveEventForm, listResponses, setGiftClaimed, setResponseCustomer, setNoticeSent } from '@/lib/db/event-forms'
+import { signConsentToken } from '@/lib/consent-token'
 import { matchExistingCustomer } from '@/lib/registration-footprint'
 import { getSystemCustomerById, getAllSystemCustomers, getCustomersWithCodes } from '@/lib/notion/customers'
 import { resolveCustomerInfo } from '@/lib/notion/relations'
@@ -28,8 +29,17 @@ export const GET = withApiAuth({ module: 'events', action: 'view' }, async (req:
   let responses = await listResponses(form.id)
   responses = await autoMatch(form.id, responses)
   const info = await resolveCustomerInfo(responses.map((r) => r.customerId).filter(Boolean)).catch(() => ({} as Record<string, { name: string; city: string; district: string }>))
-  responses = responses.map((r) => ({ ...r, customerName: info[r.customerId]?.name ?? '', customerArea: info[r.customerId] ? `${info[r.customerId].city}${info[r.customerId].district}` : '' }))
-  return NextResponse.json({ form, responses, summary: summarize(form, responses) })
+  // 告知頁上線前填寫、尚未同意者：附上個人補告知連結（簽章），供行政複製補告知信
+  const origin = req.nextUrl.origin
+  responses = responses.map((r) => {
+    const token = !r.consentAt && (r.name || r.phone || r.email) ? signConsentToken(r.id) : null
+    return {
+      ...r, customerName: info[r.customerId]?.name ?? '', customerArea: info[r.customerId] ? `${info[r.customerId].city}${info[r.customerId].district}` : '',
+      ...(token ? { consentLink: `${origin}/consent/${r.id}?t=${token}` } : {}),
+    }
+  })
+  const event = await getEventById(params.id).catch(() => null)
+  return NextResponse.json({ form, responses, summary: summarize(form, responses), eventName: event?.name ?? '' })
 })
 
 /** 還沒配對過（沒有配對說明）且有填單位的回覆，開名單時自動配一次；結果（含配不到的原因）存起來，不會每次重算 */
@@ -75,6 +85,16 @@ export const PATCH = withApiAuth({ module: 'events', action: 'edit' }, async (re
   const form = await getEventForm(params.id, kind)
   if (!form) return NextResponse.json({ error: '找不到表單' }, { status: 404 })
   const by = (session.user as any)?.name ?? '未知'
+  if ('noticeSent' in body) {
+    const r = await setNoticeSent(form.id, body.responseId, body.noticeSent === true)
+    if (!r) return NextResponse.json({ error: '找不到這筆回覆' }, { status: 404 })
+    logAuditEvent({
+      module: 'events', action: 'update', entityType: 'event-form-renotice', entityId: r.id,
+      summary: `${body.noticeSent === true ? '標記已寄個資補告知' : '取消個資補告知標記'}：${r.name || r.email || r.id}`,
+      actor: getAuditActor(session), request: getAuditRequestContext(req),
+    }).catch(() => {})
+    return NextResponse.json({ noticeSentAt: r.noticeSentAt })
+  }
   if ('customerId' in body) {
     const cid = typeof body.customerId === 'string' && body.customerId ? body.customerId : null
     const cust = cid ? await getSystemCustomerById(cid) : null

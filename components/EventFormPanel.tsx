@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { styledQrDataUrl, styledQrSvgDataUrl } from '@/lib/qr-style'
 import { RegistrationCustomerCell, type CustomerMatch } from '@/components/RegistrationCustomerCell'
+import { buildRenoticeEmail } from '@/lib/privacy-notice'
 import {
   FORM_KIND_LABEL, QUESTION_TYPES, QUESTION_TYPE_LABEL, MAX_QUESTIONS, MAX_OPTIONS,
   MAX_PRODUCTS, type EventForm, type FormKind, type FormQuestion, type FormResponse, type QuestionSummary, type FormIdentity, type FormProduct,
@@ -157,6 +158,8 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
   const label = FORM_KIND_LABEL[kind]
   const [form, setForm] = useState<EventForm | null>(null)
   const [responses, setResponses] = useState<FormResponse[]>([])
+  const [eventName, setEventName] = useState('')
+  const [copiedNotice, setCopiedNotice] = useState('')
   const [summary, setSummary] = useState<QuestionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -183,7 +186,7 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
     const res = await fetch(`/api/events/${eventId}/forms?kind=${kind}`)
     const json = await res.json().catch(() => ({}))
     if (res.ok) {
-      setForm(json.form ?? null); setResponses(json.responses ?? []); setSummary(json.summary ?? [])
+      setForm(json.form ?? null); setResponses(json.responses ?? []); setSummary(json.summary ?? []); setEventName(json.eventName ?? '')
       if (json.form) setDraft({ title: json.form.title, intro: json.form.intro, gift: json.form.gift, giftImage: json.form.giftImage ?? '', identity: json.form.identity, questions: json.form.questions, open: json.form.open })
     } else setMsg({ ok: false, text: json.error ?? '載入失敗' })
     setLoading(false)
@@ -236,6 +239,27 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
     const json = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(json.error ?? '更新失敗')
     return { customerId: json.customerId ?? '', customerName: json.customerName ?? '', customerArea: json.customerArea ?? '', matchNote: json.matchNote ?? '' }
+  }
+  // 補告知：複製個人補告知信（行政用公司信箱寄出）；寄完標記，連結點了同意後自動變成「已補同意」
+  async function copyRenotice(r: FormResponse) {
+    if (!r.consentLink) return
+    const mail = buildRenoticeEmail({ name: r.name, eventName, link: r.consentLink })
+    try { await navigator.clipboard.writeText(`收件人：${r.email}\n主旨：${mail.subject}\n\n${mail.body}`); setCopiedNotice(r.id); setTimeout(() => setCopiedNotice(''), 2000) }
+    catch { setMsg({ ok: false, text: '無法複製，請改用電腦瀏覽器' }) }
+  }
+  async function copyRenoticeList() {
+    const rows = responses.filter((r) => r.consentLink && r.email)
+    const tsv = ['姓名\t信箱\t補告知連結', ...rows.map((r) => `${r.name}\t${r.email}\t${r.consentLink}`)].join('\n')
+    try { await navigator.clipboard.writeText(tsv); setCopiedNotice('list'); setTimeout(() => setCopiedNotice(''), 2000) }
+    catch { setMsg({ ok: false, text: '無法複製，請改用電腦瀏覽器' }) }
+  }
+  async function markNotice(r: FormResponse, sent: boolean) {
+    const res = await fetch(`/api/events/${eventId}/forms`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, responseId: r.id, noticeSent: sent }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg({ ok: false, text: json.error ?? '更新失敗' }); return }
+    setResponses((prev) => prev.map((x) => (x.id === r.id ? { ...x, noticeSentAt: json.noticeSentAt ?? '' } : x)))
   }
   const setMatch = (id: string, v: CustomerMatch) => setResponses((prev) => prev.map((x) => (x.id === id ? { ...x, ...v } : x)))
 
@@ -422,7 +446,15 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
         <div className="card-soft overflow-hidden">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
             <h3 className="font-semibold text-stone-900">回覆名單</h3>
-            <span className="text-sm text-stone-400">{responses.length} 份</span>
+            <div className="flex items-center gap-3">
+              {canEdit && responses.some((r) => r.consentLink && r.email) && (
+                <button onClick={copyRenoticeList} title="複製尚未同意個資告知、且有留信箱者的姓名、信箱與個人補告知連結（可貼到 Excel）"
+                  className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">
+                  {copiedNotice === 'list' ? '已複製' : `複製補告知名單（${responses.filter((r) => r.consentLink && r.email).length}）`}
+                </button>
+              )}
+              <span className="text-sm text-stone-400">{responses.length} 份</span>
+            </div>
           </div>
           {responses.length === 0 ? (
             <div className="py-12 text-center text-sm text-stone-400">還沒有人填寫</div>
@@ -451,7 +483,20 @@ export function EventFormPanel({ eventId, kind, canEdit }: { eventId: string; ki
                             <Link href={`/customers/${r.customerId}`} className="font-medium text-brand-700 hover:underline">{r.customerName || '查看客戶'}</Link>
                           ) : <span className="text-xs text-stone-400">未配對</span>}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}{r.email && <p className="text-[11px] text-stone-400">{r.email}</p>}{r.consentAt && <p className="text-[11px] text-stone-400">已同意個資告知{r.marketingOptIn ? '・願收資訊' : ''}</p>}</td></>}
+                        <td className="whitespace-nowrap px-4 py-3 text-stone-600">{r.phone || '—'}{r.email && <p className="text-[11px] text-stone-400">{r.email}</p>}{r.consentAt ? (
+                          <p className="text-[11px] text-stone-400">{r.consentSource === 'renotice' ? `已補同意個資告知（${fmt(r.consentAt)}）` : '已同意個資告知'}{r.marketingOptIn ? '・願收資訊' : ''}</p>
+                        ) : r.consentLink ? (
+                          <div className="mt-1 text-[11px]">
+                            <p className="text-amber-700">改版前填寫（未經告知）{r.noticeSentAt ? `・已寄補告知 ${fmt(r.noticeSentAt)}` : ''}</p>
+                            {canEdit && (
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                {r.email && <button onClick={() => copyRenotice(r)} className="rounded-full bg-stone-100 px-2.5 py-0.5 font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">{copiedNotice === r.id ? '已複製' : '複製補告知信'}</button>}
+                                {!r.email && <button onClick={() => { navigator.clipboard.writeText(r.consentLink!).then(() => { setCopiedNotice(r.id); setTimeout(() => setCopiedNotice(''), 2000) }).catch(() => {}) }} className="rounded-full bg-stone-100 px-2.5 py-0.5 font-semibold text-stone-600 transition-all hover:bg-stone-200 active:scale-95">{copiedNotice === r.id ? '已複製' : '複製同意連結'}</button>}
+                                <button onClick={() => markNotice(r, !r.noticeSentAt)} className="rounded-full px-2.5 py-0.5 text-stone-500 transition-all hover:bg-stone-100 active:scale-95">{r.noticeSentAt ? '取消已寄' : '標記已寄'}</button>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}</td></>}
                       {form.questions.map((q) => {
                         const v = r.answers?.[q.id]
                         return <td key={q.id} className="max-w-[16rem] px-4 py-3 text-stone-600">{v == null || v === '' ? '—' : Array.isArray(v) ? v.join('、') : String(v)}</td>

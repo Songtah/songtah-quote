@@ -14,7 +14,7 @@ const toForm = (r: any): EventForm => ({
   identity: r.identity, questions: r.questions ?? [], open: !!r.open, updatedAt: iso(r.updated_at),
 })
 const toResponse = (r: any): FormResponse => ({
-  id: r.id, name: r.name ?? '', phone: r.phone ?? '', institution: r.institution ?? '', city: r.city ?? '', district: r.district ?? '', jobTitle: r.job_title ?? '', email: r.email ?? '', consentAt: iso(r.consent_at), consentVersion: r.consent_version ?? '', marketingOptIn: !!r.marketing_opt_in, answers: r.answers ?? {},
+  id: r.id, name: r.name ?? '', phone: r.phone ?? '', institution: r.institution ?? '', city: r.city ?? '', district: r.district ?? '', jobTitle: r.job_title ?? '', email: r.email ?? '', consentAt: iso(r.consent_at), consentVersion: r.consent_version ?? '', marketingOptIn: !!r.marketing_opt_in, consentSource: r.consent_source ?? '', noticeSentAt: iso(r.notice_sent_at), answers: r.answers ?? {},
   giftClaimedAt: iso(r.gift_claimed_at), giftClaimedBy: r.gift_claimed_by ?? '', createdAt: iso(r.created_at),
   customerId: r.customer_id ?? '', matchNote: r.match_note ?? '',
 })
@@ -62,8 +62,8 @@ export async function addResponse(form: EventForm, data: { name: string; phone: 
     if (dup.length) return { response: toResponse(dup[0]), duplicate: true }
   }
   const r = await db`
-    insert into event_form_responses (form_id, event_id, name, phone, phone_tail, institution, city, district, job_title, email, consent_at, consent_version, marketing_opt_in, answers)
-    values (${form.id}, ${form.eventId}, ${data.name || null}, ${data.phone || null}, ${tail}, ${data.institution || null}, ${data.city || null}, ${data.district || null}, ${data.jobTitle || null}, ${data.email || null}, ${data.consentVersion ? new Date() : null}, ${data.consentVersion || null}, ${data.consentVersion ? !!data.marketingOptIn : null}, ${db.json(data.answers as any)})
+    insert into event_form_responses (form_id, event_id, name, phone, phone_tail, institution, city, district, job_title, email, consent_at, consent_version, marketing_opt_in, consent_source, answers)
+    values (${form.id}, ${form.eventId}, ${data.name || null}, ${data.phone || null}, ${tail}, ${data.institution || null}, ${data.city || null}, ${data.district || null}, ${data.jobTitle || null}, ${data.email || null}, ${data.consentVersion ? new Date() : null}, ${data.consentVersion || null}, ${data.consentVersion ? !!data.marketingOptIn : null}, ${data.consentVersion ? 'form' : null}, ${db.json(data.answers as any)})
     on conflict (form_id, phone_tail) where phone_tail is not null do nothing
     returning *`
   if (!r.length && tail) {
@@ -95,6 +95,33 @@ export async function listCustomerResponses(customerId: string): Promise<{ event
     form: toForm({ id: r.f_id, event_id: r.f_event_id, kind: r.f_kind, title: r.f_title, intro: r.f_intro, gift: r.f_gift, gift_image: r.f_gift_image, identity: r.f_identity, questions: r.f_questions, open: r.f_open, updated_at: r.f_updated_at }),
     response: toResponse(r),
   }))
+}
+
+/** 補告知：標記／取消「已寄出補告知信」 */
+export async function setNoticeSent(formId: string, responseId: string, sent: boolean): Promise<FormResponse | null> {
+  if (!isUuid(responseId)) return null
+  const r = sent
+    ? await sql()`update event_form_responses set notice_sent_at = coalesce(notice_sent_at, now()) where id = ${responseId} and form_id = ${formId} returning *`
+    : await sql()`update event_form_responses set notice_sent_at = null where id = ${responseId} and form_id = ${formId} returning *`
+  return r.length ? toResponse(r[0]) : null
+}
+
+/** 補告知連結：只看回覆 id（連結已簽章），回傳回覆與所屬表單 */
+export async function getResponseForConsent(responseId: string): Promise<{ response: FormResponse; formId: string; eventId: string; formTitle: string } | null> {
+  if (!isUuid(responseId)) return null
+  const r = await sql()`select r.*, f.title as f_title from event_form_responses r join event_forms f on f.id = r.form_id where r.id = ${responseId}`
+  return r.length ? { response: toResponse(r[0]), formId: r[0].form_id, eventId: r[0].event_id, formTitle: r[0].f_title ?? '' } : null
+}
+
+/** 補告知連結勾選同意：已同意過就不覆蓋（保留原本的同意時間與來源） */
+export async function recordRenoticeConsent(responseId: string, version: string, marketing: boolean): Promise<FormResponse | null> {
+  if (!isUuid(responseId)) return null
+  const r = await sql()`update event_form_responses
+    set consent_at = now(), consent_version = ${version}, marketing_opt_in = ${marketing}, consent_source = 'renotice'
+    where id = ${responseId} and consent_at is null returning *`
+  if (r.length) return toResponse(r[0])
+  const cur = await sql()`select * from event_form_responses where id = ${responseId}`
+  return cur.length ? toResponse(cur[0]) : null
 }
 
 /** 標記／取消贈品已領。回傳更新後的回覆；找不到回 null。 */
